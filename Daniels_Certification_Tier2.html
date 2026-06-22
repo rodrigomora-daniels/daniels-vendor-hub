@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daniels Sales Certification — Sales Tier 2: Credit, Digital Tools & Policies</title>
+<style>
+  :root {
+    --navy:#1B3A6B; --gold:#C8922A; --ltblue:#D6E4F7; --cream:#FFF8EC;
+    --green:#27AE60; --red:#C0392B; --gray:#F4F4F4; --dkgray:#3C3C3C;
+    --mgray:#6B6B6B; --white:#FFFFFF;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:Arial,sans-serif;background:#f0f2f5;color:var(--dkgray);min-height:100vh;}
+
+  .site-header{background:var(--navy);border-bottom:4px solid var(--gold);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;}
+  .site-header h1{color:var(--white);font-size:17px;font-weight:700;}
+  .site-header .sub{color:var(--gold);font-size:12px;margin-top:2px;}
+  .timer-box{background:var(--gold);color:var(--navy);padding:8px 18px;border-radius:6px;font-size:22px;font-weight:700;min-width:90px;text-align:center;display:none;}
+  .timer-box.warning{background:var(--red);color:var(--white);}
+
+  .screen{display:none;max-width:880px;margin:28px auto;padding:0 16px 60px;}
+  .screen.active{display:block;}
+  .card{background:var(--white);border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.10);padding:32px;}
+  .card-title{font-size:21px;font-weight:700;color:var(--navy);border-bottom:3px solid var(--gold);padding-bottom:12px;margin-bottom:20px;}
+
+  .intro-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0;}
+  .info-box{background:var(--ltblue);border:1px solid var(--navy);border-radius:8px;padding:13px 15px;}
+  .info-box .label{font-size:11px;text-transform:uppercase;color:var(--navy);font-weight:700;margin-bottom:3px;}
+  .info-box .value{font-size:14px;color:var(--dkgray);}
+  .warn-box{background:#fff3cd;border-left:4px solid var(--gold);border-radius:4px;padding:11px 15px;margin:14px 0;font-size:13px;}
+  .section-pill{display:inline-block;background:var(--navy);color:var(--white);font-size:10px;padding:2px 8px;border-radius:10px;margin-bottom:4px;font-weight:700;letter-spacing:.5px;}
+
+  .form-group{margin-bottom:18px;}
+  .form-group label{display:block;font-weight:700;color:var(--navy);margin-bottom:5px;font-size:14px;}
+  .form-group input,.form-group select{width:100%;padding:9px 12px;border:2px solid #ddd;border-radius:6px;font-size:15px;outline:none;transition:border .2s;}
+  .form-group input:focus,.form-group select:focus{border-color:var(--navy);}
+
+  .btn{display:inline-block;padding:11px 26px;border-radius:6px;font-size:15px;font-weight:700;cursor:pointer;border:none;transition:opacity .2s;}
+  .btn:hover{opacity:.88;}
+  .btn-primary{background:var(--navy);color:var(--white);}
+  .btn-gold{background:var(--gold);color:var(--white);}
+  .btn-block{width:100%;text-align:center;}
+
+  .progress-wrap{background:#ddd;border-radius:4px;height:8px;margin-bottom:5px;}
+  .progress-bar{background:var(--gold);height:8px;border-radius:4px;transition:width .3s;}
+  .progress-label{font-size:12px;color:var(--mgray);text-align:right;}
+
+  .q-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .q-badge{background:var(--navy);color:var(--white);font-size:11px;padding:3px 10px;border-radius:4px;font-weight:700;}
+  .q-pts{font-size:12px;color:var(--mgray);}
+  .q-section{font-size:11px;color:var(--gold);font-weight:700;text-transform:uppercase;margin-bottom:5px;}
+  .q-text{font-size:15px;font-weight:700;color:var(--dkgray);line-height:1.5;margin-bottom:6px;}
+  .q-sub{font-size:13px;color:var(--mgray);font-style:italic;margin-bottom:14px;}
+  .q-scenario{background:var(--ltblue);border-left:4px solid var(--navy);border-radius:4px;padding:10px 14px;margin-bottom:14px;font-size:13px;line-height:1.6;}
+
+  .options{display:flex;flex-direction:column;gap:9px;}
+  .option{display:flex;align-items:flex-start;gap:11px;padding:11px 15px;border:2px solid #ddd;border-radius:8px;cursor:pointer;transition:all .15s;background:var(--white);}
+  .option:hover{border-color:var(--navy);background:var(--ltblue);}
+  .option.selected{border-color:var(--navy);background:var(--ltblue);}
+  .option.correct{border-color:var(--green);background:#eaf7ea;}
+  .option.wrong{border-color:var(--red);background:#fdecea;}
+  .option-letter{width:27px;height:27px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;background:#eee;color:var(--dkgray);}
+  .option.selected .option-letter{background:var(--navy);color:var(--white);}
+  .option.correct .option-letter{background:var(--green);color:var(--white);}
+  .option.wrong .option-letter{background:var(--red);color:var(--white);}
+  .option-text{font-size:13.5px;line-height:1.5;padding-top:3px;}
+
+  .explanation{display:none;margin-top:13px;padding:11px 15px;border-left:4px solid var(--gold);background:var(--cream);border-radius:4px;font-size:13px;line-height:1.6;}
+  .explanation.show{display:block;}
+  .explanation strong{color:var(--navy);}
+
+  .q-nav{display:flex;justify-content:space-between;align-items:center;margin-top:22px;}
+  .q-counter{font-size:13px;color:var(--mgray);}
+
+  .score-circle{width:130px;height:130px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto 20px;border:6px solid var(--navy);background:var(--ltblue);}
+  .score-pct{font-size:36px;font-weight:700;color:var(--navy);}
+  .score-lbl{font-size:11px;color:var(--mgray);}
+  .score-circle.pass{border-color:var(--green);background:#eaf7ea;}
+  .score-circle.pass .score-pct{color:var(--green);}
+  .score-circle.fail{border-color:var(--red);background:#fdecea;}
+  .score-circle.fail .score-pct{color:var(--red);}
+  .result-status{text-align:center;font-size:21px;font-weight:700;margin-bottom:7px;}
+  .result-status.pass{color:var(--green);}
+  .result-status.fail{color:var(--red);}
+  .result-sub{text-align:center;color:var(--mgray);font-size:13px;margin-bottom:22px;}
+  .result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-bottom:22px;}
+  .result-stat{background:var(--gray);border-radius:8px;padding:13px;text-align:center;}
+  .result-stat .num{font-size:24px;font-weight:700;color:var(--navy);}
+  .result-stat .lbl{font-size:11px;color:var(--mgray);margin-top:2px;}
+
+  /* Section breakdown */
+  .section-breakdown{margin:20px 0;}
+  .sb-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+  .sb-label{font-size:12px;color:var(--dkgray);min-width:200px;}
+  .sb-bar-wrap{flex:1;background:#eee;border-radius:4px;height:10px;}
+  .sb-bar{height:10px;border-radius:4px;background:var(--gold);}
+  .sb-bar.green{background:var(--green);}
+  .sb-bar.red{background:var(--red);}
+  .sb-pct{font-size:12px;color:var(--mgray);min-width:35px;text-align:right;}
+
+  /* CERTIFICATE */
+  #cert-wrap{display:none;margin-top:24px;}
+  #certificate{background:var(--white);border:8px double var(--navy);border-radius:12px;padding:44px 52px;text-align:center;position:relative;}
+  #certificate::before{content:"";position:absolute;inset:8px;border:2px solid var(--gold);border-radius:8px;pointer-events:none;}
+  .cert-logo{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--mgray);margin-bottom:8px;}
+  .cert-company{font-size:26px;font-weight:700;color:var(--navy);margin-bottom:3px;}
+  .cert-divider{color:var(--gold);font-size:18px;margin:8px 0;}
+  .cert-badge-icon{font-size:44px;display:block;margin-bottom:6px;}
+  .cert-title-sm{font-size:12px;color:var(--mgray);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;}
+  .cert-title{font-size:22px;font-weight:700;color:var(--dkgray);margin-bottom:22px;}
+  .cert-certifies{font-size:13px;color:var(--mgray);margin-bottom:7px;font-style:italic;}
+  .cert-name{font-size:30px;font-weight:700;color:var(--navy);border-bottom:2px solid var(--gold);display:inline-block;padding-bottom:5px;margin-bottom:22px;}
+  .cert-body{font-size:13px;color:var(--dkgray);max-width:480px;margin:0 auto 18px;line-height:1.7;}
+  .cert-score-badge{display:inline-block;background:var(--navy);color:var(--white);padding:9px 26px;border-radius:28px;font-size:17px;font-weight:700;margin-bottom:22px;}
+  .cert-competencies{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-bottom:22px;}
+  .cert-comp{background:var(--ltblue);border:1px solid var(--navy);border-radius:6px;padding:7px 13px;font-size:11px;font-weight:700;color:var(--navy);}
+  .cert-footer{display:flex;justify-content:space-around;margin-top:22px;border-top:1px solid #eee;padding-top:18px;}
+  .cert-footer-item{text-align:center;}
+  .cert-footer-item .val{font-size:13px;font-weight:700;color:var(--navy);border-top:1px solid var(--navy);padding-top:5px;min-width:150px;}
+  .cert-footer-item .lbl{font-size:10px;color:var(--mgray);margin-top:3px;}
+
+  @media print{
+    .site-header,.btn,#result-actions,.no-print{display:none!important;}
+    #cert-wrap{display:block!important;}
+    body{background:white;}
+    .screen{padding:0;}
+  }
+</style>
+</head>
+<body>
+
+<div class="site-header">
+  <div>
+    <div class="sub">🏠 DANIELS HOME CENTER</div>
+    <h1>Sales Certification — Sales Tier 2: Credit, Digital Tools & Policies | 28 Questions | 50 Minutes</h1>
+  </div>
+  <div class="timer-box" id="timer">50:00</div>
+</div>
+
+<!-- INTRO -->
+<div class="screen active" id="screen-intro">
+  <div class="card">
+    <div class="card-title">Daniels Sales Certification — Sales Tier 2: Credit, Digital Tools & Policies</div>
+    <div class="intro-grid">
+      <div class="info-box"><div class="label">Questions</div><div class="value">28 questions · Multiple choice</div></div>
+      <div class="info-box"><div class="label">Time Limit</div><div class="value">50 minutes</div></div>
+      <div class="info-box"><div class="label">Passing Score</div><div class="value">80% (22 of 28 correct)</div></div>
+      <div class="info-box"><div class="label">Modules</div><div class="value">Credit & Financing · Digital Catalog · Pre-Screener · Company Policies</div></div>
+    </div>
+    <div class="warn-box">⚠️ <strong>Important / Importante:</strong> Scenario-based questions. Read each carefully. Timer cannot be paused once started. / Preguntas basadas en escenarios. Léelas con cuidado. El temporizador no se puede pausar una vez iniciado.</div>
+    <hr style="border:none;border-top:2px solid var(--gold);margin:22px 0;">
+    <div class="form-group"><label>Full Name / Nombre Completo *</label><input type="text" id="emp-name" placeholder="Enter your full name"></div>
+    <div class="form-group"><label>Employee ID / ID de Empleado *</label><input type="text" id="emp-id" placeholder="e.g. DHC-001"></div>
+    <div class="form-group"><label>Store Location / Tienda *</label>
+      <select id="emp-store">
+        <option value="">— Select location —</option>
+        <option>Daniels Home Center — Main</option>
+        <option>Daniels Home Center — Other</option>
+      </select>
+    </div>
+    <div style="margin-top:22px"><button class="btn btn-primary btn-block" onclick="startExam()">Begin Assessment / Comenzar Evaluación →</button></div>
+  </div>
+</div>
+
+<!-- EXAM -->
+<div class="screen" id="screen-exam">
+  <div style="margin-bottom:11px">
+    <div class="progress-wrap"><div class="progress-bar" id="progress-bar" style="width:3%"></div></div>
+    <div class="progress-label" id="progress-label">Question 1 of 38</div>
+  </div>
+  <div class="card">
+    <div class="q-meta"><span class="q-badge" id="q-num">Q1</span><span class="q-pts" id="q-pts">3 pts</span></div>
+    <div class="q-section" id="q-section"></div>
+    <div class="q-text" id="q-text"></div>
+    <div class="q-scenario" id="q-scenario" style="display:none"></div>
+    <div class="q-sub" id="q-sub" style="display:none"></div>
+    <div class="options" id="q-options"></div>
+    <div class="explanation" id="q-explanation"></div>
+    <div class="q-nav">
+      <span class="q-counter" id="q-answered">0 of 38 answered</span>
+      <button class="btn btn-primary" id="btn-next" onclick="nextQuestion()">Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div class="screen" id="screen-results">
+  <div class="card">
+    <div class="card-title" id="result-title">Assessment Complete / Evaluación Completa</div>
+    <div class="score-circle" id="score-circle"><div class="score-pct" id="score-pct">--</div><div class="score-lbl">SCORE</div></div>
+    <div class="result-status" id="result-status"></div>
+    <div class="result-sub" id="result-sub"></div>
+    <div class="result-grid">
+      <div class="result-stat"><div class="num" id="r-correct">--</div><div class="lbl">Correct / Correctas</div></div>
+      <div class="result-stat"><div class="num" id="r-wrong">--</div><div class="lbl">Incorrect / Incorrectas</div></div>
+      <div class="result-stat"><div class="num" id="r-time">--</div><div class="lbl">Time Used / Tiempo</div></div>
+    </div>
+    <div class="section-breakdown" id="section-breakdown"></div>
+    <div id="result-actions">
+      <button class="btn btn-gold btn-block" id="btn-cert" onclick="showCertificate()" style="margin-bottom:10px;display:none">🏆 Download Certificate / Descargar Certificado</button>
+      <button class="btn btn-primary btn-block" id="btn-retake" onclick="handleRetake()" style="margin-bottom:10px">Retake / Reintentar</button>
+      <button class="btn btn-primary btn-block" style="background:var(--mgray)" onclick="backToDashboard()">← Back to Dashboard / Volver al Panel</button>
+      <div id="attempts-locked-msg" style="display:none;background:#fdecea;border-left:4px solid var(--red);color:var(--red);padding:14px 16px;border-radius:6px;font-size:13px;margin-top:10px;text-align:center;">
+        You have used all 3 attempts for this certification. Please see your manager to discuss next steps. / Has usado los 3 intentos disponibles. Contacta a tu gerente para los siguientes pasos.
+      </div>
+    </div>
+  </div>
+  <div id="cert-wrap">
+    <div id="certificate">
+      <div class="cert-logo">Daniels Home Center · Internal Certification Program</div>
+      <div class="cert-company">DANIELS HOME CENTER</div>
+      <div class="cert-divider">━━━━━━━━━━━━━━━━</div>
+      <span class="cert-badge-icon">🏆</span>
+      <div class="cert-title-sm">Certificate of Achievement</div>
+      <div class="cert-title">Sales Excellence — Tier 2 Certified</div>
+      <div class="cert-certifies">This certifies that / Este certificado acredita que</div>
+      <div class="cert-name" id="cert-name">—</div>
+      <div class="cert-body">has successfully completed the <strong>Daniels Sales Tier 2 Certification</strong>, demonstrating mastery of the credit &amp; financing process, the digital catalog navigation system, the Daniels Pre-Screen Tool, and the company's three core operational policies — Haul Away, Price Match, and Return/Exchange/Warranty.</div>
+      <div class="cert-score-badge" id="cert-score">Score: —%</div>
+      <div class="cert-competencies">
+        <div class="cert-comp">✓ Credit &amp; Financing</div>
+        <div class="cert-comp">✓ Digital Catalog Navigation</div>
+        <div class="cert-comp">✓ Pre-Screen Tool</div>
+        <div class="cert-comp">✓ Haul Away Policy</div>
+        <div class="cert-comp">✓ Price Match Policy</div>
+        <div class="cert-comp">✓ Return &amp; Warranty Policy</div>
+      </div>
+      <div class="cert-footer">
+        <div class="cert-footer-item"><div class="val" id="cert-date">—</div><div class="lbl">Date of Completion</div></div>
+        <div class="cert-footer-item"><div class="val" id="cert-id">—</div><div class="lbl">Employee ID</div></div>
+        <div class="cert-footer-item"><div class="val">Sales Excellence — Tier 2</div><div class="lbl">Certification Level</div></div>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-block no-print" style="margin-top:14px" onclick="window.print()">🖨️ Print / Save Certificate</button>
+  </div>
+</div>
+
+<script>
+
+
+// ════ SUPABASE CONFIG & EMPLOYEE CONTEXT ════════════════════════
+const SUPABASE_URL = 'https://ecfxeebhtgkbsdeuiueb.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_oRxEOMLizp1kjlsRjWWaxg_muaaMHFt';
+const TIER_KEY = 'tier2';
+
+async function sbFetch(path, options = {}) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Prefer': options.method === 'POST' ? 'return=representation' : undefined,
+      ...(options.headers || {})
+    }
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Supabase error ${res.status}: ${errText}`);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+let loggedInEmployee = null;
+
+async function loadEmployeeFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  const empId = params.get('emp');
+  if (!empId) return null;
+  try {
+    const rows = await sbFetch(`empleados?id=eq.${empId}&select=id,nombre_completo,employee_id,tienda`);
+    if (rows && rows.length > 0) return rows[0];
+  } catch (err) {
+    console.error('Could not load employee context:', err);
+  }
+  return null;
+}
+
+async function initEmployeeContext() {
+  loggedInEmployee = await loadEmployeeFromURL();
+  if (loggedInEmployee) {
+    // Pre-fill and lock the intro fields, skip manual entry
+    document.getElementById('emp-name').value = loggedInEmployee.nombre_completo;
+    document.getElementById('emp-id').value = loggedInEmployee.employee_id || '';
+    const storeSelect = document.getElementById('emp-store');
+    if (storeSelect && loggedInEmployee.tienda) {
+      for (const opt of storeSelect.options) {
+        if (opt.value === loggedInEmployee.tienda) { storeSelect.value = loggedInEmployee.tienda; break; }
+      }
+    }
+    document.getElementById('emp-name').readOnly = true;
+    document.getElementById('emp-id').readOnly = true;
+    if (storeSelect) storeSelect.disabled = true;
+
+    attemptCount = await checkAttemptCount();
+    if (attemptCount >= MAX_ATTEMPTS) {
+      document.querySelector('.card-title').insertAdjacentHTML('afterend',
+        `<div style="background:#fdecea;border-left:4px solid var(--red);color:var(--red);padding:14px 16px;border-radius:6px;font-size:14px;margin-bottom:18px;">
+          You have already used all ${MAX_ATTEMPTS} attempts for this certification. Please see your manager to discuss next steps. / Ya has usado los ${MAX_ATTEMPTS} intentos disponibles. Contacta a tu gerente.
+        </div>`);
+      document.querySelector('button[onclick="startExam()"]').disabled = true;
+      document.querySelector('button[onclick="startExam()"]').style.opacity = '0.5';
+      document.querySelector('button[onclick="startExam()"]').style.cursor = 'not-allowed';
+    } else if (attemptCount > 0) {
+      document.querySelector('.card-title').insertAdjacentHTML('afterend',
+        `<div style="background:#fff3cd;border-left:4px solid var(--gold);padding:12px 16px;border-radius:6px;font-size:13px;margin-bottom:18px;">
+          Attempt ${attemptCount + 1} of ${MAX_ATTEMPTS} / Intento ${attemptCount + 1} de ${MAX_ATTEMPTS}
+        </div>`);
+    }
+  }
+}
+
+async function saveResultToSupabase(scored, totalPts, pct, pass, elapsed) {
+  if (!loggedInEmployee) {
+    console.warn('No logged-in employee context — result not saved to Supabase.');
+    return;
+  }
+  const record = {
+    empleado_id: loggedInEmployee.id,
+    certificacion: TIER_KEY,
+    score: scored,
+    total_puntos: totalPts,
+    porcentaje: pct,
+    aprobado: pass,
+    tiempo_usado_segundos: elapsed,
+    detalle_respuestas: state.answers
+  };
+  try {
+    await sbFetch('certificaciones_progreso', {
+      method: 'POST',
+      body: JSON.stringify(record)
+    });
+    console.log('Result saved to Supabase successfully.');
+  } catch (err) {
+    console.error('Failed to save result to Supabase:', err);
+  }
+}
+
+
+let attemptCount = 0;
+const MAX_ATTEMPTS = 3;
+
+async function checkAttemptCount() {
+  if (!loggedInEmployee) return 0;
+  try {
+    const rows = await sbFetch(`certificaciones_progreso?empleado_id=eq.${loggedInEmployee.id}&certificacion=eq.tier2&select=id`);
+    return rows ? rows.length : 0;
+  } catch (err) {
+    console.error('Could not check attempt count:', err);
+    return 0;
+  }
+}
+
+function backToDashboard() {
+  window.location.href = 'Daniels_Vendor_Hub_Login.html';
+}
+
+function handleRetake() {
+  if (attemptCount >= MAX_ATTEMPTS) {
+    alert('You have used all {MAX_ATTEMPTS} attempts. Please see your manager.');
+    return;
+  }
+  location.reload();
+}
+
+document.addEventListener('DOMContentLoaded', initEmployeeContext);
+
+const QUESTIONS = [
+
+{
+  section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
+  q:"A customer is excited about a $1,600 sofa set and ready to apply for financing. You ask for the three required documents and they hand you: a gym membership card, a utility bill from 4 months ago, and a bank statement from last month. How many of the three documents are valid? / Un cliente emocionado por un sofá de $1,600 quiere solicitar financiamiento. Te entrega: una tarjeta de membresía de gimnasio, un recibo de servicios de hace 4 meses, y un estado de cuenta bancario del mes pasado. ¿Cuántos de los tres documentos son válidos?",
+  scenario:null, sub:null,
+  opts:[
+    "All three — they cover ID, address, and income. / Los tres — cubren ID, domicilio e ingresos.",
+    "Two — the gym card is not a valid ID but the other two work. / Dos — la tarjeta de gimnasio no es un ID válido pero los otros dos sirven.",
+    "One — only the bank statement is valid. The gym card is not a government-issued ID. The utility bill must be within 60 days (4 months = invalid). The bank statement works as proof of income IF it shows regular deposits. / Uno — solo el estado de cuenta bancario es válido.",
+    "Zero — none of these documents meet the standard requirements. / Cero — ninguno de estos documentos cumple los requisitos."
+  ],
+  correct:2,
+  explanation:"Breaking it down: (1) Gym card = NOT valid ID — must be government-issued with photo. (2) Utility bill from 4 months ago = NOT valid — must be within 60 days. (3) Bank statement from last month = VALID as proof of income if it shows regular deposits. The associate needs to collect 2 more valid documents before submitting: a real government photo ID and a current utility bill (or bank statement with address)."
+},
+
+{
+  section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
+  q:"You submitted a complete application with all three documents. The Twilio phone verification was sent to the customer but they say 'I didn't get a text.' The customer is getting impatient. What do you do? / Enviaste una solicitud completa con los tres documentos. La verificación Twilio se envió pero el cliente dice 'No recibí el mensaje.' El cliente se está impacientando. ¿Qué haces?",
+  scenario:null, sub:null,
+  opts:[
+    "Ask the approver to bypass the Twilio step this one time since documents are complete. / Pedirle al aprobador que omita el paso de Twilio esta vez ya que los documentos están completos.",
+    "Submit the application anyway and add a note that Twilio was skipped. / Enviar la solicitud de todas formas y agregar una nota de que se omitió Twilio.",
+    "Help the customer check the phone number entered, confirm it is their current number, ask them to check spam/secondary apps (some carriers delay), and wait — Twilio is a mandatory fraud gate that cannot be bypassed regardless of customer impatience. Alert the approver of the delay. / Ayudar al cliente a verificar el número de teléfono, confirmar que es el actual, pedir que revisen spam — Twilio es una barrera antifraude obligatoria que no puede omitirse.",
+    "Offer to re-enter the application with a different phone number from the customer's contacts. / Ofrecer re-ingresar la solicitud con un número de teléfono diferente de los contactos del cliente."
+  ],
+  correct:2,
+  explanation:"Twilio phone verification is a mandatory fraud gate — non-negotiable, non-bypassable, regardless of impatience, document completeness, or time pressure. The correct response is to help troubleshoot (correct number? check spam? carrier delay?) and wait, not circumvent. Using someone else's phone number is a fraud risk. Submitting without verification blocks the application at the system level anyway."
+},
+
+{
+  section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
+  q:"You run a customer through the waterfall. They have a FICO of 572 and are buying a sectional for $1,800 with $300 down. The system does not auto-approve and it goes to manual review. While waiting, the customer asks you: 'What are my chances?' What do you say? / Corres a un cliente por la cascada. Tiene FICO 572 y compra un seccional de $1,800 con $300 de enganche. El sistema no auto-aprueba y va a revisión manual. El cliente pregunta: '¿Cuáles son mis posibilidades?' ¿Qué dices?",
+  scenario:null, sub:null,
+  opts:[
+    "'With your down payment and the product you chose, I think you have a solid shot.' / 'Con tu enganche y el producto que elegiste, creo que tienes buenas posibilidades.'",
+    "'Your FICO is a little low but the down payment helps — we will see.' / 'Tu FICO está un poco bajo pero el enganche ayuda — veremos.'",
+    "'I honestly cannot tell you — the approver makes that call, not me. What I can tell you is that we submitted everything correctly and completely, which is exactly what gives you the best shot. Let me show you a couple of other things while we wait.' / 'Honestamente no puedo decirte — el aprobador toma esa decisión, no yo.'",
+    "'Manual review usually means approval — do not worry.' / 'La revisión manual usualmente significa aprobación — no te preocupes.'"
+  ],
+  correct:2,
+  explanation:"Never predict outcomes — even when you think you know. 'I think you have a solid shot' sets an expectation you cannot fulfill. 'Manual review usually means approval' is factually wrong and professionally dangerous. The correct answer redirects honestly: the approver decides, you submitted everything correctly, and you keep the customer engaged productively while waiting."
+},
+
+{
+  section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
+  q:"The approver returns an APPROVED decision — through SNAP/Acima (lease-to-own), not in-house. The customer did not know lease-to-own was an option and asks 'What does that mean exactly?' What is your role? / El aprobador regresa una decisión APROBADA — a través de SNAP/Acima (arrendamiento con opción de compra), no en casa. El cliente no sabía que era una opción y pregunta '¿Qué significa eso exactamente?' ¿Cuál es tu rol?",
+  scenario:null, sub:null,
+  opts:[
+    "Explain lease-to-own in detail including approximate total cost and buyout options. / Explicar el arrendamiento con opción de compra en detalle incluyendo el costo total aproximado y opciones de compra.",
+    "Tell the customer lease-to-own is basically the same as financing, just with a different name. / Decirle al cliente que el arrendamiento es básicamente lo mismo que el financiamiento, solo con un nombre diferente.",
+    "Let the approver explain the terms — your role is to stay positive, confirm the customer heard the decision, and support the handoff: 'Great news — we found a path. The approver is going to walk you through exactly how this works.' Do not explain terms the approver should communicate. / Dejar que el aprobador explique los términos — tu rol es mantener actitud positiva y apoyar la entrega.",
+    "Warn the customer that lease-to-own has a higher total cost so they can decide if they want to proceed. / Advertir al cliente que el arrendamiento tiene un costo total más alto para que puedan decidir si proceden."
+  ],
+  correct:2,
+  explanation:"When the approver communicates an approval — in any path — your role is to support and maintain positive momentum, not to explain terms that belong to the approver. SNAP/Acima terms (lease structure, buyout options, total cost) are the approver's domain. Getting ahead of those explanations risks confusion or accidentally undermining a decision the customer was about to accept."
+},
+
+{
+  section:"Digital Catalog Navigation / Navegación del Catálogo Digital", pts:3,
+  q:"A customer wants a gray sectional with chaise that is not on your showroom floor. You open danielshomecenter.com on the tablet. What is the fastest path to find relevant results? / Un cliente quiere un seccional gris con chaise que no está en el piso. Abres danielshomecenter.com en la tablet. ¿Cuál es el camino más rápido para encontrar resultados relevantes?",
+  scenario:null, sub:null,
+  opts:[
+    "Go to the homepage and scroll down to find the featured sectionals section. / Ir a la página de inicio y desplazarse hacia abajo para encontrar la sección de seccionales destacados.",
+    "Navigate: Furniture → Living Room → Sectionals, then use the Color Family filter to select gray. Results appear in seconds with real inventory and delivery timelines. / Navegar: Furniture → Living Room → Sectionals, luego usar el filtro de Color Family para seleccionar gris.",
+    "Use the search bar and type 'sectional with chaise' — the most flexible option. / Usar la barra de búsqueda y escribir 'seccional con chaise' — la opción más flexible.",
+    "Go to danielshomecenter.com/danielsexpress.html for the fastest delivery options first. / Ir a danielshomecenter.com/danielsexpress.html para las opciones de entrega más rápidas primero."
+  ],
+  correct:1,
+  explanation:"The fastest structured path is category navigation + filter: Furniture → Living Room → Sectionals → Color Family: Gray. This narrows thousands of products to exactly what the customer needs in 3 clicks. The search bar works but returns broader results requiring more scrolling. DanielsExpress only carries Ashley brand inventory — it severely limits options. Homepage scrolling is the slowest approach."
+},
+
+{
+  section:"Digital Catalog Navigation / Navegación del Catálogo Digital", pts:3,
+  q:"A customer is interested in bedroom furniture but specifically loves Ashley Furniture because they had a great experience with the brand before. How do you quickly show only Ashley options within the bedroom category? / Un cliente está interesado en muebles de recámara pero le gusta específicamente Ashley Furniture. ¿Cómo muestras rápidamente solo las opciones de Ashley dentro de la categoría de recámara?",
+  scenario:null, sub:null,
+  opts:[
+    "Go to danielshomecenter.com/danielsexpress.html — DanielsExpress carries only Ashley and everything is Ready to Deliver. / Ir a danielshomecenter.com/danielsexpress.html — DanielsExpress lleva solo Ashley y todo es Ready to Deliver.",
+    "Navigate to Furniture → Bedroom, then use the Brand filter to select Ashley. This shows all Ashley bedroom items including beds, sets, dressers and nightstands with their delivery timelines. / Navegar a Furniture → Bedroom, luego usar el filtro de Brand para seleccionar Ashley.",
+    "Use the search bar and type 'Ashley bedroom' for the most complete results. / Usar la barra de búsqueda y escribir 'Ashley bedroom' para los resultados más completos.",
+    "Both A and B work equally well — use whichever the customer prefers. / Tanto A como B funcionan igualmente bien."
+  ],
+  correct:1,
+  explanation:"For Ashley bedroom specifically: Furniture → Bedroom → Brand: Ashley is the most complete path — it shows the full Ashley bedroom catalog including items not in DanielsExpress, with all delivery tiers visible. DanielsExpress (option A) only carries Ashley but is limited to their express inventory subset — it misses Ashley items on the 1-2 week or 2-3 week timeline. Brand filter on the full category is always more complete."
+},
+
+{
+  section:"Digital Catalog Navigation / Navegación del Catálogo Digital", pts:3,
+  q:"A customer needs a dining room set delivered within one week — they are moving in 8 days. How do you filter the website to show only what is actually achievable for their timeline? / Un cliente necesita un juego de comedor entregado en una semana — se muda en 8 días. ¿Cómo filtra el sitio web para mostrar solo lo que es alcanzable para su plazo?",
+  scenario:null, sub:null,
+  opts:[
+    "Show them everything in the dining room category and manually tell them which items are in stock. / Mostrarles todo en la categoría de comedor y decirles manualmente cuáles están en stock.",
+    "Navigate to Furniture → Dining Room, then use the Estimated Delivery filter: select 'Ready to Deliver' AND 'Online Exclusive: 0-1 Week'. This shows only items achievable within their timeline. / Navegar a Furniture → Dining Room, luego usar el filtro de Estimated Delivery: seleccionar 'Ready to Deliver' Y 'Online Exclusive: 0-1 Week'.",
+    "Go to DanielsExpress since all items there are Ready to Deliver — fastest path for urgent needs. / Ir a DanielsExpress ya que todos los artículos son Ready to Deliver.",
+    "Call the warehouse to check which dining sets are physically available. / Llamar al almacén para verificar qué juegos de comedor están disponibles físicamente."
+  ],
+  correct:1,
+  explanation:"The Estimated Delivery filter is exactly designed for this situation. 'Ready to Deliver' = in stock physically. 'Online Exclusive: 0-1 Week' = ships within a week. Selecting both covers the full achievable window for an 8-day timeline. DanielsExpress (option C) only carries Ashley brand dining — severely limits selection. Calling the warehouse is slow and bypasses the live inventory system that already has this information."
+},
+
+{
+  section:"Digital Catalog Navigation / Navegación del Catálogo Digital", pts:3,
+  q:"While browsing the catalog with a customer, you find the perfect sectional but they ask 'Can I see it in a different color?' The page shows the item in beige only. What is the correct next move on the website? / Mientras navegas el catálogo con un cliente, encuentran el seccional perfecto pero pregunta '¿Lo puedo ver en otro color?' La página lo muestra solo en beige. ¿Cuál es el siguiente movimiento correcto?",
+  scenario:null, sub:null,
+  opts:[
+    "Tell them this is the only color available and suggest a different sectional. / Decirles que ese es el único color disponible y sugerir otro seccional.",
+    "Check the product detail page for color/fabric swatches — many items show multiple configurations on the same product page. If none are shown, go back to the category, apply the Color Family filter for their preferred color, and look for the same model or similar construction in that color. / Revisar la página de detalle del producto para opciones de color/tela. Si no hay, volver a la categoría y aplicar el filtro de Color Family.",
+    "Offer to order a custom color — most brands accommodate this with a lead time. / Ofrecer ordenar un color personalizado — la mayoría de las marcas lo permiten con tiempo de entrega.",
+    "Show them the catalog on a separate manufacturer website to find additional colorways. / Mostrarles el catálogo en el sitio web del fabricante para encontrar colores adicionales."
+  ],
+  correct:1,
+  explanation:"First check the product detail page — many items display multiple fabric/color options within the same listing via swatches. If not available there, use the Color Family filter in the category to find the same or equivalent model in the desired color. Custom orders are rarely offered at Daniels' price point. Sending the customer to a manufacturer website exits the Daniels experience entirely — always keep them in danielshomecenter.com."
+},
+
+{
+  section:"Pre-Screen Tool / Herramienta de Pre-Screen", pts:3,
+  q:"You are about to run the Daniels Credit Pre-Screen Tool on a tablet with a customer who has not yet applied for credit. Which framing of the tool's purpose is most effective with the customer? / Estás a punto de usar la Herramienta de Pre-Screen con un cliente que aún no ha solicitado crédito. ¿Cuál es el encuadre más efectivo del propósito de la herramienta con el cliente?",
+  scenario:"The customer seems interested but hesitant about financing — they have not mentioned their credit score and you want to run the pre-screen without making them feel interrogated or worried about a credit check. / El cliente parece interesado pero dudoso sobre el financiamiento — no ha mencionado su puntaje de crédito y quieres correr el pre-screen sin que se sienta interrogado ni preocupado por una consulta de crédito.", sub:null,
+  opts:[
+    "'I need to run your credit to see if you qualify.' / 'Necesito correr tu crédito para ver si calificas.'",
+    "'Let me check your credit score in our system.' / 'Déjame revisar tu puntaje de crédito en nuestro sistema.'",
+    "'I have a quick tool here that helps me show you your options before we even start paperwork — it takes 2 minutes, it does NOT pull your credit, and it tells us exactly what we can structure for you today.' / 'Tengo una herramienta rápida que me ayuda a mostrarte tus opciones antes de cualquier papeleo — toma 2 minutos, NO consulta tu crédito, y nos dice exactamente qué podemos estructurar para ti hoy.'",
+    "'I have to check a few things in our system to see what you can afford.' / 'Tengo que revisar algunas cosas en nuestro sistema para ver qué puedes pagar.'"
+  ],
+  correct:2,
+  explanation:"The critical framing points: (1) 'before we even start paperwork' — positions it early, not as a barrier. (2) 'does NOT pull your credit' — eliminates the #1 fear. (3) 'shows you your options' — customer-benefit framing, not a qualification gatekeeping exercise. (4) 'takes 2 minutes' — low commitment. Never say 'check your credit,' 'see what you can afford,' or 'see if you qualify' — all create anxiety and defensiveness."
+},
+
+{
+  section:"Pre-Screen Tool / Herramienta de Pre-Screen", pts:3,
+  q:"You are entering data into the Pre-Screen Tool. The customer says they earn 'around $2,000 a month' but cannot show a pay stub because they are paid in cash. How should you handle the income field? / Estás ingresando datos en la Herramienta de Pre-Screen. El cliente dice que gana 'alrededor de $2,000 al mes' pero no puede mostrar un talón de pago porque le pagan en efectivo. ¿Cómo manejas el campo de ingresos?",
+  scenario:null, sub:null,
+  opts:[
+    "Enter $2,000 and mark income as 'verified' since the customer told you directly. / Ingresar $2,000 y marcar el ingreso como 'verificado' ya que el cliente te lo dijo directamente.",
+    "Enter $2,000 but mark income as 'Self-declared' (not verified) — the pre-screen result will reflect the appropriate risk level. Later in the formal application, collect 2 months of bank statements showing regular deposits as the income verification. / Ingresar $2,000 pero marcar el ingreso como 'Autodeclarado' (no verificado) — el resultado del pre-screen reflejará el nivel de riesgo apropiado.",
+    "Do not enter an income amount since it cannot be verified — leave it blank. / No ingresar un monto de ingresos ya que no puede verificarse — dejarlo en blanco.",
+    "Enter a conservative estimate of $1,500 to avoid overstating their profile. / Ingresar una estimación conservadora de $1,500 para evitar sobrestimar su perfil."
+  ],
+  correct:1,
+  explanation:"The pre-screen tool has an 'Income Verified' toggle precisely for this situation. Enter what the customer states, mark it as self-declared (not verified), and the tool adjusts the risk assessment accordingly. Marking it verified when it is not overstates the profile and misleads the approver. Leaving income blank breaks the calculation. The formal income verification (2 months bank statements for cash-paid workers) happens at the application stage, not the pre-screen."
+},
+
+{
+  section:"Pre-Screen Tool / Herramienta de Pre-Screen", pts:3,
+  q:"The Pre-Screen Tool returns a result showing the customer qualifies for in-house financing at a certain term and down payment. The customer asks: 'So I'm approved?' What is your exact response? / La Herramienta de Pre-Screen regresa un resultado mostrando que el cliente califica para financiamiento en casa en cierto plazo y enganche. El cliente pregunta: '¿Entonces estoy aprobado?' ¿Cuál es tu respuesta exacta?",
+  scenario:null, sub:null,
+  opts:[
+    "'Yes — this is essentially your approval. Now let us finalize the paperwork.' / 'Sí — esto es esencialmente tu aprobación. Ahora finalicemos el papeleo.'",
+    "'This looks really good — I think you are going to be fine.' / 'Esto se ve muy bien — creo que vas a estar bien.'",
+    "'This shows you are a strong candidate for in-house financing with a structure like this — but the actual approval decision belongs to our credit team. What this means is we now know exactly how to build your deal. Let us get the application started.' / 'Esto muestra que eres un candidato fuerte para financiamiento en casa con esta estructura — pero la decisión de aprobación real pertenece a nuestro equipo de crédito.'",
+    "'The tool says you qualify — I will let the approver confirm the details.' / 'La herramienta dice que calificas — dejaré que el aprobador confirme los detalles.'"
+  ],
+  correct:2,
+  explanation:"The Pre-Screen Tool is a simulator, not an approval system. It runs a hybrid model against the customer's profile but does NOT access the credit bureau in real time and does NOT commit Daniels to any financing decision. 'You are approved' based on the pre-screen is a false promise that can destroy trust when the formal application produces a different result. The correct language converts the result into forward momentum while setting accurate expectations."
+},
+
+{
+  section:"Pre-Screen Tool / Herramienta de Pre-Screen", pts:3,
+  q:"The Pre-Screen Tool result shows 'DECLINE — Hard Stop: Prior Daniels Default.' The customer has been friendly and engaged throughout. How do you handle this moment? / El resultado de la Herramienta de Pre-Screen muestra 'RECHAZO — Freno Absoluto: Default Previo con Daniels.' El cliente ha sido amigable y comprometido durante todo el proceso. ¿Cómo manejas este momento?",
+  scenario:null, sub:null,
+  opts:[
+    "Show the customer the screen and explain that the system found a prior default in their history. / Mostrarle al cliente la pantalla y explicar que el sistema encontró un default previo en su historial.",
+    "Tell them the tool is showing an issue and escalate to the approver immediately — do not interpret or share the specific decline reason with the customer. Treat it as 'the system needs the approver's review' and maintain their dignity. / Decirles que la herramienta muestra un problema y escalar al aprobador inmediatamente — no interpretar ni compartir la razón específica del rechazo con el cliente.",
+    "Tell the customer directly that they have a prior default with Daniels and cannot finance today. / Decirle al cliente directamente que tiene un default previo con Daniels y no puede financiar hoy.",
+    "Pretend the tool had a technical error and try entering the data again with different numbers. / Pretender que la herramienta tuvo un error técnico e intentar ingresar datos diferentes."
+  ],
+  correct:1,
+  explanation:"A hard stop on the pre-screen goes immediately to the approver — you do not interpret, explain, or share decline reasons with the customer. 'The system needs a second look from our credit team' is the correct bridge. Showing the customer a screen that says 'Prior Daniels Default' is humiliating and a privacy issue. The approver communicates the decision and the path forward (if any) — that is their role, not yours."
+},
+
+{
+  section:"Pre-Screen Tool / Herramienta de Pre-Screen", pts:3,
+  q:"The Pre-Screen Tool shows the customer qualifies for SNAP/Acima (lease-to-own) but NOT for in-house financing. They came in expecting to finance a $1,200 sofa set. How do you present this outcome constructively while being honest? / La Herramienta de Pre-Screen muestra que el cliente califica para SNAP/Acima (arrendamiento) pero NO para financiamiento en casa. Esperaban financiar un juego de sala de $1,200. ¿Cómo presentas este resultado constructivamente siendo honesto?",
+  scenario:null, sub:null,
+  opts:[
+    "Tell them lease-to-own is just like financing but with a different name — same thing. / Decirles que el arrendamiento es igual al financiamiento pero con otro nombre.",
+    "Tell them they did not qualify for financing and suggest they come back when their credit improves. / Decirles que no calificaron para financiamiento y sugerir que regresen cuando mejore su crédito.",
+    "Be honest about the path: 'The good news is we found an option that works — it is a lease-to-own program rather than traditional financing. It works differently in terms of total cost, but it means you can take your sofa home today. Our credit team will walk you through exactly how it works so you can decide if it is right for you.' / Ser honesto: 'La buena noticia es que encontramos una opción que funciona — es un programa de arrendamiento...'",
+    "Skip the pre-screen result and submit a formal in-house application anyway — the approver may find a different outcome. / Omitir el resultado del pre-screen y enviar una solicitud de financiamiento en casa de todas formas."
+  ],
+  correct:2,
+  explanation:"Honesty + forward momentum. Lease-to-own is NOT the same as financing (option A is false — it has a higher total cost and is a different legal structure). But it IS a real path to taking the sofa home today. Present it as good news (we found a path) + honest (it works differently) + next step (the credit team explains it so they can decide). Never misrepresent the product or submit applications you know will decline to appear helpful."
+},
+
+{
+  section:"Integration Scenario / Escenario de Integración", pts:3,
+  q:"Carlos enters the store. In pre-screening you learn: new to the area, furnishing a studio apartment, paid in cash at his last job but just started a new W2 job 3 weeks ago, wants to decide today, budget 'around $800-$1,000.' What are the two most critical things to address BEFORE showing him product? / Carlos entra a la tienda. En el pre-screening aprendes: nuevo en el área, amueblando un estudio, pagado en efectivo en su último trabajo pero acaba de empezar un trabajo W2 hace 3 semanas, quiere decidir hoy, presupuesto 'alrededor de $800-$1,000.' ¿Cuáles son las dos cosas más críticas ANTES de mostrar producto?",
+  scenario:null, sub:null,
+  opts:[
+    "Establish his color preference and whether he needs delivery. / Establecer su preferencia de color y si necesita entrega.",
+    "Clarify the studio layout (space constraints) and run the pre-screen tool to understand his financing path — his income situation (new W2 job, 3 weeks in) will determine what documents he needs and what financing options are available. / Aclarar el layout del estudio (restricciones de espacio) y correr el pre-screen para entender su camino de financiamiento.",
+    "Present your full sofa line starting with options in the $800-$1,000 range. / Presentar tu línea completa de sofás comenzando con opciones en el rango de $800-$1,000.",
+    "Confirm he is the sole decision maker and establish what he has seen elsewhere. / Confirmar que es el único tomador de decisiones y establecer qué ha visto en otros lugares."
+  ],
+  correct:1,
+  explanation:"Two high-priority pre-screen signals: (1) Studio = space constraints are real — you need dimensions before showing large sectionals. (2) New W2 job + previously cash-paid = non-standard income documentation. He has 3 weeks of pay stubs maximum + possibly bank statements from his cash era. Run the pre-screen first to understand what financing path is realistic, so you show him products in the range he can actually acquire today."
+},
+
+{
+  section:"Integration Scenario / Escenario de Integración", pts:3,
+  q:"A customer found a sofa on danielshomecenter.com before coming in. They pull it up on their phone and show you model #FN-4821-GRY — a gray fabric sofa listed at $799. You cannot find it on the floor. What is the ideal response sequence? / Un cliente encontró un sofá en danielshomecenter.com antes de venir. Te muestra el modelo #FN-4821-GRY en su teléfono — sofá de tela gris a $799. No lo puedes encontrar en el piso. ¿Cuál es la secuencia de respuesta ideal?",
+  scenario:null, sub:null,
+  opts:[
+    "Tell them floor models are different from online and they should choose something in the store. / Decirles que los modelos de piso son diferentes a los de línea y deben elegir algo en la tienda.",
+    "Pull up the same model on the store tablet to confirm availability and delivery timeline, acknowledge their research ('Great find — let me show you this one and what else sits around it at that price point'), then expand to Good/Better/Best from that anchor. / Abrir el mismo modelo en la tablet para confirmar disponibilidad y tiempo de entrega, reconocer su investigación y expandir a Bueno/Mejor/Óptimo desde ese ancla.",
+    "Look up the item in your inventory system to confirm if it is in the warehouse. / Buscar el artículo en tu sistema de inventario para confirmar si está en el almacén.",
+    "Tell them you can order it and it will arrive in 1-2 weeks. / Decirles que puedes ordenarlo y llegará en 1-2 semanas."
+  ],
+  correct:1,
+  explanation:"The customer already did their research — honor it and use it. Pull up the same item on the tablet (confirms availability and delivery in real time), validate their research, and use that specific product as the Entry Product anchor for your Good/Better/Best sequence. A digitally-researched customer who is met with 'that is different from what we have in store' feels dismissed. The correct move converts their online research into the floor conversation."
+},
+
+{
+  section:"Integration Scenario / Escenario de Integración", pts:3,
+  q:"Final integration: A customer wants a bedroom set, has FICO ~590, is self-employed with bank statements, spouse is co-applicant. Walk through the correct sequence of steps for this specific scenario. / Integración final: Un cliente quiere un juego de recámara, tiene FICO ~590, es autoemplado con estados de cuenta, el cónyuge es co-solicitante. ¿Cuál es la secuencia correcta de pasos para este escenario específico?",
+  scenario:null, sub:null,
+  opts:[
+    "Run pre-screen with both applicants' income → Good/Better/Best bedroom → Bundle → Protection → Collect 3 docs from BOTH applicants (both need ID, proof of address, proof of income) → Complete Infinity application for both → Twilio verification → Hand off to approver noting: self-employed income via bank statements, co-applicant present. / Correr pre-screen con ingresos de ambos → Bueno/Mejor/Óptimo → Bundle → Protección → Recopilar 3 docs de AMBOS → Solicitud Infinity para ambos → Twilio → Entregar al aprobador.",
+    "Skip the pre-screen since FICO 590 will likely result in SNAP/Acima anyway. / Omitir el pre-screen ya que FICO 590 probablemente resultará en SNAP/Acima de todas formas.",
+    "Collect documents from the primary applicant only — the spouse's income just gets added to the application. / Recopilar documentos solo del solicitante principal — los ingresos del cónyuge solo se agregan a la solicitud.",
+    "Run the Good/Better/Best first, close the product decision, then collect documents at the Finance Desk. / Correr Bueno/Mejor/Óptimo primero, cerrar la decisión de producto, luego recopilar documentos en la Mesa de Financiamiento."
+  ],
+  correct:0,
+  explanation:"Full scenario breakdown: (1) Pre-screen with BOTH incomes to know the realistic financing range before investing floor time. (2) Product journey informed by that range. (3) ALL three documents from BOTH applicants — when a spouse is co-applicant, both must provide ID, address proof, and income proof, and both must sign. (4) Note self-employed income documentation type for the approver. (5) Twilio is mandatory. (6) Flag all unusual circumstances in the approver handoff. This is the complete, correct execution."
+},
+
+{
+  section:"Haul Away Policy / Política de Recolección", pts:3,
+  q:"A customer is buying a new sofa and mentions their old sofa is in the garage, completely accessible. During delivery, the crew notices visible rodent droppings on the old sofa's cushions. What is the correct procedure? / Un cliente compra un sofá nuevo y menciona que el viejo está en el garaje, completamente accesible. Durante la entrega, la cuadrilla nota excremento de roedores visible en los cojines del sofá viejo. ¿Cuál es el procedimiento correcto?",
+  scenario:null, sub:null,
+  opts:[
+    "The crew must haul it away anyway since the customer already paid the $49.99 fee and it was accessible. / La cuadrilla debe llevárselo de todas formas ya que el cliente ya pagó la cuota de $49.99 y era accesible.",
+    "The driver/crew lead has full authority to reject the haul away on-site due to the contamination risk. They must take at least 3 photos, log 'Rejected — Health/Safety Risk' in Dispatch Track, and notify the Warehouse/Shipping supervisor the same day. Since the rejection was due to a condition created by the customer, Daniel's may retain the charge. / El conductor tiene autoridad total para rechazar en sitio. Debe tomar al menos 3 fotos, anotar 'Rechazado' en Dispatch Track, y notificar al supervisor el mismo día. Como la condición la causó el cliente, Daniel's puede retener el cargo.",
+    "The crew should offer to clean the sofa themselves before hauling it away. / La cuadrilla debe ofrecerse a limpiar el sofá ellos mismos antes de llevárselo.",
+    "The crew should haul it away but charge an additional contamination fee on the spot. / La cuadrilla debe llevárselo pero cobrar una tarifa adicional de contaminación en el momento."
+  ],
+  correct:1,
+  explanation:"The driver/crew lead has full on-site authority to reject a Haul Away for health/safety risks like rodent droppings — this protects the crew, the truck, and the warehouse. The required steps are exact: 3+ photos, Dispatch Track notation, same-day supervisor notification. Because the contamination was a customer-created condition (not a Daniel's error), the $49.99 charge may be retained — though a store manager can authorize a goodwill refund. Crews never clean contaminated items themselves; this exposes them to the exact risk the policy protects against."
+},
+
+{
+  section:"Haul Away Policy / Política de Recolección", pts:3,
+  q:"A customer purchasing a new mattress and box spring set asks if Daniel's will take away their old mattress set for free. They also ask about hauling away their old dining table separately. How should the associate respond regarding pricing and legal requirement? / Un cliente que compra un colchón nuevo pregunta si Daniel's se llevará el colchón viejo gratis. También pregunta sobre llevarse su mesa de comedor vieja por separado. ¿Cómo debe responder el asociado sobre el precio y el requisito legal?",
+  scenario:null, sub:null,
+  opts:[
+    "Both items qualify for free haul away since they are being picked up on the same delivery. / Ambos artículos califican para recolección gratuita ya que se recogen en la misma entrega.",
+    "Neither item qualifies for free haul away — both require the $49.99 fee. / Ninguno califica para recolección gratuita — ambos requieren la cuota de $49.99.",
+    "The mattress set qualifies for free haul away under California law (mattress take-back requirement) since it's offered at the time of delivery. The dining table is a separate furniture item and requires the standard $49.99 Haul Away fee. / El juego de colchón califica para recolección gratuita bajo la ley de California, ya que se ofrece al momento de la entrega. La mesa de comedor es un artículo separado y requiere la cuota estándar de $49.99.",
+    "Both items require a fee, but the mattress fee is discounted to $25 under state law. / Ambos artículos requieren cuota, pero la del colchón se descuenta a $25 bajo la ley estatal."
+  ],
+  correct:2,
+  explanation:"California law specifically mandates free mattress/box spring/futon take-back when offered at delivery time or within 30 days — this is a legal requirement, not a Daniel's courtesy. The dining table falls under category B (Furniture Haul Away — Paid) and requires the standard $49.99 fee per the SKU pricing. Associates must know this distinction clearly since it directly affects what they can legally promise a customer."
+},
+
+{
+  section:"Haul Away Policy / Política de Recolección", pts:3,
+  q:"A customer scheduling delivery of a bedroom set (headboard, footboard, rails, dresser, mirror, chest, and 2 nightstands) wants the matching old bedroom set hauled away, including 2 old nightstands. How many Haul Away fees apply and why? / Un cliente que programa entrega de un juego de recámara (cabecera, piecera, rieles, tocador, espejo, cómoda y 2 mesas de noche) quiere que se lleven el juego viejo, incluyendo 2 mesas de noche viejas. ¿Cuántas cuotas de Haul Away aplican y por qué?",
+  scenario:null, sub:null,
+  opts:[
+    "One fee total — bedroom sets are always a single flat fee regardless of pieces. / Una cuota total — los juegos de recámara siempre son una tarifa única sin importar las piezas.",
+    "One Haul Away fee covers the standard bedroom set (HB+FB+Rails+Dresser+Mirror+Chest+1 Nightstand). Since the customer has 2 nightstands, the second nightstand is an additional piece beyond the standard set and requires an extra Haul Away fee. / Una cuota cubre el set estándar. Como el cliente tiene 2 mesas de noche, la segunda es una pieza adicional fuera del set estándar y requiere cuota extra.",
+    "Two full set fees apply since there are 2 nightstands in the bedroom. / Aplican dos cuotas completas de set ya que hay 2 mesas de noche en la recámara.",
+    "No fee applies since it's a full room being replaced with a new purchase. / No aplica cuota ya que es un cuarto completo siendo reemplazado por una compra nueva."
+  ],
+  correct:1,
+  explanation:"The Bedroom Set classification specifically includes ONE nightstand in the standard set definition (HB+FB+Rails+Dresser+Mirror+Chest+1 Nightstand). Per the policy: 'Additional pieces beyond the standard set require an extra Haul Away fee.' The second nightstand falls outside that standard definition, triggering an additional charge. Associates must know exact set compositions to quote correctly and avoid under-charging or customer disputes at delivery."
+},
+
+{
+  section:"Haul Away Policy / Política de Recolección", pts:3,
+  q:"During the sales conversation, what THREE things must a sales associate communicate to the customer about Haul Away before the sale is finalized? / Durante la conversación de venta, ¿qué TRES cosas debe comunicar el asociado sobre Haul Away antes de finalizar la venta?",
+  scenario:null, sub:null,
+  opts:[
+    "Only the price of the service — the rest is handled by the delivery team on-site. / Solo el precio del servicio — el resto lo maneja el equipo de entrega en el sitio.",
+    "What Haul Away includes, the preparation requirements (item must be emptied, disconnected, accessible), and that possible rejection can occur due to safety/hygiene issues — plus that structural changes to the home (removing doors, railings) will not be performed. / Qué incluye Haul Away, los requisitos de preparación, y que puede haber rechazo por seguridad/higiene — además de que no se realizarán cambios estructurales al hogar.",
+    "Only the delivery date and time window. / Solo la fecha y ventana de entrega.",
+    "Just that the crew will handle everything on delivery day without any prior explanation needed. / Solo que la cuadrilla se encargará de todo el día de entrega sin necesidad de explicación previa."
+  ],
+  correct:1,
+  explanation:"Section 7 of the policy is explicit: Sales must inform customers about what's included, preparation requirements, possible rejection scenarios, and structural limitations — all BEFORE the sale closes, not at delivery. Setting these expectations upfront prevents disputes and failed pickups at the customer's door, which damage trust and cost the crew time. This is a sales responsibility, not just a delivery-day formality."
+},
+
+{
+  section:"Price Match Policy / Política de Igualación de Precio", pts:3,
+  q:"A customer brings in a screenshot on their phone (no visible URL or date) showing a sofa at a lower price from an online furniture store they found through a Google search. They insist this should qualify for a price match. What is the correct response? / Un cliente trae una captura de pantalla en su teléfono (sin URL ni fecha visible) mostrando un sofá a menor precio de una tienda en línea encontrada por Google. Insiste en que esto debe calificar. ¿Cuál es la respuesta correcta?",
+  scenario:null, sub:null,
+  opts:[
+    "Approve the price match since the customer is clearly showing a lower price in good faith. / Aprobar la igualación ya que el cliente claramente muestra un precio menor de buena fe.",
+    "Explain that the evidence does not qualify — screenshots without a visible date/URL are explicitly not accepted, and the store has not been verified as an Eligible Competitor. Offer to help look up the specific item online together to verify it properly. / Explicar que la evidencia no califica — las capturas sin URL/fecha visible no se aceptan, y la tienda no ha sido verificada como Competidor Elegible. Ofrecer buscar el artículo juntos para verificarlo correctamente.",
+    "Approve it but only if the manager is not available to ask. / Aprobarlo solo si el gerente no está disponible para preguntar.",
+    "Deny it permanently and tell the customer price matching is not available for any online stores. / Negarlo permanentemente y decirle que la igualación no aplica para ninguna tienda en línea."
+  ],
+  correct:1,
+  explanation:"Two separate disqualifiers here: (1) The proof itself fails — 'screenshots without date/URL' are explicitly listed as not accepted evidence. (2) The competitor's eligibility is unverified — an unknown online store found via search may not meet the Eligible Competitor criteria (factory-authorized, full-service, physical presence in Southern California). The correct move is constructive: explain why it doesn't qualify yet, and offer to verify properly rather than flatly refusing or improperly approving."
+},
+
+{
+  section:"Price Match Policy / Política de Igualación de Precio", pts:3,
+  q:"A customer found the exact same sofa model, same fabric, same configuration at Living Spaces for $150 less, with a valid printed ad showing the date. The price difference, including Living Spaces' delivery fee comparison, totals $180. Who can approve this price match? / Un cliente encontró el mismo modelo exacto de sofá, mismo tela, misma configuración en Living Spaces por $150 menos, con un anuncio impreso válido con fecha. La diferencia total, incluyendo comparación de cuota de entrega, es de $180. ¿Quién puede aprobar esta igualación?",
+  scenario:null, sub:null,
+  opts:[
+    "Only a Store Manager can approve any price match request, regardless of amount. / Solo un Gerente de Tienda puede aprobar cualquier solicitud, sin importar el monto.",
+    "The sales associate can approve this directly — it's under the $200 threshold associates are authorized to approve, and Living Spaces is a confirmed Eligible Competitor with valid, verifiable proof. / El asociado de ventas puede aprobarlo directamente — está bajo el límite de $200 que los asociados están autorizados a aprobar, y Living Spaces es un Competidor Elegible confirmado con prueba válida.",
+    "This requires corporate approval since it involves a delivery fee comparison. / Esto requiere aprobación corporativa ya que involucra comparación de cuota de entrega.",
+    "No one can approve it because the proof is a printed ad, not a digital one. / Nadie puede aprobarlo porque la prueba es un anuncio impreso, no digital."
+  ],
+  correct:1,
+  explanation:"Associates may approve differences up to $200 — this $180 variance is within that authority. Living Spaces is explicitly listed as an Eligible Competitor example. A printed advertisement with a date is valid proof per the policy. All conditions are met: identical product, eligible competitor, valid proof, within approval threshold. Escalation to a Store Manager is only required for larger variances or questionable/unverifiable cases — neither applies here."
+},
+
+{
+  section:"Price Match Policy / Política de Igualación de Precio", pts:3,
+  q:"A customer wants to price match a TV they saw advertised at Best Buy during a Black Friday doorbuster sale, sold and shipped by Best Buy directly. What is the correct determination? / Un cliente quiere igualar el precio de un TV que vio anunciado en Best Buy durante una venta doorbuster de Black Friday, vendido y enviado directamente por Best Buy. ¿Cuál es la determinación correcta?",
+  scenario:null, sub:null,
+  opts:[
+    "This qualifies — Best Buy is an Eligible Competitor and the item was sold/shipped by them directly. / Esto califica — Best Buy es un Competidor Elegible y el artículo fue vendido/enviado directamente por ellos.",
+    "This does NOT qualify — even though Best Buy is an Eligible Competitor and the item meets the 'sold and shipped by Best Buy' requirement, Black Friday doorbusters and flash sales are explicitly excluded offer types under the policy. / Esto NO califica — aunque Best Buy es Competidor Elegible y el artículo cumple el requisito de 'vendido y enviado por Best Buy', las ventas Black Friday doorbuster están explícitamente excluidas.",
+    "This qualifies only if the customer purchases on the same calendar day as Black Friday. / Esto califica solo si el cliente compra el mismo día calendario que el Black Friday.",
+    "This qualifies but only for half the price difference. / Esto califica pero solo por la mitad de la diferencia de precio."
+  ],
+  correct:1,
+  explanation:"This question tests whether associates can hold two criteria in mind at once: competitor eligibility AND offer type eligibility. Best Buy passes the competitor test (explicitly listed, and 'sold and shipped by Best Buy only' is specified in the examples). But Section 7.2 explicitly excludes 'Black Friday, Cyber Monday, doorbusters, flash sales' regardless of which retailer is running them. An eligible competitor does not override an excluded offer type — both conditions must pass independently."
+},
+
+{
+  section:"Price Match Policy / Política de Igualación de Precio", pts:3,
+  q:"A customer wants to price match a sectional, but the competitor's version has a chaise on the left side while the customer is buying the right-side configuration from Daniel's. The competitor's price is lower. What should the associate do? / Un cliente quiere igualar el precio de un seccional, pero la versión del competidor tiene el chaise del lado izquierdo mientras que el cliente compra la configuración del lado derecho en Daniel's. El precio del competidor es menor. ¿Qué debe hacer el asociado?",
+  scenario:null, sub:null,
+  opts:[
+    "Approve it since it's still technically the 'same sofa' just mirrored. / Aprobarlo ya que técnicamente es el 'mismo sofá' solo reflejado.",
+    "Deny it immediately without further review since the configuration doesn't match. / Negarlo inmediatamente sin más revisión ya que la configuración no coincide.",
+    "This must be escalated for mandatory review — sectional orientation differences are explicitly listed under Mandatory Escalation as a 'product variation' requiring manager-level judgment, since the policy requires items to be identical in configuration. / Esto debe escalarse para revisión obligatoria — las diferencias de orientación de seccionales están explícitamente listadas bajo Escalación Obligatoria como una 'variación de producto' que requiere juicio gerencial.",
+    "The associate can approve it as long as the price difference is under $50. / El asociado puede aprobarlo siempre que la diferencia de precio sea menor a $50."
+  ],
+  correct:2,
+  explanation:"Section 8.3 explicitly lists 'Product variations (fabric, configuration, sectional orientation, bundle sets)' under Mandatory Escalation. This isn't about the dollar amount — it's about the nature of the discrepancy. Sectional orientation is a named example specifically because it's a common gray-area case. Even a tiny price difference doesn't let an associate bypass mandatory escalation when the variation type itself requires manager judgment on whether 'identical' is satisfied."
+},
+
+{
+  section:"Return, Exchange & Warranty Policy / Política de Devolución, Cambio y Garantía", pts:3,
+  q:"A customer purchased a mattress 5 days ago and says they don't like how it feels — no defect, just personal preference. They want to return it for a refund. What is the correct response? / Un cliente compró un colchón hace 5 días y dice que no le gusta cómo se siente — sin defecto, solo preferencia personal. Quiere devolverlo por reembolso. ¿Cuál es la respuesta correcta?",
+  scenario:null, sub:null,
+  opts:[
+    "Approve the return since it's within the 7-day window and charge the standard 20% restocking fee. / Aprobar la devolución ya que está dentro de la ventana de 7 días y cobrar la cuota de reabastecimiento del 20%.",
+    "Mattresses are explicitly listed as non-returnable, final-sale merchandise regardless of timeline. The associate should explain this clearly: 'I understand your concern. This category is marked as final sale and the policy does not allow a return.' Then explore other options like service/comfort exchange programs if available. / Los colchones están explícitamente listados como mercancía de venta final, sin importar el plazo. El asociado debe explicar claramente que la categoría es de venta final.",
+    "Approve the return only if the customer agrees to a 50% restocking fee instead of 20%. / Aprobar la devolución solo si el cliente acepta una cuota de reabastecimiento del 50% en lugar de 20%.",
+    "Tell the customer to come back after 7 days when the return window has closed, at which point it becomes eligible for exchange instead. / Decirle al cliente que regrese después de 7 días cuando la ventana de devolución cierre, momento en el cual será elegible para cambio."
+  ],
+  correct:1,
+  explanation:"Mattresses are on the explicit non-returnable list regardless of the 7-day window — preference-based dissatisfaction doesn't override this. The 7-day/20% restocking fee rule applies to RETURNABLE categories only; it never applies to mattresses. The correct script from Section 3.3 acknowledges the concern without over-promising, then redirects to whatever legitimate alternative exists (the policy does not guarantee comfort exchanges — that would need separate verification)."
+},
+
+{
+  section:"Return, Exchange & Warranty Policy / Política de Devolución, Cambio y Garantía", pts:3,
+  q:"A customer's refrigerator (purchased for $899) stopped cooling properly 10 days after delivery. They want it exchanged. What is the correct procedure sequence? / El refrigerador de un cliente (comprado por $899) dejó de enfriar correctamente 10 días después de la entrega. Quiere que se lo cambien. ¿Cuál es la secuencia correcta del procedimiento?",
+  scenario:null, sub:null,
+  opts:[
+    "Since it's an appliance, immediately schedule a swap with the warehouse without further verification. / Ya que es un electrodoméstico, programar el cambio inmediatamente con el almacén sin más verificación.",
+    "Deny the exchange since 10 days exceeds the 7-day return window. / Negar el cambio ya que 10 días excede la ventana de devolución de 7 días.",
+    "This is an exchange (not return) for a defective item, within the 14-day exchange window. Per appliance-specific procedure: verify the timeline, gather photos, log the defect description, and submit to CS-Service for review before any swap is authorized — Service must confirm the defect type before approval. / Esto es un cambio (no devolución) por artículo defectuoso, dentro de la ventana de 14 días. Se debe verificar el plazo, reunir fotos, registrar la descripción del defecto y enviar a CS-Service para revisión antes de autorizar cualquier cambio.",
+    "Tell the customer only the manufacturer can handle this, not Daniel's. / Decirle al cliente que solo el fabricante puede manejar esto, no Daniel's."
+  ],
+  correct:2,
+  explanation:"Key distinction: defective items go through the EXCHANGE process (14-day window), not the return process (7-day window) — the customer is at day 10, which is fine for exchange but would be too late for a standard return. Appliances specifically require Service Department validation before any exchange is authorized (Section 8) — the CS associate cannot approve the swap alone; they gather evidence and route to CS-Service, who determines defect type and approves before Shipping schedules anything."
+},
+
+{
+  section:"Return, Exchange & Warranty Policy / Política de Devolución, Cambio y Garantía", pts:3,
+  q:"A customer bought an 'As-Is' dining table for $250, took it home, and 3 days later calls saying they noticed a small scratch and want to return it. What is the correct answer? / Un cliente compró una mesa de comedor 'As-Is' por $250, se la llevó a casa, y 3 días después llama diciendo que notó un rayón pequeño y quiere devolverla. ¿Cuál es la respuesta correcta?",
+  scenario:null, sub:null,
+  opts:[
+    "Since it's within 7 days, the standard return policy with 20% restocking fee applies. / Ya que está dentro de 7 días, aplica la política estándar de devolución con cuota de reabastecimiento del 20%.",
+    "As-Is items carry no manufacturer warranty and cannot be returned or exchanged after 48 hours of ownership — at 3 days, this window has already closed regardless of the issue described. / Los artículos 'As-Is' no tienen garantía del fabricante y no pueden devolverse ni cambiarse después de 48 horas de propiedad — a los 3 días, esta ventana ya cerró sin importar el problema descrito.",
+    "Since the item was already marked As-Is for cosmetic issues, any further scratches are automatically covered. / Ya que el artículo ya estaba marcado As-Is por problemas cosméticos, cualquier rayón adicional está automáticamente cubierto.",
+    "The 48-hour window only applies to pickup, not to return requests, so this can still be processed. / La ventana de 48 horas solo aplica para recolección, no para solicitudes de devolución, así que esto puede procesarse."
+  ],
+  correct:1,
+  explanation:"As-Is items operate on a completely separate, stricter rule: no returns or exchanges after 48 hours of ownership, period — this 48-hour window is shorter than the standard 7-day return window and applies regardless of the standard return policy. At 3 days (72+ hours), this customer is past the window. As-Is items are sold specifically because of their condition issues; new or additional cosmetic concerns don't reopen eligibility."
+},
+
+{
+  section:"Return, Exchange & Warranty Policy / Política de Devolución, Cambio y Garantía", pts:3,
+  q:"A customer's $350 microwave stopped working after 75 days. They call asking about warranty coverage. What coverage applies and what must the associate do first? / El microondas de $350 de un cliente dejó de funcionar después de 75 días. Llama preguntando sobre cobertura de garantía. ¿Qué cobertura aplica y qué debe hacer primero el asociado?",
+  scenario:null, sub:null,
+  opts:[
+    "No coverage applies since 75 days exceeds the 14-day exchange window. / No aplica cobertura ya que 75 días excede la ventana de cambio de 14 días.",
+    "Since the item is priced below $399, it falls under the 90-day manufacturer warranty coverage (not the standard 1-year for higher-priced items). At 75 days, this is still within coverage. The associate must open an Infinity case, attach details, and tag CS-Service for the manufacturer warranty claim process — not treat it as a standard exchange. / Ya que el artículo está por debajo de $399, cae bajo la cobertura de garantía del fabricante de 90 días. A los 75 días, sigue dentro de cobertura. El asociado debe abrir un caso en Infinity y etiquetar CS-Service.",
+    "The full 1-year manufacturer warranty applies regardless of price, so this is automatically covered. / Aplica la garantía completa de 1 año del fabricante sin importar el precio, así que esto está automáticamente cubierto.",
+    "The customer must pay full price for a replacement since exchanges only apply within 14 days of purchase. / El cliente debe pagar precio completo por un reemplazo ya que los cambios solo aplican dentro de 14 días de la compra."
+  ],
+  correct:1,
+  explanation:"This tests the critical price-based warranty distinction: items under $399 get 90-day coverage (not the standard 1-year). At $350, this microwave qualifies for the shorter window — and at 75 days, it's still inside that 90-day coverage. This is a WARRANTY claim (Section 5), separate from the 14-day EXCHANGE window for non-defective reselections — defective items past 14 days move into warranty territory, not exchange territory. The correct first step is always Infinity case + CS-Service tag, never an automatic swap."
+}
+
+]; // end QUESTIONS
+
+
+
+// ════ APP STATE ════════════════════════════════════════════════
+let state={empName:'',empId:'',empStore:'',current:0,answers:new Array(QUESTIONS.length).fill(null),answered:0,startTime:null,timerInterval:null,secondsLeft:3000,finished:false};
+
+function startExam(){
+  const n=document.getElementById('emp-name').value.trim();
+  const i=document.getElementById('emp-id').value.trim();
+  const s=document.getElementById('emp-store').value;
+  if(!n||!i||!s){alert('Please complete all fields / Por favor completa todos los campos');return;}
+  state.empName=n;state.empId=i;state.empStore=s;state.startTime=Date.now();
+  document.getElementById('screen-intro').classList.remove('active');
+  document.getElementById('screen-exam').classList.add('active');
+  document.getElementById('timer').style.display='block';
+  startTimer();renderQuestion();
+}
+
+function startTimer(){
+  state.timerInterval=setInterval(()=>{
+    state.secondsLeft--;updateTimerDisplay();
+    if(state.secondsLeft<=0){clearInterval(state.timerInterval);finishExam();}
+  },1000);
+}
+
+function updateTimerDisplay(){
+  const m=Math.floor(state.secondsLeft/60),s=state.secondsLeft%60;
+  const el=document.getElementById('timer');
+  el.textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  el.classList.toggle('warning',state.secondsLeft<=300);
+}
+
+function renderQuestion(){
+  const qi=state.current,q=QUESTIONS[qi];
+  document.getElementById('q-num').textContent=`Q${qi+1}`;
+  document.getElementById('q-pts').textContent=`${q.pts} pts`;
+  document.getElementById('q-section').textContent=q.section;
+  document.getElementById('q-text').textContent=q.q;
+  const scEl=document.getElementById('q-scenario');
+  if(q.scenario){scEl.textContent=q.scenario;scEl.style.display='block';}else{scEl.style.display='none';}
+  const subEl=document.getElementById('q-sub');
+  if(q.sub){subEl.textContent=q.sub;subEl.style.display='block';}else{subEl.style.display='none';}
+  const pct=((qi)/QUESTIONS.length*100).toFixed(0);
+  document.getElementById('progress-bar').style.width=`${pct}%`;
+  document.getElementById('progress-label').textContent=`Question ${qi+1} of ${QUESTIONS.length} / Pregunta ${qi+1} de ${QUESTIONS.length}`;
+  document.getElementById('q-answered').textContent=`${state.answered} of ${QUESTIONS.length} answered / de ${QUESTIONS.length} respondidas`;
+  const container=document.getElementById('q-options');container.innerHTML='';
+  const letters=['A','B','C','D'];
+  q.opts.forEach((opt,i)=>{
+    const div=document.createElement('div');
+    div.className='option'+(state.answers[qi]===i?' selected':'');
+    div.innerHTML=`<div class="option-letter">${letters[i]}</div><div class="option-text">${opt}</div>`;
+    if(state.answers[qi]===null)div.onclick=()=>selectAnswer(i);
+    container.appendChild(div);
+  });
+  const expEl=document.getElementById('q-explanation');
+  if(state.answers[qi]!==null){
+    expEl.innerHTML=`<strong>Explanation / Explicación:</strong> ${q.explanation}`;
+    expEl.classList.add('show');markAnswered(qi);
+  }else{expEl.classList.remove('show');expEl.textContent='';}
+  const btn=document.getElementById('btn-next');
+  if(qi===QUESTIONS.length-1){btn.textContent='Submit / Enviar';btn.onclick=()=>finishExam();}
+  else{btn.textContent='Next / Siguiente →';btn.onclick=()=>nextQuestion();}
+}
+
+function selectAnswer(optIdx){
+  if(state.answers[state.current]!==null)return;
+  state.answered++;state.answers[state.current]=optIdx;renderQuestion();
+}
+
+function markAnswered(qi){
+  const q=QUESTIONS[qi];
+  document.querySelectorAll('.option').forEach((el,i)=>{
+    el.onclick=null;
+    if(i===q.correct)el.classList.add('correct');
+    else if(i===state.answers[qi]&&i!==q.correct)el.classList.add('wrong');
+  });
+}
+
+function nextQuestion(){if(state.current<QUESTIONS.length-1){state.current++;renderQuestion();}}
+
+function finishExam(){
+  clearInterval(state.timerInterval);state.finished=true;
+  const elapsed=Math.floor((Date.now()-state.startTime)/1000);
+  const totalPts=QUESTIONS.reduce((s,q)=>s+q.pts,0);
+  let scored=0;QUESTIONS.forEach((q,i)=>{if(state.answers[i]===q.correct)scored+=q.pts;});
+  const correct=QUESTIONS.filter((q,i)=>state.answers[i]===q.correct).length;
+  const pct=Math.round(scored/totalPts*100);const pass=pct>=80;
+  document.getElementById('screen-exam').classList.remove('active');
+  document.getElementById('screen-results').classList.add('active');
+  document.getElementById('timer').style.display='none';
+  const circle=document.getElementById('score-circle');
+  circle.className='score-circle '+(pass?'pass':'fail');
+  document.getElementById('score-pct').textContent=pct+'%';
+  document.getElementById('result-status').textContent=pass?'🏆 CERTIFIED — PASSED / CERTIFICADO — APROBADO':'❌ NOT PASSED — RETRY REQUIRED / NO APROBADO — REINTENTAR';
+  document.getElementById('result-status').className='result-status '+(pass?'pass':'fail');
+  document.getElementById('result-sub').textContent=pass?`Score: ${pct}% (${scored}/${totalPts} pts) — Congratulations! / ¡Felicidades!`:`Score: ${pct}% (${scored}/${totalPts} pts) — Minimum required: 80%. Please review the manual. / Mínimo requerido: 80%.`;
+  document.getElementById('r-correct').textContent=correct;
+  document.getElementById('r-wrong').textContent=QUESTIONS.length-correct;
+  const em=Math.floor(elapsed/60),es=elapsed%60;
+  document.getElementById('r-time').textContent=`${String(em).padStart(2,'0')}:${String(es).padStart(2,'0')}`;
+  // Section breakdown
+  buildSectionBreakdown(pass);
+  if(pass)document.getElementById('btn-cert').style.display='block';
+  saveResultToSupabase(scored, totalPts, pct, pass, elapsed);
+  attemptCount++;
+  if (attemptCount >= MAX_ATTEMPTS) {
+    document.getElementById('btn-retake').style.display = 'none';
+    document.getElementById('attempts-locked-msg').style.display = 'block';
+  }
+}
+
+function buildSectionBreakdown(pass){
+  const sections={};
+  QUESTIONS.forEach((q,i)=>{
+    if(!sections[q.section])sections[q.section]={correct:0,total:0};
+    sections[q.section].total++;
+    if(state.answers[i]===q.correct)sections[q.section].correct++;
+  });
+  let html='<div style="margin-bottom:12px;font-weight:700;color:var(--navy);font-size:14px;">Performance by Module / Desempeño por Módulo:</div>';
+  Object.entries(sections).forEach(([sec,data])=>{
+    const pct=Math.round(data.correct/data.total*100);
+    const barClass=pct>=80?'green':pct>=60?'':' red';
+    html+=`<div class="sb-row"><div class="sb-label" style="font-size:11px">${sec}</div><div class="sb-bar-wrap"><div class="sb-bar${barClass}" style="width:${pct}%"></div></div><div class="sb-pct">${pct}%</div></div>`;
+  });
+  document.getElementById('section-breakdown').innerHTML=html;
+}
+
+function showCertificate(){
+  const totalPts=QUESTIONS.reduce((s,q)=>s+q.pts,0);
+  let scored=0;QUESTIONS.forEach((q,i)=>{if(state.answers[i]===q.correct)scored+=q.pts;});
+  const pct=Math.round(scored/totalPts*100);
+  const now=new Date();
+  const dateStr=now.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('cert-name').textContent=state.empName;
+  document.getElementById('cert-score').textContent=`Final Score: ${pct}% — ${scored}/${totalPts} pts`;
+  document.getElementById('cert-date').textContent=dateStr;
+  document.getElementById('cert-id').textContent=state.empId;
+  document.getElementById('cert-wrap').style.display='block';
+  document.getElementById('cert-wrap').scrollIntoView({behavior:'smooth'});
+}
+</script>
+</body>
+</html>

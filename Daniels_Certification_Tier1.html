@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daniels Sales Certification — Sales Tier 1: Process Fundamentals</title>
+<style>
+  :root {
+    --navy:#1B3A6B; --gold:#C8922A; --ltblue:#D6E4F7; --cream:#FFF8EC;
+    --green:#27AE60; --red:#C0392B; --gray:#F4F4F4; --dkgray:#3C3C3C;
+    --mgray:#6B6B6B; --white:#FFFFFF;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:Arial,sans-serif;background:#f0f2f5;color:var(--dkgray);min-height:100vh;}
+
+  .site-header{background:var(--navy);border-bottom:4px solid var(--gold);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;}
+  .site-header h1{color:var(--white);font-size:17px;font-weight:700;}
+  .site-header .sub{color:var(--gold);font-size:12px;margin-top:2px;}
+  .timer-box{background:var(--gold);color:var(--navy);padding:8px 18px;border-radius:6px;font-size:22px;font-weight:700;min-width:90px;text-align:center;display:none;}
+  .timer-box.warning{background:var(--red);color:var(--white);}
+
+  .screen{display:none;max-width:880px;margin:28px auto;padding:0 16px 60px;}
+  .screen.active{display:block;}
+  .card{background:var(--white);border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.10);padding:32px;}
+  .card-title{font-size:21px;font-weight:700;color:var(--navy);border-bottom:3px solid var(--gold);padding-bottom:12px;margin-bottom:20px;}
+
+  .intro-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0;}
+  .info-box{background:var(--ltblue);border:1px solid var(--navy);border-radius:8px;padding:13px 15px;}
+  .info-box .label{font-size:11px;text-transform:uppercase;color:var(--navy);font-weight:700;margin-bottom:3px;}
+  .info-box .value{font-size:14px;color:var(--dkgray);}
+  .warn-box{background:#fff3cd;border-left:4px solid var(--gold);border-radius:4px;padding:11px 15px;margin:14px 0;font-size:13px;}
+  .section-pill{display:inline-block;background:var(--navy);color:var(--white);font-size:10px;padding:2px 8px;border-radius:10px;margin-bottom:4px;font-weight:700;letter-spacing:.5px;}
+
+  .form-group{margin-bottom:18px;}
+  .form-group label{display:block;font-weight:700;color:var(--navy);margin-bottom:5px;font-size:14px;}
+  .form-group input,.form-group select{width:100%;padding:9px 12px;border:2px solid #ddd;border-radius:6px;font-size:15px;outline:none;transition:border .2s;}
+  .form-group input:focus,.form-group select:focus{border-color:var(--navy);}
+
+  .btn{display:inline-block;padding:11px 26px;border-radius:6px;font-size:15px;font-weight:700;cursor:pointer;border:none;transition:opacity .2s;}
+  .btn:hover{opacity:.88;}
+  .btn-primary{background:var(--navy);color:var(--white);}
+  .btn-gold{background:var(--gold);color:var(--white);}
+  .btn-block{width:100%;text-align:center;}
+
+  .progress-wrap{background:#ddd;border-radius:4px;height:8px;margin-bottom:5px;}
+  .progress-bar{background:var(--gold);height:8px;border-radius:4px;transition:width .3s;}
+  .progress-label{font-size:12px;color:var(--mgray);text-align:right;}
+
+  .q-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .q-badge{background:var(--navy);color:var(--white);font-size:11px;padding:3px 10px;border-radius:4px;font-weight:700;}
+  .q-pts{font-size:12px;color:var(--mgray);}
+  .q-section{font-size:11px;color:var(--gold);font-weight:700;text-transform:uppercase;margin-bottom:5px;}
+  .q-text{font-size:15px;font-weight:700;color:var(--dkgray);line-height:1.5;margin-bottom:6px;}
+  .q-sub{font-size:13px;color:var(--mgray);font-style:italic;margin-bottom:14px;}
+  .q-scenario{background:var(--ltblue);border-left:4px solid var(--navy);border-radius:4px;padding:10px 14px;margin-bottom:14px;font-size:13px;line-height:1.6;}
+
+  .options{display:flex;flex-direction:column;gap:9px;}
+  .option{display:flex;align-items:flex-start;gap:11px;padding:11px 15px;border:2px solid #ddd;border-radius:8px;cursor:pointer;transition:all .15s;background:var(--white);}
+  .option:hover{border-color:var(--navy);background:var(--ltblue);}
+  .option.selected{border-color:var(--navy);background:var(--ltblue);}
+  .option.correct{border-color:var(--green);background:#eaf7ea;}
+  .option.wrong{border-color:var(--red);background:#fdecea;}
+  .option-letter{width:27px;height:27px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;background:#eee;color:var(--dkgray);}
+  .option.selected .option-letter{background:var(--navy);color:var(--white);}
+  .option.correct .option-letter{background:var(--green);color:var(--white);}
+  .option.wrong .option-letter{background:var(--red);color:var(--white);}
+  .option-text{font-size:13.5px;line-height:1.5;padding-top:3px;}
+
+  .explanation{display:none;margin-top:13px;padding:11px 15px;border-left:4px solid var(--gold);background:var(--cream);border-radius:4px;font-size:13px;line-height:1.6;}
+  .explanation.show{display:block;}
+  .explanation strong{color:var(--navy);}
+
+  .q-nav{display:flex;justify-content:space-between;align-items:center;margin-top:22px;}
+  .q-counter{font-size:13px;color:var(--mgray);}
+
+  .score-circle{width:130px;height:130px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto 20px;border:6px solid var(--navy);background:var(--ltblue);}
+  .score-pct{font-size:36px;font-weight:700;color:var(--navy);}
+  .score-lbl{font-size:11px;color:var(--mgray);}
+  .score-circle.pass{border-color:var(--green);background:#eaf7ea;}
+  .score-circle.pass .score-pct{color:var(--green);}
+  .score-circle.fail{border-color:var(--red);background:#fdecea;}
+  .score-circle.fail .score-pct{color:var(--red);}
+  .result-status{text-align:center;font-size:21px;font-weight:700;margin-bottom:7px;}
+  .result-status.pass{color:var(--green);}
+  .result-status.fail{color:var(--red);}
+  .result-sub{text-align:center;color:var(--mgray);font-size:13px;margin-bottom:22px;}
+  .result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-bottom:22px;}
+  .result-stat{background:var(--gray);border-radius:8px;padding:13px;text-align:center;}
+  .result-stat .num{font-size:24px;font-weight:700;color:var(--navy);}
+  .result-stat .lbl{font-size:11px;color:var(--mgray);margin-top:2px;}
+
+  /* Section breakdown */
+  .section-breakdown{margin:20px 0;}
+  .sb-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+  .sb-label{font-size:12px;color:var(--dkgray);min-width:200px;}
+  .sb-bar-wrap{flex:1;background:#eee;border-radius:4px;height:10px;}
+  .sb-bar{height:10px;border-radius:4px;background:var(--gold);}
+  .sb-bar.green{background:var(--green);}
+  .sb-bar.red{background:var(--red);}
+  .sb-pct{font-size:12px;color:var(--mgray);min-width:35px;text-align:right;}
+
+  /* CERTIFICATE */
+  #cert-wrap{display:none;margin-top:24px;}
+  #certificate{background:var(--white);border:8px double var(--navy);border-radius:12px;padding:44px 52px;text-align:center;position:relative;}
+  #certificate::before{content:"";position:absolute;inset:8px;border:2px solid var(--gold);border-radius:8px;pointer-events:none;}
+  .cert-logo{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--mgray);margin-bottom:8px;}
+  .cert-company{font-size:26px;font-weight:700;color:var(--navy);margin-bottom:3px;}
+  .cert-divider{color:var(--gold);font-size:18px;margin:8px 0;}
+  .cert-badge-icon{font-size:44px;display:block;margin-bottom:6px;}
+  .cert-title-sm{font-size:12px;color:var(--mgray);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;}
+  .cert-title{font-size:22px;font-weight:700;color:var(--dkgray);margin-bottom:22px;}
+  .cert-certifies{font-size:13px;color:var(--mgray);margin-bottom:7px;font-style:italic;}
+  .cert-name{font-size:30px;font-weight:700;color:var(--navy);border-bottom:2px solid var(--gold);display:inline-block;padding-bottom:5px;margin-bottom:22px;}
+  .cert-body{font-size:13px;color:var(--dkgray);max-width:480px;margin:0 auto 18px;line-height:1.7;}
+  .cert-score-badge{display:inline-block;background:var(--navy);color:var(--white);padding:9px 26px;border-radius:28px;font-size:17px;font-weight:700;margin-bottom:22px;}
+  .cert-competencies{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-bottom:22px;}
+  .cert-comp{background:var(--ltblue);border:1px solid var(--navy);border-radius:6px;padding:7px 13px;font-size:11px;font-weight:700;color:var(--navy);}
+  .cert-footer{display:flex;justify-content:space-around;margin-top:22px;border-top:1px solid #eee;padding-top:18px;}
+  .cert-footer-item{text-align:center;}
+  .cert-footer-item .val{font-size:13px;font-weight:700;color:var(--navy);border-top:1px solid var(--navy);padding-top:5px;min-width:150px;}
+  .cert-footer-item .lbl{font-size:10px;color:var(--mgray);margin-top:3px;}
+
+  @media print{
+    .site-header,.btn,#result-actions,.no-print{display:none!important;}
+    #cert-wrap{display:block!important;}
+    body{background:white;}
+    .screen{padding:0;}
+  }
+</style>
+</head>
+<body>
+
+<div class="site-header">
+  <div>
+    <div class="sub">🏠 DANIELS HOME CENTER</div>
+    <h1>Sales Certification — Sales Tier 1: Process Fundamentals | 28 Questions | 75 Minutes</h1>
+  </div>
+  <div class="timer-box" id="timer">75:00</div>
+</div>
+
+<!-- INTRO -->
+<div class="screen active" id="screen-intro">
+  <div class="card">
+    <div class="card-title">Daniels Sales Certification — Sales Tier 1: Process Fundamentals</div>
+    <div class="intro-grid">
+      <div class="info-box"><div class="label">Questions</div><div class="value">28 questions · Multiple choice</div></div>
+      <div class="info-box"><div class="label">Time Limit</div><div class="value">75 minutes</div></div>
+      <div class="info-box"><div class="label">Passing Score</div><div class="value">80% (22 of 28 correct)</div></div>
+      <div class="info-box"><div class="label">Modules</div><div class="value">Sales Process · Pre-Screening · Objections · Service & Loyalty</div></div>
+    </div>
+    <div class="warn-box">⚠️ <strong>Important / Importante:</strong> Scenario-based questions. Read each carefully. Timer cannot be paused once started. / Preguntas basadas en escenarios. Léelas con cuidado. El temporizador no se puede pausar una vez iniciado.</div>
+    <hr style="border:none;border-top:2px solid var(--gold);margin:22px 0;">
+    <div class="form-group"><label>Full Name / Nombre Completo *</label><input type="text" id="emp-name" placeholder="Enter your full name"></div>
+    <div class="form-group"><label>Employee ID / ID de Empleado *</label><input type="text" id="emp-id" placeholder="e.g. DHC-001"></div>
+    <div class="form-group"><label>Store Location / Tienda *</label>
+      <select id="emp-store">
+        <option value="">— Select location —</option>
+        <option>Daniels Home Center — Main</option>
+        <option>Daniels Home Center — Other</option>
+      </select>
+    </div>
+    <div style="margin-top:22px"><button class="btn btn-primary btn-block" onclick="startExam()">Begin Assessment / Comenzar Evaluación →</button></div>
+  </div>
+</div>
+
+<!-- EXAM -->
+<div class="screen" id="screen-exam">
+  <div style="margin-bottom:11px">
+    <div class="progress-wrap"><div class="progress-bar" id="progress-bar" style="width:3%"></div></div>
+    <div class="progress-label" id="progress-label">Question 1 of 38</div>
+  </div>
+  <div class="card">
+    <div class="q-meta"><span class="q-badge" id="q-num">Q1</span><span class="q-pts" id="q-pts">3 pts</span></div>
+    <div class="q-section" id="q-section"></div>
+    <div class="q-text" id="q-text"></div>
+    <div class="q-scenario" id="q-scenario" style="display:none"></div>
+    <div class="q-sub" id="q-sub" style="display:none"></div>
+    <div class="options" id="q-options"></div>
+    <div class="explanation" id="q-explanation"></div>
+    <div class="q-nav">
+      <span class="q-counter" id="q-answered">0 of 38 answered</span>
+      <button class="btn btn-primary" id="btn-next" onclick="nextQuestion()">Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div class="screen" id="screen-results">
+  <div class="card">
+    <div class="card-title" id="result-title">Assessment Complete / Evaluación Completa</div>
+    <div class="score-circle" id="score-circle"><div class="score-pct" id="score-pct">--</div><div class="score-lbl">SCORE</div></div>
+    <div class="result-status" id="result-status"></div>
+    <div class="result-sub" id="result-sub"></div>
+    <div class="result-grid">
+      <div class="result-stat"><div class="num" id="r-correct">--</div><div class="lbl">Correct / Correctas</div></div>
+      <div class="result-stat"><div class="num" id="r-wrong">--</div><div class="lbl">Incorrect / Incorrectas</div></div>
+      <div class="result-stat"><div class="num" id="r-time">--</div><div class="lbl">Time Used / Tiempo</div></div>
+    </div>
+    <div class="section-breakdown" id="section-breakdown"></div>
+    <div id="result-actions">
+      <button class="btn btn-gold btn-block" id="btn-cert" onclick="showCertificate()" style="margin-bottom:10px;display:none">🏆 Download Certificate / Descargar Certificado</button>
+      <button class="btn btn-primary btn-block" id="btn-retake" onclick="handleRetake()" style="margin-bottom:10px">Retake / Reintentar</button>
+      <button class="btn btn-primary btn-block" style="background:var(--mgray)" onclick="backToDashboard()">← Back to Dashboard / Volver al Panel</button>
+      <div id="attempts-locked-msg" style="display:none;background:#fdecea;border-left:4px solid var(--red);color:var(--red);padding:14px 16px;border-radius:6px;font-size:13px;margin-top:10px;text-align:center;">
+        You have used all 3 attempts for this certification. Please see your manager to discuss next steps. / Has usado los 3 intentos disponibles. Contacta a tu gerente para los siguientes pasos.
+      </div>
+    </div>
+  </div>
+  <div id="cert-wrap">
+    <div id="certificate">
+      <div class="cert-logo">Daniels Home Center · Internal Certification Program</div>
+      <div class="cert-company">DANIELS HOME CENTER</div>
+      <div class="cert-divider">━━━━━━━━━━━━━━━━</div>
+      <span class="cert-badge-icon">🏆</span>
+      <div class="cert-title-sm">Certificate of Achievement</div>
+      <div class="cert-title">Sales Excellence — Tier 1 Certified</div>
+      <div class="cert-certifies">This certifies that / Este certificado acredita que</div>
+      <div class="cert-name" id="cert-name">—</div>
+      <div class="cert-body">has successfully completed the <strong>Daniels Sales Tier 1 Certification</strong>, demonstrating mastery of the core consultative sales process — the 7-Stage Customer Journey, pre-screening, Good/Better/Best, bundle &amp; protection selling, financing fundamentals, the close, service recovery, and objection handling.</div>
+      <div class="cert-score-badge" id="cert-score">Score: —%</div>
+      <div class="cert-competencies">
+        <div class="cert-comp">✓ Sales Process Mastery</div>
+        <div class="cert-comp">✓ Pre-Screening &amp; Discovery</div>
+        <div class="cert-comp">✓ Objection Handling</div>
+        <div class="cert-comp">✓ Service Recovery</div>
+        <div class="cert-comp">✓ Professional Standards</div>
+      </div>
+      <div class="cert-footer">
+        <div class="cert-footer-item"><div class="val" id="cert-date">—</div><div class="lbl">Date of Completion</div></div>
+        <div class="cert-footer-item"><div class="val" id="cert-id">—</div><div class="lbl">Employee ID</div></div>
+        <div class="cert-footer-item"><div class="val">Sales Excellence — Tier 1</div><div class="lbl">Certification Level</div></div>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-block no-print" style="margin-top:14px" onclick="window.print()">🖨️ Print / Save Certificate</button>
+  </div>
+</div>
+
+<script>
+
+
+// ════ SUPABASE CONFIG & EMPLOYEE CONTEXT ════════════════════════
+const SUPABASE_URL = 'https://ecfxeebhtgkbsdeuiueb.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_oRxEOMLizp1kjlsRjWWaxg_muaaMHFt';
+const TIER_KEY = 'tier1';
+
+async function sbFetch(path, options = {}) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Prefer': options.method === 'POST' ? 'return=representation' : undefined,
+      ...(options.headers || {})
+    }
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Supabase error ${res.status}: ${errText}`);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+let loggedInEmployee = null;
+
+async function loadEmployeeFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  const empId = params.get('emp');
+  if (!empId) return null;
+  try {
+    const rows = await sbFetch(`empleados?id=eq.${empId}&select=id,nombre_completo,employee_id,tienda`);
+    if (rows && rows.length > 0) return rows[0];
+  } catch (err) {
+    console.error('Could not load employee context:', err);
+  }
+  return null;
+}
+
+async function initEmployeeContext() {
+  loggedInEmployee = await loadEmployeeFromURL();
+  if (loggedInEmployee) {
+    // Pre-fill and lock the intro fields, skip manual entry
+    document.getElementById('emp-name').value = loggedInEmployee.nombre_completo;
+    document.getElementById('emp-id').value = loggedInEmployee.employee_id || '';
+    const storeSelect = document.getElementById('emp-store');
+    if (storeSelect && loggedInEmployee.tienda) {
+      for (const opt of storeSelect.options) {
+        if (opt.value === loggedInEmployee.tienda) { storeSelect.value = loggedInEmployee.tienda; break; }
+      }
+    }
+    document.getElementById('emp-name').readOnly = true;
+    document.getElementById('emp-id').readOnly = true;
+    if (storeSelect) storeSelect.disabled = true;
+
+    attemptCount = await checkAttemptCount();
+    if (attemptCount >= MAX_ATTEMPTS) {
+      document.querySelector('.card-title').insertAdjacentHTML('afterend',
+        `<div style="background:#fdecea;border-left:4px solid var(--red);color:var(--red);padding:14px 16px;border-radius:6px;font-size:14px;margin-bottom:18px;">
+          You have already used all ${MAX_ATTEMPTS} attempts for this certification. Please see your manager to discuss next steps. / Ya has usado los ${MAX_ATTEMPTS} intentos disponibles. Contacta a tu gerente.
+        </div>`);
+      document.querySelector('button[onclick="startExam()"]').disabled = true;
+      document.querySelector('button[onclick="startExam()"]').style.opacity = '0.5';
+      document.querySelector('button[onclick="startExam()"]').style.cursor = 'not-allowed';
+    } else if (attemptCount > 0) {
+      document.querySelector('.card-title').insertAdjacentHTML('afterend',
+        `<div style="background:#fff3cd;border-left:4px solid var(--gold);padding:12px 16px;border-radius:6px;font-size:13px;margin-bottom:18px;">
+          Attempt ${attemptCount + 1} of ${MAX_ATTEMPTS} / Intento ${attemptCount + 1} de ${MAX_ATTEMPTS}
+        </div>`);
+    }
+  }
+}
+
+async function saveResultToSupabase(scored, totalPts, pct, pass, elapsed) {
+  if (!loggedInEmployee) {
+    console.warn('No logged-in employee context — result not saved to Supabase.');
+    return;
+  }
+  const record = {
+    empleado_id: loggedInEmployee.id,
+    certificacion: TIER_KEY,
+    score: scored,
+    total_puntos: totalPts,
+    porcentaje: pct,
+    aprobado: pass,
+    tiempo_usado_segundos: elapsed,
+    detalle_respuestas: state.answers
+  };
+  try {
+    await sbFetch('certificaciones_progreso', {
+      method: 'POST',
+      body: JSON.stringify(record)
+    });
+    console.log('Result saved to Supabase successfully.');
+  } catch (err) {
+    console.error('Failed to save result to Supabase:', err);
+  }
+}
+
+
+let attemptCount = 0;
+const MAX_ATTEMPTS = 3;
+
+async function checkAttemptCount() {
+  if (!loggedInEmployee) return 0;
+  try {
+    const rows = await sbFetch(`certificaciones_progreso?empleado_id=eq.${loggedInEmployee.id}&certificacion=eq.tier1&select=id`);
+    return rows ? rows.length : 0;
+  } catch (err) {
+    console.error('Could not check attempt count:', err);
+    return 0;
+  }
+}
+
+function backToDashboard() {
+  window.location.href = 'Daniels_Vendor_Hub_Login.html';
+}
+
+function handleRetake() {
+  if (attemptCount >= MAX_ATTEMPTS) {
+    alert('You have used all {MAX_ATTEMPTS} attempts. Please see your manager.');
+    return;
+  }
+  location.reload();
+}
+
+document.addEventListener('DOMContentLoaded', initEmployeeContext);
+
+const QUESTIONS = [
+
+{
+  section:"Sales Fundamentals / Fundamentos de Ventas", pts:3,
+  q:"A customer walks in pointing at a sofa in your window display and says: 'I want that one — how much is it?' You check and the price is $1,299. What is the correct FIRST move? / Un cliente entra señalando un sofá en la vitrina y dice: '¿Cuánto cuesta ese?' El precio es $1,299. ¿Cuál es el PRIMER movimiento correcto?",
+  scenario:null, sub:null,
+  opts:[
+    "Quote the price immediately so they know if it's in their budget. / Dar el precio inmediatamente para que sepan si está en su presupuesto.",
+    "Acknowledge their interest, take them to the sofa, and immediately invite comparison: 'Great choice to start — let me show you this one and the two levels around it so you can decide with full information.' / Reconocer su interés, llevarlos al sofá e invitar comparación inmediata.",
+    "Tell them the $1,299 option is entry-level and they should look at something better first. / Decirles que la opción de $1,299 es de entrada y deberían ver algo mejor primero.",
+    "Ask pre-screening questions before showing them the sofa they asked about. / Hacer preguntas de pre-screening antes de mostrarles el sofá que pidieron."
+  ],
+  correct:1,
+  explanation:"Show → Respect → Expand. Never delay showing what they asked for — that creates friction. But immediately bridge to comparison: 'Let me also show you the levels around it.' Quoting price first anchors the conversation to cost before value exists. Ignoring the request to force pre-screening also breaks rapport at the first moment."
+},
+
+{
+  section:"Sales Fundamentals / Fundamentos de Ventas", pts:3,
+  q:"A customer has been on the floor for 20 minutes with an associate. The associate has explained features on 4 different sofas in great detail. The customer says 'I need to think about it.' What went wrong? / Un cliente estuvo 20 minutos en piso. El asociado explicó características de 4 sofás en detalle. El cliente dice 'necesito pensarlo.' ¿Qué salió mal?",
+  scenario:null, sub:null,
+  opts:[
+    "The associate showed too many options — should have shown only one. / El asociado mostró demasiadas opciones — debió mostrar solo una.",
+    "The associate over-explained instead of facilitating physical experience, never created emotional ownership, and likely skipped the close. Confusion kills sales. / El asociado sobre-explicó en lugar de facilitar la experiencia física, nunca creó propiedad emocional y probablemente omitió el cierre.",
+    "The associate did not offer financing early enough. / El asociado no ofreció financiamiento suficientemente temprano.",
+    "The associate should have created urgency by telling the customer the item was going out of stock. / El asociado debió crear urgencia diciendo que el artículo se estaba agotando."
+  ],
+  correct:1,
+  explanation:"'Value must be experienced, not explained.' 20 minutes of feature explanation without sitting, touching, or feeling = zero emotional ownership. The customer is not overloaded with products — they are under-engaged with any of them. The associate never facilitated an experience, never narrowed to a recommendation, and never asked for the decision."
+},
+
+{
+  section:"Sales Fundamentals / Fundamentos de Ventas", pts:3,
+  q:"Which of the following best describes what it means to be a 'Decision Guide' at Daniels — and NOT just an order taker? / ¿Cuál describe mejor lo que significa ser un 'Guía de Decisión' en Daniels — y NO solo un tomador de pedidos?",
+  scenario:null, sub:null,
+  opts:[
+    "Recommending the highest-priced product available in every category. / Recomendar el producto más caro disponible en cada categoría.",
+    "Following the customer's lead, showing only what they ask for, and processing the sale when they decide. / Seguir el liderazgo del cliente, mostrar solo lo que piden y procesar la venta cuando decidan.",
+    "Actively reducing uncertainty, expanding clarity on options, building confidence in the decision, and leading the process even when the customer wants to control it through price. / Reducir activamente la incertidumbre, ampliar la claridad sobre las opciones, construir confianza en la decisión y liderar el proceso.",
+    "Being available and friendly so the customer feels comfortable asking questions. / Estar disponible y amigable para que el cliente se sienta cómodo haciendo preguntas."
+  ],
+  correct:2,
+  explanation:"A Decision Guide actively leads — reduces uncertainty, increases clarity, builds conviction, and delivers the best solution. Not the fastest or the easiest. The customer who 'wants to control the process through price' is exactly who needs a Decision Guide most. Friendly availability is table stakes, not a role definition."
+},
+
+{
+  section:"Sales Fundamentals / Fundamentos de Ventas", pts:3,
+  q:"A customer says: 'I just want something basic — I don't need anything fancy.' Based on the Daniels sales truths, what is the most accurate interpretation of this statement? / Un cliente dice: 'Solo quiero algo básico — no necesito nada elegante.' ¿Cuál es la interpretación más precisa según las verdades de ventas Daniels?",
+  scenario:null, sub:null,
+  opts:[
+    "The customer has a clear preference and should be shown only entry-level options. / El cliente tiene una preferencia clara y debe ver solo opciones de entrada.",
+    "This is a price anchor and a signal of uncertainty, not a firm product decision. The associate's job is to discover what 'basic' actually means for their specific situation before concluding they only want entry-level. / Es un ancla de precio y señal de incertidumbre, no una decisión firme de producto.",
+    "The customer is budget-constrained and the associate should immediately introduce financing to expand their range. / El cliente tiene restricciones de presupuesto y el asociado debe introducir financiamiento inmediatamente.",
+    "The customer is a researcher and will likely not buy today. / El cliente está investigando y probablemente no comprará hoy."
+  ],
+  correct:1,
+  explanation:"'Customers don't resist price — they resist uncertainty.' 'I want something basic' is almost always a defensive anchor, not a true product preference. It means: 'I don't want to feel like I'm being sold to.' The correct response is curiosity — find out what their situation actually requires — before concluding they only qualify for entry-level."
+},
+
+{
+  section:"Stage 1: Pre-Screening / Etapa 1: Pre-Screening", pts:3,
+  q:"You are pre-screening a customer. They answer your questions about the room and their needs, but when you ask 'Do you usually prefer monthly comfort on larger purchases?' they say 'I'm paying cash.' What is the ideal response? / Estás en pre-screening. El cliente responde preguntas sobre el cuarto y sus necesidades, pero cuando preguntas '¿Prefiere comodidad mensual en compras grandes?' dice 'Pago en efectivo.' ¿Cuál es la respuesta ideal?",
+  scenario:null, sub:null,
+  opts:[
+    "'Perfect — that actually makes this easier. Let me show you what we have that fits your situation.' Continue the pre-screening and note cash preference. / 'Perfecto — eso facilita las cosas. Déjame mostrarte lo que tenemos.' Continúa el pre-screening y anota preferencia en efectivo.",
+    "Move immediately to showing products since financing is off the table. / Pasar inmediatamente a mostrar productos ya que el financiamiento está descartado.",
+    "Explain the benefits of financing anyway in case they change their mind. / Explicar los beneficios del financiamiento de todas formas por si cambian de opinión.",
+    "Ask how much cash they have available to set a hard budget ceiling. / Preguntar cuánto efectivo tienen disponible para establecer un techo de presupuesto."
+  ],
+  correct:0,
+  explanation:"Cash preference is a qualifier, not a barrier. Acknowledge it positively and move on — don't push financing on a cash customer (that's tone-deaf) and don't ask for their cash amount (invasive). The pre-screening continues normally; you now know they won't need the financing stage. The bundle, protection, and close stages still apply fully."
+},
+
+{
+  section:"Stage 1: Pre-Screening / Etapa 1: Pre-Screening", pts:3,
+  q:"A new customer walks in and says 'I'm just looking.' Which SPIN move should you make in the first 60 seconds to stay in the conversation without pressure? / Un cliente nuevo entra y dice 'Solo estoy viendo.' ¿Qué movimiento SPIN debes hacer en los primeros 60 segundos para mantenerte en la conversación sin presión?",
+  scenario:null, sub:null,
+  opts:[
+    "(S) 'Great — are you looking for anything in particular, or just getting a feel for the store?' Then listen completely before asking anything else. / (S) 'Perfecto — ¿busca algo en particular o solo explorando la tienda?' Luego escuchar completamente.",
+    "(I) Immediately explain the risk of waiting too long to buy furniture during promotional periods. / (I) Explicar inmediatamente el riesgo de esperar demasiado para comprar durante períodos promocionales.",
+    "(N) Ask them what the ideal solution for their home would look like. / (N) Preguntar cómo se vería la solución ideal para su hogar.",
+    "Let them browse alone for 5-10 minutes before approaching. / Dejarlos explorar solos 5-10 minutos antes de acercarse."
+  ],
+  correct:0,
+  explanation:"'Just looking' is a defense mechanism, not a dismissal. The correct SPIN entry is a soft Situation question that invites conversation without creating pressure. It validates their browsing while opening a door. Jumping to Implication or Need-Payoff without establishing Situation first feels like an interrogation. 5-10 minutes of abandonment loses control of the interaction entirely."
+},
+
+{
+  section:"Stage 1: Pre-Screening / Etapa 1: Pre-Screening", pts:3,
+  q:"During pre-screening you discover the customer is furnishing a new 2-bedroom apartment, has a partner who is not present, and they are 'hoping to decide today.' Which two factors should most shape how you structure the rest of the interaction? / Durante el pre-screening descubres que el cliente está amueblando un apartamento nuevo de 2 recámaras, tiene una pareja que no está presente y 'espera decidir hoy.' ¿Qué dos factores deben dar forma al resto de la interacción?",
+  scenario:null, sub:null,
+  opts:[
+    "2-bedroom scope (potential multi-room sale) AND absent partner (address decision authority before investing full floor time). / Alcance de 2 recámaras (posible venta multi-cuarto) Y pareja ausente (abordar autoridad de decisión antes de invertir tiempo completo).",
+    "Urgency to decide today AND the size of the apartment to estimate delivery logistics. / Urgencia para decidir hoy Y el tamaño del apartamento para estimar logística de entrega.",
+    "Partner not present (postpone the sale) AND 2-bedroom scope (show bedroom first). / Pareja no presente (posponer la venta) Y alcance de 2 recámaras (mostrar recámara primero).",
+    "Budget range AND delivery timeline, since they want to decide today. / Rango de presupuesto Y tiempo de entrega, ya que quieren decidir hoy."
+  ],
+  correct:0,
+  explanation:"Two critical pre-screening signals: (1) 2-bedroom = room for bundle expansion — living room, bedroom, potentially both. Start there. (2) Absent partner = potential close-killer at the end. Address it early: 'Can we get them on a quick call when we find the right option?' Don't invest 45 minutes only to hear 'I need to check with my partner' at the close."
+},
+
+{
+  section:"Stage 3: Good / Better / Best", pts:3,
+  q:"You are presenting 3 sectionals. The customer keeps touching the GOOD option and says 'This feels fine to me.' You know the BETTER option has significantly superior cushion construction. What is the single most effective next move? / Presentas 3 seccionales. El cliente sigue tocando la opción BUENA y dice 'Esta se siente bien.' Sabes que la MEJOR tiene construcción de cojín superior. ¿Cuál es el siguiente movimiento más efectivo?",
+  scenario:null, sub:null,
+  opts:[
+    "Tell them the Good option wears out faster and they will regret it. / Decirles que la opción Buena se desgasta más rápido y se arrepentirán.",
+    "Agree it feels fine and present the price difference between Good and Better. / Estar de acuerdo en que se siente bien y presentar la diferencia de precio entre Bueno y Mejor.",
+    "Say nothing — guide them physically to the Better option: 'Do me a favor — sit in this one for 30 seconds and compare. Just feel the difference.' Then be quiet. / No decir nada — guiarlos físicamente a la opción Mejor: 'Siéntese en esta 30 segundos y compare. Solo sienta la diferencia.' Luego callarse.",
+    "Explain the technical differences in foam density and fabric rub count between the two options. / Explicar las diferencias técnicas en densidad de espuma y recuento de fricciones entre las dos opciones."
+  ],
+  correct:2,
+  explanation:"'Stop explaining. Start facilitating.' The Golden Rule of Stage 3. The customer saying 'this feels fine' has not yet experienced the difference — they are making a judgment without data. The move is to create the physical comparison, then be quiet. The product closes; your words slow the sale. Technical explanations after 'this feels fine' land on deaf ears."
+},
+
+{
+  section:"Stage 3: Good / Better / Best", pts:3,
+  q:"A customer is considering a bedroom set. They ask: 'What's the difference between the $899 and the $1,299 set — they look the same to me.' Using the 4 Cs, which answer is most complete and effective? / Un cliente considera un juego de recámara. Pregunta: '¿Cuál es la diferencia entre el de $899 y el de $1,299 — se ven igual?' Usando los 4 Cs, ¿cuál respuesta es más completa y efectiva?",
+  scenario:null, sub:null,
+  opts:[
+    "'The $1,299 set is a higher-end brand with better reviews.' / 'El juego de $1,299 es una marca de mayor gama con mejores reseñas.'",
+    "'The main difference is $400 — but you get a lot more for that.' / 'La diferencia principal son $400 — pero obtienes mucho más por eso.'",
+    "'Great question — let me show you exactly. Run your hand across this drawer — feel how smooth it glides? That is dovetail construction versus a staple joint. The cover on this one is solid wood versus MDF veneer. Over 5 years of daily use, one holds its finish and the other shows wear. That is the $400.' / '¡Buena pregunta! Desliza tu mano en este cajón — ¿sientes qué suave corre? Esa es la diferencia en construcción.'",
+    "'The $1,299 set has better wood and will last longer — it is worth the investment.' / 'El juego de $1,299 tiene mejor madera y durará más — vale la inversión.'"
+  ],
+  correct:2,
+  explanation:"The 4 Cs (Comfort, Cover, Cushion, Construction) are your upgrade language. The answer that wins uses a physical demonstration (touch the drawer) and translates abstract quality into a concrete, time-based consequence (5 years of daily use). 'Better reviews' is lazy. 'Worth it' is an opinion. 'Feel the difference and here is why it matters over time' is consultative selling."
+},
+
+{
+  section:"Stage 3: Good / Better / Best", pts:3,
+  q:"You have presented Good/Better/Best. The customer looks at all three, then points to the BEST option and says 'That one is way out of my range.' What is the correct interpretation and response? / Presentaste Bueno/Mejor/Óptimo. El cliente mira los tres, señala el ÓPTIMO y dice 'Ese está muy fuera de mi rango.' ¿Cuál es la interpretación y respuesta correcta?",
+  scenario:null, sub:null,
+  opts:[
+    "The customer has confirmed their budget ceiling — move immediately to the Good option. / El cliente confirmó su techo de presupuesto — pasar inmediatamente a la opción Buena.",
+    "The presentation worked correctly — the BEST option elevated the perception of BETTER. Respond: 'Totally understand — most customers land right here on the Better level. Here is exactly why this one makes sense for what you told me.' / La presentación funcionó correctamente — el ÓPTIMO elevó la percepción del MEJOR. Responder: 'Entiendo — la mayoría de los clientes eligen el nivel Mejor.'",
+    "Offer a discount on the BEST option to bring it into range. / Ofrecer un descuento en la opción ÓPTIMA para ponerla en rango.",
+    "Ask them what their actual budget is before continuing. / Preguntarles cuál es su presupuesto real antes de continuar."
+  ],
+  correct:1,
+  explanation:"This is the Compromise Effect working exactly as designed. The BEST option exists to make BETTER look like the smart, balanced choice — and that just happened. 'Out of my range' about BEST is not a problem; it's confirmation that BETTER is now positioned perfectly. Move directly to BETTER with confidence and connect it to what they told you in pre-screening."
+},
+
+{
+  section:"Stage 4 & 5: Bundle & Protection / Bundle y Protección", pts:3,
+  q:"A customer has selected a sofa and ottoman. They seem happy and ready to go to the register. You have not yet presented the bundle (rug, lamps, accent chair) or the protection plan. What is the professional standard here? / Un cliente eligió un sofá y un ottoman. Parecen listos para ir a la caja. Aún no presentaste el bundle ni el plan de protección. ¿Cuál es el estándar profesional?",
+  scenario:null, sub:null,
+  opts:[
+    "Let them go — they seem decided and pushing more items risks the sale. / Dejarlos ir — parecen decididos y presionar más artículos arriesga la venta.",
+    "Mention the protection plan quickly at the register — it is too late for the bundle. / Mencionar el plan de protección rápido en la caja — ya es tarde para el bundle.",
+    "Both the bundle AND the protection plan are non-negotiable steps. Present both before going to the register: 'Before we go — let me show you how the full room looks together, and I also want to cover one thing about protecting what you are taking home today.' / Tanto el bundle COMO el plan de protección son pasos no negociables. Presentar ambos antes de ir a la caja.",
+    "Ask if they want to see anything else — if they say no, proceed to the register. / Preguntar si quieren ver algo más — si dicen no, proceder a la caja."
+  ],
+  correct:2,
+  explanation:"Rules 3 and 4 of the 7 Non-Negotiables: 'Bundle every sale' and 'Offer protection always — no exceptions.' Both are mandatory before the register. 'They seem ready' is not a reason to skip steps — it is a reason to be efficient, not to omit. The language bridges naturally: 'Before we finalize this — one more thing I want to show you.' Never frame it as a question ('do you want to see anything else') — that invites a no."
+},
+
+{
+  section:"Stage 4 & 5: Bundle & Protection / Bundle y Protección", pts:3,
+  q:"A customer buying a dining room set ($1,400) with 3 young children declines the protection plan saying 'We're pretty careful.' What is the strongest concrete response? / Un cliente que compra un juego de comedor ($1,400) con 3 hijos pequeños declina el plan de protección diciendo 'Somos bastante cuidadosos.' ¿Cuál es la respuesta concreta más fuerte?",
+  scenario:null, sub:null,
+  opts:[
+    "'I respect that — it is optional. Let us go to the register.' / 'Lo respeto — es opcional. Vamos a la caja.'",
+    "'Most careful families still get it — you never know.' / 'La mayoría de las familias cuidadosas igual lo obtienen — nunca se sabe.'",
+    "Feel-Felt-Found + concrete number: 'I hear you — most families with young kids feel exactly that way. What they found is that a single food or liquid stain on dining fabric runs $150-$250 to clean professionally — per incident. With three kids, that is not an 'if' — it is a 'when.' This plan costs less than two cleanings and covers everything for the life of the furniture.' / Feel-Felt-Found + número concreto: '...una sola mancha en tela de comedor cuesta $150-$250 limpiar profesionalmente — por incidente.'",
+    "'This protection plan is only available right now — you cannot add it later.' / 'Este plan solo está disponible ahora — no lo puede agregar después.'"
+  ],
+  correct:2,
+  explanation:"Feel-Felt-Found is the framework. But the power is in the concrete number tied to THEIR exact situation — 3 kids + dining fabric = near-certain incidents. '$150-$250 per cleaning, per incident' transforms 'optional cost' into 'obvious math.' The 'only available now' angle is true but feels like pressure without a reason — always lead with the value argument first."
+},
+
+{
+  section:"Stage 4 & 5: Bundle & Protection / Bundle y Protección", pts:3,
+  q:"At the Finance Desk, the customer says they want to add the protection plan 'next month when I get paid.' What is the accurate and complete response? / En la Mesa de Financiamiento, el cliente dice que quiere agregar el plan de protección 'el próximo mes cuando me paguen.' ¿Cuál es la respuesta precisa y completa?",
+  scenario:null, sub:null,
+  opts:[
+    "Note it in the order and tell them to call when ready. / Anotarlo en el pedido y decirles que llamen cuando estén listos.",
+    "Agree and add a reminder to follow up next month. / Estar de acuerdo y agregar un recordatorio para dar seguimiento el próximo mes.",
+    "Inform them clearly that the protection plan is only available at the time of purchase — it cannot be added after delivery at this price or at all. Give one final concrete reason: 'Once your furniture leaves today unprotected, any damage that happens before you add coverage would not be covered regardless. This is your one window.' / Informarles claramente que el plan solo está disponible al momento de la compra.",
+    "Tell them the plan will be more expensive later if they wait. / Decirles que el plan será más caro después si esperan."
+  ],
+  correct:2,
+  explanation:"This is not negotiable or deferrable — the protection plan window closes at delivery. The associate must communicate this clearly and with a reason: anything that happens to unprotected furniture between now and a hypothetical future enrollment is not covered. This is factual, not pressure. Option D (more expensive later) is false — there is no later at all."
+},
+
+{
+  section:"Stage 6 & 7: Financing & Close / Financiamiento y Cierre", pts:3,
+  q:"A customer's total purchase is $2,800 for a living room set. After the bundle and protection plan are presented and accepted, they say 'That total is too high.' What is the correct sequence of responses? / El total de un cliente es $2,800 por un juego de sala. Después de que se presentó y aceptó el bundle y el plan de protección, dice 'Ese total es muy alto.' ¿Cuál es la secuencia correcta de respuestas?",
+  scenario:null, sub:null,
+  opts:[
+    "Remove the protection plan to lower the total. / Quitar el plan de protección para bajar el total.",
+    "Reframe to monthly: 'On our 24-month plan that is about $117/month — for a complete living room you will use every day for 10+ years. That is less than $4 a day.' If they are still hesitant, offer to adjust the term to change the monthly. Never reduce items first. / Replantear a mensual: 'En nuestro plan a 24 meses son aproximadamente $117/mes...'",
+    "Offer a discount on the sofa to make the total more manageable. / Ofrecer un descuento en el sofá para hacer el total más manejable.",
+    "Ask them what total they were expecting to pay and rebuild the order from there. / Preguntarles qué total esperaban pagar y reconstruir el pedido desde ahí."
+  ],
+  correct:1,
+  explanation:"The Monthly Reframe converts total sticker shock into a daily/monthly reality. $117/month for a complete living room used daily for 10+ years is a fundamentally different psychological frame than $2,800. Never be the first to remove items — that validates price as the problem and devalues everything you built. If the monthly is still a concern, adjust term length, not items."
+},
+
+{
+  section:"Stage 6 & 7: Financing & Close / Financiamiento y Cierre", pts:3,
+  q:"You have completed all 7 stages. You do your recap and ask: 'Shall we get this started?' The customer is silent for 8 seconds, then says 'I don't know...' What is the most professional response? / Completaste las 7 etapas. Haces el recap y preguntas: '¿Lo preparamos?' El cliente está en silencio 8 segundos y luego dice 'No sé...' ¿Cuál es la respuesta más profesional?",
+  scenario:null, sub:null,
+  opts:[
+    "Immediately offer a price reduction to push them over the line. / Ofrecer inmediatamente una reducción de precio para empujarlos a decidir.",
+    "Say 'Take your time — I will be here when you are ready.' and step back. / Decir 'Tómese su tiempo — estaré aquí cuando esté listo' y alejarse.",
+    "Hold the silence for 2-3 more seconds, then diagnose calmly: 'Of course — can I ask, is it the product itself, something about the timing, or is there a specific question I have not answered yet?' Then listen completely before responding. / Mantener el silencio 2-3 segundos más, luego diagnosticar: '¿Es el producto, el momento, o hay una pregunta que no respondí?'",
+    "Recap the value one more time in detail to reinforce the decision. / Hacer el recap del valor una vez más en detalle para reforzar la decisión."
+  ],
+  correct:2,
+  explanation:"'Hesitation is not rejection — it is a request for more certainty.' The 8 seconds of silence is discomfort, not a no. Hold the silence first (pressure-free), then diagnose the specific blocker before doing anything else. Reducing price first trains hesitation as a negotiation tactic. Stepping back surrenders the sale. Re-recapping before knowing what is blocking adds noise, not clarity."
+},
+
+{
+  section:"Stage 6 & 7: Financing & Close / Financiamiento y Cierre", pts:3,
+  q:"Which of the following is the correct Assumptive Close language, and why does it work better than asking a direct question? / ¿Cuál es el lenguaje correcto del Cierre por Suposición, y por qué funciona mejor que hacer una pregunta directa?",
+  scenario:null, sub:null,
+  opts:[
+    "'Are you ready to buy today?' — direct and honest. / '¿Está listo para comprar hoy?' — directo y honesto.",
+    "'Would you like to move forward with this?' — gives the customer control. / '¿Le gustaría proceder con esto?' — da control al cliente.",
+    "'Let me get this put together for you' — assumes the customer is buying, which is professional leadership, not pressure. It moves the interaction forward without creating a yes/no decision point that could trigger hesitation. / 'Déjame preparar esto para usted' — asume que el cliente está comprando, lo cual es liderazgo profesional, no presión.",
+    "'I think this is the right choice for you — shall we finalize?' — confident recommendation plus a question. / 'Creo que esta es la elección correcta — ¿finalizamos?' — recomendación más pregunta."
+  ],
+  correct:2,
+  explanation:"The Assumptive Close works because it treats the decision as already made — not arrogantly, but with professional confidence earned through a well-executed process. 'Are you ready to buy?' creates a binary yes/no that can trigger defensive hesitation. 'Let me get this put together' moves forward smoothly. The customer who wants to stop will stop; the customer who is on the fence follows the confident guide."
+},
+
+{
+  section:"Service Recovery & Loyalty / Recuperación y Lealtad", pts:3,
+  q:"A customer calls furious — their sofa was delivered damaged. They are demanding a full refund and threatening to post a negative review. You take the call. What are the first TWO steps in exact order? / Un cliente llama furioso — su sofá fue entregado dañado. Exige reembolso completo y amenaza con reseña negativa. Tomas la llamada. ¿Cuáles son los primeros DOS pasos en orden exacto?",
+  scenario:null, sub:null,
+  opts:[
+    "Apologize immediately and offer a replacement or discount to de-escalate. / Disculparse inmediatamente y ofrecer un reemplazo o descuento para reducir la tensión.",
+    "Explain the delivery and return policy clearly before the customer can escalate further. / Explicar la política de entrega y devolución claramente antes de que el cliente escale más.",
+    "(1) Stay calm — do not match their emotional intensity. (2) Listen fully without interrupting, defending, or explaining while they speak. Only after they have finished do you acknowledge. / (1) Mantener la calma — no igualar su intensidad emocional. (2) Escuchar completamente sin interrumpir, defender ni explicar mientras hablan.",
+    "Transfer immediately to a manager since the customer is threatening a review. / Transferir inmediatamente a un gerente ya que el cliente amenaza con una reseña."
+  ],
+  correct:2,
+  explanation:"The 7-Step Recovery Protocol starts with: (1) Stay Calm, (2) Listen Fully. Both before anything else. The most common mistake is jumping to apologies, offers, or policy explanations before the customer has been heard. Interrupting or defending while they are speaking escalates. Transferring immediately signals that you cannot handle it. Calm listening de-escalates before any solution is presented."
+},
+
+{
+  section:"Service Recovery & Loyalty / Recuperación y Lealtad", pts:3,
+  q:"30 days after a customer's delivery, you make the follow-up call. They say everything arrived fine but the throw pillows they bought do not match as well as they expected. What is the best response? / 30 días después de la entrega, haces la llamada de seguimiento. El cliente dice que todo llegó bien pero los cojines no combinan tan bien como esperaban. ¿Cuál es la mejor respuesta?",
+  scenario:null, sub:null,
+  opts:[
+    "Apologize and tell them to come in to exchange them. / Disculparse y decirles que vengan a cambiarlos.",
+    "Thank them for the feedback and note it for future sales. / Agradecerles el comentario y anotarlo para ventas futuras.",
+    "Turn it into a service and sales moment: 'I am glad you told me — let me look at what we have that would complement your set better. I can pull up some options right now and you can come in when you are ready, or I can send you some photos.' You just opened a re-engagement. / Convertirlo en un momento de servicio y ventas: 'Me alegra que me lo diga — déjame ver qué tenemos que combine mejor...'",
+    "Suggest they check the website for accent pillow options that might work better. / Sugerirles que revisen el sitio web para opciones de cojines de acento."
+  ],
+  correct:2,
+  explanation:"The 30-day call is not just a courtesy — it is a loyalty and re-engagement touchpoint. A customer who mentions something is not completely right has just opened a door. The professional move is to solve it personally, actively, and use it to bring them back into a buying conversation. Sending them to the website is a missed opportunity. Apologizing and moving on leaves money on the table."
+},
+
+{
+  section:"Service Recovery & Loyalty / Recuperación y Lealtad", pts:3,
+  q:"Which of the following is the single highest-ROI post-purchase action an associate can take, according to the Daniels system? / ¿Cuál de las siguientes es la acción post-compra de mayor ROI que puede tomar un asociado, según el sistema Daniels?",
+  scenario:null, sub:null,
+  opts:[
+    "Sending an automated 'thank you' email within 24 hours. / Enviar un correo de 'gracias' automatizado en 24 horas.",
+    "Making a personal phone call within 48 hours of delivery — not automated, not a text, a real conversation. / Hacer una llamada telefónica personal en las 48 horas después de la entrega — no automatizada, no un mensaje, una conversación real.",
+    "Tagging the customer on social media with their new furniture. / Etiquetar al cliente en redes sociales con su nuevo mueble.",
+    "Sending a promotional text when new inventory arrives that matches what they bought. / Enviar un mensaje promocional cuando llegue nuevo inventario que coincida con lo que compraron."
+  ],
+  correct:1,
+  explanation:"A personal call within 48 hours of delivery is the highest-ROI single action in the Daniels post-purchase system. In an era of automation, a genuine human call creates extraordinary differentiation. It takes 3 minutes and builds a relationship worth thousands in future business and referrals. 'A 5% increase in customer retention can increase profitability by 25-95%.'"
+},
+
+{
+  section:"Objection Mastery / Dominio de Objeciones", pts:3,
+  q:"A customer says 'I want to think about it and come back this weekend.' You have completed all stages. What is the most complete professional response? / Un cliente dice 'Quiero pensarlo y regresar este fin de semana.' Completaste todas las etapas. ¿Cuál es la respuesta profesional más completa?",
+  scenario:null, sub:null,
+  opts:[
+    "Give them your card and tell them you will hold the item until the weekend. / Darles tu tarjeta y decirles que reservarás el artículo hasta el fin de semana.",
+    "Agree and follow up with a phone call Friday. / Estar de acuerdo y dar seguimiento con una llamada el viernes.",
+    "Cushion, Clarify, Answer, Confirm: 'Of course — can I ask, is there something specific you want to think through? I want to make sure you have everything before you go. Also — let me check on inventory for this configuration, because I would not want you to come back Friday and find it is gone.' Then offer to hold it or reserve it. / Reconocer, Clarificar, Responder, Confirmar.",
+    "Tell them the sale ends today to create urgency. / Decirles que la venta termina hoy para crear urgencia."
+  ],
+  correct:2,
+  explanation:"The full Objection Framework: Cushion (of course), Clarify (what specifically?), Answer (address the blocker), Confirm (does that help?). Adding the inventory reality check is not false urgency — it is genuine service. A customer who comes back Friday to find their configuration sold is a service failure. Offering to hold or reserve completes the professional response and keeps the sale alive."
+},
+
+{
+  section:"Objection Mastery / Dominio de Objeciones", pts:3,
+  q:"A customer compares your price to a big-box competitor and says the competitor's version is $200 cheaper. Which response most effectively differentiates without attacking the competitor? / Un cliente compara tu precio con un competidor y dice que la versión del competidor es $200 más barata. ¿Cuál respuesta diferencia más efectivamente sin atacar al competidor?",
+  scenario:null, sub:null,
+  opts:[
+    "'That store sells lower-quality products — you get what you pay for.' / 'Esa tienda vende productos de menor calidad — obtienes lo que pagas.'",
+    "'We can match that price if you decide today.' / 'Podemos igualar ese precio si decide hoy.'",
+    "'That is worth looking at closely — let me ask, does that price include delivery, setup, and what happens if something goes wrong in year 2? Our price includes [X]. When you compare the total experience over 5 years of daily use, the $200 difference often reverses. What specifically did you see?' / '¿Ese precio incluye entrega, instalación y qué pasa si algo falla en el año 2? Nuestro precio incluye [X]...'",
+    "'Our quality is much better — I can show you the difference in the materials.' / 'Nuestra calidad es mucho mejor — puedo mostrarle la diferencia en los materiales.'"
+  ],
+  correct:2,
+  explanation:"The correct objection response compares total value, not sticker price. Delivery, setup, service, protection, brand reliability, and the experience 2 years from now are all part of the real price. Attacking the competitor damages trust. Price matching validates price as the only differentiator and trains future negotiation. 'What specifically did you see?' clarifies whether you are actually comparing the same product."
+},
+
+{
+  section:"Integration Scenario / Escenario de Integración", pts:3,
+  q:"You are walking a customer through the full 7-stage journey. At Stage 4 (Bundle) they are engaged and add a rug and accent chair. At Stage 5 (Protection) they decline firmly. At Stage 6 (Financing) you run the pre-screen and it shows they qualify in-house. At Stage 7 you recap and ask. They say 'yes.' What is the single most important thing to remember at the Finance Desk? / Llevas a un cliente por las 7 etapas. En Etapa 4 agregan tapete y silla. En Etapa 5 declinan la protección. En Etapa 6 el pre-screen muestra que califican en casa. En Etapa 7 dicen 'sí.' ¿Cuál es lo más importante en la Mesa de Financiamiento?",
+  scenario:null, sub:null,
+  opts:[
+    "Confirm the delivery date and get the paperwork signed as fast as possible. / Confirmar la fecha de entrega y firmar el papeleo lo más rápido posible.",
+    "The Finance Desk is the LAST opportunity to add the protection plan — present it one final time with a concrete reason tied to their specific purchase before completing the paperwork. / La Mesa de Financiamiento es la ÚLTIMA oportunidad para agregar el plan de protección — presentarlo una vez más con una razón concreta antes de completar el papeleo.",
+    "Verify all three documents are on file before submitting the formal application. / Verificar que los tres documentos estén en archivo antes de enviar la solicitud formal.",
+    "Remind them of everything included in their bundle so there are no surprises on delivery. / Recordarles todo lo incluido en su bundle para que no haya sorpresas en la entrega."
+  ],
+  correct:1,
+  explanation:"The protection plan was declined at Stage 5 — but the Finance Desk is the last possible moment to add it. One final presentation is mandatory (Rule 4: 'Offer protection always — no exceptions'). Make it brief and concrete: 'Before we finalize — the one thing I want to mention again: this is the last moment to add the protection. After delivery, this window closes permanently. For [their specific purchase], the main risk is [specific scenario]. It is your call.' Then honor their decision."
+},
+
+{
+  section:"Section 2: Professional Standards / Estándares Profesionales", pts:3,
+  q:"According to the Daniels professional standard, what percentage of the time should a top-performing associate be talking versus listening during a customer interaction — and why? / Según el estándar profesional Daniels, ¿qué porcentaje del tiempo debe estar hablando vs. escuchando un asociado de alto desempeño — y por qué?",
+  scenario:null, sub:null,
+  opts:[
+    "70% talking, 30% listening — the associate must lead the conversation and present the product confidently. / 70% hablando, 30% escuchando — el asociado debe liderar la conversación.",
+    "50/50 — a balanced conversation builds the best rapport. / 50/50 — una conversación equilibrada construye la mejor relación.",
+    "30% talking, 70% listening — because the associate's job is to understand the customer's situation first, and the customer cannot tell you what they need if you are doing all the talking. / 30% hablando, 70% escuchando — porque el trabajo del asociado es entender primero la situación del cliente.",
+    "It depends on the stage — no fixed ratio applies across the full interaction. / Depende de la etapa — no aplica una proporción fija."
+  ],
+  correct:2,
+  explanation:"The 30/70 rule is a cornerstone of the Daniels professional standard. Top performers talk 30% and listen 70%. This is not passive — it is active, structured listening that surfaces the customer's real situation, budget, decision authority, and urgency. An associate who talks 70% of the time is presenting, not discovering. And a customer who cannot tell you what they need will buy nothing or buy wrong."
+},
+
+{
+  section:"Stage 0: Personal Readiness / Preparación Personal", pts:3,
+  q:"Between customers, an associate just finished a very difficult interaction where the customer left without buying and was rude. The next customer walks in 90 seconds later. What does the Daniels pre-shift ritual and reset protocol require? / Entre clientes, un asociado acaba de terminar una interacción muy difícil donde el cliente se fue sin comprar y fue grosero. El siguiente cliente entra 90 segundos después. ¿Qué requiere el protocolo de reset de Daniels?",
+  scenario:null, sub:null,
+  opts:[
+    "It is acceptable to carry some residual frustration — customers understand associates are human. / Es aceptable cargar algo de frustración residual — los clientes entienden que los asociados son humanos.",
+    "Execute the 30-second physical reset: step away briefly, breathe deeply three times, reset posture (shoulders back, chin up), set a specific intention for this next customer. Treat them as if they are the most important customer of the day — because they are. / Ejecutar el reset físico de 30 segundos: alejarse brevemente, respirar profundo tres veces, restablecer postura, establecer intención.",
+    "Wait until you feel ready naturally before approaching the next customer. / Esperar hasta sentirte listo naturalmente antes de acercarte al siguiente cliente.",
+    "Tell a colleague to greet the next customer while you take a few minutes to decompress. / Pedirle a un compañero que salude al siguiente cliente mientras tomas unos minutos."
+  ],
+  correct:1,
+  explanation:"The 30-Second Reset is not optional — it is part of the sales process. Neuroscience confirms that body position influences mood and confidence. Three deep breaths + posture reset changes your emotional state in 30 seconds. Every customer deserves the associate's full presence regardless of what happened with the previous interaction. Emotional states are contagious — residual frustration transfers to the next customer before you say a word."
+},
+
+{
+  section:"Section 6: Finance Desk SOP / Mesa de Financiamiento", pts:3,
+  q:"A customer has just completed their sale on the floor and is being handed off to the Finance Desk. The floor associate said: 'Go see Maria over there — she will handle the rest.' How should the Finance Desk associate begin the interaction, and why does it matter? / Un cliente acaba de completar su venta en el piso y es enviado a la Mesa de Financiamiento. El asociado dijo: 'Ve con María — ella se encarga del resto.' ¿Cómo debe comenzar el asociado de la Mesa de Financiamiento la interacción, y por qué importa?",
+  scenario:null, sub:null,
+  opts:[
+    "Get straight to the paperwork efficiently — the customer has already made their decision and does not need more selling. / Ir directamente al papeleo eficientemente — el cliente ya tomó su decisión.",
+    "Greet with the same warmth and professionalism as the sales floor, review the complete order together out loud, and reinforce the protection plan if not already included — because the Finance Desk is Stage 7 continued, not a separate transaction, and the last in-store impression defines the relationship. / Saludar con la misma calidez y profesionalismo del piso, revisar el pedido completo en voz alta y reforzar el plan de protección.",
+    "Apologize for any wait time and move through the paperwork as quickly as possible to respect their time. / Disculparse por cualquier tiempo de espera y procesar el papeleo lo más rápido posible.",
+    "Start by confirming the delivery address and payment method — the two most critical logistics items. / Comenzar confirmando la dirección de entrega y el método de pago."
+  ],
+  correct:1,
+  explanation:"The Finance Desk is not a separate process — it is Stage 7 continued. The transition from the floor must be clean and consistent. Customers who leave the finance desk feeling respected and well-informed are far more likely to refer others and return. A poor handoff plants last-minute doubts. The finance desk is also the LAST opportunity to add the protection plan — making it a loyalty moment, not just a transaction."
+},
+
+{
+  section:"Section 7: Digital Sales / Ventas Digitales", pts:3,
+  q:"Industry research cited in the Daniels training shows that customers who engage both in-store AND online show significantly higher transaction values. What specific actions should an associate take AFTER a store visit to leverage this? / La investigación de la industria citada en el entrenamiento Daniels muestra que los clientes que interactúan tanto en tienda COMO en línea muestran valores de transacción significativamente más altos. ¿Qué acciones específicas debe tomar un asociado DESPUÉS de una visita?",
+  scenario:null, sub:null,
+  opts:[
+    "Send the customer a promotional email with current sales and discounts. / Enviar al cliente un correo promocional con ventas y descuentos actuales.",
+    "Follow up by texting or emailing the customer specific product links from the Daniels website for the exact items they saw — not generic promotions. Customers who receive a follow-up link are 40% more likely to return and complete the purchase. / Dar seguimiento enviando por mensaje o correo los enlaces específicos de los productos que vieron — no promociones genéricas.",
+    "Add them to the Daniels mailing list for monthly promotions. / Agregarlos a la lista de correo de Daniels para promociones mensuales.",
+    "Call them the next day to see if they have made a decision. / Llamarles al día siguiente para ver si han tomado una decisión."
+  ],
+  correct:1,
+  explanation:"The digital follow-up rule is specific: send the exact product links the customer was interested in — not generic promotions. The manual cites that customers who receive a specific product follow-up are 40% more likely to return and complete the purchase. This is not a mass marketing action — it is a personalized, consultative continuation of the floor interaction. Generic mailing list additions are impersonal and often ignored."
+},
+
+{
+  section:"Section 12: Execution Rules / Reglas de Ejecución", pts:3,
+  q:"Of the 7 Non-Negotiable Execution Rules at Daniels, which TWO are most commonly violated together — and what is the consequence of violating both? / De las 7 Reglas de Ejecución No Negociables de Daniels, ¿cuáles DOS se violan más comúnmente juntas — y cuál es la consecuencia de violar ambas?",
+  scenario:null, sub:null,
+  opts:[
+    "Rules 1 (control the process) and 6 (stay professional) — the customer becomes combative and the sale cannot recover. / Reglas 1 (controlar el proceso) y 6 (mantenerse profesional).",
+    "Rules 3 (bundle every sale) and 4 (offer protection always) — both require proactive action the associate must initiate. When skipped, the customer leaves with an incomplete solution and no coverage, which drives lower satisfaction and zero attachment revenue. / Reglas 3 (bundle en cada venta) y 4 (ofrecer protección siempre) — ambas requieren acción proactiva. Cuando se omiten, el cliente se va con solución incompleta y sin cobertura.",
+    "Rules 2 (build value first) and 5 (use financing correctly) — both relate to timing and are easy to rush. / Reglas 2 (construir valor primero) y 5 (usar el financiamiento correctamente).",
+    "Rules 6 (stay professional) and 7 (follow policy) — compliance issues are the most common source of disciplinary action. / Reglas 6 (mantenerse profesional) y 7 (seguir la política)."
+  ],
+  correct:1,
+  explanation:"Rules 3 and 4 are the most commonly skipped because they require the associate to proactively initiate a conversation the customer did not ask for. It feels like 'pushing more.' But these are non-negotiables precisely because they drive both customer satisfaction and store revenue. A customer with a bundle is more satisfied (complete solution) and a customer with protection has lower buyer's remorse. Both are omitted when associates rush to close or get timid after the primary sale."
+},
+
+{
+  section:"Section 12: Execution Rules / Reglas de Ejecución", pts:3,
+  q:"The '1% Improvement Principle' in the Daniels system says that improving each performance area by 1% per week compounds into dramatic results. What is the practical application of this on the floor? / El 'Principio de Mejora del 1%' en el sistema Daniels dice que mejorar cada área de desempeño en 1% por semana produce resultados dramáticos. ¿Cuál es la aplicación práctica de esto en el piso?",
+  scenario:null, sub:null,
+  opts:[
+    "Try to improve everything simultaneously each week by reviewing the entire manual. / Intentar mejorar todo simultáneamente cada semana revisando el manual completo.",
+    "Track your daily metrics (conversion rate, ATP, protection attachment, bundle rate) and choose ONE stage each week to practice with intention — before your shift, during slow periods, and after difficult interactions. Focus and repetition compounds faster than trying to fix everything at once. / Rastrear tus métricas diarias y elegir UNA etapa cada semana para practicar con intención — antes del turno, durante períodos lentos y después de interacciones difíciles.",
+    "Ask your manager to observe and give feedback on all 7 stages each week. / Pedirle a tu gerente que observe y dé retroalimentación sobre las 7 etapas cada semana.",
+    "Focus on the stages where you are already strong to maximize your conversion rate. / Enfocarte en las etapas donde ya eres fuerte para maximizar tu tasa de conversión."
+  ],
+  correct:1,
+  explanation:"The 1% Principle applied practically: track your metrics, identify your weakest stage, and dedicate one week of focused practice to that stage only. One concept per day is enough. The professionals earning $80,000-$100,000+ in furniture sales got there through consistent, incremental improvement — not overnight transformation. Trying to fix everything at once produces no improvement in anything. Focus + repetition + time = compound growth."
+}
+
+]; // end QUESTIONS
+
+
+
+// ════ APP STATE ════════════════════════════════════════════════
+let state={empName:'',empId:'',empStore:'',current:0,answers:new Array(QUESTIONS.length).fill(null),answered:0,startTime:null,timerInterval:null,secondsLeft:4500,finished:false};
+
+function startExam(){
+  const n=document.getElementById('emp-name').value.trim();
+  const i=document.getElementById('emp-id').value.trim();
+  const s=document.getElementById('emp-store').value;
+  if(!n||!i||!s){alert('Please complete all fields / Por favor completa todos los campos');return;}
+  state.empName=n;state.empId=i;state.empStore=s;state.startTime=Date.now();
+  document.getElementById('screen-intro').classList.remove('active');
+  document.getElementById('screen-exam').classList.add('active');
+  document.getElementById('timer').style.display='block';
+  startTimer();renderQuestion();
+}
+
+function startTimer(){
+  state.timerInterval=setInterval(()=>{
+    state.secondsLeft--;updateTimerDisplay();
+    if(state.secondsLeft<=0){clearInterval(state.timerInterval);finishExam();}
+  },1000);
+}
+
+function updateTimerDisplay(){
+  const m=Math.floor(state.secondsLeft/60),s=state.secondsLeft%60;
+  const el=document.getElementById('timer');
+  el.textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  el.classList.toggle('warning',state.secondsLeft<=300);
+}
+
+function renderQuestion(){
+  const qi=state.current,q=QUESTIONS[qi];
+  document.getElementById('q-num').textContent=`Q${qi+1}`;
+  document.getElementById('q-pts').textContent=`${q.pts} pts`;
+  document.getElementById('q-section').textContent=q.section;
+  document.getElementById('q-text').textContent=q.q;
+  const scEl=document.getElementById('q-scenario');
+  if(q.scenario){scEl.textContent=q.scenario;scEl.style.display='block';}else{scEl.style.display='none';}
+  const subEl=document.getElementById('q-sub');
+  if(q.sub){subEl.textContent=q.sub;subEl.style.display='block';}else{subEl.style.display='none';}
+  const pct=((qi)/QUESTIONS.length*100).toFixed(0);
+  document.getElementById('progress-bar').style.width=`${pct}%`;
+  document.getElementById('progress-label').textContent=`Question ${qi+1} of ${QUESTIONS.length} / Pregunta ${qi+1} de ${QUESTIONS.length}`;
+  document.getElementById('q-answered').textContent=`${state.answered} of ${QUESTIONS.length} answered / de ${QUESTIONS.length} respondidas`;
+  const container=document.getElementById('q-options');container.innerHTML='';
+  const letters=['A','B','C','D'];
+  q.opts.forEach((opt,i)=>{
+    const div=document.createElement('div');
+    div.className='option'+(state.answers[qi]===i?' selected':'');
+    div.innerHTML=`<div class="option-letter">${letters[i]}</div><div class="option-text">${opt}</div>`;
+    if(state.answers[qi]===null)div.onclick=()=>selectAnswer(i);
+    container.appendChild(div);
+  });
+  const expEl=document.getElementById('q-explanation');
+  if(state.answers[qi]!==null){
+    expEl.innerHTML=`<strong>Explanation / Explicación:</strong> ${q.explanation}`;
+    expEl.classList.add('show');markAnswered(qi);
+  }else{expEl.classList.remove('show');expEl.textContent='';}
+  const btn=document.getElementById('btn-next');
+  if(qi===QUESTIONS.length-1){btn.textContent='Submit / Enviar';btn.onclick=()=>finishExam();}
+  else{btn.textContent='Next / Siguiente →';btn.onclick=()=>nextQuestion();}
+}
+
+function selectAnswer(optIdx){
+  if(state.answers[state.current]!==null)return;
+  state.answered++;state.answers[state.current]=optIdx;renderQuestion();
+}
+
+function markAnswered(qi){
+  const q=QUESTIONS[qi];
+  document.querySelectorAll('.option').forEach((el,i)=>{
+    el.onclick=null;
+    if(i===q.correct)el.classList.add('correct');
+    else if(i===state.answers[qi]&&i!==q.correct)el.classList.add('wrong');
+  });
+}
+
+function nextQuestion(){if(state.current<QUESTIONS.length-1){state.current++;renderQuestion();}}
+
+function finishExam(){
+  clearInterval(state.timerInterval);state.finished=true;
+  const elapsed=Math.floor((Date.now()-state.startTime)/1000);
+  const totalPts=QUESTIONS.reduce((s,q)=>s+q.pts,0);
+  let scored=0;QUESTIONS.forEach((q,i)=>{if(state.answers[i]===q.correct)scored+=q.pts;});
+  const correct=QUESTIONS.filter((q,i)=>state.answers[i]===q.correct).length;
+  const pct=Math.round(scored/totalPts*100);const pass=pct>=80;
+  document.getElementById('screen-exam').classList.remove('active');
+  document.getElementById('screen-results').classList.add('active');
+  document.getElementById('timer').style.display='none';
+  const circle=document.getElementById('score-circle');
+  circle.className='score-circle '+(pass?'pass':'fail');
+  document.getElementById('score-pct').textContent=pct+'%';
+  document.getElementById('result-status').textContent=pass?'🏆 CERTIFIED — PASSED / CERTIFICADO — APROBADO':'❌ NOT PASSED — RETRY REQUIRED / NO APROBADO — REINTENTAR';
+  document.getElementById('result-status').className='result-status '+(pass?'pass':'fail');
+  document.getElementById('result-sub').textContent=pass?`Score: ${pct}% (${scored}/${totalPts} pts) — Congratulations! / ¡Felicidades!`:`Score: ${pct}% (${scored}/${totalPts} pts) — Minimum required: 80%. Please review the manual. / Mínimo requerido: 80%.`;
+  document.getElementById('r-correct').textContent=correct;
+  document.getElementById('r-wrong').textContent=QUESTIONS.length-correct;
+  const em=Math.floor(elapsed/60),es=elapsed%60;
+  document.getElementById('r-time').textContent=`${String(em).padStart(2,'0')}:${String(es).padStart(2,'0')}`;
+  // Section breakdown
+  buildSectionBreakdown(pass);
+  if(pass)document.getElementById('btn-cert').style.display='block';
+  saveResultToSupabase(scored, totalPts, pct, pass, elapsed);
+  attemptCount++;
+  if (attemptCount >= MAX_ATTEMPTS) {
+    document.getElementById('btn-retake').style.display = 'none';
+    document.getElementById('attempts-locked-msg').style.display = 'block';
+  }
+}
+
+function buildSectionBreakdown(pass){
+  const sections={};
+  QUESTIONS.forEach((q,i)=>{
+    if(!sections[q.section])sections[q.section]={correct:0,total:0};
+    sections[q.section].total++;
+    if(state.answers[i]===q.correct)sections[q.section].correct++;
+  });
+  let html='<div style="margin-bottom:12px;font-weight:700;color:var(--navy);font-size:14px;">Performance by Module / Desempeño por Módulo:</div>';
+  Object.entries(sections).forEach(([sec,data])=>{
+    const pct=Math.round(data.correct/data.total*100);
+    const barClass=pct>=80?'green':pct>=60?'':' red';
+    html+=`<div class="sb-row"><div class="sb-label" style="font-size:11px">${sec}</div><div class="sb-bar-wrap"><div class="sb-bar${barClass}" style="width:${pct}%"></div></div><div class="sb-pct">${pct}%</div></div>`;
+  });
+  document.getElementById('section-breakdown').innerHTML=html;
+}
+
+function showCertificate(){
+  const totalPts=QUESTIONS.reduce((s,q)=>s+q.pts,0);
+  let scored=0;QUESTIONS.forEach((q,i)=>{if(state.answers[i]===q.correct)scored+=q.pts;});
+  const pct=Math.round(scored/totalPts*100);
+  const now=new Date();
+  const dateStr=now.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('cert-name').textContent=state.empName;
+  document.getElementById('cert-score').textContent=`Final Score: ${pct}% — ${scored}/${totalPts} pts`;
+  document.getElementById('cert-date').textContent=dateStr;
+  document.getElementById('cert-id').textContent=state.empId;
+  document.getElementById('cert-wrap').style.display='block';
+  document.getElementById('cert-wrap').scrollIntoView({behavior:'smooth'});
+}
+</script>
+</body>
+</html>
