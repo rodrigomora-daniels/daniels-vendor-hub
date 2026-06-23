@@ -108,35 +108,14 @@
   <div class="logo-block">
     <div>
       <div class="logo-text">🏠 DANIEL'S HOME CENTER</div>
-      <div class="logo-sub">Sales-Led Collection Form</div>
+      <div class="logo-sub">How Did They Hear About Us?</div>
     </div>
   </div>
-  <div class="step-pill" id="step-pill">Step 1 of 2</div>
 </div>
-
-<!-- SCREEN 1: EMPLOYEE + DATE -->
-<div class="screen active" id="screen-employee">
-  <div class="content">
-    <div class="employee-card">
-      <h2>Quick Check-In</h2>
-      <div class="sub">Takes 10 seconds. Helps us understand where our customers come from.</div>
-
-      <label class="field-label">Employee Name *</label>
-      <input type="text" class="field-input" id="emp-name" placeholder="Your name" autocomplete="off">
-
-      <label class="field-label">Today's Date</label>
-      <div class="date-display" id="today-date">—</div>
-    </div>
-  </div>
-  <div class="bottom-bar">
-    <div class="bottom-bar-inner">
-      <button class="btn btn-primary" id="btn-to-source" onclick="goToSource()">Continue →</button>
-    </div>
-  </div>
 </div>
 
 <!-- SCREEN 2: SOURCE SELECTION -->
-<div class="screen" id="screen-source">
+<div class="screen active" id="screen-source">
   <div class="content">
     <div class="grid-title">How did the customer<br>hear about us?</div>
     <div class="grid-sub">Tap one — you can add a note if needed</div>
@@ -208,7 +187,6 @@
     <div class="success-title">Got it — thank you!</div>
     <div class="success-sub">This helps Daniel's understand what's working and invest in the right places.</div>
     <div class="success-summary">
-      <div class="row"><span class="k">Employee</span><span class="v" id="sum-emp">—</span></div>
       <div class="row"><span class="k">Source</span><span class="v" id="sum-source">—</span></div>
       <div class="row"><span class="k">Date</span><span class="v" id="sum-date">—</span></div>
     </div>
@@ -262,31 +240,13 @@ function saveLocalFallback(record) {
 /* ════════════════════════════════════════════════════════════
    APP STATE & LOGIC
    ════════════════════════════════════════════════════════════ */
-let state = { empName: '', source: null, otherNote: '' };
+let state = { source: null, otherNote: '' };
 
 function formatToday() {
   const d = new Date();
   return d.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
 }
-document.getElementById('today-date').textContent = formatToday();
-
-function goToSource() {
-  const name = document.getElementById('emp-name').value.trim();
-  if (!name) {
-    alert('Please enter your name to continue.');
-    return;
-  }
-  state.empName = name;
-  document.getElementById('screen-employee').classList.remove('active');
-  document.getElementById('screen-source').classList.add('active');
-  document.getElementById('step-pill').textContent = 'Step 2 of 2';
-}
-
-function goToEmployee() {
-  document.getElementById('screen-source').classList.remove('active');
-  document.getElementById('screen-employee').classList.add('active');
-  document.getElementById('step-pill').textContent = 'Step 1 of 2';
-}
+// No employee/date screen needed — source selection is the entry point.
 
 function selectSource(el) {
   document.querySelectorAll('.source-tile').forEach(t => t.classList.remove('selected'));
@@ -311,7 +271,6 @@ async function submitForm() {
   state.otherNote = document.getElementById('other-text').value.trim();
 
   const record = {
-    employee_name: state.empName,
     source: state.source,
     other_note: state.source === 'Other' ? state.otherNote : null,
     submitted_at: new Date().toISOString()
@@ -320,7 +279,6 @@ async function submitForm() {
   await saveLead(record);
 
   // Populate success screen
-  document.getElementById('sum-emp').textContent = state.empName;
   document.getElementById('sum-source').textContent = state.source === 'Other' && state.otherNote
     ? `Other: ${state.otherNote}` : state.source;
   document.getElementById('sum-date').textContent = formatToday();
@@ -332,14 +290,13 @@ async function submitForm() {
 }
 
 function resetForm() {
-  state = { empName: state.empName, source: null, otherNote: '' }; // keep employee name for speed on next entry
+  state = { source: null, otherNote: '' };
   document.querySelectorAll('.source-tile').forEach(t => t.classList.remove('selected'));
   document.getElementById('other-detail').classList.remove('show');
   document.getElementById('other-text').value = '';
   document.getElementById('btn-submit').disabled = true;
   document.getElementById('screen-success').classList.remove('active');
   document.getElementById('screen-source').classList.add('active');
-  document.getElementById('step-pill').textContent = 'Step 2 of 2';
 }
 </script>
 </body>
