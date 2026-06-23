@@ -175,7 +175,7 @@
   <div class="bottom-bar">
     <div class="bottom-bar-inner">
       <button class="btn btn-primary" id="btn-submit" onclick="submitForm()" disabled>Submit</button>
-      <button class="btn btn-ghost" onclick="goToEmployee()">← Back</button>
+      <button class="btn btn-ghost" onclick="goBackToHub()">← Back</button>
     </div>
   </div>
 </div>
@@ -241,6 +241,11 @@ function saveLocalFallback(record) {
    APP STATE & LOGIC
    ════════════════════════════════════════════════════════════ */
 let state = { source: null, otherNote: '' };
+
+function goBackToHub() {
+  window.location.href = 'index.html';
+}
+
 
 function formatToday() {
   const d = new Date();
