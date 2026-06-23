@@ -38,6 +38,8 @@
 
   /* COCKPIT HEADER */
   .cockpit-header{background:var(--navy);border-bottom:4px solid var(--gold);padding:18px 28px;display:flex;align-items:center;justify-content:space-between;}
+  .cockpit-header .btn-ghost{background:transparent;border:1px solid var(--ltblue);color:var(--ltblue);}
+  .cockpit-header .btn-ghost:hover{background:rgba(255,255,255,.1);}
   .cockpit-header h1{color:var(--white);font-size:19px;}
   .cockpit-header .sub{color:var(--gold);font-size:12px;}
 
@@ -193,6 +195,20 @@
       </div>
     </div>
 
+    <!-- AUDIT LOG -->
+    <div class="section">
+      <div class="section-hdr">
+        <h2>📋 Admin Activity Log</h2>
+        <button class="btn btn-gold" onclick="exportCSV('auditlog')">⬇ Export CSV</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table id="tbl-auditlog">
+          <thead><tr><th>Admin</th><th>Action</th><th>Detail</th><th>Date</th></tr></thead>
+          <tbody id="tbl-auditlog-body"><tr><td colspan="4" class="empty-state">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -259,7 +275,7 @@ async function sbFetch(path, options = {}) {
 }
 
 let admin = null;
-let cachedData = { employees: [], codes: [], leadsource: [] };
+let cachedData = { employees: [], codes: [], leadsource: [], auditlog: [] };
 
 /* ════════ LOGIN ════════ */
 async function handleAdminLogin() {
@@ -308,7 +324,7 @@ async function handleAdminLogin() {
 
 /* ════════ LOAD DATA ════════ */
 async function loadAllData() {
-  await Promise.all([loadEmployees(), loadCodes(), loadLeadSource()]);
+  await Promise.all([loadEmployees(), loadCodes(), loadLeadSource(), loadAuditLog()]);
 }
 
 async function loadEmployees() {
@@ -438,6 +454,29 @@ async function loadLeadSource() {
   }
 }
 
+async function loadAuditLog() {
+  try {
+    const logs = await sbFetch('admin_audit_log?select=*&order=created_at.desc&limit=100');
+    cachedData.auditlog = logs;
+    const tbody = document.getElementById('tbl-auditlog-body');
+    if (logs.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4" class="empty-state">No admin actions recorded yet.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = logs.map(l => `
+      <tr>
+        <td>${l.admin_username}</td>
+        <td><span class="pill pill-gray">${l.accion}</span></td>
+        <td>${l.detalle || '—'}</td>
+        <td>${new Date(l.created_at).toLocaleString()}</td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    console.error('Failed to load audit log:', err);
+    document.getElementById('tbl-auditlog-body').innerHTML = `<tr><td colspan="4" class="empty-state">Error loading activity log.</td></tr>`;
+  }
+}
+
 /* ════════ DELETE EMPLOYEE ════════ */
 async function deleteEmployee(empId, name) {
   if (!confirm(`Delete ${name}? This also deletes their certification history. This cannot be undone.`)) return;
@@ -450,7 +489,7 @@ async function deleteEmployee(empId, name) {
       alert(rows[0].message);
       return;
     }
-    loadEmployees();
+    loadEmployees(); loadAuditLog();
   } catch (err) {
     alert('Error deleting employee: ' + err.message);
   }
@@ -511,7 +550,7 @@ async function submitPlantCert() {
       return;
     }
     closeModal('modal-plant');
-    loadEmployees();
+    loadEmployees(); loadAuditLog();
   } catch (err) {
     errEl.textContent = 'Error: ' + err.message;
     errEl.classList.add('show');
@@ -578,6 +617,15 @@ function exportCSV(type) {
       { label: 'Submitted At', get: r => r.submitted_at },
     ]);
     downloadCSV(csv, `daniels_lead_source_${dateStamp}.csv`);
+  }
+  if (type === 'auditlog') {
+    const csv = toCSV(cachedData.auditlog, [
+      { label: 'Admin', get: r => r.admin_username },
+      { label: 'Action', get: r => r.accion },
+      { label: 'Detail', get: r => r.detalle },
+      { label: 'Date', get: r => r.created_at },
+    ]);
+    downloadCSV(csv, `daniels_admin_audit_log_${dateStamp}.csv`);
   }
 }
 
