@@ -65,6 +65,23 @@
 
   .section-title{color:var(--navy);font-size:17px;font-weight:700;margin:28px 0 14px;}
 
+  .tab-bar{display:flex;gap:8px;margin-bottom:8px;border-bottom:2px solid #e8e4dc;padding-bottom:0;overflow-x:auto;}
+  .tab-btn{background:transparent;border:none;padding:12px 18px;font-size:14px;font-weight:700;color:var(--mgray);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;transition:all .15s;}
+  .tab-btn:hover{color:var(--navy);}
+  .tab-btn.active{color:var(--navy);border-bottom-color:var(--gold);}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+  .tool-frame-wrap{background:var(--white);border-radius:14px;padding:8px;box-shadow:0 2px 12px rgba(0,0,0,.07);}
+
+  .home-cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+  @media (max-width:780px){ .home-cards-grid{grid-template-columns:1fr;} }
+  .home-card{background:var(--white);border-radius:16px;padding:28px 22px;box-shadow:0 2px 14px rgba(0,0,0,.08);cursor:pointer;transition:all .15s;border:2px solid transparent;text-align:center;}
+  .home-card:hover{border-color:var(--gold);transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,0,0,.12);}
+  .home-card:active{transform:translateY(0);}
+  .home-card-icon{font-size:44px;margin-bottom:14px;}
+  .home-card h3{color:var(--navy);font-size:18px;margin-bottom:10px;}
+  .home-card p{color:var(--mgray);font-size:13px;line-height:1.5;}
+
   .cert-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
   @media (max-width:680px){ .cert-grid{grid-template-columns:1fr;} }
 
@@ -132,7 +149,7 @@
       <input type="text" class="field-input" id="signup-code" placeholder="e.g. DANIELS2026-A7X3" autocomplete="off">
       <label class="field-label">Full Name *</label>
       <input type="text" class="field-input" id="signup-name" placeholder="Your full name" autocomplete="off">
-      <label class="field-label">Employee ID (optional)</label>
+      <label class="field-label">Employee ID *</label>
       <input type="text" class="field-input" id="signup-empid" placeholder="e.g. DHC-002" autocomplete="off">
       <label class="field-label">Choose a Username *</label>
       <input type="text" class="field-input" id="signup-username" placeholder="e.g. mgarcia" autocomplete="off">
@@ -206,16 +223,48 @@
       ⚠️ Your password needs to be updated. Please see your manager to set a new one.
     </div>
 
-    <div class="points-banner">
-      <div class="left">
-        <div class="lbl">Total Points Earned</div>
-        <div class="pts" id="total-points">0</div>
+    <!-- HOME SCREEN: 3 tool cards -->
+    <div class="tab-panel active" id="tab-home">
+      <div class="points-banner">
+        <div class="left">
+          <div class="lbl">Total Points Earned</div>
+          <div class="pts" id="total-points-home">0</div>
+        </div>
+        <div class="badges-row" id="badges-row-home">
+          <div class="mini-badge locked" title="Sales Tier 1">🥇</div>
+          <div class="mini-badge locked" title="Sales Tier 2">🥈</div>
+        </div>
       </div>
-      <div class="badges-row" id="badges-row">
-        <div class="mini-badge locked" title="Sales Tier 1">🥇</div>
-        <div class="mini-badge locked" title="Sales Tier 2">🥈</div>
+
+      <div class="section-title">What do you need today?</div>
+      <div class="home-cards-grid">
+        <div class="home-card" onclick="switchTab('certifications')">
+          <div class="home-card-icon">🎓</div>
+          <h3>Certifications</h3>
+          <p>Take your Sales Tier 1 &amp; Tier 2 exams, track your progress, and download your certificates.</p>
+        </div>
+        <div class="home-card" onclick="switchTab('prescreen')">
+          <div class="home-card-icon">📊</div>
+          <h3>Pre-Screener</h3>
+          <p>Run a quick credit pre-screen for a customer before starting paperwork.</p>
+        </div>
+        <div class="home-card" onclick="switchTab('leadsource')">
+          <div class="home-card-icon">📍</div>
+          <h3>How They Found Us</h3>
+          <p>Quick 10-second check-in after a sale — helps us understand where customers come from.</p>
+        </div>
       </div>
     </div>
+
+    <div class="tab-bar" id="tab-bar-nav" style="display:none">
+      <button class="tab-btn" onclick="switchTab('home')">← Home</button>
+      <button class="tab-btn active" data-tab="certifications" onclick="switchTab('certifications')">🎓 Certifications</button>
+      <button class="tab-btn" data-tab="prescreen" onclick="switchTab('prescreen')">📊 Pre-Screener</button>
+      <button class="tab-btn" data-tab="leadsource" onclick="switchTab('leadsource')">📍 How They Found Us</button>
+    </div>
+
+    <!-- TAB: CERTIFICATIONS -->
+    <div class="tab-panel" id="tab-certifications">
 
     <div class="section-title">Your Certifications</div>
     <div class="cert-grid" id="cert-grid">
@@ -254,6 +303,26 @@
       </div>
       <div class="empty-history" id="empty-history">No attempts yet — your history will show here once you complete a certification.</div>
     </div>
+    </div> <!-- end tab-certifications -->
+
+    <!-- TAB: PRE-SCREENER -->
+    <div class="tab-panel" id="tab-prescreen">
+      <div class="section-title">Credit Pre-Screen Tool</div>
+      <p style="font-size:13px;color:var(--mgray);margin-bottom:14px;">Internal tool only — never share this screen or its contents outside the store.</p>
+      <div class="tool-frame-wrap">
+        <iframe id="prescreen-frame" src="" style="width:100%;height:780px;border:none;border-radius:12px;" title="Pre-Screen Tool"></iframe>
+      </div>
+    </div>
+
+    <!-- TAB: LEAD SOURCE -->
+    <div class="tab-panel" id="tab-leadsource">
+      <div class="section-title">How Did the Customer Hear About Us?</div>
+      <p style="font-size:13px;color:var(--mgray);margin-bottom:14px;">Quick check-in after a sale — takes 10 seconds.</p>
+      <div class="tool-frame-wrap">
+        <iframe id="leadsource-frame" src="" style="width:100%;height:780px;border:none;border-radius:12px;" title="Lead Source Form"></iframe>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -349,7 +418,7 @@ async function handleSignup() {
 
   errEl.classList.remove('show');
 
-  if (!code || !name || !username || !pw1 || !pw2) {
+  if (!code || !name || !empId || !username || !pw1 || !pw2) {
     errEl.textContent = 'Please fill in all required fields.';
     errEl.classList.add('show');
     return;
@@ -376,7 +445,7 @@ async function handleSignup() {
         p_username: username,
         p_password: pw1,
         p_nombre_completo: name,
-        p_employee_id: empId || null
+        p_employee_id: empId
       })
     });
 
@@ -516,7 +585,7 @@ function renderDashboardData() {
     }
   });
 
-  document.getElementById('total-points').textContent = totalPoints;
+  document.getElementById('total-points-home').textContent = totalPoints;
 
   ['tier1', 'tier2'].forEach(tier => {
     const best = bestByTier[tier];
@@ -581,6 +650,40 @@ function renderDashboardData() {
       `;
       tableEl.appendChild(row);
     });
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   TAB NAVIGATION — Certifications / Pre-Screener / Lead Source
+   ════════════════════════════════════════════════════════════ */
+const TOOL_URLS = {
+  prescreen: 'https://rodrigomora-daniels.github.io/daniels-credit-simulator/',
+  leadsource: 'Daniels_Lead_Source_Form.html'
+};
+
+function switchTab(tabName) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+
+  if (tabName === 'home') {
+    document.getElementById('tab-bar-nav').style.display = 'none';
+    document.getElementById('tab-home').classList.add('active');
+    return;
+  }
+
+  document.getElementById('tab-bar-nav').style.display = 'flex';
+  document.querySelector(`.tab-btn[data-tab="${tabName}"]`).classList.add('active');
+  document.getElementById(`tab-${tabName}`).classList.add('active');
+
+  // Lazy-load iframes only on first visit to that tab — keeps tool URLs
+  // out of the static page source until an authenticated user requests them.
+  if (tabName === 'prescreen') {
+    const frame = document.getElementById('prescreen-frame');
+    if (!frame.src) frame.src = TOOL_URLS.prescreen;
+  }
+  if (tabName === 'leadsource') {
+    const frame = document.getElementById('leadsource-frame');
+    if (!frame.src) frame.src = TOOL_URLS.leadsource;
   }
 }
 
