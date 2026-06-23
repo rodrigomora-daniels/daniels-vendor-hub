@@ -215,6 +215,7 @@
       <div class="name" id="dash-name">—</div>
       <div class="role" id="dash-role">—</div>
     </div>
+    <button class="logout-btn" id="btn-admin-console" onclick="openAdminConsole()" style="display:none;background:var(--gold);border-color:var(--gold);color:var(--navy);margin-right:10px;">⚙️ Admin</button>
     <button class="logout-btn" onclick="handleLogout()">Sign Out</button>
   </div>
 
@@ -251,7 +252,7 @@
         <div class="home-card" onclick="navigateToTool('leadsource')">
           <div class="home-card-icon">📍</div>
           <h3>How They Found Us</h3>
-          <p>Quick 10-second check-in after a sale — helps us understand where customers come from.</p>
+          <p>Quick 10-second check-in — helps us understand where customers come from.</p>
         </div>
       </div>
     </div>
@@ -511,6 +512,10 @@ async function handleChangePassword() {
   }
 }
 
+function openAdminConsole() {
+  window.location.href = 'cockpit.html';
+}
+
 function handleLogout() {
   session = { empleado: null, history: [] };
   document.getElementById('login-username').value = '';
@@ -538,6 +543,10 @@ async function loadDashboard() {
 
   document.getElementById('dash-name').textContent = emp.nombre_completo;
   document.getElementById('dash-role').textContent = `${emp.rol.toUpperCase()} · ${emp.tienda || ''}`;
+
+  if (emp.es_admin) {
+    document.getElementById('btn-admin-console').style.display = 'inline-block';
+  }
 
   try {
     const history = await sbFetch(

@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daniels Vendor Hub — Admin Cockpit</title>
+<style>
+  :root {
+    --navy:#1B3A6B; --gold:#C8922A; --ltblue:#D6E4F7; --cream:#FFF8EC;
+    --green:#27AE60; --red:#C0392B; --gray:#F4F4F4; --dkgray:#3C3C3C;
+    --mgray:#6B6B6B; --white:#FFFFFF;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:Arial,sans-serif;background:#f0f2f5;color:var(--dkgray);min-height:100vh;}
+
+  .screen{display:none;}
+  .screen.active{display:block;}
+
+  /* LOGIN GATE (re-uses same login flow, admin-only) */
+  .login-wrap{max-width:420px;margin:60px auto;}
+  .login-card{background:var(--white);border-radius:16px;padding:36px 32px;box-shadow:0 8px 30px rgba(0,0,0,.15);}
+  .login-card h1{color:var(--navy);font-size:22px;margin-bottom:6px;text-align:center;}
+  .login-card .sub{color:var(--mgray);font-size:13px;text-align:center;margin-bottom:24px;}
+  .field-label{display:block;font-weight:700;color:var(--navy);font-size:13px;margin-bottom:6px;}
+  .field-input{width:100%;padding:13px 16px;border:2px solid #e0ddd6;border-radius:10px;font-size:15px;margin-bottom:16px;outline:none;}
+  .field-input:focus{border-color:var(--navy);}
+  .error-msg{background:#fdecea;border-left:4px solid var(--red);color:var(--red);padding:10px 14px;border-radius:6px;font-size:13px;margin-bottom:14px;display:none;}
+  .error-msg.show{display:block;}
+
+  .btn{display:inline-block;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:opacity .15s;}
+  .btn:hover{opacity:.85;}
+  .btn-primary{background:var(--navy);color:var(--white);}
+  .btn-gold{background:var(--gold);color:var(--white);}
+  .btn-red{background:var(--red);color:var(--white);}
+  .btn-ghost{background:transparent;border:1px solid #ccc;color:var(--dkgray);}
+  .btn-block{width:100%;display:block;text-align:center;padding:13px;font-size:15px;}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+
+  /* COCKPIT HEADER */
+  .cockpit-header{background:var(--navy);border-bottom:4px solid var(--gold);padding:18px 28px;display:flex;align-items:center;justify-content:space-between;}
+  .cockpit-header h1{color:var(--white);font-size:19px;}
+  .cockpit-header .sub{color:var(--gold);font-size:12px;}
+
+  .cockpit-content{padding:28px 24px;max-width:1200px;margin:0 auto;}
+
+  /* KPI CARDS */
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
+  @media (max-width:900px){ .kpi-grid{grid-template-columns:repeat(2,1fr);} }
+  .kpi-card{background:var(--white);border-radius:12px;padding:18px 20px;box-shadow:0 2px 10px rgba(0,0,0,.06);}
+  .kpi-card .lbl{font-size:11px;color:var(--mgray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+  .kpi-card .val{font-size:28px;font-weight:700;color:var(--navy);}
+  .kpi-card .sub{font-size:12px;color:var(--mgray);margin-top:4px;}
+
+  /* SECTION */
+  .section{background:var(--white);border-radius:14px;padding:22px;box-shadow:0 2px 10px rgba(0,0,0,.06);margin-bottom:24px;}
+  .section-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+  .section-hdr h2{color:var(--navy);font-size:16px;}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;background:var(--gray);padding:9px 12px;color:var(--navy);font-weight:700;border-bottom:2px solid #e0ddd6;}
+  td{padding:9px 12px;border-bottom:1px solid #f0ece2;vertical-align:middle;}
+  tr:hover td{background:#fafafa;}
+  .pill{display:inline-block;padding:3px 9px;border-radius:10px;font-size:11px;font-weight:700;}
+  .pill-green{background:#eaf7ea;color:var(--green);}
+  .pill-red{background:#fdecea;color:var(--red);}
+  .pill-gray{background:#eee;color:var(--mgray);}
+  .pill-gold{background:#fdf3e3;color:var(--gold);}
+
+  .row-actions{display:flex;gap:6px;}
+  .row-actions .btn{padding:5px 10px;font-size:11px;}
+
+  .empty-state{text-align:center;padding:30px;color:var(--mgray);font-size:13px;}
+
+  /* MODAL */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:center;justify-content:center;}
+  .modal-overlay.show{display:flex;}
+  .modal-box{background:var(--white);border-radius:14px;padding:26px;max-width:420px;width:90%;}
+  .modal-box h3{color:var(--navy);margin-bottom:14px;font-size:17px;}
+  .modal-box .field-label{margin-top:10px;}
+
+  ::-webkit-scrollbar{height:6px;}
+</style>
+</head>
+<body>
+
+<!-- ══════════ ADMIN LOGIN GATE ══════════ -->
+<div class="screen active" id="screen-admin-login">
+  <div class="login-wrap">
+    <div class="login-card">
+      <h1>🔐 Admin Cockpit</h1>
+      <div class="sub">Daniels Vendor Hub — Authorized access only</div>
+      <div class="error-msg" id="login-error"></div>
+      <label class="field-label">Username</label>
+      <input type="text" class="field-input" id="login-username" placeholder="rodrigo.mora">
+      <label class="field-label">Password</label>
+      <input type="password" class="field-input" id="login-password" placeholder="••••••••">
+      <button class="btn btn-primary btn-block" id="btn-login" onclick="handleAdminLogin()">Sign In</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ COCKPIT ══════════ -->
+<div class="screen" id="screen-cockpit">
+  <div class="cockpit-header">
+    <div>
+      <h1>🔐 Admin Cockpit</h1>
+      <div class="sub" id="admin-greeting">—</div>
+    </div>
+    <div>
+      <button class="btn btn-ghost" onclick="window.location.href='index.html'">← Vendor Hub</button>
+      <button class="btn btn-ghost" onclick="location.reload()">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="cockpit-content">
+
+    <!-- KPIs -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="lbl">Total Employees</div>
+        <div class="val" id="kpi-total-emp">—</div>
+        <div class="sub" id="kpi-total-emp-sub">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="lbl">Invitation Codes</div>
+        <div class="val" id="kpi-codes">—</div>
+        <div class="sub" id="kpi-codes-sub">used / available</div>
+      </div>
+      <div class="kpi-card">
+        <div class="lbl">Tier 1 Certified</div>
+        <div class="val" id="kpi-tier1">—</div>
+        <div class="sub">of total employees</div>
+      </div>
+      <div class="kpi-card">
+        <div class="lbl">Tier 2 Certified</div>
+        <div class="val" id="kpi-tier2">—</div>
+        <div class="sub">of total employees</div>
+      </div>
+    </div>
+
+    <!-- EMPLOYEES TABLE -->
+    <div class="section">
+      <div class="section-hdr">
+        <h2>👥 Employees</h2>
+        <button class="btn btn-gold" onclick="exportCSV('employees')">⬇ Export CSV</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table id="tbl-employees">
+          <thead>
+            <tr>
+              <th>Name</th><th>Username</th><th>Employee ID</th><th>Store</th>
+              <th>Tier 1</th><th>Tier 2</th><th>Points</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tbl-employees-body">
+            <tr><td colspan="8" class="empty-state">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- INVITATION CODES -->
+    <div class="section">
+      <div class="section-hdr">
+        <h2>🎫 Invitation Codes</h2>
+        <button class="btn btn-gold" onclick="exportCSV('codes')">⬇ Export CSV</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table id="tbl-codes">
+          <thead><tr><th>Code</th><th>Status</th><th>Used By</th><th>Created</th></tr></thead>
+          <tbody id="tbl-codes-body"><tr><td colspan="4" class="empty-state">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- LEAD SOURCE -->
+    <div class="section">
+      <div class="section-hdr">
+        <h2>📍 How They Found Us — Entries</h2>
+        <button class="btn btn-gold" onclick="exportCSV('leadsource')">⬇ Export CSV</button>
+      </div>
+      <div class="kpi-grid" style="margin-bottom:16px">
+        <div class="kpi-card"><div class="lbl">Total Entries</div><div class="val" id="kpi-ls-total">—</div></div>
+        <div class="kpi-card"><div class="lbl">Top Source</div><div class="val" id="kpi-ls-top" style="font-size:16px">—</div></div>
+        <div class="kpi-card"><div class="lbl">Top Employee</div><div class="val" id="kpi-ls-emp" style="font-size:16px">—</div></div>
+        <div class="kpi-card"><div class="lbl">This Week</div><div class="val" id="kpi-ls-week">—</div></div>
+      </div>
+      <div style="overflow-x:auto">
+        <table id="tbl-leadsource">
+          <thead><tr><th>Employee</th><th>Source</th><th>Note</th><th>Date</th></tr></thead>
+          <tbody id="tbl-leadsource-body"><tr><td colspan="4" class="empty-state">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════ MODAL: PLANT CERTIFICATION ══════════ -->
+<div class="modal-overlay" id="modal-plant">
+  <div class="modal-box">
+    <h3>🌱 Plant Certification</h3>
+    <div class="error-msg" id="plant-error"></div>
+    <label class="field-label">Employee</label>
+    <select class="field-input" id="plant-employee"></select>
+    <label class="field-label">Certification</label>
+    <select class="field-input" id="plant-cert">
+      <option value="tier1">Sales Tier 1</option>
+      <option value="tier2">Sales Tier 2</option>
+    </select>
+    <label class="field-label">Score (points earned)</label>
+    <input type="number" class="field-input" id="plant-score" placeholder="e.g. 84">
+    <label class="field-label">Total Points Possible</label>
+    <input type="number" class="field-input" id="plant-total" placeholder="e.g. 84" value="84">
+    <label class="field-label">Date Completed</label>
+    <input type="date" class="field-input" id="plant-date">
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-plant')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="submitPlantCert()">Plant It</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODAL: RESET PASSWORD ══════════ -->
+<div class="modal-overlay" id="modal-reset">
+  <div class="modal-box">
+    <h3>🔑 Reset Password</h3>
+    <p style="font-size:13px;color:var(--mgray);margin-bottom:14px">
+      This requires running one SQL command in Supabase (passwords are hashed and can't be reset from here for security). Copy the command below:
+    </p>
+    <textarea id="reset-sql-output" readonly style="width:100%;height:90px;font-family:monospace;font-size:12px;padding:10px;border:1px solid #ddd;border-radius:8px;"></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-reset')">Close</button>
+      <button class="btn btn-gold" style="flex:1" onclick="copyResetSQL()">📋 Copy</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://ecfxeebhtgkbsdeuiueb.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_oRxEOMLizp1kjlsRjWWaxg_muaaMHFt';
+
+async function sbFetch(path, options = {}) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Prefer': options.method === 'POST' ? 'return=representation' : undefined,
+      ...(options.headers || {})
+    }
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Supabase error ${res.status}: ${errText}`);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+let admin = null;
+let cachedData = { employees: [], codes: [], leadsource: [] };
+
+/* ════════ LOGIN ════════ */
+async function handleAdminLogin() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  const btn = document.getElementById('btn-login');
+  errEl.classList.remove('show');
+
+  if (!username || !password) {
+    errEl.textContent = 'Please enter both fields.';
+    errEl.classList.add('show');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Signing in...';
+
+  try {
+    const rows = await sbFetch('rpc/verificar_login', {
+      method: 'POST',
+      body: JSON.stringify({ p_username: username, p_password: password })
+    });
+
+    if (!rows || rows.length === 0) throw new Error('Invalid credentials.');
+    const emp = rows[0];
+
+    if (!emp.es_admin) {
+      throw new Error('This account does not have admin access.');
+    }
+
+    admin = emp;
+    document.getElementById('screen-admin-login').classList.remove('active');
+    document.getElementById('screen-cockpit').classList.add('active');
+    document.getElementById('admin-greeting').textContent = `Signed in as ${emp.nombre_completo}`;
+    loadAllData();
+
+  } catch (err) {
+    errEl.textContent = err.message.includes('admin access') ? err.message : 'Incorrect username or password.';
+    errEl.classList.add('show');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Sign In';
+  }
+}
+
+/* ════════ LOAD DATA ════════ */
+async function loadAllData() {
+  await Promise.all([loadEmployees(), loadCodes(), loadLeadSource()]);
+}
+
+async function loadEmployees() {
+  try {
+    const employees = await sbFetch('empleados?select=id,nombre_completo,username,employee_id,tienda,rol,es_admin');
+    const progress = await sbFetch('certificaciones_progreso?select=empleado_id,certificacion,porcentaje,score,aprobado&order=fecha_completado.desc');
+
+    const merged = employees.map(emp => {
+      const empProgress = progress.filter(p => p.empleado_id === emp.id);
+      const tier1 = empProgress.find(p => p.certificacion === 'tier1' && p.aprobado);
+      const tier2 = empProgress.find(p => p.certificacion === 'tier2' && p.aprobado);
+      const totalPoints = empProgress.filter(p => p.aprobado).reduce((s, p) => s + (p.score || 0), 0);
+      return { ...emp, tier1, tier2, totalPoints };
+    });
+
+    cachedData.employees = merged;
+    renderEmployeesTable(merged);
+    renderKPIs(merged);
+    populatePlantDropdown(merged);
+  } catch (err) {
+    console.error('Failed to load employees:', err);
+    document.getElementById('tbl-employees-body').innerHTML = `<tr><td colspan="8" class="empty-state">Error loading employees.</td></tr>`;
+  }
+}
+
+function renderEmployeesTable(employees) {
+  const tbody = document.getElementById('tbl-employees-body');
+  if (employees.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No employees yet.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = employees.map(e => `
+    <tr>
+      <td>${e.nombre_completo}${e.es_admin ? ' <span class="pill pill-gold">ADMIN</span>' : ''}</td>
+      <td>${e.username}</td>
+      <td>${e.employee_id || '—'}</td>
+      <td>${e.tienda || '—'}</td>
+      <td>${e.tier1 ? `<span class="pill pill-green">${e.tier1.porcentaje}%</span>` : '<span class="pill pill-gray">—</span>'}</td>
+      <td>${e.tier2 ? `<span class="pill pill-green">${e.tier2.porcentaje}%</span>` : '<span class="pill pill-gray">—</span>'}</td>
+      <td>${e.totalPoints}</td>
+      <td class="row-actions">
+        <button class="btn btn-ghost" onclick="openResetModal('${e.username}')">Reset PW</button>
+        ${!e.es_admin ? `<button class="btn btn-red" onclick="deleteEmployee('${e.id}','${e.nombre_completo}')">Delete</button>` : ''}
+      </td>
+    </tr>
+  `).join('');
+}
+
+function renderKPIs(employees) {
+  const total = employees.length;
+  const tier1Count = employees.filter(e => e.tier1).length;
+  const tier2Count = employees.filter(e => e.tier2).length;
+  document.getElementById('kpi-total-emp').textContent = total;
+  document.getElementById('kpi-total-emp-sub').textContent = `${employees.filter(e=>!e.es_admin).length} vendors, ${employees.filter(e=>e.es_admin).length} admin`;
+  document.getElementById('kpi-tier1').textContent = `${tier1Count}/${total}`;
+  document.getElementById('kpi-tier2').textContent = `${tier2Count}/${total}`;
+}
+
+async function loadCodes() {
+  try {
+    const codes = await sbFetch('codigos_invitacion?select=codigo,usado,used_at,usado_por_empleado_id,created_at&order=created_at.desc');
+    cachedData.codes = codes;
+    const usedCount = codes.filter(c => c.usado).length;
+    document.getElementById('kpi-codes').textContent = `${usedCount}/${codes.length}`;
+
+    const employeesById = {};
+    cachedData.employees.forEach(e => employeesById[e.id] = e.nombre_completo);
+
+    const tbody = document.getElementById('tbl-codes-body');
+    if (codes.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4" class="empty-state">No codes yet.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = codes.map(c => `
+      <tr>
+        <td><code>${c.codigo}</code></td>
+        <td>${c.usado ? '<span class="pill pill-green">Used</span>' : '<span class="pill pill-gray">Available</span>'}</td>
+        <td>${c.usado_por_empleado_id ? (employeesById[c.usado_por_empleado_id] || '—') : '—'}</td>
+        <td>${new Date(c.created_at).toLocaleDateString()}</td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    console.error('Failed to load codes:', err);
+  }
+}
+
+async function loadLeadSource() {
+  try {
+    const entries = await sbFetch('customer_source_log?select=*&order=submitted_at.desc');
+    cachedData.leadsource = entries;
+
+    document.getElementById('kpi-ls-total').textContent = entries.length;
+
+    const sourceCounts = {};
+    const empCounts = {};
+    const oneWeekAgo = new Date(Date.now() - 7*24*60*60*1000);
+    let weekCount = 0;
+
+    entries.forEach(e => {
+      sourceCounts[e.source] = (sourceCounts[e.source]||0) + 1;
+      empCounts[e.employee_name] = (empCounts[e.employee_name]||0) + 1;
+      if (new Date(e.submitted_at) >= oneWeekAgo) weekCount++;
+    });
+
+    const topSource = Object.entries(sourceCounts).sort((a,b)=>b[1]-a[1])[0];
+    const topEmp = Object.entries(empCounts).sort((a,b)=>b[1]-a[1])[0];
+
+    document.getElementById('kpi-ls-top').textContent = topSource ? `${topSource[0]} (${topSource[1]})` : '—';
+    document.getElementById('kpi-ls-emp').textContent = topEmp ? `${topEmp[0]} (${topEmp[1]})` : '—';
+    document.getElementById('kpi-ls-week').textContent = weekCount;
+
+    const tbody = document.getElementById('tbl-leadsource-body');
+    if (entries.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4" class="empty-state">No entries yet.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = entries.slice(0, 100).map(e => `
+      <tr>
+        <td>${e.employee_name}</td>
+        <td>${e.source}</td>
+        <td>${e.other_note || '—'}</td>
+        <td>${new Date(e.submitted_at).toLocaleString()}</td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    console.error('Failed to load lead source:', err);
+  }
+}
+
+/* ════════ DELETE EMPLOYEE ════════ */
+async function deleteEmployee(empId, name) {
+  if (!confirm(`Delete ${name}? This also deletes their certification history. This cannot be undone.`)) return;
+  try {
+    const rows = await sbFetch('rpc/admin_eliminar_empleado', {
+      method: 'POST',
+      body: JSON.stringify({ p_admin_id: admin.id, p_empleado_id: empId })
+    });
+    if (!rows[0].success) {
+      alert(rows[0].message);
+      return;
+    }
+    loadEmployees();
+  } catch (err) {
+    alert('Error deleting employee: ' + err.message);
+  }
+}
+
+/* ════════ RESET PASSWORD MODAL ════════ */
+function openResetModal(username) {
+  const tempPw = 'Temp' + Math.floor(1000 + Math.random()*9000) + '!';
+  document.getElementById('reset-sql-output').value =
+    `select admin_reset_password('${username}', '${tempPw}');\n\n-- Temporary password: ${tempPw}\n-- Give this to the employee. They'll be required to change it on next login.`;
+  document.getElementById('modal-reset').classList.add('show');
+}
+function copyResetSQL() {
+  const ta = document.getElementById('reset-sql-output');
+  ta.select();
+  document.execCommand('copy');
+}
+
+/* ════════ PLANT CERTIFICATION MODAL ════════ */
+function populatePlantDropdown(employees) {
+  const sel = document.getElementById('plant-employee');
+  sel.innerHTML = employees.filter(e=>!e.es_admin).map(e => `<option value="${e.id}">${e.nombre_completo} (${e.username})</option>`).join('');
+}
+function openPlantModal() {
+  document.getElementById('plant-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('modal-plant').classList.add('show');
+}
+async function submitPlantCert() {
+  const errEl = document.getElementById('plant-error');
+  errEl.classList.remove('show');
+  const empId = document.getElementById('plant-employee').value;
+  const cert = document.getElementById('plant-cert').value;
+  const score = parseInt(document.getElementById('plant-score').value);
+  const total = parseInt(document.getElementById('plant-total').value);
+  const date = document.getElementById('plant-date').value;
+
+  if (!empId || !score || !total || !date) {
+    errEl.textContent = 'Please fill in all fields.';
+    errEl.classList.add('show');
+    return;
+  }
+
+  try {
+    const rows = await sbFetch('rpc/admin_sembrar_certificacion', {
+      method: 'POST',
+      body: JSON.stringify({
+        p_admin_id: admin.id,
+        p_empleado_id: empId,
+        p_certificacion: cert,
+        p_score: score,
+        p_total_puntos: total,
+        p_fecha: new Date(date).toISOString()
+      })
+    });
+    if (!rows[0].success) {
+      errEl.textContent = rows[0].message;
+      errEl.classList.add('show');
+      return;
+    }
+    closeModal('modal-plant');
+    loadEmployees();
+  } catch (err) {
+    errEl.textContent = 'Error: ' + err.message;
+    errEl.classList.add('show');
+  }
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
+
+/* ════════ CSV EXPORT ════════ */
+function toCSV(rows, headers) {
+  const escape = (val) => {
+    if (val === null || val === undefined) return '';
+    const s = String(val).replace(/"/g, '""');
+    return /[",\n]/.test(s) ? `"${s}"` : s;
+  };
+  const headerRow = headers.map(h => escape(h.label)).join(',');
+  const dataRows = rows.map(row => headers.map(h => escape(h.get(row))).join(','));
+  return [headerRow, ...dataRows].join('\n');
+}
+
+function downloadCSV(content, filename) {
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportCSV(type) {
+  const dateStamp = new Date().toISOString().split('T')[0];
+  if (type === 'employees') {
+    const csv = toCSV(cachedData.employees, [
+      { label: 'Name', get: r => r.nombre_completo },
+      { label: 'Username', get: r => r.username },
+      { label: 'Employee ID', get: r => r.employee_id },
+      { label: 'Store', get: r => r.tienda },
+      { label: 'Role', get: r => r.rol },
+      { label: 'Tier 1 %', get: r => r.tier1 ? r.tier1.porcentaje : '' },
+      { label: 'Tier 2 %', get: r => r.tier2 ? r.tier2.porcentaje : '' },
+      { label: 'Total Points', get: r => r.totalPoints },
+    ]);
+    downloadCSV(csv, `daniels_employees_${dateStamp}.csv`);
+  }
+  if (type === 'codes') {
+    const csv = toCSV(cachedData.codes, [
+      { label: 'Code', get: r => r.codigo },
+      { label: 'Used', get: r => r.usado ? 'Yes' : 'No' },
+      { label: 'Used At', get: r => r.used_at },
+      { label: 'Created At', get: r => r.created_at },
+    ]);
+    downloadCSV(csv, `daniels_invitation_codes_${dateStamp}.csv`);
+  }
+  if (type === 'leadsource') {
+    const csv = toCSV(cachedData.leadsource, [
+      { label: 'Employee', get: r => r.employee_name },
+      { label: 'Source', get: r => r.source },
+      { label: 'Note', get: r => r.other_note },
+      { label: 'Submitted At', get: r => r.submitted_at },
+    ]);
+    downloadCSV(csv, `daniels_lead_source_${dateStamp}.csv`);
+  }
+}
+
+document.getElementById('login-password').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') handleAdminLogin();
+});
+
+// Add a floating "Plant Certification" button once cockpit loads
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.createElement('button');
+  btn.className = 'btn btn-gold';
+  btn.textContent = '🌱 Plant Certification';
+  btn.style.position = 'fixed';
+  btn.style.bottom = '24px';
+  btn.style.right = '24px';
+  btn.style.padding = '14px 22px';
+  btn.style.fontSize = '14px';
+  btn.style.boxShadow = '0 4px 14px rgba(0,0,0,.2)';
+  btn.onclick = openPlantModal;
+  document.getElementById('screen-cockpit').appendChild(btn);
+});
+</script>
+</body>
+</html>
