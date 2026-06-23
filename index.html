@@ -243,12 +243,12 @@
           <h3>Certifications</h3>
           <p>Take your Sales Tier 1 &amp; Tier 2 exams, track your progress, and download your certificates.</p>
         </div>
-        <div class="home-card" onclick="switchTab('prescreen')">
+        <div class="home-card" onclick="navigateToTool('prescreen')">
           <div class="home-card-icon">📊</div>
           <h3>Pre-Screener</h3>
           <p>Run a quick credit pre-screen for a customer before starting paperwork.</p>
         </div>
-        <div class="home-card" onclick="switchTab('leadsource')">
+        <div class="home-card" onclick="navigateToTool('leadsource')">
           <div class="home-card-icon">📍</div>
           <h3>How They Found Us</h3>
           <p>Quick 10-second check-in after a sale — helps us understand where customers come from.</p>
@@ -259,8 +259,6 @@
     <div class="tab-bar" id="tab-bar-nav" style="display:none">
       <button class="tab-btn" onclick="switchTab('home')">← Home</button>
       <button class="tab-btn active" data-tab="certifications" onclick="switchTab('certifications')">🎓 Certifications</button>
-      <button class="tab-btn" data-tab="prescreen" onclick="switchTab('prescreen')">📊 Pre-Screener</button>
-      <button class="tab-btn" data-tab="leadsource" onclick="switchTab('leadsource')">📍 How They Found Us</button>
     </div>
 
     <!-- TAB: CERTIFICATIONS -->
@@ -304,24 +302,6 @@
       <div class="empty-history" id="empty-history">No attempts yet — your history will show here once you complete a certification.</div>
     </div>
     </div> <!-- end tab-certifications -->
-
-    <!-- TAB: PRE-SCREENER -->
-    <div class="tab-panel" id="tab-prescreen">
-      <div class="section-title">Credit Pre-Screen Tool</div>
-      <p style="font-size:13px;color:var(--mgray);margin-bottom:14px;">Internal tool only — never share this screen or its contents outside the store.</p>
-      <div class="tool-frame-wrap">
-        <iframe id="prescreen-frame" src="" style="width:100%;height:780px;border:none;border-radius:12px;" title="Pre-Screen Tool"></iframe>
-      </div>
-    </div>
-
-    <!-- TAB: LEAD SOURCE -->
-    <div class="tab-panel" id="tab-leadsource">
-      <div class="section-title">How Did the Customer Hear About Us?</div>
-      <p style="font-size:13px;color:var(--mgray);margin-bottom:14px;">Quick check-in after a sale — takes 10 seconds.</p>
-      <div class="tool-frame-wrap">
-        <iframe id="leadsource-frame" src="" style="width:100%;height:780px;border:none;border-radius:12px;" title="Lead Source Form"></iframe>
-      </div>
-    </div>
 
   </div>
 </div>
@@ -654,7 +634,9 @@ function renderDashboardData() {
 }
 
 /* ════════════════════════════════════════════════════════════
-   TAB NAVIGATION — Certifications / Pre-Screener / Lead Source
+   TAB NAVIGATION — Home / Certifications
+   TOOL NAVIGATION — Pre-Screener / Lead Source (direct page navigation,
+   not iframe — GitHub Pages blocks framing between its own sites)
    ════════════════════════════════════════════════════════════ */
 const TOOL_URLS = {
   prescreen: 'https://rodrigomora-daniels.github.io/daniels-credit-simulator/',
@@ -674,17 +656,10 @@ function switchTab(tabName) {
   document.getElementById('tab-bar-nav').style.display = 'flex';
   document.querySelector(`.tab-btn[data-tab="${tabName}"]`).classList.add('active');
   document.getElementById(`tab-${tabName}`).classList.add('active');
+}
 
-  // Lazy-load iframes only on first visit to that tab — keeps tool URLs
-  // out of the static page source until an authenticated user requests them.
-  if (tabName === 'prescreen') {
-    const frame = document.getElementById('prescreen-frame');
-    if (!frame.src) frame.src = TOOL_URLS.prescreen;
-  }
-  if (tabName === 'leadsource') {
-    const frame = document.getElementById('leadsource-frame');
-    if (!frame.src) frame.src = TOOL_URLS.leadsource;
-  }
+function navigateToTool(toolName) {
+  window.location.href = TOOL_URLS[toolName];
 }
 
 function goToExam(tier) {
