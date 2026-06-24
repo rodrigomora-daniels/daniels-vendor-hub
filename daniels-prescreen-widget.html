@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<!--
+================================================================================
+DANIELS HOME CENTER — CUSTOMER-FACING PRE-SCREEN WIDGET
+v1.1 | June 2026
+
+ABOUT THIS WIDGET
+Public-facing, simplified "what could my credit line look like" tool for
+danielshomecenter.com (Magento) — and portable to Shopify later without
+rewrite. This widget is a NEW consumer of the EXISTING credit-prescreen
+Supabase Edge Function. It does not modify, duplicate, or reimplement any
+business logic. It does not perform a soft credit pull or bureau check of
+any kind — every input is self-reported by the shopper, and the result is
+explicitly framed as an estimate, not an approval or credit offer.
+
+BRANDING (v1.1)
+Light brand presence only: small Daniel's logo (base64-embedded, no
+external asset dependency) in a slim header strip, plus navy (#0B3A6B)
+and gold (#E8A93C) accents on primary CTA buttons, active choice-button
+state, and form focus rings. Page background, card structure, and layout
+remain neutral/white so the widget reads as native page content rather
+than a separate marketing unit.
+
+LOGGING (v1.1)
+Confirmed live 2026-06-23: table `prescreen_widget_log` and Edge Function
+`prescreen-widget-log` are deployed in the same Supabase project
+(daniels-lms) as credit-prescreen, following the customer_source_log
+pattern (public insert-only, no public select). Logging call is
+fire-and-forget — a logging failure never blocks or affects the
+customer-visible result.
+
+WHAT THIS WIDGET DOES NOT DO
+- Does not touch the Edge Function contract (13-field payload, 26-field
+  response are fixed and verified against the live simulator source).
+- Does not touch any existing Supabase table (employees, certificaciones_*,
+  customer_source_log, codigos_invitacion, admin_audit_log).
+- Does not integrate with Affirm/PayPal/Synchrony directly — "explore other
+  payment options" and "buy with cash instead" both route to the existing
+  cart, where those payment methods already live natively in Magento.
+- Does not ask the shopper to choose a product category — `product` is
+  fixed to "furniture" (lowest-friction default in the engine).
+
+PAYLOAD FIELD SOURCING (v1)
+  fico       → mapped from 1 of 4 plain-language credit buttons
+  income     → mapped from 1 of 4 monthly income range buttons
+  purchase   → manual numeric input (never auto-detected as the only path)
+  tax        → fixed default, 8.0
+  tenure     → fixed default, 18
+  product    → fixed default, "furniture"
+  dpInput    → live slider, recalculates on change (debounced)
+  termReq    → live slider, recalculates on change (debounced)
+  debts      → fixed default, 1100
+  tradelines → fixed default, "moderate"
+  emptype    → fixed default, "w2"   (NOT "employed" — invalid value)
+  verified   → fixed default, true
+  priorDef   → fixed default, false
+  inquiries  → fixed default, false
+
+RESULT MESSAGING
+The raw `decision` string from the engine (built for a salesperson reading
+an approval workflow) is NEVER shown to the customer. Every response is
+mapped from `routing` to one of four fixed, plain-English messages with a
+matching CTA set. See ROUTING_COPY below.
+
+File: daniels-prescreen-widget.html
+Consumes: Supabase Edge Function credit-prescreen (unchanged, read-only)
+Built: June 2026 | Public-facing
+================================================================================
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daniels Home Center — Credit Estimate</title>
+<style>
+  #dhc-prescreen-root, #dhc-prescreen-root * {
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  #dhc-prescreen-root {
+    /* Daniels brand: navy + gold, applied to action/positive elements only.
+       Structure, backgrounds, and neutral states stay plain so the widget
+       reads as native page content rather than a marketing unit. */
+    --dhc-navy:   #0B3A6B;
+    --dhc-navy-dk:#082A4E;
+    --dhc-gold:   #E8A93C;
+    --dhc-gold-dk:#C98F26;
+    --dhc-ink:    #0F1923;
+    --dhc-ice:    #EAF1F8;
+    --dhc-white:  #FFFFFF;
+    --dhc-off:    #F8F7F4;
+    --dhc-muted:  #EAE8E2;
+    --dhc-border: #D6D3CB;
+    --dhc-sub:    #6B7280;
+    --dhc-green:  #166534;
+    --dhc-gb:     #DCFCE7;
+    --dhc-radius: 10px;
+    max-width: 420px;
+    margin: 0 auto;
+    color: var(--dhc-ink);
+    font-size: 15px;
+    line-height: 1.45;
+  }
+  #dhc-prescreen-root .dhc-card {
+    background: var(--dhc-white);
+    border: 1px solid var(--dhc-border);
+    border-radius: var(--dhc-radius);
+    padding: 20px;
+  }
+  #dhc-prescreen-root .dhc-card + .dhc-card { margin-top: 14px; }
+  #dhc-prescreen-root .dhc-brand-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 14px;
+  }
+  #dhc-prescreen-root .dhc-brand-header img {
+    height: 22px;
+    width: auto;
+    display: block;
+  }
+  #dhc-prescreen-root .dhc-brand-header span {
+    font-size: 11px;
+    color: var(--dhc-sub);
+    border-left: 1px solid var(--dhc-border);
+    padding-left: 8px;
+    line-height: 1;
+  }
+  #dhc-prescreen-root .dhc-eyebrow {
+    font-size: 13px;
+    color: var(--dhc-sub);
+    margin: 0 0 4px;
+  }
+  #dhc-prescreen-root .dhc-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 16px;
+  }
+  #dhc-prescreen-root .dhc-field { margin-bottom: 16px; }
+  #dhc-prescreen-root .dhc-label {
+    font-size: 13px;
+    color: var(--dhc-sub);
+    margin: 0 0 8px;
+    display: block;
+  }
+  #dhc-prescreen-root input[type="text"] {
+    width: 100%;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 10px 12px;
+    border: 1px solid var(--dhc-border);
+    border-radius: 8px;
+    background: var(--dhc-off);
+    color: var(--dhc-ink);
+  }
+  #dhc-prescreen-root input[type="text"]:focus {
+    outline: none;
+    border-color: var(--dhc-navy);
+    box-shadow: 0 0 0 3px rgba(11,58,107,0.14);
+  }
+  #dhc-prescreen-root .dhc-hint {
+    font-size: 11px;
+    color: #9CA3AF;
+    margin: 4px 0 0;
+  }
+  #dhc-prescreen-root .dhc-grid2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  #dhc-prescreen-root .dhc-choice {
+    font-size: 13px;
+    padding: 10px 8px;
+    border: 1px solid var(--dhc-border);
+    border-radius: 8px;
+    background: var(--dhc-white);
+    color: var(--dhc-ink);
+    cursor: pointer;
+    text-align: center;
+  }
+  #dhc-prescreen-root .dhc-choice:hover { background: var(--dhc-off); }
+  #dhc-prescreen-root .dhc-choice.active {
+    border-color: var(--dhc-gold-dk);
+    border-width: 2px;
+    background: #FDF6E9;
+    color: var(--dhc-navy-dk);
+    font-weight: 600;
+  }
+  #dhc-prescreen-root .dhc-choice-wide {
+    grid-column: span 2;
+  }
+  #dhc-prescreen-root .dhc-checkbox-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px;
+    background: var(--dhc-off);
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  #dhc-prescreen-root .dhc-checkbox-row input[type="checkbox"] {
+    margin-top: 2px;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    accent-color: var(--dhc-navy);
+  }
+  #dhc-prescreen-root .dhc-checkbox-row span {
+    font-size: 13px;
+    color: var(--dhc-sub);
+    line-height: 1.4;
+  }
+  #dhc-prescreen-root .dhc-cta-primary {
+    width: 100%;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px;
+    border: 1px solid var(--dhc-navy);
+    border-radius: 8px;
+    background: var(--dhc-navy);
+    color: var(--dhc-white);
+    cursor: pointer;
+  }
+  #dhc-prescreen-root .dhc-cta-primary:hover { background: var(--dhc-navy-dk); }
+  #dhc-prescreen-root .dhc-cta-primary:disabled {
+    background: var(--dhc-muted);
+    border-color: var(--dhc-border);
+    color: var(--dhc-sub);
+    cursor: not-allowed;
+  }
+  #dhc-prescreen-root .dhc-cta-secondary {
+    width: 100%;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 11px;
+    border: 1px solid var(--dhc-border);
+    border-radius: 8px;
+    background: var(--dhc-white);
+    color: var(--dhc-ink);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  #dhc-prescreen-root .dhc-cta-secondary:hover { background: var(--dhc-off); }
+  #dhc-prescreen-root .dhc-result-msg {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0 0 16px;
+  }
+  #dhc-prescreen-root .dhc-result-msg.tone-good { color: var(--dhc-green); }
+  #dhc-prescreen-root .dhc-result-msg.tone-neutral { color: var(--dhc-sub); }
+  #dhc-prescreen-root .dhc-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  #dhc-prescreen-root .dhc-metric {
+    background: var(--dhc-off);
+    border-radius: 8px;
+    padding: 12px;
+  }
+  #dhc-prescreen-root .dhc-metric-label {
+    font-size: 12px;
+    color: var(--dhc-sub);
+    margin: 0 0 2px;
+  }
+  #dhc-prescreen-root .dhc-metric-value {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0;
+  }
+  #dhc-prescreen-root .dhc-slider-row { margin-bottom: 14px; }
+  #dhc-prescreen-root .dhc-slider-head {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  #dhc-prescreen-root .dhc-slider-head span:first-child {
+    font-size: 13px;
+    color: var(--dhc-sub);
+  }
+  #dhc-prescreen-root .dhc-slider-head span:last-child {
+    font-size: 13px;
+    font-weight: 600;
+  }
+  #dhc-prescreen-root input[type="range"] {
+    width: 100%;
+    accent-color: var(--dhc-navy);
+  }
+  #dhc-prescreen-root .dhc-note-box {
+    background: var(--dhc-off);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 16px;
+    display: flex;
+    gap: 10px;
+  }
+  #dhc-prescreen-root .dhc-note-box p {
+    font-size: 13px;
+    color: var(--dhc-sub);
+    margin: 0;
+    line-height: 1.5;
+  }
+  #dhc-prescreen-root .dhc-disclosure {
+    background: var(--dhc-ice);
+    border: 1px solid #C7DCEF;
+    border-radius: 8px;
+    padding: 14px;
+    margin: 14px 0 0;
+  }
+  #dhc-prescreen-root .dhc-disclosure ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  #dhc-prescreen-root .dhc-disclosure li {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--dhc-ink);
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  #dhc-prescreen-root .dhc-disclosure li:last-child { margin-bottom: 0; }
+  #dhc-prescreen-root .dhc-disclosure li b { font-weight: 600; }
+  #dhc-prescreen-root .dhc-disclosure li::before {
+    content: "✓";
+    color: var(--dhc-navy);
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  #dhc-prescreen-root .dhc-cta-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  #dhc-prescreen-root .dhc-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: dhc-spin 0.7s linear infinite;
+    margin-right: 6px;
+    vertical-align: -2px;
+  }
+  @keyframes dhc-spin { to { transform: rotate(360deg); } }
+  #dhc-prescreen-root .dhc-error {
+    font-size: 13px;
+    color: #8A1F1F;
+    background: #FFF0F0;
+    border: 1px solid #E0B4B4;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 14px;
+  }
+  #dhc-prescreen-root .dhc-hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div id="dhc-prescreen-root">
+
+  <div class="dhc-brand-header">
+    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPEAAABACAYAAADLXZHZAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyJpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNiAoV2luZG93cykiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6QzRGRkNEMTNGMEIzMTFFOUFBMUZCRTcwOUY0NEE5QkUiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6QzRGRkNEMTRGMEIzMTFFOUFBMUZCRTcwOUY0NEE5QkUiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDpDNEZGQ0QxMUYwQjMxMUU5QUExRkJFNzA5RjQ0QTlCRSIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDpDNEZGQ0QxMkYwQjMxMUU5QUExRkJFNzA5RjQ0QTlCRSIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/Pu8wqoUAABVASURBVHja7F0HuBXF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" alt="Daniel's Home Center">
+    <span>Credit estimate tool</span>
+  </div>
+
+  <!-- ══════════════════════════ INPUT CARD ══════════════════════════ -->
+  <div class="dhc-card" id="dhc-input-card">
+    <p class="dhc-eyebrow">Quick estimate</p>
+    <p class="dhc-title">What could your credit line look like?</p>
+
+    <div class="dhc-field">
+      <label class="dhc-label" for="dhc-price">Item price</label>
+      <input type="text" id="dhc-price" inputmode="decimal" value="" placeholder="$0">
+      <p class="dhc-hint">Edit if this isn't exact</p>
+    </div>
+
+    <div class="dhc-field">
+      <span class="dhc-label">How would you describe your credit?</span>
+      <div class="dhc-grid2" id="dhc-credit-group" role="group" aria-label="Credit level">
+        <button type="button" class="dhc-choice" data-fico="740">Excellent</button>
+        <button type="button" class="dhc-choice" data-fico="690">Good</button>
+        <button type="button" class="dhc-choice" data-fico="630">Fair</button>
+        <button type="button" class="dhc-choice" data-fico="580">Limited or not sure</button>
+      </div>
+    </div>
+
+    <div class="dhc-field">
+      <span class="dhc-label">What's your monthly income?</span>
+      <div class="dhc-grid2" id="dhc-income-group" role="group" aria-label="Monthly income">
+        <button type="button" class="dhc-choice" data-income="1500">Under $2,000</button>
+        <button type="button" class="dhc-choice" data-income="2750">$2,000–$3,500</button>
+        <button type="button" class="dhc-choice" data-income="4500">$3,500–$5,500</button>
+        <button type="button" class="dhc-choice" data-income="6500">$5,500 or more</button>
+      </div>
+    </div>
+
+    <div class="dhc-field">
+      <span class="dhc-label">How do you get paid?</span>
+      <div class="dhc-grid2" id="dhc-emptype-group" role="group" aria-label="Employment type">
+        <button type="button" class="dhc-choice" data-emptype="w2">Employed (W2)</button>
+        <button type="button" class="dhc-choice" data-emptype="selfemployed">Self-Employed</button>
+      </div>
+    </div>
+
+    <div class="dhc-field">
+      <span class="dhc-label">What are your total monthly debt payments?</span>
+      <div class="dhc-grid2" id="dhc-debts-group" role="group" aria-label="Monthly debt payments">
+        <button type="button" class="dhc-choice" data-debts="350">Under $500/mo</button>
+        <button type="button" class="dhc-choice" data-debts="1000">$500–1,500/mo</button>
+        <button type="button" class="dhc-choice" data-debts="2250">$1,500–3,000/mo</button>
+        <button type="button" class="dhc-choice" data-debts="3500">$3,000+/mo</button>
+      </div>
+    </div>
+
+    <div class="dhc-field">
+      <span class="dhc-label">What are you shopping for?</span>
+      <div class="dhc-grid2" id="dhc-product-group" role="group" aria-label="Product category">
+        <button type="button" class="dhc-choice" data-product="furniture">Furniture</button>
+        <button type="button" class="dhc-choice" data-product="mattress">Mattress</button>
+        <button type="button" class="dhc-choice" data-product="appliances">Appliances</button>
+        <button type="button" class="dhc-choice" data-product="electronics">Electronics</button>
+        <button type="button" class="dhc-choice dhc-choice-wide" data-product="furniture">Other</button>
+      </div>
+    </div>
+
+    <div class="dhc-field">
+      <label class="dhc-checkbox-row" for="dhc-credit-history-flag">
+        <input type="checkbox" id="dhc-credit-history-flag">
+        <span>I've had a missed payment or collections account in the last 2 years, or several credit inquiries recently</span>
+      </label>
+    </div>
+
+    <button type="button" class="dhc-cta-primary" id="dhc-submit-btn" disabled>See my estimate</button>
+  </div>
+
+  <!-- ══════════════════════════ RESULT CARD (hidden until first run) ══════════════════════════ -->
+  <div class="dhc-card dhc-hidden" id="dhc-result-card">
+    <p class="dhc-eyebrow">Result</p>
+    <div id="dhc-error-slot"></div>
+    <p class="dhc-result-msg" id="dhc-result-msg"></p>
+
+    <div class="dhc-metrics" id="dhc-metrics">
+      <div class="dhc-metric">
+        <p class="dhc-metric-label">Monthly payment</p>
+        <p class="dhc-metric-value" id="dhc-metric-pmt">—</p>
+      </div>
+      <div class="dhc-metric">
+        <p class="dhc-metric-label">Term</p>
+        <p class="dhc-metric-value" id="dhc-metric-term">—</p>
+      </div>
+    </div>
+
+    <div class="dhc-note-box dhc-hidden" id="dhc-note-box">
+      <p id="dhc-note-text"></p>
+    </div>
+
+    <div class="dhc-slider-row">
+      <div class="dhc-slider-head">
+        <span>Your down payment</span>
+        <span id="dhc-dp-readout">$0</span>
+      </div>
+      <input type="range" id="dhc-dp-slider" min="0" max="1800" step="25" value="0">
+    </div>
+
+    <div class="dhc-slider-row">
+      <div class="dhc-slider-head">
+        <span>Desired term</span>
+        <span id="dhc-term-readout">18 months</span>
+      </div>
+      <input type="range" id="dhc-term-slider" min="3" max="24" step="3" value="18">
+    </div>
+
+    <div class="dhc-disclosure">
+      <ul>
+        <li><span><b>No credit pull, soft or hard</b> — checking your estimate has zero impact on your credit score.</span></li>
+        <li><span><b>100% based on what you tell us</b> — we don't verify this against any outside source.</span></li>
+        <li><span><b>This is an estimate, not an approval or credit offer.</b></span></li>
+      </ul>
+    </div>
+
+    <div class="dhc-cta-stack" id="dhc-cta-stack"></div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ────────────────────────────────────────────────────────────────
+  // CONFIG — Edge Function contract. DO NOT MODIFY.
+  // Verified directly against the live internal simulator source
+  // (Daniels_Credit_Simulator_v3.html) on 2026-06-23.
+  // ────────────────────────────────────────────────────────────────
+  var EDGE_URL = "https://ecfxeebhtgkbsdeuiueb.supabase.co/functions/v1/credit-prescreen";
+  var EDGE_KEY = "sb_publishable_oRxEOMLizp1kjlsRjWWaxg_muaaMHFt";
+  var CART_URL = "/checkout/cart/"; // Magento default cart path — confirm/adjust per environment
+
+  var FIXED_DEFAULTS = {
+    tax: 8.0,
+    tenure: 18,
+    tradelines: "moderate",
+    verified: false
+  };
+
+  var ROUTING_COPY = {
+    inhouse: {
+      tone: "tone-good",
+      message: "This looks good for in-house financing at Daniels",
+      note: null,
+      ctas: ["call"]
+    },
+    external: {
+      tone: "tone-neutral",
+      message: "This could work through one of our financing partners",
+      note: "Your estimate may route to an outside financing partner rather than Daniels in-house credit.",
+      ctas: ["call", "explore"]
+    },
+    snap: {
+      tone: "tone-neutral",
+      message: "This could work through one of our financing partners",
+      note: "Your estimate may route to an outside financing partner rather than Daniels in-house credit.",
+      ctas: ["call", "explore"]
+    },
+    split: {
+      tone: "tone-neutral",
+      message: "This may need to combine two financing options",
+      note: "Some deals are structured as part Daniels in-house, part outside partner. An advisor can walk you through it.",
+      ctas: ["call", "explore"]
+    },
+    notviable: {
+      tone: "tone-neutral",
+      message: "Visit us in store — our team can look at options this quick tool can't see",
+      note: "With today's information we can't give you a number yet — but that doesn't mean there's no option. Many cases get resolved by talking directly with an advisor.",
+      ctas: ["call", "cash"]
+    }
+  };
+
+  var CTA_LABELS = {
+    call: { icon: "\u260E", text: "Visit us or call 866-341-4695", kind: "primary", action: "tel" },
+    explore: { icon: "\u21BB", text: "Explore other payment options", kind: "secondary", action: "cart" },
+    cash: { icon: "\u{1F6CD}", text: "Buy with cash instead", kind: "secondary", action: "cart" }
+  };
+
+  // ────────────────────────────────────────────────────────────────
+  // STATE
+  // ────────────────────────────────────────────────────────────────
+  var state = {
+    price: null,
+    fico: null,
+    income: null,
+    emptype: null,
+    debts: null,
+    product: null,
+    creditHistoryFlag: false,
+    dpInput: 0,
+    termReq: 18,
+    lastResult: null
+  };
+
+  var debounceTimer = null;
+
+  // ────────────────────────────────────────────────────────────────
+  // DOM REFS
+  // ────────────────────────────────────────────────────────────────
+  var $ = function (id) { return document.getElementById(id); };
+  var priceInput   = $("dhc-price");
+  var creditGroup  = $("dhc-credit-group");
+  var incomeGroup  = $("dhc-income-group");
+  var emptypeGroup = $("dhc-emptype-group");
+  var debtsGroup   = $("dhc-debts-group");
+  var productGroup = $("dhc-product-group");
+  var creditHistoryFlag = $("dhc-credit-history-flag");
+  var submitBtn    = $("dhc-submit-btn");
+  var inputCard    = $("dhc-input-card");
+  var resultCard   = $("dhc-result-card");
+  var resultMsg    = $("dhc-result-msg");
+  var metricPmt    = $("dhc-metric-pmt");
+  var metricTerm   = $("dhc-metric-term");
+  var noteBox      = $("dhc-note-box");
+  var noteText      = $("dhc-note-text");
+  var dpSlider     = $("dhc-dp-slider");
+  var dpReadout    = $("dhc-dp-readout");
+  var termSlider   = $("dhc-term-slider");
+  var termReadout  = $("dhc-term-readout");
+  var ctaStack     = $("dhc-cta-stack");
+  var errorSlot    = $("dhc-error-slot");
+
+  // ────────────────────────────────────────────────────────────────
+  // HELPERS
+  // ────────────────────────────────────────────────────────────────
+  function parsePrice(raw) {
+    var n = parseFloat(String(raw).replace(/[^0-9.]/g, ""));
+    return isNaN(n) ? 0 : n;
+  }
+
+  function fmtMoney(n) {
+    if (n == null || isNaN(n)) return "—";
+    return "$" + Math.round(n).toLocaleString();
+  }
+
+  function selectChoice(group, btn, valueAttr) {
+    Array.prototype.forEach.call(group.querySelectorAll(".dhc-choice"), function (b) {
+      b.classList.remove("active");
+    });
+    btn.classList.add("active");
+    return btn.getAttribute(valueAttr);
+  }
+
+  function validateForm() {
+    var ok = state.price > 0 && state.fico != null && state.income != null &&
+             state.emptype != null && state.debts != null && state.product != null;
+    submitBtn.disabled = !ok;
+    return ok;
+  }
+
+  function mapRouting(result) {
+    // The engine's `routing` field is the source of truth for which
+    // partner track applies. `cls`/`decision` text is sales-facing and
+    // is never surfaced to the customer directly.
+    var key = (result.routing || "").toLowerCase();
+    if (ROUTING_COPY[key]) return ROUTING_COPY[key];
+    // Fallback: if no clean routing match, treat as not-viable rather
+    // than guessing — safer default for a public-facing surface.
+    if (result.tier) return ROUTING_COPY.inhouse;
+    return ROUTING_COPY.notviable;
+  }
+
+  function renderCtas(copy) {
+    ctaStack.innerHTML = "";
+    copy.ctas.forEach(function (key) {
+      var def = CTA_LABELS[key];
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = def.kind === "primary" ? "dhc-cta-primary" : "dhc-cta-secondary";
+      btn.style.display = "flex";
+      btn.style.alignItems = "center";
+      btn.style.justifyContent = "center";
+      btn.style.gap = "6px";
+      btn.innerHTML = "<span aria-hidden=\"true\">" + def.icon + "</span><span>" + def.text + "</span>";
+      btn.addEventListener("click", function () {
+        if (def.action === "tel") {
+          window.location.href = "tel:8663414695";
+        } else if (def.action === "cart") {
+          window.location.href = CART_URL;
+        }
+      });
+      ctaStack.appendChild(btn);
+    });
+  }
+
+  function renderResult(result) {
+    state.lastResult = result;
+    var copy = mapRouting(result);
+
+    errorSlot.innerHTML = "";
+    resultMsg.textContent = copy.message;
+    resultMsg.className = "dhc-result-msg " + copy.tone;
+
+    if (copy.note) {
+      noteText.textContent = copy.note;
+      noteBox.classList.remove("dhc-hidden");
+    } else {
+      noteBox.classList.add("dhc-hidden");
+    }
+
+    metricPmt.textContent = result.pmt > 0 ? fmtMoney(result.pmt) + "/mo" : "—";
+    metricTerm.textContent = result.term ? result.term + " mo" : "—";
+
+    renderCtas(copy);
+    resultCard.classList.remove("dhc-hidden");
+  }
+
+  function renderError() {
+    errorSlot.innerHTML = "<div class=\"dhc-error\">We couldn't load your estimate right now. Please try again in a moment, or visit us in store.</div>";
+    resultMsg.textContent = "";
+    metricPmt.textContent = "—";
+    metricTerm.textContent = "—";
+    noteBox.classList.add("dhc-hidden");
+    ctaStack.innerHTML = "";
+    renderCtas(ROUTING_COPY.notviable);
+    resultCard.classList.remove("dhc-hidden");
+  }
+
+  function buildPayload() {
+    return {
+      fico: state.fico,
+      income: state.income,
+      purchase: state.price,
+      tax: FIXED_DEFAULTS.tax,
+      tenure: FIXED_DEFAULTS.tenure,
+      product: state.product,
+      dpInput: state.dpInput,
+      termReq: state.termReq,
+      debts: state.debts,
+      tradelines: FIXED_DEFAULTS.tradelines,
+      emptype: state.emptype,
+      verified: FIXED_DEFAULTS.verified,
+      priorDef: state.creditHistoryFlag,
+      inquiries: state.creditHistoryFlag
+    };
+  }
+
+  function runEstimate(isInitial) {
+    var payload = buildPayload();
+    console.log("[DHC debug] runEstimate called, isInitial =", isInitial, "payload =", payload);
+
+    if (isInitial) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = "<span class=\"dhc-spinner\"></span>Calculating…";
+    }
+
+    fetch(EDGE_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + EDGE_KEY,
+        "apikey": EDGE_KEY
+      },
+      body: JSON.stringify(payload)
+    })
+      .then(function (resp) {
+        console.log("[DHC debug] fetch resolved, status =", resp.status);
+        if (!resp.ok) throw new Error("Server returned " + resp.status);
+        return resp.json();
+      })
+      .then(function (result) {
+        console.log("[DHC debug] result received =", result);
+        if (result.error) throw new Error(result.error);
+        renderResult(result);
+        console.log("[DHC debug] renderResult called, pmt =", result.pmt, "term =", result.term);
+        if (isInitial) {
+          logRun(payload, result);
+          inputCard.classList.add("dhc-hidden");
+        }
+      })
+      .catch(function (err) {
+        console.log("[DHC debug] runEstimate CATCH fired:", err && err.message);
+        renderError();
+      })
+      .finally(function () {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "See my estimate";
+      });
+  }
+
+  function logRun(payload, result) {
+    // Logging is intentionally fire-and-forget and never blocks the
+    // customer's result from rendering. Failure here is silent by
+    // design — it must never surface as an error to the shopper.
+    // Endpoint confirmed live 2026-06-23: table `prescreen_widget_log`
+    // and Edge Function `prescreen-widget-log` are deployed in the
+    // same Supabase project (daniels-lms), separate from
+    // customer_source_log and all other existing tables.
+    //
+    // Schema verified directly against a live row on 2026-06-23
+    // (10 columns): id, customer_name, fico_bucket, income_bucket,
+    // price, routing, dp, term, pmt, submitted_at, emptype.
+    // submitted_at is auto-generated — never sent from the client.
+    // Field names below were previously mismatched (fico_band vs
+    // fico_bucket, dp_input vs dp, etc.) which caused every insert to
+    // land with those columns NULL while routing — the one field that
+    // happened to match — landed correctly. Fixed to match exactly.
+    try {
+      fetch(EDGE_URL.replace("/credit-prescreen", "/prescreen-widget-log"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + EDGE_KEY,
+          "apikey": EDGE_KEY
+        },
+        body: JSON.stringify({
+          customer_name: null,
+          fico_bucket: payload.fico,
+          income_bucket: payload.income,
+          emptype: payload.emptype,
+          price: payload.purchase,
+          dp: payload.dpInput,
+          term: payload.termReq,
+          pmt: result.pmt != null ? result.pmt : null,
+          routing: result.routing || null
+        })
+      }).catch(function () { /* silent — logging must never break the UX */ });
+    } catch (e) { /* silent */ }
+  }
+
+  // ────────────────────────────────────────────────────────────────
+  // EVENTS
+  // ────────────────────────────────────────────────────────────────
+  priceInput.addEventListener("input", function () {
+    state.price = parsePrice(priceInput.value);
+    var dpMax = Math.max(500, Math.round(state.price));
+    dpSlider.max = dpMax;
+    if (state.dpInput > dpMax) {
+      state.dpInput = dpMax;
+      dpSlider.value = dpMax;
+      dpReadout.textContent = fmtMoney(dpMax);
+    }
+    validateForm();
+  });
+
+  Array.prototype.forEach.call(creditGroup.querySelectorAll(".dhc-choice"), function (btn) {
+    btn.addEventListener("click", function () {
+      state.fico = parseFloat(selectChoice(creditGroup, btn, "data-fico"));
+      validateForm();
+    });
+  });
+
+  Array.prototype.forEach.call(incomeGroup.querySelectorAll(".dhc-choice"), function (btn) {
+    btn.addEventListener("click", function () {
+      state.income = parseFloat(selectChoice(incomeGroup, btn, "data-income"));
+      validateForm();
+    });
+  });
+
+  Array.prototype.forEach.call(emptypeGroup.querySelectorAll(".dhc-choice"), function (btn) {
+    btn.addEventListener("click", function () {
+      state.emptype = selectChoice(emptypeGroup, btn, "data-emptype");
+      validateForm();
+    });
+  });
+
+  Array.prototype.forEach.call(debtsGroup.querySelectorAll(".dhc-choice"), function (btn) {
+    btn.addEventListener("click", function () {
+      state.debts = parseFloat(selectChoice(debtsGroup, btn, "data-debts"));
+      validateForm();
+    });
+  });
+
+  Array.prototype.forEach.call(productGroup.querySelectorAll(".dhc-choice"), function (btn) {
+    btn.addEventListener("click", function () {
+      state.product = selectChoice(productGroup, btn, "data-product");
+      validateForm();
+    });
+  });
+
+  creditHistoryFlag.addEventListener("change", function () {
+    state.creditHistoryFlag = creditHistoryFlag.checked;
+  });
+
+  submitBtn.addEventListener("click", function () {
+    if (!validateForm()) return;
+    runEstimate(true);
+  });
+
+  dpSlider.addEventListener("input", function () {
+    state.dpInput = parseInt(dpSlider.value, 10) || 0;
+    dpReadout.textContent = fmtMoney(state.dpInput);
+    console.log("[DHC debug] dp slider input fired, dpInput =", state.dpInput);
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(function () {
+      console.log("[DHC debug] debounce fired, calling runEstimate(false)");
+      runEstimate(false);
+    }, 400);
+  });
+
+  termSlider.addEventListener("input", function () {
+    state.termReq = parseInt(termSlider.value, 10) || 18;
+    termReadout.textContent = state.termReq + " months";
+    console.log("[DHC debug] term slider input fired, termReq =", state.termReq);
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(function () {
+      console.log("[DHC debug] debounce fired, calling runEstimate(false)");
+      runEstimate(false);
+    }, 400);
+  });
+
+  // ────────────────────────────────────────────────────────────────
+  // OPTIONAL ENHANCEMENT HOOK (not wired by default — see notes)
+  // ────────────────────────────────────────────────────────────────
+  // If/when the host page reliably exposes a product price (confirmed
+  // working across all relevant page types — not assumed), call:
+  //   window.DHCPrescreen.prefillPrice(123.45)
+  // This pre-fills the field but never disables manual editing, and
+  // the widget functions identically with or without this call.
+  window.DHCPrescreen = window.DHCPrescreen || {};
+  window.DHCPrescreen.prefillPrice = function (amount) {
+    var n = parseFloat(amount);
+    if (!isNaN(n) && n > 0) {
+      priceInput.value = "$" + n.toLocaleString();
+      state.price = n;
+      var dpMax = Math.max(500, Math.round(n));
+      dpSlider.max = dpMax;
+      validateForm();
+    }
+  };
+
+})();
+</script>
+
+</body>
+</html>
