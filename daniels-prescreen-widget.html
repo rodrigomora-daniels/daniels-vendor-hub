@@ -273,6 +273,15 @@ Built: June 2026 | Public-facing
     margin: 0;
   }
   #dhc-prescreen-root .dhc-slider-row { margin-bottom: 14px; }
+  #dhc-prescreen-root .dhc-adjust-note {
+    font-size: 12px;
+    color: var(--dhc-navy-dk);
+    background: #FDF6E9;
+    border: 1px solid var(--dhc-gold);
+    border-radius: 6px;
+    padding: 6px 10px;
+    margin: 8px 0 0;
+  }
   #dhc-prescreen-root .dhc-slider-head {
     display: flex;
     justify-content: space-between;
@@ -468,6 +477,7 @@ Built: June 2026 | Public-facing
         <span id="dhc-dp-readout">$0</span>
       </div>
       <input type="range" id="dhc-dp-slider" min="0" max="1800" step="25" value="0">
+      <p class="dhc-adjust-note dhc-hidden" id="dhc-dp-adjust-note"></p>
     </div>
 
     <div class="dhc-slider-row">
@@ -476,6 +486,7 @@ Built: June 2026 | Public-facing
         <span id="dhc-term-readout">18 months</span>
       </div>
       <input type="range" id="dhc-term-slider" min="3" max="24" step="3" value="18">
+      <p class="dhc-adjust-note dhc-hidden" id="dhc-term-adjust-note"></p>
     </div>
 
     <div class="dhc-disclosure">
@@ -589,8 +600,10 @@ Built: June 2026 | Public-facing
   var noteText      = $("dhc-note-text");
   var dpSlider     = $("dhc-dp-slider");
   var dpReadout    = $("dhc-dp-readout");
+  var dpAdjustNote = $("dhc-dp-adjust-note");
   var termSlider   = $("dhc-term-slider");
   var termReadout  = $("dhc-term-readout");
+  var termAdjustNote = $("dhc-term-adjust-note");
   var ctaStack     = $("dhc-cta-stack");
   var errorSlot    = $("dhc-error-slot");
 
@@ -674,6 +687,35 @@ Built: June 2026 | Public-facing
 
     metricPmt.textContent = result.pmt > 0 ? fmtMoney(result.pmt) + "/mo" : "—";
     metricTerm.textContent = result.term ? result.term + " mo" : "—";
+
+    // The engine is the source of truth for the actual term/down payment
+    // used in the calculation — these can differ from what the customer
+    // requested (e.g. a lower credit tier capping max term, or a
+    // required minimum down payment). When they differ, sync the slider
+    // to the real value so the slider and the result card never show
+    // two contradicting numbers, and explain why with a short note.
+    if (result.term != null && result.term !== state.termReq) {
+      state.termReq = result.term;
+      termSlider.value = result.term;
+      termReadout.textContent = result.term + " months";
+      termAdjustNote.textContent = "Adjusted to " + result.term + " months based on your profile.";
+      termAdjustNote.classList.remove("dhc-hidden");
+    } else {
+      termAdjustNote.classList.add("dhc-hidden");
+    }
+
+    if (result.dp != null && Math.round(result.dp) !== Math.round(state.dpInput)) {
+      var adjustedDp = Math.round(result.dp);
+      state.dpInput = adjustedDp;
+      var dpMax = Math.max(parseInt(dpSlider.max, 10) || 0, adjustedDp);
+      dpSlider.max = dpMax;
+      dpSlider.value = adjustedDp;
+      dpReadout.textContent = fmtMoney(adjustedDp);
+      dpAdjustNote.textContent = "Adjusted to " + fmtMoney(adjustedDp) + " based on your profile's minimum down payment.";
+      dpAdjustNote.classList.remove("dhc-hidden");
+    } else {
+      dpAdjustNote.classList.add("dhc-hidden");
+    }
 
     renderCtas(copy);
     resultCard.classList.remove("dhc-hidden");
