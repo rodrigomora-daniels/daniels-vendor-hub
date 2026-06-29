@@ -291,9 +291,18 @@ async function initEmployeeContext() {
         if (opt.value === loggedInEmployee.tienda) { storeSelect.value = loggedInEmployee.tienda; break; }
       }
     }
-    document.getElementById('emp-name').readOnly = true;
-    document.getElementById('emp-id').readOnly = true;
-    if (storeSelect) storeSelect.disabled = true;
+
+    if (loggedInEmployee.es_admin) {
+      document.querySelector('.card-title').insertAdjacentHTML('afterend',
+        `<div style="background:#fdf3e3;border-left:4px solid var(--gold);color:var(--navy);padding:14px 16px;border-radius:6px;font-size:14px;margin-bottom:18px;font-weight:700;">
+          🔍 Admin Preview Mode — you can pick any store, retake as many times as you like, and this run will NOT be saved to any employee's record.
+        </div>`);
+    } else {
+      document.getElementById('emp-name').readOnly = true;
+      document.getElementById('emp-id').readOnly = true;
+      // Store stays editable for everyone — a vendor may certify at a
+      // different store than their default one without it being a blocker.
+    }
 
     attemptCount = await checkAttemptCount();
     if (attemptCount >= MAX_ATTEMPTS) {
@@ -316,6 +325,10 @@ async function initEmployeeContext() {
 async function saveResultToSupabase(scored, totalPts, pct, pass, elapsed) {
   if (!loggedInEmployee) {
     console.warn('No logged-in employee context — result not saved to Supabase.');
+    return;
+  }
+  if (loggedInEmployee.es_admin) {
+    console.log('Admin preview mode — result intentionally NOT saved to Supabase.');
     return;
   }
   const record = {
@@ -345,6 +358,7 @@ const MAX_ATTEMPTS = 3;
 
 async function checkAttemptCount() {
   if (!loggedInEmployee) return 0;
+  if (loggedInEmployee.es_admin) return 0; // admin always has unlimited attempts
   try {
     const rows = await sbFetch(`certificaciones_progreso?empleado_id=eq.${loggedInEmployee.id}&certificacion=eq.tier2&select=id`);
     return rows ? rows.length : 0;
