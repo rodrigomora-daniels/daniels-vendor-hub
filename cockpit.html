@@ -536,6 +536,11 @@ function renderCertAttemptsTable(rows) {
     const timeTxt = r.tiempo_usado_segundos != null ? `${Math.floor(r.tiempo_usado_segundos/60)}:${String(r.tiempo_usado_segundos%60).padStart(2,'0')}` : '—';
     const dateTxt = r.fecha_completado ? new Date(r.fecha_completado).toLocaleString() : (r.started_at ? new Date(r.started_at).toLocaleString()+' (started)' : '—');
     const canView = r.detalle_respuestas && Array.isArray(r.detalle_respuestas) && r.detalle_respuestas.length > 0;
+    let statusText;
+    if (r.aprobado === true) statusText = 'Passed';
+    else if (r.aprobado === false) statusText = 'Failed';
+    else if (r.estado === 'abandoned') statusText = 'Abandoned';
+    else statusText = 'In Progress';
     return `<tr>
       <td>${name}</td>
       <td>${certLabel}</td>
@@ -546,6 +551,7 @@ function renderCertAttemptsTable(rows) {
       <td>${dateTxt}</td>
       <td class="row-actions">
         ${canView ? `<button class="btn btn-ghost" onclick='openAnswerDetail(${JSON.stringify(r.id)}, ${JSON.stringify(r.certificacion)})'>View Answers</button>` : ''}
+        <button class="btn btn-red" onclick='deleteAttempt(${JSON.stringify(r.id)}, ${JSON.stringify(name)}, ${JSON.stringify(certLabel)}, ${JSON.stringify(statusText)})'>Delete</button>
       </td>
     </tr>`;
   }).join('');
@@ -624,6 +630,25 @@ async function submitCertReset() {
     loadAllData();
   } catch (err) {
     alert('Error resetting certification: ' + err.message);
+  }
+}
+
+/* ════════ DELETE A SINGLE ATTEMPT (corrupted / interrupted / stuck) ════════ */
+async function deleteAttempt(recordId, empName, certLabel, statusText) {
+  if (!confirm(`Delete this ${certLabel} attempt for ${empName} (${statusText})?\n\nThis permanently removes the record and frees up an attempt slot. This cannot be undone.`)) return;
+  try {
+    const rows = await sbFetch('rpc/admin_eliminar_intento_certificacion', {
+      method: 'POST',
+      body: JSON.stringify({
+        p_admin_id: admin.id,
+        p_intento_id: recordId,
+        p_detalle: `${empName} — ${certLabel} — ${statusText}`
+      })
+    });
+    if (!rows[0].success) { alert(rows[0].message); return; }
+    loadAllData();
+  } catch (err) {
+    alert('Error deleting attempt: ' + err.message);
   }
 }
 

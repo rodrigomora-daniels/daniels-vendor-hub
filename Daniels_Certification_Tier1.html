@@ -815,6 +815,25 @@ const QUESTIONS = [
 const EXAM_SECONDS = 4500;
 let currentRecordId = null;
 const SESSION_KEY = () => `examSession_${TIER_KEY}_${(loggedInEmployee && loggedInEmployee.id) || 'guest'}`;
+let displayOrder = [];
+let optionOrder = {};
+
+function shuffleArray(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+function buildShuffledOrders(){
+  displayOrder = shuffleArray(QUESTIONS.map((_,i)=>i));
+  optionOrder = {};
+  QUESTIONS.forEach((q,qi)=>{
+    optionOrder[qi] = shuffleArray(q.opts.map((_,i)=>i));
+  });
+}
 let state={empName:'',empId:'',empStore:'',current:0,answers:new Array(QUESTIONS.length).fill(null),answered:0,startTime:null,timerInterval:null,secondsLeft:EXAM_SECONDS,finished:false};
 
 function confirmStartExam(){
@@ -839,6 +858,7 @@ function closeStartConfirmModal(){
 async function beginExamFlow(){
   document.getElementById('start-confirm-modal').style.display='none';
   state.startTime=Date.now();
+  buildShuffledOrders();
 
   if (loggedInEmployee && !loggedInEmployee.es_admin) {
     try {
@@ -875,7 +895,9 @@ function saveSessionSnapshot(){
       current: state.current,
       answers: state.answers,
       answered: state.answered,
-      empName: state.empName, empId: state.empId, empStore: state.empStore
+      empName: state.empName, empId: state.empId, empStore: state.empStore,
+      displayOrder: displayOrder,
+      optionOrder: optionOrder
     }));
   } catch(err){ console.warn('Could not persist session snapshot:', err); }
 }
@@ -900,6 +922,8 @@ function tryResumeExam(){
   state.answers = snap.answers;
   state.answered = snap.answered;
   state.empName = snap.empName; state.empId = snap.empId; state.empStore = snap.empStore;
+  if (snap.displayOrder && snap.optionOrder) { displayOrder = snap.displayOrder; optionOrder = snap.optionOrder; }
+  else { buildShuffledOrders(); }
   document.getElementById('screen-intro').classList.remove('active');
   document.getElementById('screen-exam').classList.add('active');
   document.getElementById('timer').style.display='block';
@@ -941,8 +965,8 @@ function updateTimerDisplay(){
 }
 
 function renderQuestion(){
-  const qi=state.current,q=QUESTIONS[qi];
-  document.getElementById('q-num').textContent=`Q${qi+1}`;
+  const qi=displayOrder[state.current],q=QUESTIONS[qi];
+  document.getElementById('q-num').textContent=`Q${state.current+1}`;
   document.getElementById('q-pts').textContent=`${q.pts} pts`;
   document.getElementById('q-section').textContent=q.section;
   document.getElementById('q-text').textContent=q.q;
@@ -950,17 +974,19 @@ function renderQuestion(){
   if(q.scenario){scEl.textContent=q.scenario;scEl.style.display='block';}else{scEl.style.display='none';}
   const subEl=document.getElementById('q-sub');
   if(q.sub){subEl.textContent=q.sub;subEl.style.display='block';}else{subEl.style.display='none';}
-  const pct=((qi)/QUESTIONS.length*100).toFixed(0);
+  const pct=((state.current)/QUESTIONS.length*100).toFixed(0);
   document.getElementById('progress-bar').style.width=`${pct}%`;
-  document.getElementById('progress-label').textContent=`Question ${qi+1} of ${QUESTIONS.length} / Pregunta ${qi+1} de ${QUESTIONS.length}`;
+  document.getElementById('progress-label').textContent=`Question ${state.current+1} of ${QUESTIONS.length} / Pregunta ${state.current+1} de ${QUESTIONS.length}`;
   document.getElementById('q-answered').textContent=`${state.answered} of ${QUESTIONS.length} answered / de ${QUESTIONS.length} respondidas`;
   const container=document.getElementById('q-options');container.innerHTML='';
   const letters=['A','B','C','D'];
-  q.opts.forEach((opt,i)=>{
+  const order = optionOrder[qi] || q.opts.map((_,i)=>i);
+  order.forEach((origIdx,visualPos)=>{
+    const opt=q.opts[origIdx];
     const div=document.createElement('div');
-    div.className='option'+(state.answers[qi]===i?' selected':'');
-    div.innerHTML=`<div class="option-letter">${letters[i]}</div><div class="option-text">${opt}</div>`;
-    if(state.answers[qi]===null)div.onclick=()=>selectAnswer(i);
+    div.className='option'+(state.answers[qi]===origIdx?' selected':'');
+    div.innerHTML=`<div class="option-letter">${letters[visualPos]}</div><div class="option-text">${opt}</div>`;
+    if(state.answers[qi]===null)div.onclick=()=>selectAnswer(origIdx);
     container.appendChild(div);
   });
   const expEl=document.getElementById('q-explanation');
@@ -969,21 +995,24 @@ function renderQuestion(){
     expEl.classList.add('show');markAnswered(qi);
   }else{expEl.classList.remove('show');expEl.textContent='';}
   const btn=document.getElementById('btn-next');
-  if(qi===QUESTIONS.length-1){btn.textContent='Submit / Enviar';btn.onclick=()=>finishExam();}
+  if(state.current===QUESTIONS.length-1){btn.textContent='Submit / Enviar';btn.onclick=()=>finishExam();}
   else{btn.textContent='Next / Siguiente →';btn.onclick=()=>nextQuestion();}
 }
 
 function selectAnswer(optIdx){
-  if(state.answers[state.current]!==null)return;
-  state.answered++;state.answers[state.current]=optIdx;renderQuestion();saveSessionSnapshot();
+  const qi=displayOrder[state.current];
+  if(state.answers[qi]!==null)return;
+  state.answered++;state.answers[qi]=optIdx;renderQuestion();saveSessionSnapshot();
 }
 
 function markAnswered(qi){
   const q=QUESTIONS[qi];
-  document.querySelectorAll('.option').forEach((el,i)=>{
+  const order = optionOrder[qi] || q.opts.map((_,i)=>i);
+  document.querySelectorAll('.option').forEach((el,visualPos)=>{
     el.onclick=null;
-    if(i===q.correct)el.classList.add('correct');
-    else if(i===state.answers[qi]&&i!==q.correct)el.classList.add('wrong');
+    const origIdx = order[visualPos];
+    if(origIdx===q.correct)el.classList.add('correct');
+    else if(origIdx===state.answers[qi]&&origIdx!==q.correct)el.classList.add('wrong');
   });
 }
 
