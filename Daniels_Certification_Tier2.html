@@ -161,7 +161,7 @@
         <option>Cerritos (RR)</option>
       </select>
     </div>
-    <div style="margin-top:22px"><button class="btn btn-primary btn-block" onclick="startExam()">Begin Assessment / Comenzar Evaluación →</button></div>
+    <div style="margin-top:22px"><button class="btn btn-primary btn-block" onclick="confirmStartExam()">Begin Assessment / Comenzar Evaluación →</button></div>
   </div>
 </div>
 
@@ -304,15 +304,26 @@ async function initEmployeeContext() {
       // different store than their default one without it being a blocker.
     }
 
-    attemptCount = await checkAttemptCount();
-    if (attemptCount >= MAX_ATTEMPTS) {
+    const status = await checkCertificationStatus();
+    attemptCount = status.attempts;
+    certPassed = status.passed;
+    const startBtn = document.querySelector('button[onclick="confirmStartExam()"]');
+    if (certPassed) {
+      document.querySelector('.card-title').insertAdjacentHTML('afterend',
+        `<div style="background:#e8f5e9;border-left:4px solid #2e7d32;color:#2e7d32;padding:14px 16px;border-radius:6px;font-size:14px;margin-bottom:18px;font-weight:700;">
+          ✅ You have already passed this certification. Retakes are not available once you've passed. / Ya aprobaste esta certificación. No se permite reintentar una vez aprobada.
+        </div>`);
+      startBtn.disabled = true;
+      startBtn.style.opacity = '0.5';
+      startBtn.style.cursor = 'not-allowed';
+    } else if (attemptCount >= MAX_ATTEMPTS) {
       document.querySelector('.card-title').insertAdjacentHTML('afterend',
         `<div style="background:#fdecea;border-left:4px solid var(--red);color:var(--red);padding:14px 16px;border-radius:6px;font-size:14px;margin-bottom:18px;">
-          You have already used all ${MAX_ATTEMPTS} attempts for this certification. Please see your manager to discuss next steps. / Ya has usado los ${MAX_ATTEMPTS} intentos disponibles. Contacta a tu gerente.
+          You have already used all ${MAX_ATTEMPTS} attempts for this certification without passing. This certification is locked until your manager resets it. / Ya usaste los ${MAX_ATTEMPTS} intentos sin aprobar. Esta certificación está bloqueada hasta que tu gerente la reinicie.
         </div>`);
-      document.querySelector('button[onclick="startExam()"]').disabled = true;
-      document.querySelector('button[onclick="startExam()"]').style.opacity = '0.5';
-      document.querySelector('button[onclick="startExam()"]').style.cursor = 'not-allowed';
+      startBtn.disabled = true;
+      startBtn.style.opacity = '0.5';
+      startBtn.style.cursor = 'not-allowed';
     } else if (attemptCount > 0) {
       document.querySelector('.card-title').insertAdjacentHTML('afterend',
         `<div style="background:#fff3cd;border-left:4px solid var(--gold);padding:12px 16px;border-radius:6px;font-size:13px;margin-bottom:18px;">
@@ -320,6 +331,7 @@ async function initEmployeeContext() {
         </div>`);
     }
   }
+  tryResumeExam();
 }
 
 async function saveResultToSupabase(scored, totalPts, pct, pass, elapsed) {
@@ -332,39 +344,54 @@ async function saveResultToSupabase(scored, totalPts, pct, pass, elapsed) {
     return;
   }
   const record = {
-    empleado_id: loggedInEmployee.id,
-    certificacion: TIER_KEY,
     score: scored,
     total_puntos: totalPts,
     porcentaje: pct,
     aprobado: pass,
     tiempo_usado_segundos: elapsed,
-    detalle_respuestas: state.answers
+    detalle_respuestas: state.answers,
+    estado: 'completed'
   };
   try {
-    await sbFetch('certificaciones_progreso', {
-      method: 'POST',
-      body: JSON.stringify(record)
-    });
+    if (currentRecordId) {
+      await sbFetch(`certificaciones_progreso?id=eq.${currentRecordId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(record)
+      });
+    } else {
+      // Fallback safety net: no start-record exists (shouldn't normally happen) — insert full result directly.
+      await sbFetch('certificaciones_progreso', {
+        method: 'POST',
+        body: JSON.stringify({ empleado_id: loggedInEmployee.id, certificacion: TIER_KEY, started_at: new Date().toISOString(), ...record })
+      });
+    }
     console.log('Result saved to Supabase successfully.');
   } catch (err) {
     console.error('Failed to save result to Supabase:', err);
   }
+  clearSessionSnapshot();
 }
 
 
 let attemptCount = 0;
+let certPassed = false;
 const MAX_ATTEMPTS = 3;
 
-async function checkAttemptCount() {
-  if (!loggedInEmployee) return 0;
-  if (loggedInEmployee.es_admin) return 0; // admin always has unlimited attempts
+async function checkCertificationStatus() {
+  if (!loggedInEmployee) return {attempts:0, passed:false};
+  if (loggedInEmployee.es_admin) return {attempts:0, passed:false};
   try {
-    const rows = await sbFetch(`certificaciones_progreso?empleado_id=eq.${loggedInEmployee.id}&certificacion=eq.tier2&select=id`);
-    return rows ? rows.length : 0;
+    const resetRows = await sbFetch(`certificacion_resets?empleado_id=eq.${loggedInEmployee.id}&certificacion=eq.${TIER_KEY}&select=reset_at&order=reset_at.desc&limit=1`);
+    const lastReset = (resetRows && resetRows.length) ? resetRows[0].reset_at : null;
+    let query = `certificaciones_progreso?empleado_id=eq.${loggedInEmployee.id}&certificacion=eq.${TIER_KEY}&select=id,aprobado`;
+    if (lastReset) query += `&started_at=gt.${lastReset}`;
+    const rows = await sbFetch(query);
+    const attempts = rows ? rows.length : 0;
+    const passed = rows ? rows.some(r => r.aprobado === true) : false;
+    return {attempts, passed};
   } catch (err) {
-    console.error('Could not check attempt count:', err);
-    return 0;
+    console.error('Could not check certification status:', err);
+    return {attempts:0, passed:false};
   }
 }
 
@@ -373,8 +400,12 @@ function backToDashboard() {
 }
 
 function handleRetake() {
+  if (certPassed) {
+    alert('You already passed this certification. / Ya aprobaste esta certificación.');
+    return;
+  }
   if (attemptCount >= MAX_ATTEMPTS) {
-    alert('You have used all {MAX_ATTEMPTS} attempts. Please see your manager.');
+    alert('You have used all ' + MAX_ATTEMPTS + ' attempts. Please see your manager. / Ya usaste tus ' + MAX_ATTEMPTS + ' intentos. Contacta a tu gerente.');
     return;
   }
   location.reload();
@@ -781,18 +812,101 @@ const QUESTIONS = [
 
 
 // ════ APP STATE ════════════════════════════════════════════════
-let state={empName:'',empId:'',empStore:'',current:0,answers:new Array(QUESTIONS.length).fill(null),answered:0,startTime:null,timerInterval:null,secondsLeft:3000,finished:false};
+const EXAM_SECONDS = 3000;
+let currentRecordId = null;
+const SESSION_KEY = () => `examSession_${TIER_KEY}_${(loggedInEmployee && loggedInEmployee.id) || 'guest'}`;
+let state={empName:'',empId:'',empStore:'',current:0,answers:new Array(QUESTIONS.length).fill(null),answered:0,startTime:null,timerInterval:null,secondsLeft:EXAM_SECONDS,finished:false};
 
-function startExam(){
+function confirmStartExam(){
+  if (certPassed) { alert('You already passed this certification. Retakes are not available. / Ya aprobaste esta certificación. No se permite reintentar.'); return; }
+  if (attemptCount >= MAX_ATTEMPTS && !(loggedInEmployee && loggedInEmployee.es_admin)) { alert('You have used all attempts. Please see your manager. / Ya usaste todos tus intentos. Contacta a tu gerente.'); return; }
   const n=document.getElementById('emp-name').value.trim();
   const i=document.getElementById('emp-id').value.trim();
   const s=document.getElementById('emp-store').value;
   if(!n||!i||!s){alert('Please complete all fields / Por favor completa todos los campos');return;}
-  state.empName=n;state.empId=i;state.empStore=s;state.startTime=Date.now();
+  state.empName=n;state.empId=i;state.empStore=s;
+  const attemptLabel = (loggedInEmployee && loggedInEmployee.es_admin)
+    ? 'Admin Preview Mode — this run will not be saved. / Modo vista previa de administrador — esta sesión no se guardará.'
+    : `This will count as Attempt ${attemptCount + 1} of ${MAX_ATTEMPTS}. The timer starts immediately once you begin and cannot be paused — closing or leaving this page before submitting still uses this attempt. / Esto contará como el Intento ${attemptCount + 1} de ${MAX_ATTEMPTS}. El cronómetro inicia de inmediato y no se puede pausar — cerrar o salir de esta página antes de enviar también usa este intento.`;
+  document.getElementById('start-confirm-text').textContent = attemptLabel;
+  document.getElementById('start-confirm-modal').style.display='flex';
+}
+
+function closeStartConfirmModal(){
+  document.getElementById('start-confirm-modal').style.display='none';
+}
+
+async function beginExamFlow(){
+  document.getElementById('start-confirm-modal').style.display='none';
+  state.startTime=Date.now();
+
+  if (loggedInEmployee && !loggedInEmployee.es_admin) {
+    try {
+      const inserted = await sbFetch('certificaciones_progreso', {
+        method:'POST',
+        body: JSON.stringify({
+          empleado_id: loggedInEmployee.id,
+          certificacion: TIER_KEY,
+          started_at: new Date().toISOString(),
+          estado: 'in_progress'
+        })
+      });
+      if (inserted && inserted.length) currentRecordId = inserted[0].id;
+    } catch(err){
+      console.error('Could not register attempt start:', err);
+      alert('There was a problem starting the exam. Please try again or contact your manager. / Hubo un problema al iniciar el examen. Intenta de nuevo o contacta a tu gerente.');
+      return;
+    }
+  }
+
   document.getElementById('screen-intro').classList.remove('active');
   document.getElementById('screen-exam').classList.add('active');
   document.getElementById('timer').style.display='block';
+  saveSessionSnapshot();
   startTimer();renderQuestion();
+}
+
+function saveSessionSnapshot(){
+  if (loggedInEmployee && loggedInEmployee.es_admin) return;
+  try {
+    sessionStorage.setItem(SESSION_KEY(), JSON.stringify({
+      recordId: currentRecordId,
+      startTime: state.startTime,
+      current: state.current,
+      answers: state.answers,
+      answered: state.answered,
+      empName: state.empName, empId: state.empId, empStore: state.empStore
+    }));
+  } catch(err){ console.warn('Could not persist session snapshot:', err); }
+}
+
+function clearSessionSnapshot(){
+  try { sessionStorage.removeItem(SESSION_KEY()); } catch(err){}
+}
+
+function tryResumeExam(){
+  if (loggedInEmployee && loggedInEmployee.es_admin) return false;
+  let raw;
+  try { raw = sessionStorage.getItem(SESSION_KEY()); } catch(err){ return false; }
+  if (!raw) return false;
+  let snap;
+  try { snap = JSON.parse(raw); } catch(err){ return false; }
+  if (!snap) return false;
+  const elapsedSinceStart = Math.floor((Date.now()-snap.startTime)/1000);
+  const remaining = EXAM_SECONDS - elapsedSinceStart;
+  currentRecordId = snap.recordId;
+  state.startTime = snap.startTime;
+  state.current = snap.current;
+  state.answers = snap.answers;
+  state.answered = snap.answered;
+  state.empName = snap.empName; state.empId = snap.empId; state.empStore = snap.empStore;
+  document.getElementById('screen-intro').classList.remove('active');
+  document.getElementById('screen-exam').classList.add('active');
+  document.getElementById('timer').style.display='block';
+  if (remaining <= 0) { state.secondsLeft = 0; finishExam(); return true; }
+  state.secondsLeft = remaining;
+  startTimer();renderQuestion();
+  return true;
 }
 
 function startTimer(){
@@ -801,6 +915,23 @@ function startTimer(){
     if(state.secondsLeft<=0){clearInterval(state.timerInterval);finishExam();}
   },1000);
 }
+
+function markAbandonedBeacon(){
+  if (!loggedInEmployee || loggedInEmployee.es_admin) return;
+  if (state.finished || !currentRecordId) return;
+  const examScreen = document.getElementById('screen-exam');
+  if (!examScreen || !examScreen.classList.contains('active')) return;
+  try {
+    fetch(`${SUPABASE_URL}/rest/v1/certificaciones_progreso?id=eq.${currentRecordId}`, {
+      method:'PATCH',
+      keepalive:true,
+      headers:{ 'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':`Bearer ${SUPABASE_KEY}` },
+      body: JSON.stringify({ estado:'abandoned', tiempo_usado_segundos: Math.floor((Date.now()-state.startTime)/1000) })
+    });
+  } catch(err){}
+}
+window.addEventListener('pagehide', markAbandonedBeacon);
+window.addEventListener('beforeunload', markAbandonedBeacon);
 
 function updateTimerDisplay(){
   const m=Math.floor(state.secondsLeft/60),s=state.secondsLeft%60;
@@ -844,7 +975,7 @@ function renderQuestion(){
 
 function selectAnswer(optIdx){
   if(state.answers[state.current]!==null)return;
-  state.answered++;state.answers[state.current]=optIdx;renderQuestion();
+  state.answered++;state.answers[state.current]=optIdx;renderQuestion();saveSessionSnapshot();
 }
 
 function markAnswered(qi){
@@ -882,10 +1013,15 @@ function finishExam(){
   buildSectionBreakdown(pass);
   if(pass)document.getElementById('btn-cert').style.display='block';
   saveResultToSupabase(scored, totalPts, pct, pass, elapsed);
-  attemptCount++;
-  if (attemptCount >= MAX_ATTEMPTS) {
+  if (pass) {
+    certPassed = true;
     document.getElementById('btn-retake').style.display = 'none';
-    document.getElementById('attempts-locked-msg').style.display = 'block';
+  } else {
+    attemptCount++;
+    if (attemptCount >= MAX_ATTEMPTS) {
+      document.getElementById('btn-retake').style.display = 'none';
+      document.getElementById('attempts-locked-msg').style.display = 'block';
+    }
   }
 }
 
@@ -919,5 +1055,17 @@ function showCertificate(){
   document.getElementById('cert-wrap').scrollIntoView({behavior:'smooth'});
 }
 </script>
+
+<!-- START CONFIRMATION MODAL -->
+<div id="start-confirm-modal" style="display:none;position:fixed;inset:0;background:rgba(20,20,20,.55);z-index:999;align-items:center;justify-content:center;">
+  <div style="background:#fff;max-width:440px;width:90%;border-radius:10px;padding:28px 26px;box-shadow:0 10px 40px rgba(0,0,0,.3);">
+    <div style="font-size:17px;font-weight:700;color:var(--navy);margin-bottom:10px;">Confirm Exam Start / Confirmar Inicio</div>
+    <div id="start-confirm-text" style="font-size:14px;color:#333;line-height:1.5;margin-bottom:18px;"></div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-primary" style="flex:1" onclick="beginExamFlow()">Start Now / Iniciar Ahora</button>
+      <button class="btn btn-block" style="flex:1;background:var(--mgray);color:#fff" onclick="closeStartConfirmModal()">Cancel / Cancelar</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

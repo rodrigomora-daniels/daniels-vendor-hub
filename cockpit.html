@@ -212,6 +212,26 @@
   </div>
 </div>
 
+    <!-- CERTIFICATION ATTEMPTS -->
+    <div class="section">
+      <div class="section-hdr">
+        <h2>🎓 Certification Attempts</h2>
+        <button class="btn btn-gold" onclick="exportCSV('certattempts')">⬇ Export CSV</button>
+      </div>
+      <div class="kpi-grid" style="margin-bottom:16px">
+        <div class="kpi-card"><div class="lbl">Tier 1 Pass Rate</div><div class="val" id="kpi-t1-passrate">—</div><div class="sub" id="kpi-t1-passrate-sub">—</div></div>
+        <div class="kpi-card"><div class="lbl">Tier 2 Pass Rate</div><div class="val" id="kpi-t2-passrate">—</div><div class="sub" id="kpi-t2-passrate-sub">—</div></div>
+        <div class="kpi-card"><div class="lbl">In Progress</div><div class="val" id="kpi-cert-inprogress">—</div><div class="sub">exams currently open</div></div>
+        <div class="kpi-card"><div class="lbl">Locked (3 strikes)</div><div class="val" id="kpi-cert-locked">—</div><div class="sub">need admin reset</div></div>
+      </div>
+      <div style="overflow-x:auto">
+        <table id="tbl-certattempts">
+          <thead><tr><th>Employee</th><th>Cert</th><th>Attempt #</th><th>Status</th><th>Score</th><th>Time Used</th><th>Date</th><th>Actions</th></tr></thead>
+          <tbody id="tbl-certattempts-body"><tr><td colspan="8" class="empty-state">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
 <!-- ══════════ MODAL: PLANT CERTIFICATION ══════════ -->
 <div class="modal-overlay" id="modal-plant">
   <div class="modal-box">
@@ -252,6 +272,29 @@
   </div>
 </div>
 
+<!-- ══════════ MODAL: ANSWER DETAIL ══════════ -->
+<div class="modal-overlay" id="modal-answers">
+  <div class="modal-box" style="max-width:640px;max-height:80vh;overflow-y:auto">
+    <h3 id="answers-modal-title">Answer Detail</h3>
+    <div id="answers-modal-body">Loading...</div>
+    <div style="margin-top:14px"><button class="btn btn-ghost btn-block" onclick="closeModal('modal-answers')">Close</button></div>
+  </div>
+</div>
+
+<!-- ══════════ MODAL: RESET CERTIFICATION ══════════ -->
+<div class="modal-overlay" id="modal-cert-reset">
+  <div class="modal-box">
+    <h3>🔓 Reset Certification</h3>
+    <p style="font-size:13px;color:var(--mgray);margin-bottom:14px" id="cert-reset-desc"></p>
+    <label class="field-label">Reason / Notes (optional)</label>
+    <input type="text" class="field-input" id="cert-reset-notes" placeholder="e.g. approved by Ted, retrained">
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-cert-reset')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="submitCertReset()">Reset Attempts</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const SUPABASE_URL = 'https://ecfxeebhtgkbsdeuiueb.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_oRxEOMLizp1kjlsRjWWaxg_muaaMHFt';
@@ -275,7 +318,10 @@ async function sbFetch(path, options = {}) {
 }
 
 let admin = null;
-let cachedData = { employees: [], codes: [], leadsource: [], auditlog: [] };
+let cachedData = { employees: [], codes: [], leadsource: [], auditlog: [], certAttempts: [], certResets: [] };
+let certResetTarget = null;
+const examFileByTier = { tier1: 'Daniels_Certification_Tier1.html', tier2: 'Daniels_Certification_Tier2.html' };
+let questionBankCache = {};
 
 /* ════════ LOGIN ════════ */
 async function handleAdminLogin() {
@@ -324,6 +370,7 @@ async function handleAdminLogin() {
 
 /* ════════ LOAD DATA ════════ */
 async function loadAllData() {
+  await loadCertAttempts();
   await Promise.all([loadEmployees(), loadCodes(), loadLeadSource(), loadAuditLog()]);
 }
 
@@ -356,21 +403,30 @@ function renderEmployeesTable(employees) {
     tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No employees yet.</td></tr>`;
     return;
   }
-  tbody.innerHTML = employees.map(e => `
+  tbody.innerHTML = employees.map(e => {
+    const t1Lock = !e.es_admin ? certLockStatus(e.id, 'tier1') : null;
+    const t2Lock = !e.es_admin ? certLockStatus(e.id, 'tier2') : null;
+    const escName = (e.nombre_completo || '').replace(/'/g, "\\'");
+    const resetBtns = [
+      (t1Lock && t1Lock.locked) ? `<button class="btn btn-red" onclick="openCertResetModal('${e.id}','${escName}','tier1')">Reset T1</button>` : '',
+      (t2Lock && t2Lock.locked) ? `<button class="btn btn-red" onclick="openCertResetModal('${e.id}','${escName}','tier2')">Reset T2</button>` : ''
+    ].join('');
+    return `
     <tr>
       <td>${e.nombre_completo}${e.es_admin ? ' <span class="pill pill-gold">ADMIN</span>' : ''}</td>
       <td>${e.username}</td>
       <td>${e.employee_id || '—'}</td>
       <td>${e.tienda || '—'}</td>
-      <td>${e.tier1 ? `<span class="pill pill-green">${e.tier1.porcentaje}%</span>` : '<span class="pill pill-gray">—</span>'}</td>
-      <td>${e.tier2 ? `<span class="pill pill-green">${e.tier2.porcentaje}%</span>` : '<span class="pill pill-gray">—</span>'}</td>
+      <td>${e.tier1 ? `<span class="pill pill-green">${e.tier1.porcentaje}%</span>` : (t1Lock && t1Lock.locked ? '<span class="pill pill-red">Locked</span>' : '<span class="pill pill-gray">—</span>')}</td>
+      <td>${e.tier2 ? `<span class="pill pill-green">${e.tier2.porcentaje}%</span>` : (t2Lock && t2Lock.locked ? '<span class="pill pill-red">Locked</span>' : '<span class="pill pill-gray">—</span>')}</td>
       <td>${e.totalPoints}</td>
       <td class="row-actions">
         <button class="btn btn-ghost" onclick="openResetModal('${e.username}')">Reset PW</button>
+        ${resetBtns}
         ${!e.es_admin ? `<button class="btn btn-red" onclick="deleteEmployee('${e.id}','${e.nombre_completo}')">Delete</button>` : ''}
       </td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
 }
 
 function renderKPIs(employees) {
@@ -381,6 +437,190 @@ function renderKPIs(employees) {
   document.getElementById('kpi-total-emp-sub').textContent = `${employees.filter(e=>!e.es_admin).length} vendors, ${employees.filter(e=>e.es_admin).length} admin`;
   document.getElementById('kpi-tier1').textContent = `${tier1Count}/${total}`;
   document.getElementById('kpi-tier2').textContent = `${tier2Count}/${total}`;
+}
+
+/* ════════ CERTIFICATION ATTEMPTS: data + lock logic ════════ */
+function lastResetFor(empId, cert, resets) {
+  const r = resets.filter(x => x.empleado_id === empId && x.certificacion === cert);
+  if (!r.length) return null;
+  return r.reduce((latest, x) => (!latest || new Date(x.reset_at) > new Date(latest)) ? x.reset_at : latest, null);
+}
+
+function attemptsSinceReset(empId, cert, rows, resets) {
+  const lastReset = lastResetFor(empId, cert, resets);
+  return rows.filter(r => r.empleado_id === empId && r.certificacion === cert &&
+    (!lastReset || new Date(r.started_at || r.fecha_completado) > new Date(lastReset)));
+}
+
+function certLockStatus(empId, cert) {
+  const rows = cachedData.certAttempts || [];
+  const resets = cachedData.certResets || [];
+  const attempts = attemptsSinceReset(empId, cert, rows, resets);
+  const passed = attempts.some(r => r.aprobado === true);
+  return { passed, attemptCount: attempts.length, locked: !passed && attempts.length >= 3 };
+}
+
+async function loadCertAttempts() {
+  try {
+    const rows = await sbFetch('certificaciones_progreso?select=id,empleado_id,certificacion,score,total_puntos,porcentaje,aprobado,estado,tiempo_usado_segundos,fecha_completado,started_at,detalle_respuestas&order=fecha_completado.desc');
+    let resets = [];
+    try {
+      resets = await sbFetch('certificacion_resets?select=empleado_id,certificacion,reset_at&order=reset_at.desc');
+    } catch (err) {
+      console.warn('certificacion_resets table not available yet:', err);
+    }
+    cachedData.certAttempts = rows || [];
+    cachedData.certResets = resets || [];
+    renderCertKPIs(cachedData.certAttempts, cachedData.certResets);
+    renderCertAttemptsTable(cachedData.certAttempts);
+  } catch (err) {
+    console.error('Failed to load certification attempts:', err);
+    document.getElementById('tbl-certattempts-body').innerHTML = `<tr><td colspan="8" class="empty-state">Error loading attempts.</td></tr>`;
+  }
+}
+
+function renderCertKPIs(rows, resets) {
+  ['tier1','tier2'].forEach(cert => {
+    const completed = rows.filter(r => r.certificacion === cert && (r.estado === 'completed' || (r.estado == null && r.aprobado != null)));
+    const passed = completed.filter(r => r.aprobado === true).length;
+    const rate = completed.length ? Math.round(passed / completed.length * 100) : 0;
+    const label = cert === 'tier1' ? 't1' : 't2';
+    document.getElementById(`kpi-${label}-passrate`).textContent = completed.length ? `${rate}%` : '—';
+    document.getElementById(`kpi-${label}-passrate-sub`).textContent = `${passed} passed / ${completed.length} completed`;
+  });
+  document.getElementById('kpi-cert-inprogress').textContent = rows.filter(r => r.estado === 'in_progress').length;
+
+  const byPair = {};
+  rows.forEach(r => {
+    const key = r.empleado_id + '|' + r.certificacion;
+    (byPair[key] = byPair[key] || []).push(r);
+  });
+  let lockedCount = 0;
+  Object.keys(byPair).forEach(key => {
+    const [empId, cert] = key.split('|');
+    const attempts = attemptsSinceReset(empId, cert, rows, resets);
+    const passed = attempts.some(r => r.aprobado === true);
+    if (!passed && attempts.length >= 3) lockedCount++;
+  });
+  document.getElementById('kpi-cert-locked').textContent = lockedCount;
+}
+
+function renderCertAttemptsTable(rows) {
+  const tbody = document.getElementById('tbl-certattempts-body');
+  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No attempts yet.</td></tr>`; return; }
+  const employeesById = {};
+  cachedData.employees.forEach(e => employeesById[e.id] = e.nombre_completo);
+
+  const grouped = {};
+  const sorted = [...rows].sort((a,b) => new Date(a.started_at || a.fecha_completado) - new Date(b.started_at || b.fecha_completado));
+  sorted.forEach(r => {
+    const key = r.empleado_id + '|' + r.certificacion;
+    grouped[key] = (grouped[key] || 0) + 1;
+    r._attemptNum = grouped[key];
+  });
+
+  tbody.innerHTML = rows.map(r => {
+    const name = employeesById[r.empleado_id] || 'Unknown';
+    const certLabel = r.certificacion === 'tier1' ? 'Tier 1' : 'Tier 2';
+    let statusPill;
+    if (r.estado === 'in_progress') statusPill = '<span class="pill pill-gray">In Progress</span>';
+    else if (r.estado === 'abandoned') statusPill = '<span class="pill pill-gray">Abandoned</span>';
+    else if (r.aprobado === true) statusPill = '<span class="pill pill-green">Passed</span>';
+    else if (r.aprobado === false) statusPill = '<span class="pill pill-red">Failed</span>';
+    else statusPill = '<span class="pill pill-gray">—</span>';
+    const scoreTxt = r.porcentaje != null ? `${r.porcentaje}%` : '—';
+    const timeTxt = r.tiempo_usado_segundos != null ? `${Math.floor(r.tiempo_usado_segundos/60)}:${String(r.tiempo_usado_segundos%60).padStart(2,'0')}` : '—';
+    const dateTxt = r.fecha_completado ? new Date(r.fecha_completado).toLocaleString() : (r.started_at ? new Date(r.started_at).toLocaleString()+' (started)' : '—');
+    const canView = r.detalle_respuestas && Array.isArray(r.detalle_respuestas) && r.detalle_respuestas.length > 0;
+    return `<tr>
+      <td>${name}</td>
+      <td>${certLabel}</td>
+      <td>${r._attemptNum || '—'}</td>
+      <td>${statusPill}</td>
+      <td>${scoreTxt}</td>
+      <td>${timeTxt}</td>
+      <td>${dateTxt}</td>
+      <td class="row-actions">
+        ${canView ? `<button class="btn btn-ghost" onclick='openAnswerDetail(${JSON.stringify(r.id)}, ${JSON.stringify(r.certificacion)})'>View Answers</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+/* ════════ ANSWER DETAIL MODAL ════════ */
+async function getQuestionBank(tier) {
+  if (questionBankCache[tier]) return questionBankCache[tier];
+  const res = await fetch(examFileByTier[tier]);
+  if (!res.ok) throw new Error(`Could not load ${examFileByTier[tier]} (${res.status})`);
+  const html = await res.text();
+  const match = html.match(/const QUESTIONS\s*=\s*(\[[\s\S]*?\]);/);
+  if (!match) throw new Error('Could not locate question bank in ' + examFileByTier[tier]);
+  const QUESTIONS = new Function('return ' + match[1])();
+  questionBankCache[tier] = QUESTIONS;
+  return QUESTIONS;
+}
+
+async function openAnswerDetail(recordId, cert) {
+  document.getElementById('answers-modal-title').textContent = 'Loading…';
+  document.getElementById('answers-modal-body').innerHTML = 'Loading answers…';
+  document.getElementById('modal-answers').classList.add('show');
+  try {
+    const record = (cachedData.certAttempts || []).find(r => r.id === recordId);
+    if (!record) throw new Error('Attempt not found.');
+    const QUESTIONS = await getQuestionBank(cert);
+    const employeesById = {};
+    cachedData.employees.forEach(e => employeesById[e.id] = e.nombre_completo);
+    const name = employeesById[record.empleado_id] || 'Unknown';
+    document.getElementById('answers-modal-title').textContent =
+      `${name} — ${cert === 'tier1' ? 'Sales Tier 1' : 'Sales Tier 2'} (${record.porcentaje != null ? record.porcentaje + '%' : '—'})`;
+
+    const answers = record.detalle_respuestas || [];
+    const letters = ['A','B','C','D'];
+    let html = '';
+    QUESTIONS.forEach((q, i) => {
+      const given = answers[i];
+      const isCorrect = given === q.correct;
+      html += `<div style="border-left:4px solid ${isCorrect ? '#2e7d32' : '#c62828'};padding:8px 12px;margin-bottom:10px;background:${isCorrect ? '#f1f8f1' : '#fdf1f1'};border-radius:4px;">
+        <div style="font-weight:700;font-size:12px;color:var(--mgray);margin-bottom:2px">${isCorrect ? '✅' : '❌'} Q${i+1} · ${q.section}</div>
+        <div style="font-size:13px;margin-bottom:6px">${q.q}</div>
+        <div style="font-size:12px;color:#333">Answered: <strong>${given != null && given !== undefined ? letters[given] + ' — ' + q.opts[given] : '— (not answered)'}</strong></div>
+        ${!isCorrect ? `<div style="font-size:12px;color:#333">Correct: <strong>${letters[q.correct]} — ${q.opts[q.correct]}</strong></div>` : ''}
+      </div>`;
+    });
+    document.getElementById('answers-modal-body').innerHTML = html;
+  } catch (err) {
+    document.getElementById('answers-modal-body').innerHTML = `<div class="empty-state">Error loading answer detail: ${err.message}</div>`;
+  }
+}
+
+/* ════════ RESET CERTIFICATION ════════ */
+function openCertResetModal(empId, empName, cert) {
+  certResetTarget = { empId, empName, certificacion: cert };
+  document.getElementById('cert-reset-desc').textContent =
+    `${empName} has used all 3 attempts on ${cert === 'tier1' ? 'Sales Tier 1' : 'Sales Tier 2'} without passing. This will unlock 3 new attempts.`;
+  document.getElementById('cert-reset-notes').value = '';
+  document.getElementById('modal-cert-reset').classList.add('show');
+}
+
+async function submitCertReset() {
+  if (!certResetTarget) return;
+  const notes = document.getElementById('cert-reset-notes').value.trim();
+  try {
+    const rows = await sbFetch('rpc/admin_reset_certificacion', {
+      method: 'POST',
+      body: JSON.stringify({
+        p_admin_id: admin.id,
+        p_empleado_id: certResetTarget.empId,
+        p_certificacion: certResetTarget.certificacion,
+        p_notas: notes || null
+      })
+    });
+    if (!rows[0].success) { alert(rows[0].message); return; }
+    closeModal('modal-cert-reset');
+    loadAllData();
+  } catch (err) {
+    alert('Error resetting certification: ' + err.message);
+  }
 }
 
 async function loadCodes() {
@@ -626,6 +866,20 @@ function exportCSV(type) {
       { label: 'Date', get: r => r.created_at },
     ]);
     downloadCSV(csv, `daniels_admin_audit_log_${dateStamp}.csv`);
+  }
+  if (type === 'certattempts') {
+    const employeesById = {};
+    cachedData.employees.forEach(e => employeesById[e.id] = e.nombre_completo);
+    const csv = toCSV(cachedData.certAttempts, [
+      { label: 'Employee', get: r => employeesById[r.empleado_id] || 'Unknown' },
+      { label: 'Certification', get: r => r.certificacion },
+      { label: 'Status', get: r => r.estado || (r.aprobado === true ? 'completed (passed)' : r.aprobado === false ? 'completed (failed)' : '') },
+      { label: 'Score %', get: r => r.porcentaje },
+      { label: 'Time Used (sec)', get: r => r.tiempo_usado_segundos },
+      { label: 'Started At', get: r => r.started_at },
+      { label: 'Completed At', get: r => r.fecha_completado },
+    ]);
+    downloadCSV(csv, `daniels_certification_attempts_${dateStamp}.csv`);
   }
 }
 
