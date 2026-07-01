@@ -372,6 +372,7 @@ async function handleAdminLogin() {
 async function loadAllData() {
   await loadCertAttempts();
   await Promise.all([loadEmployees(), loadCodes(), loadLeadSource(), loadAuditLog()]);
+  renderCertAttemptsTable(cachedData.certAttempts); // re-render now that employee names are cached
 }
 
 async function loadEmployees() {
@@ -480,15 +481,18 @@ async function loadCertAttempts() {
 }
 
 function renderCertKPIs(rows, resets) {
+  // NOTE: `aprobado` is the reliable signal for "this attempt was graded" — it's only ever
+  // set by finishExam/PATCH or the plant-certification RPC. `estado` can be stale/backfilled
+  // (e.g. legacy rows got DEFAULT 'in_progress' when that column was added), so aprobado wins.
   ['tier1','tier2'].forEach(cert => {
-    const completed = rows.filter(r => r.certificacion === cert && (r.estado === 'completed' || (r.estado == null && r.aprobado != null)));
+    const completed = rows.filter(r => r.certificacion === cert && r.aprobado != null);
     const passed = completed.filter(r => r.aprobado === true).length;
     const rate = completed.length ? Math.round(passed / completed.length * 100) : 0;
     const label = cert === 'tier1' ? 't1' : 't2';
     document.getElementById(`kpi-${label}-passrate`).textContent = completed.length ? `${rate}%` : '—';
     document.getElementById(`kpi-${label}-passrate-sub`).textContent = `${passed} passed / ${completed.length} completed`;
   });
-  document.getElementById('kpi-cert-inprogress').textContent = rows.filter(r => r.estado === 'in_progress').length;
+  document.getElementById('kpi-cert-inprogress').textContent = rows.filter(r => r.estado === 'in_progress' && r.aprobado == null).length;
 
   const byPair = {};
   rows.forEach(r => {
@@ -523,10 +527,10 @@ function renderCertAttemptsTable(rows) {
     const name = employeesById[r.empleado_id] || 'Unknown';
     const certLabel = r.certificacion === 'tier1' ? 'Tier 1' : 'Tier 2';
     let statusPill;
-    if (r.estado === 'in_progress') statusPill = '<span class="pill pill-gray">In Progress</span>';
-    else if (r.estado === 'abandoned') statusPill = '<span class="pill pill-gray">Abandoned</span>';
-    else if (r.aprobado === true) statusPill = '<span class="pill pill-green">Passed</span>';
+    if (r.aprobado === true) statusPill = '<span class="pill pill-green">Passed</span>';
     else if (r.aprobado === false) statusPill = '<span class="pill pill-red">Failed</span>';
+    else if (r.estado === 'abandoned') statusPill = '<span class="pill pill-gray">Abandoned</span>';
+    else if (r.estado === 'in_progress') statusPill = '<span class="pill pill-gray">In Progress</span>';
     else statusPill = '<span class="pill pill-gray">—</span>';
     const scoreTxt = r.porcentaje != null ? `${r.porcentaje}%` : '—';
     const timeTxt = r.tiempo_usado_segundos != null ? `${Math.floor(r.tiempo_usado_segundos/60)}:${String(r.tiempo_usado_segundos%60).padStart(2,'0')}` : '—';
