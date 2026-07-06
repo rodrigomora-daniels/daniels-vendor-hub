@@ -165,8 +165,12 @@
     <div class="section">
       <div class="section-hdr">
         <h2>🎫 Invitation Codes</h2>
-        <button class="btn btn-gold" onclick="exportCSV('codes')">⬇ Export CSV</button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-primary" onclick="openGenerateCodeModal()">+ Generate Code</button>
+          <button class="btn btn-gold" onclick="exportCSV('codes')">⬇ Export CSV</button>
+        </div>
       </div>
+      <div style="font-size:13px;color:var(--mgray);margin-bottom:14px;" id="codes-summary-line">Loading…</div>
       <div style="overflow-x:auto">
         <table id="tbl-codes">
           <thead><tr><th>Code</th><th>Status</th><th>Used By</th><th>Created</th></tr></thead>
@@ -310,6 +314,30 @@
     <div style="display:flex;gap:8px;margin-top:14px">
       <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-change-role')">Cancel</button>
       <button class="btn btn-primary" style="flex:1" onclick="submitRoleChange()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODAL: GENERATE INVITATION CODE(S) ══════════ -->
+<div class="modal-overlay" id="modal-generate-code">
+  <div class="modal-box">
+    <h3>🎫 Generate Invitation Code(s)</h3>
+    <label class="field-label">How many?</label>
+    <input type="number" class="field-input" id="gencode-qty" value="1" min="1" max="25">
+    <label class="field-label">Assign role</label>
+    <select class="field-input" id="gencode-rol">
+      <option value="vendedor">Vendedor</option>
+      <option value="manager">Manager</option>
+    </select>
+    <label class="field-label">Store (optional)</label>
+    <input type="text" class="field-input" id="gencode-tienda" placeholder="e.g. Anaheim — Mega Center">
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-generate-code')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="submitGenerateCode()">Generate</button>
+    </div>
+    <div id="gencode-result" style="display:none;margin-top:16px;background:var(--gray);border-radius:8px;padding:14px;">
+      <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px;">New code(s) — copy and share with the employee:</div>
+      <div id="gencode-result-list" style="font-family:monospace;font-size:14px;line-height:1.8;"></div>
     </div>
   </div>
 </div>
@@ -703,6 +731,41 @@ async function submitRoleChange() {
   }
 }
 
+/* ════════ GENERATE INVITATION CODE(S) ════════ */
+function openGenerateCodeModal() {
+  document.getElementById('gencode-qty').value = 1;
+  document.getElementById('gencode-rol').value = 'vendedor';
+  document.getElementById('gencode-tienda').value = '';
+  document.getElementById('gencode-result').style.display = 'none';
+  document.getElementById('gencode-result-list').innerHTML = '';
+  document.getElementById('modal-generate-code').classList.add('show');
+}
+
+async function submitGenerateCode() {
+  const qty = Math.max(1, Math.min(25, parseInt(document.getElementById('gencode-qty').value, 10) || 1));
+  const rol = document.getElementById('gencode-rol').value;
+  const tienda = document.getElementById('gencode-tienda').value.trim();
+  try {
+    const rows = await sbFetch('rpc/admin_generar_codigo', {
+      method: 'POST',
+      body: JSON.stringify({
+        p_admin_id: admin.id,
+        p_rol_asignado: rol,
+        p_tienda_asignada: tienda || null,
+        p_cantidad: qty
+      })
+    });
+    const codes = (rows || []).map(r => r.codigo);
+    const resultBox = document.getElementById('gencode-result');
+    const resultList = document.getElementById('gencode-result-list');
+    resultList.innerHTML = codes.map(cd => `<div>${cd}</div>`).join('');
+    resultBox.style.display = 'block';
+    loadCodes();
+  } catch (err) {
+    alert('Error generating code: ' + err.message);
+  }
+}
+
 /* ════════ DELETE A SINGLE ATTEMPT (corrupted / interrupted / stuck) ════════ */
 async function deleteAttempt(recordId, empName, certLabel, statusText) {
   if (!confirm(`Delete this ${certLabel} attempt for ${empName} (${statusText})?\n\nThis permanently removes the record and frees up an attempt slot. This cannot be undone.`)) return;
@@ -727,7 +790,10 @@ async function loadCodes() {
     const codes = await sbFetch('codigos_invitacion?select=codigo,usado,used_at,usado_por_empleado_id,created_at&order=created_at.desc');
     cachedData.codes = codes;
     const usedCount = codes.filter(c => c.usado).length;
+    const remaining = codes.length - usedCount;
     document.getElementById('kpi-codes').textContent = `${usedCount}/${codes.length}`;
+    const summaryEl = document.getElementById('codes-summary-line');
+    if (summaryEl) summaryEl.textContent = `${usedCount} used · ${remaining} available · ${codes.length} total`;
 
     const employeesById = {};
     cachedData.employees.forEach(e => employeesById[e.id] = e.nombre_completo);
