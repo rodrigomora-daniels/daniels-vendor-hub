@@ -295,6 +295,25 @@
   </div>
 </div>
 
+<!-- ══════════ MODAL: CHANGE ROLE (Super Admin only) ══════════ -->
+<div class="modal-overlay" id="modal-change-role">
+  <div class="modal-box">
+    <h3>👤 Change Role</h3>
+    <p style="font-size:13px;color:var(--mgray);margin-bottom:14px" id="role-change-desc"></p>
+    <label class="field-label">New role</label>
+    <select class="field-input" id="role-select">
+      <option value="vendedor|none">Vendedor</option>
+      <option value="manager|none">Manager</option>
+      <option value="admin|admin_secundario">Admin — Secondary (view, export, manage vendors/managers, reset attempts — cannot delete attempts, cannot manage admin accounts)</option>
+      <option value="admin|super_admin">Super Admin (full control)</option>
+    </select>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-change-role')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="submitRoleChange()">Save</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const SUPABASE_URL = 'https://ecfxeebhtgkbsdeuiueb.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_oRxEOMLizp1kjlsRjWWaxg_muaaMHFt';
@@ -318,6 +337,8 @@ async function sbFetch(path, options = {}) {
 }
 
 let admin = null;
+const isSuperAdmin = () => !!(admin && admin.nivel_admin === 'super_admin');
+let roleChangeTarget = null;
 let cachedData = { employees: [], codes: [], leadsource: [], auditlog: [], certAttempts: [], certResets: [] };
 let certResetTarget = null;
 const examFileByTier = { tier1: 'Daniels_Certification_Tier1.html', tier2: 'Daniels_Certification_Tier2.html' };
@@ -354,9 +375,17 @@ async function handleAdminLogin() {
     }
 
     admin = emp;
+    try {
+      const lvl = await sbFetch(`empleados?id=eq.${admin.id}&select=nivel_admin`);
+      admin.nivel_admin = (lvl && lvl[0] && lvl[0].nivel_admin) || null;
+    } catch (err) {
+      console.warn('Could not load admin tier (nivel_admin column may not exist yet):', err);
+      admin.nivel_admin = 'super_admin'; // fail-open to super_admin so existing admins aren't locked out before the SQL migration runs
+    }
     document.getElementById('screen-admin-login').classList.remove('active');
     document.getElementById('screen-cockpit').classList.add('active');
-    document.getElementById('admin-greeting').textContent = `Signed in as ${emp.nombre_completo}`;
+    document.getElementById('admin-greeting').textContent =
+      `Signed in as ${emp.nombre_completo} (${isSuperAdmin() ? 'Super Admin' : 'Admin'})`;
     loadAllData();
 
   } catch (err) {
@@ -373,11 +402,13 @@ async function loadAllData() {
   await loadCertAttempts();
   await Promise.all([loadEmployees(), loadCodes(), loadLeadSource(), loadAuditLog()]);
   renderCertAttemptsTable(cachedData.certAttempts); // re-render now that employee names are cached
+  const plantBtn = document.getElementById('btn-plant-cert-floating');
+  if (plantBtn) plantBtn.style.display = isSuperAdmin() ? 'block' : 'none';
 }
 
 async function loadEmployees() {
   try {
-    const employees = await sbFetch('empleados?select=id,nombre_completo,username,employee_id,tienda,rol,es_admin');
+    const employees = await sbFetch('empleados?select=id,nombre_completo,username,employee_id,tienda,rol,es_admin,nivel_admin');
     const progress = await sbFetch('certificaciones_progreso?select=empleado_id,certificacion,porcentaje,score,aprobado&order=fecha_completado.desc');
 
     const merged = employees.map(emp => {
@@ -412,9 +443,16 @@ function renderEmployeesTable(employees) {
       (t1Lock && t1Lock.locked) ? `<button class="btn btn-red" onclick="openCertResetModal('${e.id}','${escName}','tier1')">Reset T1</button>` : '',
       (t2Lock && t2Lock.locked) ? `<button class="btn btn-red" onclick="openCertResetModal('${e.id}','${escName}','tier2')">Reset T2</button>` : ''
     ].join('');
+    const adminBadge = e.es_admin
+      ? ` <span class="pill pill-gold">${e.nivel_admin === 'super_admin' ? 'SUPER ADMIN' : 'ADMIN'}</span>`
+      : '';
+    const isMe = admin && e.id === admin.id;
+    const changeRoleBtn = (isSuperAdmin() && !isMe)
+      ? `<button class="btn btn-ghost" onclick="openChangeRoleModal('${e.id}','${escName}','${e.rol}','${e.nivel_admin || ''}')">Change Role</button>`
+      : '';
     return `
     <tr>
-      <td>${e.nombre_completo}${e.es_admin ? ' <span class="pill pill-gold">ADMIN</span>' : ''}</td>
+      <td>${e.nombre_completo}${adminBadge}${isMe ? ' <span class="pill pill-gray">YOU</span>' : ''}</td>
       <td>${e.username}</td>
       <td>${e.employee_id || '—'}</td>
       <td>${e.tienda || '—'}</td>
@@ -424,6 +462,7 @@ function renderEmployeesTable(employees) {
       <td class="row-actions">
         <button class="btn btn-ghost" onclick="openResetModal('${e.username}')">Reset PW</button>
         ${resetBtns}
+        ${changeRoleBtn}
         ${!e.es_admin ? `<button class="btn btn-red" onclick="deleteEmployee('${e.id}','${e.nombre_completo}')">Delete</button>` : ''}
       </td>
     </tr>`;
@@ -551,7 +590,7 @@ function renderCertAttemptsTable(rows) {
       <td>${dateTxt}</td>
       <td class="row-actions">
         ${canView ? `<button class="btn btn-ghost" onclick='openAnswerDetail(${JSON.stringify(r.id)}, ${JSON.stringify(r.certificacion)})'>View Answers</button>` : ''}
-        <button class="btn btn-red" onclick='deleteAttempt(${JSON.stringify(r.id)}, ${JSON.stringify(name)}, ${JSON.stringify(certLabel)}, ${JSON.stringify(statusText)})'>Delete</button>
+        ${isSuperAdmin() ? `<button class="btn btn-red" onclick='deleteAttempt(${JSON.stringify(r.id)}, ${JSON.stringify(name)}, ${JSON.stringify(certLabel)}, ${JSON.stringify(statusText)})'>Delete</button>` : ''}
       </td>
     </tr>`;
   }).join('');
@@ -630,6 +669,37 @@ async function submitCertReset() {
     loadAllData();
   } catch (err) {
     alert('Error resetting certification: ' + err.message);
+  }
+}
+
+/* ════════ CHANGE ROLE (Super Admin only — gated server-side too) ════════ */
+function openChangeRoleModal(empId, empName, currentRol, currentNivel) {
+  if (!isSuperAdmin()) { alert('Only a Super Admin can change roles.'); return; }
+  roleChangeTarget = { empId, empName };
+  document.getElementById('role-change-desc').textContent = `Change role for ${empName}.`;
+  const select = document.getElementById('role-select');
+  select.value = currentNivel ? `admin|${currentNivel}` : `${currentRol}|none`;
+  document.getElementById('modal-change-role').classList.add('show');
+}
+
+async function submitRoleChange() {
+  if (!roleChangeTarget) return;
+  const [rol, nivel] = document.getElementById('role-select').value.split('|');
+  try {
+    const rows = await sbFetch('rpc/admin_cambiar_rol_empleado', {
+      method: 'POST',
+      body: JSON.stringify({
+        p_admin_id: admin.id,
+        p_empleado_id: roleChangeTarget.empId,
+        p_nuevo_rol: rol,
+        p_nuevo_nivel_admin: nivel === 'none' ? null : nivel
+      })
+    });
+    if (!rows[0].success) { alert(rows[0].message); return; }
+    closeModal('modal-change-role');
+    loadAllData();
+  } catch (err) {
+    alert('Error changing role: ' + err.message);
   }
 }
 
@@ -927,6 +997,8 @@ document.addEventListener('DOMContentLoaded', () => {
   btn.style.padding = '14px 22px';
   btn.style.fontSize = '14px';
   btn.style.boxShadow = '0 4px 14px rgba(0,0,0,.2)';
+  btn.id = 'btn-plant-cert-floating';
+  btn.style.display = 'none'; // shown only for super admins once we know their tier (see loadAllData)
   btn.onclick = openPlantModal;
   document.getElementById('screen-cockpit').appendChild(btn);
 });
