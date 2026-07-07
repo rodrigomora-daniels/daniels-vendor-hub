@@ -146,6 +146,7 @@
         <h2>👥 Employees</h2>
         <button class="btn btn-gold" onclick="exportCSV('employees')">⬇ Export CSV</button>
       </div>
+      <input type="text" class="field-input" id="employee-search" placeholder="Search by name or username…" style="margin-bottom:14px" oninput="renderEmployeesTable(cachedData.employees)">
       <div style="overflow-x:auto">
         <table id="tbl-employees">
           <thead>
@@ -167,10 +168,11 @@
         <h2>🎫 Invitation Codes</h2>
         <div style="display:flex;gap:8px;">
           <button class="btn btn-primary" onclick="openGenerateCodeModal()">+ Generate Code</button>
-          <button class="btn btn-gold" onclick="exportCSV('codes')">⬇ Export CSV</button>
+          <button class="btn btn-ghost" onclick="openCodesFullList()">View Full List</button>
         </div>
       </div>
       <div style="font-size:13px;color:var(--mgray);margin-bottom:14px;" id="codes-summary-line">Loading…</div>
+      <div style="font-size:11px;color:var(--mgray);margin-bottom:8px;">Showing 10 most recent</div>
       <div style="overflow-x:auto">
         <table id="tbl-codes">
           <thead><tr><th>Code</th><th>Status</th><th>Used By</th><th>Created</th></tr></thead>
@@ -183,7 +185,7 @@
     <div class="section">
       <div class="section-hdr">
         <h2>📍 How They Found Us — Entries</h2>
-        <button class="btn btn-gold" onclick="exportCSV('leadsource')">⬇ Export CSV</button>
+        <button class="btn btn-ghost" onclick="openLeadSourceFullList()">View Full List</button>
       </div>
       <div class="kpi-grid" style="margin-bottom:16px">
         <div class="kpi-card"><div class="lbl">Total Entries</div><div class="val" id="kpi-ls-total">—</div></div>
@@ -191,6 +193,7 @@
         <div class="kpi-card"><div class="lbl">Top Employee</div><div class="val" id="kpi-ls-emp" style="font-size:16px">—</div></div>
         <div class="kpi-card"><div class="lbl">This Week</div><div class="val" id="kpi-ls-week">—</div></div>
       </div>
+      <div style="font-size:11px;color:var(--mgray);margin-bottom:8px;">Showing 10 most recent</div>
       <div style="overflow-x:auto">
         <table id="tbl-leadsource">
           <thead><tr><th>Employee</th><th>Source</th><th>Note</th><th>Date</th></tr></thead>
@@ -203,8 +206,9 @@
     <div class="section">
       <div class="section-hdr">
         <h2>📋 Admin Activity Log</h2>
-        <button class="btn btn-gold" onclick="exportCSV('auditlog')">⬇ Export CSV</button>
+        <button class="btn btn-ghost" onclick="openAuditLogFullList()">View Full List</button>
       </div>
+      <div style="font-size:11px;color:var(--mgray);margin-bottom:8px;">Showing 5 most recent</div>
       <div style="overflow-x:auto">
         <table id="tbl-auditlog">
           <thead><tr><th>Admin</th><th>Action</th><th>Detail</th><th>Date</th></tr></thead>
@@ -342,6 +346,24 @@
   </div>
 </div>
 
+<!-- ══════════ MODAL: FULL LIST (generic — Codes / Lead Source / Audit Log) ══════════ -->
+<div class="modal-overlay" id="modal-full-list">
+  <div class="modal-box" style="max-width:900px;max-height:85vh;overflow-y:auto;">
+    <h3 id="full-list-title">Full List</h3>
+    <div id="full-list-filters" style="display:flex;gap:10px;align-items:flex-end;margin-bottom:14px;flex-wrap:wrap;"></div>
+    <div style="overflow-x:auto">
+      <table id="full-list-table">
+        <thead id="full-list-thead"></thead>
+        <tbody id="full-list-tbody"></tbody>
+      </table>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-gold" onclick="exportFullListCSV()">⬇ Export CSV (filtered)</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-full-list')">Close</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const SUPABASE_URL = 'https://ecfxeebhtgkbsdeuiueb.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_oRxEOMLizp1kjlsRjWWaxg_muaaMHFt';
@@ -459,10 +481,20 @@ async function loadEmployees() {
 
 function renderEmployeesTable(employees) {
   const tbody = document.getElementById('tbl-employees-body');
+  const searchEl = document.getElementById('employee-search');
+  const q = (searchEl && searchEl.value || '').trim().toLowerCase();
+  const filtered = q
+    ? employees.filter(e => (e.nombre_completo || '').toLowerCase().includes(q) || (e.username || '').toLowerCase().includes(q))
+    : employees;
   if (employees.length === 0) {
     tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No employees yet.</td></tr>`;
     return;
   }
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No employees match "${q}".</td></tr>`;
+    return;
+  }
+  employees = filtered;
   tbody.innerHTML = employees.map(e => {
     const t1Lock = !e.es_admin ? certLockStatus(e.id, 'tier1') : null;
     const t2Lock = !e.es_admin ? certLockStatus(e.id, 'tier2') : null;
@@ -766,6 +798,51 @@ async function submitGenerateCode() {
   }
 }
 
+/* ════════ GENERIC "FULL LIST" MODAL — used by Codes, Lead Source, Audit Log ════════ */
+let fullListState = { data: [], filtered: [], dateField: null, rowFn: null, exportColumns: null, exportFilename: 'export' };
+
+function openFullListModal(opts) {
+  fullListState = { filtered: opts.data, ...opts };
+  document.getElementById('full-list-title').textContent = opts.title;
+  document.getElementById('full-list-thead').innerHTML = opts.headerHtml;
+  const filtersEl = document.getElementById('full-list-filters');
+  if (opts.dateField) {
+    filtersEl.style.display = 'flex';
+    filtersEl.innerHTML = `
+      <div><label class="field-label">From</label><input type="date" class="field-input" id="full-list-from" style="margin-bottom:0"></div>
+      <div><label class="field-label">To</label><input type="date" class="field-input" id="full-list-to" style="margin-bottom:0"></div>
+      <button class="btn btn-ghost" onclick="renderFullListRows()">Apply</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('full-list-from').value='';document.getElementById('full-list-to').value='';renderFullListRows()">Clear</button>
+    `;
+  } else {
+    filtersEl.style.display = 'none';
+    filtersEl.innerHTML = '';
+  }
+  renderFullListRows();
+  document.getElementById('modal-full-list').classList.add('show');
+}
+
+function renderFullListRows() {
+  let rows = fullListState.data;
+  if (fullListState.dateField) {
+    const fromVal = document.getElementById('full-list-from')?.value;
+    const toVal = document.getElementById('full-list-to')?.value;
+    if (fromVal) rows = rows.filter(r => new Date(r[fullListState.dateField]) >= new Date(fromVal));
+    if (toVal) rows = rows.filter(r => new Date(r[fullListState.dateField]) <= new Date(toVal + 'T23:59:59'));
+  }
+  fullListState.filtered = rows;
+  const colCount = (fullListState.headerHtml.match(/<th/g) || []).length || 4;
+  document.getElementById('full-list-tbody').innerHTML = rows.length
+    ? rows.map(fullListState.rowFn).join('')
+    : `<tr><td colspan="${colCount}" class="empty-state">No records in this range.</td></tr>`;
+}
+
+function exportFullListCSV() {
+  const csv = toCSV(fullListState.filtered || fullListState.data, fullListState.exportColumns);
+  const dateStamp = new Date().toISOString().split('T')[0];
+  downloadCSV(csv, `${fullListState.exportFilename}_${dateStamp}.csv`);
+}
+
 /* ════════ DELETE A SINGLE ATTEMPT (corrupted / interrupted / stuck) ════════ */
 async function deleteAttempt(recordId, empName, certLabel, statusText) {
   if (!confirm(`Delete this ${certLabel} attempt for ${empName} (${statusText})?\n\nThis permanently removes the record and frees up an attempt slot. This cannot be undone.`)) return;
@@ -803,17 +880,38 @@ async function loadCodes() {
       tbody.innerHTML = `<tr><td colspan="4" class="empty-state">No codes yet.</td></tr>`;
       return;
     }
-    tbody.innerHTML = codes.map(c => `
-      <tr>
-        <td><code>${c.codigo}</code></td>
-        <td>${c.usado ? '<span class="pill pill-green">Used</span>' : '<span class="pill pill-gray">Available</span>'}</td>
-        <td>${c.usado_por_empleado_id ? (employeesById[c.usado_por_empleado_id] || '—') : '—'}</td>
-        <td>${new Date(c.created_at).toLocaleDateString()}</td>
-      </tr>
-    `).join('');
+    tbody.innerHTML = codes.slice(0, 10).map(c => codeRowHtml(c, employeesById)).join('');
   } catch (err) {
     console.error('Failed to load codes:', err);
   }
+}
+
+function codeRowHtml(c, employeesById) {
+  return `<tr>
+    <td><code>${c.codigo}</code></td>
+    <td>${c.usado ? '<span class="pill pill-green">Used</span>' : '<span class="pill pill-gray">Available</span>'}</td>
+    <td>${c.usado_por_empleado_id ? (employeesById[c.usado_por_empleado_id] || '—') : '—'}</td>
+    <td>${new Date(c.created_at).toLocaleDateString()}</td>
+  </tr>`;
+}
+
+function openCodesFullList() {
+  const employeesById = {};
+  cachedData.employees.forEach(e => employeesById[e.id] = e.nombre_completo);
+  openFullListModal({
+    title: 'All Invitation Codes',
+    data: cachedData.codes,
+    headerHtml: '<tr><th>Code</th><th>Status</th><th>Used By</th><th>Created</th></tr>',
+    rowFn: (c) => codeRowHtml(c, employeesById),
+    dateField: 'created_at',
+    exportColumns: [
+      { label: 'Code', get: r => r.codigo },
+      { label: 'Used', get: r => r.usado ? 'Yes' : 'No' },
+      { label: 'Used At', get: r => r.used_at },
+      { label: 'Created', get: r => r.created_at }
+    ],
+    exportFilename: 'daniels_invitation_codes'
+  });
 }
 
 async function loadLeadSource() {
@@ -846,40 +944,78 @@ async function loadLeadSource() {
       tbody.innerHTML = `<tr><td colspan="4" class="empty-state">No entries yet.</td></tr>`;
       return;
     }
-    tbody.innerHTML = entries.slice(0, 100).map(e => `
-      <tr>
-        <td>${e.employee_name}</td>
-        <td>${e.source}</td>
-        <td>${e.other_note || '—'}</td>
-        <td>${new Date(e.submitted_at).toLocaleString()}</td>
-      </tr>
-    `).join('');
+    tbody.innerHTML = entries.slice(0, 10).map(leadSourceRowHtml).join('');
   } catch (err) {
     console.error('Failed to load lead source:', err);
   }
 }
 
+function leadSourceRowHtml(e) {
+  return `<tr>
+    <td>${e.employee_name}</td>
+    <td>${e.source}</td>
+    <td>${e.other_note || '—'}</td>
+    <td>${new Date(e.submitted_at).toLocaleString()}</td>
+  </tr>`;
+}
+
+function openLeadSourceFullList() {
+  openFullListModal({
+    title: 'All "How They Found Us" Entries',
+    data: cachedData.leadsource,
+    headerHtml: '<tr><th>Employee</th><th>Source</th><th>Note</th><th>Date</th></tr>',
+    rowFn: leadSourceRowHtml,
+    dateField: 'submitted_at',
+    exportColumns: [
+      { label: 'Employee', get: r => r.employee_name },
+      { label: 'Source', get: r => r.source },
+      { label: 'Note', get: r => r.other_note },
+      { label: 'Date', get: r => r.submitted_at }
+    ],
+    exportFilename: 'daniels_lead_source'
+  });
+}
+
 async function loadAuditLog() {
   try {
-    const logs = await sbFetch('admin_audit_log?select=*&order=created_at.desc&limit=100');
+    const logs = await sbFetch('admin_audit_log?select=*&order=created_at.desc&limit=500');
     cachedData.auditlog = logs;
     const tbody = document.getElementById('tbl-auditlog-body');
     if (logs.length === 0) {
       tbody.innerHTML = `<tr><td colspan="4" class="empty-state">No admin actions recorded yet.</td></tr>`;
       return;
     }
-    tbody.innerHTML = logs.map(l => `
-      <tr>
-        <td>${l.admin_username}</td>
-        <td><span class="pill pill-gray">${l.accion}</span></td>
-        <td>${l.detalle || '—'}</td>
-        <td>${new Date(l.created_at).toLocaleString()}</td>
-      </tr>
-    `).join('');
+    tbody.innerHTML = logs.slice(0, 5).map(auditLogRowHtml).join('');
   } catch (err) {
     console.error('Failed to load audit log:', err);
     document.getElementById('tbl-auditlog-body').innerHTML = `<tr><td colspan="4" class="empty-state">Error loading activity log.</td></tr>`;
   }
+}
+
+function auditLogRowHtml(l) {
+  return `<tr>
+    <td>${l.admin_username}</td>
+    <td><span class="pill pill-gray">${l.accion}</span></td>
+    <td>${l.detalle || '—'}</td>
+    <td>${new Date(l.created_at).toLocaleString()}</td>
+  </tr>`;
+}
+
+function openAuditLogFullList() {
+  openFullListModal({
+    title: 'Full Admin Activity Log',
+    data: cachedData.auditlog,
+    headerHtml: '<tr><th>Admin</th><th>Action</th><th>Detail</th><th>Date</th></tr>',
+    rowFn: auditLogRowHtml,
+    dateField: 'created_at',
+    exportColumns: [
+      { label: 'Admin', get: r => r.admin_username },
+      { label: 'Action', get: r => r.accion },
+      { label: 'Detail', get: r => r.detalle },
+      { label: 'Date', get: r => r.created_at }
+    ],
+    exportFilename: 'daniels_admin_audit_log'
+  });
 }
 
 /* ════════ DELETE EMPLOYEE ════════ */
