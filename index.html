@@ -164,8 +164,9 @@
       <label class="field-label">Password</label>
       <input type="password" class="field-input" id="login-password" placeholder="••••••••">
       <button class="btn btn-primary" id="btn-login" onclick="handleLogin()">Sign In</button>
-      <div style="display:flex;justify-content:space-between;margin-top:14px;">
-        <span class="btn-ghost" onclick="goToScreen('signup')" style="cursor:pointer">New employee? Sign Up</span>
+      <div style="text-align:center;font-size:12px;color:var(--mgray);margin-top:12px;">Have a reset code from your manager? Use <strong>Sign Up</strong> below — it also handles password resets.</div>
+      <div style="display:flex;justify-content:space-between;margin-top:10px;">
+        <span class="btn-ghost" onclick="goToScreen('signup')" style="cursor:pointer">New / Resetting? Sign Up</span>
         <span class="btn-ghost" onclick="goToScreen('forgot')" style="cursor:pointer">Forgot Password?</span>
       </div>
     </div>
@@ -503,6 +504,7 @@ async function checkSignupCode() {
     if (!empRows || !empRows.length) { hideResetBanner(); return; }
     showResetBanner(empRows[0]);
   } catch (err) {
+    console.error('Reset-code lookup failed (check RLS/select policy on codigos_invitacion):', err);
     hideResetBanner();
   }
 }
