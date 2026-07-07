@@ -97,6 +97,31 @@
   .cert-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
   @media (max-width:680px){ .cert-grid{grid-template-columns:1fr;} }
 
+  /* CERTIFICATE VIEW */
+  #certificate{background:var(--white);border:8px double var(--navy);border-radius:12px;padding:44px 52px;text-align:center;position:relative;max-width:640px;margin:24px auto;}
+  #certificate::before{content:"";position:absolute;inset:8px;border:2px solid var(--gold);border-radius:8px;pointer-events:none;}
+  .cert-logo{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--mgray);margin-bottom:8px;}
+  .cert-company{font-size:26px;font-weight:700;color:var(--navy);margin-bottom:3px;}
+  .cert-divider{color:var(--gold);font-size:18px;margin:8px 0;}
+  .cert-badge-icon{font-size:44px;display:block;margin-bottom:6px;}
+  .cert-title-sm{font-size:12px;color:var(--mgray);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;}
+  .cert-title{font-size:22px;font-weight:700;color:var(--dkgray);margin-bottom:22px;}
+  .cert-certifies{font-size:13px;color:var(--mgray);margin-bottom:7px;font-style:italic;}
+  .cert-name{font-size:30px;font-weight:700;color:var(--navy);border-bottom:2px solid var(--gold);display:inline-block;padding-bottom:5px;margin-bottom:22px;}
+  .cert-body{font-size:13px;color:var(--dkgray);max-width:480px;margin:0 auto 18px;line-height:1.7;}
+  .cert-score-badge{display:inline-block;background:var(--navy);color:var(--white);padding:9px 26px;border-radius:28px;font-size:17px;font-weight:700;margin-bottom:22px;}
+  .cert-competencies{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-bottom:22px;}
+  .cert-comp{background:var(--ltblue);border:1px solid var(--navy);border-radius:6px;padding:7px 13px;font-size:11px;font-weight:700;color:var(--navy);}
+  .cert-footer{display:flex;justify-content:space-around;margin-top:22px;border-top:1px solid #eee;padding-top:18px;}
+  .cert-footer-item{text-align:center;}
+  .cert-footer-item .val{font-size:13px;font-weight:700;color:var(--navy);border-top:1px solid var(--navy);padding-top:5px;min-width:150px;}
+  .cert-footer-item .lbl{font-size:10px;color:var(--mgray);margin-top:3px;}
+  @media print{
+    .top-bar,.btn,.no-print{display:none!important;}
+    #screen-certificate{padding:0!important;}
+    body{background:white;}
+  }
+
   .cert-card{background:var(--white);border-radius:14px;padding:22px;box-shadow:0 2px 12px rgba(0,0,0,.07);border:2px solid transparent;transition:border .2s;}
   .cert-card.passed{border-color:var(--green);}
   .cert-card .cert-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;}
@@ -339,6 +364,40 @@
     </div>
     </div> <!-- end tab-certifications -->
 
+  </div>
+</div>
+
+<!-- CERTIFICATE VIEW -->
+<div class="screen" id="screen-certificate">
+  <div class="top-bar">
+    <div class="logo-block">
+      <div>
+        <div class="logo-text">🏠 DANIEL'S HOME CENTER</div>
+        <div class="logo-sub">Certificate</div>
+      </div>
+    </div>
+    <button class="btn btn-ghost no-print" style="color:#fff" onclick="goToScreen('dashboard')">← Back</button>
+  </div>
+  <div class="content" style="max-width:720px;">
+    <div id="certificate">
+      <div class="cert-logo">Daniels Home Center · Internal Certification Program</div>
+      <div class="cert-company">DANIELS HOME CENTER</div>
+      <div class="cert-divider">━━━━━━━━━━━━━━━━</div>
+      <span class="cert-badge-icon">🏆</span>
+      <div class="cert-title-sm">Certificate of Achievement</div>
+      <div class="cert-title" id="cert-title">—</div>
+      <div class="cert-certifies">This certifies that / Este certificado acredita que</div>
+      <div class="cert-name" id="cert-name">—</div>
+      <div class="cert-body" id="cert-body">—</div>
+      <div class="cert-score-badge" id="cert-score">Score: —%</div>
+      <div class="cert-competencies" id="cert-competencies"></div>
+      <div class="cert-footer">
+        <div class="cert-footer-item"><div class="val" id="cert-date">—</div><div class="lbl">Date of Completion</div></div>
+        <div class="cert-footer-item"><div class="val" id="cert-id">—</div><div class="lbl">Employee ID</div></div>
+        <div class="cert-footer-item"><div class="val" id="cert-level">—</div><div class="lbl">Certification Level</div></div>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-block no-print" style="margin-top:14px;max-width:640px;margin-left:auto;margin-right:auto;" onclick="window.print()">🖨️ Print / Save Certificate</button>
   </div>
 </div>
 
@@ -641,6 +700,44 @@ function computeBadges(history) {
   return { tier1, tier2, perfect, firstTry, fully: tier1 && tier2 };
 }
 
+/* ════════════════════════════════════════════════════════════
+   CERTIFICATE VIEW — works for normal AND admin-planted results,
+   since it only depends on the saved record (aprobado/porcentaje/etc),
+   not on how that record was created.
+   ════════════════════════════════════════════════════════════ */
+const TIER_CERT_CONTENT = {
+  tier1: {
+    title: 'Sales Excellence — Tier 1 Certified',
+    body: 'has successfully completed the <strong>Daniels Sales Tier 1 Certification</strong>, demonstrating mastery of the core consultative sales process — the 7-Stage Customer Journey, pre-screening, Good/Better/Best, bundle &amp; protection selling, financing fundamentals, the close, service recovery, and objection handling.',
+    level: 'Sales Excellence — Tier 1',
+    competencies: ['Sales Process Mastery', 'Pre-Screening &amp; Discovery', 'Objection Handling', 'Service Recovery', 'Professional Standards']
+  },
+  tier2: {
+    title: 'Sales Excellence — Tier 2 Certified',
+    body: "has successfully completed the <strong>Daniels Sales Tier 2 Certification</strong>, demonstrating mastery of the credit &amp; financing process, the digital catalog navigation system, the Daniels Pre-Screen Tool, and the company's three core operational policies — Haul Away, Price Match, and Return/Exchange/Warranty.",
+    level: 'Sales Excellence — Tier 2',
+    competencies: ['Credit &amp; Financing', 'Digital Catalog Navigation', 'Pre-Screen Tool', 'Haul Away Policy', 'Price Match Policy', 'Return &amp; Warranty Policy']
+  }
+};
+
+function viewCertificate(tier) {
+  const best = session.bestByTier && session.bestByTier[tier];
+  if (!best || !best.aprobado) return; // safety net — button should never be visible otherwise
+  const content = TIER_CERT_CONTENT[tier];
+  const dateStr = best.fecha_completado
+    ? new Date(best.fecha_completado).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    : '—';
+  document.getElementById('cert-title').textContent = content.title;
+  document.getElementById('cert-name').textContent = session.empleado.nombre_completo;
+  document.getElementById('cert-body').innerHTML = content.body;
+  document.getElementById('cert-score').textContent = `Score: ${best.porcentaje}% — ${best.score}/${best.total_puntos} pts`;
+  document.getElementById('cert-competencies').innerHTML = content.competencies.map(cp => `<div class="cert-comp">✓ ${cp}</div>`).join('');
+  document.getElementById('cert-date').textContent = dateStr;
+  document.getElementById('cert-id').textContent = session.empleado.employee_id || '—';
+  document.getElementById('cert-level').textContent = content.level;
+  goToScreen('certificate');
+}
+
 function renderBadgeBoard(history) {
   const badges = computeBadges(history);
   const map = { tier1: badges.tier1, tier2: badges.tier2, perfect: badges.perfect, firsttry: badges.firstTry, fully: badges.fully };
@@ -660,6 +757,7 @@ function renderDashboardData() {
   renderBadgeBoard(history);
   let totalPoints = 0;
   const bestByTier = { tier1: null, tier2: null };
+  session.bestByTier = bestByTier;
 
   history.forEach(h => {
     if (h.aprobado) totalPoints += (h.score || 0);
@@ -687,7 +785,8 @@ function renderDashboardData() {
         statusEl.textContent = 'Certified ✓';
         statusEl.className = 'status-pill passed';
         cardEl.classList.add('passed');
-        btnEl.textContent = 'Retake (Optional)';
+        btnEl.textContent = '🏆 View / Print Certificate';
+        btnEl.onclick = () => viewCertificate(tier);
       } else {
         statusEl.textContent = 'Retry Needed';
         statusEl.className = 'status-pill failed';

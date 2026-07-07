@@ -431,7 +431,7 @@ async function loadAllData() {
   await Promise.all([loadEmployees(), loadCodes(), loadLeadSource(), loadAuditLog()]);
   renderCertAttemptsTable(cachedData.certAttempts); // re-render now that employee names are cached
   const plantBtn = document.getElementById('btn-plant-cert-floating');
-  if (plantBtn) plantBtn.style.display = isSuperAdmin() ? 'block' : 'none';
+  if (plantBtn) plantBtn.style.display = 'block'; // any admin tier can plant a certification
 }
 
 async function loadEmployees() {
@@ -955,7 +955,7 @@ async function submitPlantCert() {
       return;
     }
     closeModal('modal-plant');
-    loadEmployees(); loadAuditLog();
+    loadAllData();
   } catch (err) {
     errEl.textContent = 'Error: ' + err.message;
     errEl.classList.add('show');
