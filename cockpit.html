@@ -232,6 +232,7 @@
         <div class="kpi-card"><div class="lbl">In Progress</div><div class="val" id="kpi-cert-inprogress">—</div><div class="sub">exams currently open</div></div>
         <div class="kpi-card"><div class="lbl">Locked (3 strikes)</div><div class="val" id="kpi-cert-locked">—</div><div class="sub">need admin reset</div></div>
       </div>
+      <input type="text" class="field-input" id="certattempts-search" placeholder="Search by employee name…" style="margin-bottom:14px" oninput="renderCertAttemptsTable(cachedData.certAttempts)">
       <div style="overflow-x:auto">
         <table id="tbl-certattempts">
           <thead><tr><th>Employee</th><th>Cert</th><th>Attempt #</th><th>Status</th><th>Score</th><th>Time Used</th><th>Date</th><th>Actions</th></tr></thead>
@@ -622,7 +623,17 @@ function renderCertAttemptsTable(rows) {
     r._attemptNum = grouped[key];
   });
 
-  tbody.innerHTML = rows.map(r => {
+  const searchEl = document.getElementById('certattempts-search');
+  const q = (searchEl && searchEl.value || '').trim().toLowerCase();
+  const visibleRows = q
+    ? rows.filter(r => (employeesById[r.empleado_id] || 'unknown').toLowerCase().includes(q))
+    : rows;
+  if (q && visibleRows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No attempts match "${q}".</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = visibleRows.map(r => {
     const name = employeesById[r.empleado_id] || 'Unknown';
     const certLabel = r.certificacion === 'tier1' ? 'Tier 1' : 'Tier 2';
     let statusPill;
@@ -992,10 +1003,21 @@ async function loadAuditLog() {
   }
 }
 
+const AUDIT_ACTION_LABELS = {
+  'reset_certificacion': 'Certification Reset',
+  'eliminar_intento_certificacion': 'Deleted Certification Attempt',
+  'sembrar_certificacion': 'Certification Planted',
+  'cambiar_rol_empleado': 'Changed Employee Role',
+  'generar_codigo': 'Generated Invitation Code(s)',
+  'Deleted employee': 'Deleted Employee'
+};
+function auditActionLabel(accion) {
+  return AUDIT_ACTION_LABELS[accion] || accion;
+}
 function auditLogRowHtml(l) {
   return `<tr>
     <td>${l.admin_username}</td>
-    <td><span class="pill pill-gray">${l.accion}</span></td>
+    <td><span class="pill pill-gray">${auditActionLabel(l.accion)}</span></td>
     <td>${l.detalle || '—'}</td>
     <td>${new Date(l.created_at).toLocaleString()}</td>
   </tr>`;
@@ -1010,7 +1032,7 @@ function openAuditLogFullList() {
     dateField: 'created_at',
     exportColumns: [
       { label: 'Admin', get: r => r.admin_username },
-      { label: 'Action', get: r => r.accion },
+      { label: 'Action', get: r => auditActionLabel(r.accion) },
       { label: 'Detail', get: r => r.detalle },
       { label: 'Date', get: r => r.created_at }
     ],
