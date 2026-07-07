@@ -211,11 +211,14 @@
     </div>
     <div class="login-card">
       <p style="font-size:14px;color:var(--dkgray);line-height:1.6;margin-bottom:18px;">
-        For security reasons, passwords cannot be reset automatically since accounts don't use email.
+        For security reasons, admins can't see or set your password directly.
       </p>
       <p style="font-size:14px;color:var(--dkgray);line-height:1.6;margin-bottom:18px;">
-        Please contact your <strong>store manager or IT</strong> in person or by phone. They will issue you a temporary password, which you'll be asked to change the next time you sign in.
+        Ask your <strong>store manager or admin</strong> for a reset code. Once you have it, go to <strong>"New employee? Sign Up"</strong> below, enter the code, and choose your own new password. Your username, badges, and certification history stay exactly the same.
       </p>
+      <div style="text-align:center;margin-top:8px;">
+        <span class="btn-ghost" onclick="goToScreen('signup')" style="cursor:pointer">I have a code — Sign Up</span>
+      </div>
       <div style="text-align:center;margin-top:8px;">
         <span class="btn-ghost" onclick="goToScreen('login')" style="cursor:pointer">← Back to Sign In</span>
       </div>
@@ -531,9 +534,20 @@ async function handleSignup() {
       return;
     }
 
-    alert('Account created successfully! You can now sign in.');
+    const isReset = (result.message || '').toLowerCase().includes('reset');
+    let actualUsername = username;
+    if (isReset && result.empleado_id) {
+      try {
+        const empRows = await sbFetch(`empleados?id=eq.${result.empleado_id}&select=username`);
+        if (empRows && empRows[0]) actualUsername = empRows[0].username;
+      } catch (err) { /* fall back to whatever they typed */ }
+    }
+
+    alert(isReset
+      ? 'Password updated! You can now sign in with your existing username and new password.'
+      : 'Account created successfully! You can now sign in.');
     goToScreen('login');
-    document.getElementById('login-username').value = username;
+    document.getElementById('login-username').value = actualUsername;
 
   } catch (err) {
     errEl.textContent = 'Connection error — please try again.';

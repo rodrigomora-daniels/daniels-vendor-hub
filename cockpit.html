@@ -266,18 +266,18 @@
   </div>
 </div>
 
-<!-- ══════════ MODAL: RESET PASSWORD ══════════ -->
+<!-- ══════════ MODAL: RESET PASSWORD (self-service code) ══════════ -->
 <div class="modal-overlay" id="modal-reset">
   <div class="modal-box">
     <h3>🔑 Reset Password</h3>
-    <p style="font-size:13px;color:var(--mgray);margin-bottom:14px">
-      This requires running one SQL command in Supabase (passwords are hashed and can't be reset from here for security). Copy the command below:
-    </p>
-    <textarea id="reset-sql-output" readonly style="width:100%;height:90px;font-family:monospace;font-size:12px;padding:10px;border:1px solid #ddd;border-radius:8px;"></textarea>
-    <div style="display:flex;gap:8px;margin-top:10px">
-      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-reset')">Close</button>
-      <button class="btn btn-gold" style="flex:1" onclick="copyResetSQL()">📋 Copy</button>
+    <p style="font-size:13px;color:var(--mgray);margin-bottom:14px" id="reset-pw-desc"></p>
+    <div id="reset-pw-result" style="display:none;background:var(--gray);border-radius:8px;padding:14px;margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px;">Reset code — share with the employee:</div>
+      <div id="reset-pw-value" style="font-family:monospace;font-size:20px;font-weight:700;color:var(--navy);"></div>
+      <div style="font-size:11px;color:var(--mgray);margin-top:8px;line-height:1.5;">Their account is now locked. Tell them to go to <strong>"New employee? Sign Up"</strong> on the login screen, enter this code, and choose their own new password. Their badges and certification history stay exactly as they are.</div>
     </div>
+    <button class="btn btn-primary btn-block" id="btn-reset-pw-generate" onclick="submitResetPassword()">Lock Account &amp; Generate Reset Code</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal('modal-reset')">Close</button>
   </div>
 </div>
 
@@ -521,7 +521,7 @@ function renderEmployeesTable(employees) {
       <td>${e.tier2 ? `<span class="pill pill-green">${e.tier2.porcentaje}%</span>` : (t2Lock && t2Lock.locked ? '<span class="pill pill-red">Locked</span>' : '<span class="pill pill-gray">—</span>')}</td>
       <td>${e.totalPoints}</td>
       <td class="row-actions">
-        <button class="btn btn-ghost" onclick="openResetModal('${e.username}')">Reset PW</button>
+        <button class="btn btn-ghost" onclick="openResetModal('${e.id}','${escName}')">Reset PW</button>
         ${resetBtns}
         ${changeRoleBtn}
         ${!e.es_admin ? `<button class="btn btn-red" onclick="deleteEmployee('${e.id}','${e.nombre_completo}')">Delete</button>` : ''}
@@ -1009,6 +1009,7 @@ const AUDIT_ACTION_LABELS = {
   'sembrar_certificacion': 'Certification Planted',
   'cambiar_rol_empleado': 'Changed Employee Role',
   'generar_codigo': 'Generated Invitation Code(s)',
+  'reset_password': 'Password Reset',
   'Deleted employee': 'Deleted Employee'
 };
 function auditActionLabel(accion) {
@@ -1058,17 +1059,35 @@ async function deleteEmployee(empId, name) {
   }
 }
 
-/* ════════ RESET PASSWORD MODAL ════════ */
-function openResetModal(username) {
-  const tempPw = 'Temp' + Math.floor(1000 + Math.random()*9000) + '!';
-  document.getElementById('reset-sql-output').value =
-    `select admin_reset_password('${username}', '${tempPw}');\n\n-- Temporary password: ${tempPw}\n-- Give this to the employee. They'll be required to change it on next login.`;
+/* ════════ RESET PASSWORD MODAL (self-service code — admin never sets/sees the password) ════════ */
+let resetPwTarget = null; // { empId, empName }
+
+function openResetModal(empId, empName) {
+  resetPwTarget = { empId, empName };
+  document.getElementById('reset-pw-desc').textContent = `This locks ${empName}'s account and generates a one-time code so THEY can set their own new password. You will never see or set the password itself.`;
+  document.getElementById('reset-pw-result').style.display = 'none';
+  document.getElementById('btn-reset-pw-generate').style.display = 'block';
   document.getElementById('modal-reset').classList.add('show');
 }
-function copyResetSQL() {
-  const ta = document.getElementById('reset-sql-output');
-  ta.select();
-  document.execCommand('copy');
+
+async function submitResetPassword() {
+  if (!resetPwTarget) return;
+  try {
+    const rows = await sbFetch('rpc/admin_iniciar_reset_password', {
+      method: 'POST',
+      body: JSON.stringify({
+        p_admin_id: admin.id,
+        p_empleado_id: resetPwTarget.empId
+      })
+    });
+    if (!rows[0].success) { alert(rows[0].message); return; }
+    document.getElementById('reset-pw-value').textContent = rows[0].codigo;
+    document.getElementById('reset-pw-result').style.display = 'block';
+    document.getElementById('btn-reset-pw-generate').style.display = 'none';
+    loadAllData();
+  } catch (err) {
+    alert('Error generating reset code: ' + err.message);
+  }
 }
 
 /* ════════ PLANT CERTIFICATION MODAL ════════ */
