@@ -182,8 +182,11 @@
     </div>
     <div class="login-card">
       <div class="error-msg" id="signup-error"></div>
+      <div id="signup-reset-banner" style="display:none;background:var(--ltblue);border-left:4px solid var(--navy);border-radius:8px;padding:12px 14px;margin-bottom:16px;">
+        <div id="signup-reset-banner-text" style="font-size:13px;color:var(--navy);line-height:1.5;"></div>
+      </div>
       <label class="field-label">Invitation Code *</label>
-      <input type="text" class="field-input" id="signup-code" placeholder="e.g. DANIELS2026-A7X3" autocomplete="off">
+      <input type="text" class="field-input" id="signup-code" placeholder="e.g. DANIELS2026-A7X3" autocomplete="off" oninput="onSignupCodeInput()">
       <label class="field-label">Full Name *</label>
       <input type="text" class="field-input" id="signup-name" placeholder="Your full name" autocomplete="off">
       <label class="field-label">Employee ID *</label>
@@ -484,6 +487,47 @@ function goToScreen(name) {
 /* ════════════════════════════════════════════════════════════
    SIGN UP
    ════════════════════════════════════════════════════════════ */
+let signupCodeCheckTimer = null;
+function onSignupCodeInput() {
+  clearTimeout(signupCodeCheckTimer);
+  signupCodeCheckTimer = setTimeout(checkSignupCode, 500);
+}
+
+async function checkSignupCode() {
+  const code = document.getElementById('signup-code').value.trim();
+  if (!code) { hideResetBanner(); return; }
+  try {
+    const codeRows = await sbFetch(`codigos_invitacion?codigo=eq.${encodeURIComponent(code.toUpperCase())}&usado=eq.false&select=empleado_id_reset`);
+    if (!codeRows || !codeRows.length || !codeRows[0].empleado_id_reset) { hideResetBanner(); return; }
+    const empRows = await sbFetch(`empleados?id=eq.${codeRows[0].empleado_id_reset}&select=nombre_completo,username,employee_id`);
+    if (!empRows || !empRows.length) { hideResetBanner(); return; }
+    showResetBanner(empRows[0]);
+  } catch (err) {
+    hideResetBanner();
+  }
+}
+
+function showResetBanner(emp) {
+  document.getElementById('signup-reset-banner').style.display = 'block';
+  document.getElementById('signup-reset-banner-text').innerHTML =
+    `👋 Welcome back, <strong>${emp.nombre_completo}</strong>! This code resets the password for your existing account (username: <strong>${emp.username}</strong>). Just choose a new password below — your badges and certification history stay exactly as they are.`;
+  document.getElementById('signup-name').value = emp.nombre_completo;
+  document.getElementById('signup-empid').value = emp.employee_id || '';
+  document.getElementById('signup-username').value = emp.username;
+  document.getElementById('signup-name').disabled = true;
+  document.getElementById('signup-empid').disabled = true;
+  document.getElementById('signup-username').disabled = true;
+  document.getElementById('btn-signup').textContent = 'Reset My Password';
+}
+
+function hideResetBanner() {
+  document.getElementById('signup-reset-banner').style.display = 'none';
+  document.getElementById('signup-name').disabled = false;
+  document.getElementById('signup-empid').disabled = false;
+  document.getElementById('signup-username').disabled = false;
+  document.getElementById('btn-signup').textContent = 'Create Account';
+}
+
 async function handleSignup() {
   const code = document.getElementById('signup-code').value.trim();
   const name = document.getElementById('signup-name').value.trim();
