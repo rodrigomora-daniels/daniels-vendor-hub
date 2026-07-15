@@ -117,7 +117,7 @@
   <div class="cockpit-content">
 
     <!-- KPIs -->
-    <div class="kpi-grid">
+    <div class="kpi-grid" id="kpi-grid-header">
       <div class="kpi-card">
         <div class="lbl">Total Employees</div>
         <div class="val" id="kpi-total-emp">—</div>
@@ -141,7 +141,7 @@
     </div>
 
     <!-- EMPLOYEES TABLE -->
-    <div class="section">
+    <div class="section" id="section-employees">
       <div class="section-hdr">
         <h2>👥 Employees</h2>
         <button class="btn btn-gold" onclick="exportCSV('employees')">⬇ Export CSV</button>
@@ -152,7 +152,7 @@
           <thead>
             <tr>
               <th>Name</th><th>Username</th><th>Employee ID</th><th>Store</th>
-              <th>Tier 1</th><th>Tier 2</th><th>Points</th><th>Actions</th>
+              <th>Tier 1</th><th>Tier 2</th><th>Points</th><th id="th-employees-actions">Actions</th>
             </tr>
           </thead>
           <tbody id="tbl-employees-body">
@@ -163,7 +163,7 @@
     </div>
 
     <!-- INVITATION CODES -->
-    <div class="section">
+    <div class="section" id="section-codes">
       <div class="section-hdr">
         <h2>🎫 Invitation Codes</h2>
         <div style="display:flex;gap:8px;">
@@ -182,7 +182,7 @@
     </div>
 
     <!-- LEAD SOURCE -->
-    <div class="section">
+    <div class="section" id="section-leadsource">
       <div class="section-hdr">
         <h2>📍 How They Found Us — Entries</h2>
         <button class="btn btn-ghost" onclick="openLeadSourceFullList()">View Full List</button>
@@ -203,7 +203,7 @@
     </div>
 
     <!-- AUDIT LOG -->
-    <div class="section">
+    <div class="section" id="section-auditlog">
       <div class="section-hdr">
         <h2>📋 Admin Activity Log</h2>
         <button class="btn btn-ghost" onclick="openAuditLogFullList()">View Full List</button>
@@ -221,7 +221,7 @@
 </div>
 
     <!-- CERTIFICATION ATTEMPTS -->
-    <div class="section">
+    <div class="section" id="section-certattempts">
       <div class="section-hdr">
         <h2>🎓 Certification Attempts</h2>
         <button class="btn btn-gold" onclick="exportCSV('certattempts')">⬇ Export CSV</button>
@@ -313,6 +313,7 @@
     <select class="field-input" id="role-select">
       <option value="vendedor|none">Vendedor</option>
       <option value="manager|none">Manager</option>
+      <option value="manager|manager_visor">Store Management — View Only (Employees roster, KPI summary, certification attempts/scores, export CSV — no changes allowed)</option>
       <option value="admin|admin_secundario">Admin — Secondary (view, export, manage vendors/managers, reset attempts — cannot delete attempts, cannot manage admin accounts)</option>
       <option value="admin|super_admin">Super Admin (full control)</option>
     </select>
@@ -389,6 +390,7 @@ async function sbFetch(path, options = {}) {
 
 let admin = null;
 const isSuperAdmin = () => !!(admin && admin.nivel_admin === 'super_admin');
+const isViewOnly = () => !!(admin && admin.nivel_admin === 'manager_visor');
 let roleChangeTarget = null;
 let cachedData = { employees: [], codes: [], leadsource: [], auditlog: [], certAttempts: [], certResets: [] };
 let certResetTarget = null;
@@ -435,8 +437,11 @@ async function handleAdminLogin() {
     }
     document.getElementById('screen-admin-login').classList.remove('active');
     document.getElementById('screen-cockpit').classList.add('active');
+    let tierLabel = 'Admin';
+    if (isSuperAdmin()) tierLabel = 'Super Admin';
+    else if (isViewOnly()) tierLabel = 'Store Management — View Only';
     document.getElementById('admin-greeting').textContent =
-      `Signed in as ${emp.nombre_completo} (${isSuperAdmin() ? 'Super Admin' : 'Admin'})`;
+      `Signed in as ${emp.nombre_completo} (${tierLabel})`;
     loadAllData();
 
   } catch (err) {
@@ -454,7 +459,19 @@ async function loadAllData() {
   await Promise.all([loadEmployees(), loadCodes(), loadLeadSource(), loadAuditLog()]);
   renderCertAttemptsTable(cachedData.certAttempts); // re-render now that employee names are cached
   const plantBtn = document.getElementById('btn-plant-cert-floating');
-  if (plantBtn) plantBtn.style.display = 'block'; // any admin tier can plant a certification
+  if (plantBtn) plantBtn.style.display = isViewOnly() ? 'none' : 'block';
+  applyViewOnlyRestrictions();
+}
+
+function applyViewOnlyRestrictions() {
+  if (!isViewOnly()) return;
+  // Store Management sees KPIs, the Employees roster, and Certification Attempts (read-only) — nothing else.
+  ['section-codes', 'section-leadsource', 'section-auditlog'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  const th = document.getElementById('th-employees-actions');
+  if (th) th.style.display = 'none';
 }
 
 async function loadEmployees() {
@@ -504,8 +521,11 @@ function renderEmployeesTable(employees) {
       (t1Lock && t1Lock.locked) ? `<button class="btn btn-red" onclick="openCertResetModal('${e.id}','${escName}','tier1')">Reset T1</button>` : '',
       (t2Lock && t2Lock.locked) ? `<button class="btn btn-red" onclick="openCertResetModal('${e.id}','${escName}','tier2')">Reset T2</button>` : ''
     ].join('');
+    let adminBadgeLabel = 'ADMIN';
+    if (e.nivel_admin === 'super_admin') adminBadgeLabel = 'SUPER ADMIN';
+    else if (e.nivel_admin === 'manager_visor') adminBadgeLabel = 'STORE MGMT';
     const adminBadge = e.es_admin
-      ? ` <span class="pill pill-gold">${e.nivel_admin === 'super_admin' ? 'SUPER ADMIN' : 'ADMIN'}</span>`
+      ? ` <span class="pill pill-gold">${adminBadgeLabel}</span>`
       : '';
     const isMe = admin && e.id === admin.id;
     const changeRoleBtn = (isSuperAdmin() && !isMe)
@@ -521,10 +541,12 @@ function renderEmployeesTable(employees) {
       <td>${e.tier2 ? `<span class="pill pill-green">${e.tier2.porcentaje}%</span>` : (t2Lock && t2Lock.locked ? '<span class="pill pill-red">Locked</span>' : '<span class="pill pill-gray">—</span>')}</td>
       <td>${e.totalPoints}</td>
       <td class="row-actions">
+        ${isViewOnly() ? '' : `
         <button class="btn btn-ghost" onclick="openResetModal('${e.id}','${escName}')">Reset PW</button>
         ${resetBtns}
         ${changeRoleBtn}
         ${!e.es_admin ? `<button class="btn btn-red" onclick="deleteEmployee('${e.id}','${e.nombre_completo}')">Delete</button>` : ''}
+        `}
       </td>
     </tr>`;
   }).join('');
@@ -535,7 +557,11 @@ function renderKPIs(employees) {
   const tier1Count = employees.filter(e => e.tier1).length;
   const tier2Count = employees.filter(e => e.tier2).length;
   document.getElementById('kpi-total-emp').textContent = total;
-  document.getElementById('kpi-total-emp-sub').textContent = `${employees.filter(e=>!e.es_admin).length} vendors, ${employees.filter(e=>e.es_admin).length} admin`;
+  const vendorCount = employees.filter(e=>!e.es_admin).length;
+  const storeManagerCount = employees.filter(e=>e.nivel_admin === 'manager_visor').length;
+  const adminCount = employees.filter(e=>e.es_admin && e.nivel_admin !== 'manager_visor').length;
+  document.getElementById('kpi-total-emp-sub').textContent =
+    `${vendorCount} vendors, ${adminCount} admin${storeManagerCount ? `, ${storeManagerCount} store mgr` : ''}`;
   document.getElementById('kpi-tier1').textContent = `${tier1Count}/${total}`;
   document.getElementById('kpi-tier2').textContent = `${tier2Count}/${total}`;
 }
@@ -660,7 +686,7 @@ function renderCertAttemptsTable(rows) {
       <td>${timeTxt}</td>
       <td>${dateTxt}</td>
       <td class="row-actions">
-        ${canView ? `<button class="btn btn-ghost" onclick='openAnswerDetail(${JSON.stringify(r.id)}, ${JSON.stringify(r.certificacion)})'>View Answers</button>` : ''}
+        ${(canView && !isViewOnly()) ? `<button class="btn btn-ghost" onclick='openAnswerDetail(${JSON.stringify(r.id)}, ${JSON.stringify(r.certificacion)})'>View Answers</button>` : ''}
         ${isSuperAdmin() ? `<button class="btn btn-red" onclick='deleteAttempt(${JSON.stringify(r.id)}, ${JSON.stringify(name)}, ${JSON.stringify(certLabel)}, ${JSON.stringify(statusText)})'>Delete</button>` : ''}
       </td>
     </tr>`;
