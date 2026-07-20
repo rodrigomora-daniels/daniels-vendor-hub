@@ -63,6 +63,9 @@
   .source-tile.walked .icon{color:var(--green);}
   .source-tile.friend .icon{color:#9b59b6;}
   .source-tile.family .icon{color:#16a085;}
+  .source-tile.tv .icon{color:#8e44ad;}
+  .source-tile.billboard .icon{color:#d35400;}
+  .source-tile.textcampaign .icon{color:#2980b9;}
   .source-tile.other .icon{color:var(--mgray);}
 
   .other-detail{display:none;margin-top:16px;}
@@ -160,6 +163,21 @@
         <div class="checkmark">✓</div>
         <div class="icon">👨‍👩‍👧</div>
         <div class="label">Family Member</div>
+      </div>
+      <div class="source-tile tv" data-source="TV Commercial" onclick="selectSource(this)">
+        <div class="checkmark">✓</div>
+        <div class="icon">📺</div>
+        <div class="label">TV Commercial</div>
+      </div>
+      <div class="source-tile billboard" data-source="Billboard" onclick="selectSource(this)">
+        <div class="checkmark">✓</div>
+        <div class="icon">🛣️</div>
+        <div class="label">Billboard</div>
+      </div>
+      <div class="source-tile textcampaign" data-source="Text Campaign" onclick="selectSource(this)">
+        <div class="checkmark">✓</div>
+        <div class="icon">💬</div>
+        <div class="label">Text Campaign</div>
       </div>
       <div class="source-tile other" data-source="Other" onclick="selectSource(this)" style="grid-column:span 2;">
         <div class="checkmark">✓</div>

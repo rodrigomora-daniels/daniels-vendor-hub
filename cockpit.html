@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Daniels Vendor Hub — Admin Cockpit</title>
+<title>My Daniels Workspace — Admin Cockpit</title>
 <style>
   :root {
     --navy:#1B3A6B; --gold:#C8922A; --ltblue:#D6E4F7; --cream:#FFF8EC;
@@ -90,7 +90,7 @@
   <div class="login-wrap">
     <div class="login-card">
       <h1>🔐 Admin Cockpit</h1>
-      <div class="sub">Daniels Vendor Hub — Authorized access only</div>
+      <div class="sub">My Daniels Workspace — Authorized access only</div>
       <div class="error-msg" id="login-error"></div>
       <label class="field-label">Username</label>
       <input type="text" class="field-input" id="login-username" placeholder="rodrigo.mora">
@@ -109,7 +109,7 @@
       <div class="sub" id="admin-greeting">—</div>
     </div>
     <div>
-      <button class="btn btn-ghost" onclick="window.location.href='index.html'">← Vendor Hub</button>
+      <button class="btn btn-ghost" onclick="window.location.href='index.html'">← My Daniels Workspace</button>
       <button class="btn btn-ghost" onclick="location.reload()">Sign Out</button>
     </div>
   </div>
@@ -722,9 +722,18 @@ async function openAnswerDetail(recordId, cert) {
 
     const answers = record.detalle_respuestas || [];
     const letters = ['A','B','C','D'];
+    // For records created after the pool-sampling feature shipped, preguntas_seleccionadas
+    // tells us exactly which pool questions (and in what order) were actually presented.
+    // Legacy records (before this field existed) get the old behavior: assume the full
+    // pool as it existed at save time was presented, in original order.
+    const presentedIndices = (record.preguntas_seleccionadas && record.preguntas_seleccionadas.length)
+      ? record.preguntas_seleccionadas
+      : QUESTIONS.map((_, i) => i);
     let html = '';
-    QUESTIONS.forEach((q, i) => {
-      const given = answers[i];
+    presentedIndices.forEach((qi, i) => {
+      const q = QUESTIONS[qi];
+      if (!q) return; // pool question no longer exists (e.g. removed later) — skip gracefully
+      const given = answers[qi] !== undefined ? answers[qi] : answers[i];
       const isCorrect = given === q.correct;
       html += `<div style="border-left:4px solid ${isCorrect ? '#2e7d32' : '#c62828'};padding:8px 12px;margin-bottom:10px;background:${isCorrect ? '#f1f8f1' : '#fdf1f1'};border-radius:4px;">
         <div style="font-weight:700;font-size:12px;color:var(--mgray);margin-bottom:2px">${isCorrect ? '✅' : '❌'} Q${i+1} · ${q.section}</div>
