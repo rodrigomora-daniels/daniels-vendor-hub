@@ -1128,7 +1128,9 @@ async function submitResetPassword() {
 /* ════════ PLANT CERTIFICATION MODAL ════════ */
 function populatePlantDropdown(employees) {
   const sel = document.getElementById('plant-employee');
-  sel.innerHTML = employees.filter(e=>!e.es_admin).map(e => `<option value="${e.id}">${e.nombre_completo} (${e.username})</option>`).join('');
+  // Exclude true admins (Super Admin, Admin Secundario) — but Store Management (manager_visor)
+  // is a store-manager role, not a system-admin role, so they still need certifications planted.
+  sel.innerHTML = employees.filter(e=>!e.es_admin || e.nivel_admin === 'manager_visor').map(e => `<option value="${e.id}">${e.nombre_completo} (${e.username})</option>`).join('');
 }
 function openPlantModal() {
   document.getElementById('plant-date').value = new Date().toISOString().split('T')[0];
