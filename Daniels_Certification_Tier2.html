@@ -419,58 +419,226 @@ const QUESTIONS = [
 
 {
   section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
-  q:"A customer is excited about a $1,600 sofa set and ready to apply for financing. You ask for the three required documents and they hand you: a gym membership card, a utility bill from 4 months ago, and a bank statement from last month. How many of the three documents are valid? / Un cliente emocionado por un sofá de $1,600 quiere solicitar financiamiento. Te entrega: una tarjeta de membresía de gimnasio, un recibo de servicios de hace 4 meses, y un estado de cuenta bancario del mes pasado. ¿Cuántos de los tres documentos son válidos?",
+  q:"A customer hands you three documents: a driver's license, a utility bill dated 55 days ago, and a pay stub from last week. Are all three valid per the specific requirements? / Un cliente entrega tres documentos: licencia, recibo de servicios de hace 55 días, y talón de pago de la semana pasada. ¿Los tres son válidos según los requisitos específicos?",
   scenario:null, sub:null,
   opts:[
-    "All three — a gym card with a photo works as identification, the utility bill confirms the address on file, and the bank statement shows income, so the full document set is technically satisfied. / Los tres — cubren ID, domicilio e ingresos.",
-    "Two — the gym card is not a valid ID, but the utility bill and bank statement both fall within acceptable timelines and can be submitted together as-is. / Dos — la tarjeta de gimnasio no es un ID válido pero los otros dos sirven.",
-    "One — only the bank statement is valid. The gym card is not a government-issued ID. The utility bill must be within 60 days (4 months = invalid). The bank statement works as proof of income IF it shows regular deposits. / Uno — solo el estado de cuenta bancario es válido.",
-    "Zero — none of these documents meet the standard requirements, since even the bank statement needs to be paired with a separate pay stub before it can count toward the application at all. / Cero — ninguno de estos documentos cumple los requisitos."
+    "Yes — all three fall within what the guide considers acceptable and current for their respective document category. / Sí — los tres caen dentro de lo que la guía considera aceptable y vigente para su categoría.",
+    "No — the utility bill is invalid, since proof of address must be dated within 30 days, not 60, making this one 25 days too old to accept. / No — el recibo de servicios es inválido, ya que el comprobante de domicilio debe ser de menos de 30 días, no 60.",
+    "No — the pay stub is invalid, since proof of income specifically requires a stub from the last 14 days, not 30, making a stub from last week borderline but still outside the accepted range depending on the exact day. / No — el talón de pago es inválido, ya que requiere ser de los últimos 14 días.",
+    "Yes for the ID and pay stub, but the utility bill needs the customer's name AND account number both visible, which can't be confirmed just from knowing it's 55 days old. / Sí para el ID y talón, pero el recibo necesita nombre Y número de cuenta visibles."
   ],
-  correct:2,
-  explanation:"Breaking it down: (1) Gym card = NOT valid ID — must be government-issued with photo. (2) Utility bill from 4 months ago = NOT valid — must be within 60 days. (3) Bank statement from last month = VALID as proof of income if it shows regular deposits. The associate needs to collect 2 more valid documents before submitting: a real government photo ID and a current utility bill (or bank statement with address)."
+  correct:0,
+  explanation:"The proof of address window is 60 days, not 30 — a 55-day-old utility bill is still valid. Proof of income accepts a pay stub from the last 30 days, not 14 — 'last week' is comfortably inside that window. Option D invents an account-number requirement that isn't part of the stated criteria (name and address are what matters, not an account number)."
 },
 
 {
   section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
-  q:"You submitted a complete application with all three documents. The Twilio phone verification was sent to the customer but they say 'I didn't get a text.' The customer is getting impatient. What do you do? / Enviaste una solicitud completa con los tres documentos. La verificación Twilio se envió pero el cliente dice 'No recibí el mensaje.' El cliente se está impacientando. ¿Qué haces?",
+  q:"A customer says they're paid in cash and hands you 6 weeks of bank statements showing deposits. Does this satisfy proof of income? / Un cliente dice que le pagan en efectivo y entrega 6 semanas de estados de cuenta mostrando depósitos. ¿Esto satisface el comprobante de ingreso?",
   scenario:null, sub:null,
   opts:[
-    "Ask the approver to bypass the Twilio step this one time since documents are complete, treating verification as a formality that can be skipped once the rest of the file is already fully in order, since this is often the first instinct on a busy floor even though it isn't what the situation actually calls for. / Pedirle al aprobador que omita el paso de Twilio esta vez ya que los documentos están completos.",
-    "Submit the application anyway and add a note that Twilio was skipped, letting the approver decide afterward whether the missing verification step needs to be revisited before a decision is made — an approach many associates default to when they haven't fully thought through the specific situation in front of them. / Enviar la solicitud de todas formas y agregar una nota de que se omitió Twilio.",
-    "Help the customer check the phone number entered, confirm it is their current number, ask them to check spam/secondary apps (some carriers delay), and wait — Twilio is a mandatory fraud gate that cannot be bypassed regardless of customer impatience. Alert the approver of the delay. / Ayudar al cliente a verificar el número de teléfono, confirmar que es el actual, pedir que revisen spam — Twilio es una barrera antifraude obligatoria que no puede omitirse.",
-    "Offer to re-enter the application with a different phone number from the customer's contacts, since any working number that can receive the verification text should satisfy the requirement, which is the kind of shortcut that feels reasonable in the moment but doesn't actually hold up once you look at what's really being asked. / Ofrecer re-ingresar la solicitud con un número de teléfono diferente de los contactos del cliente."
+    "Yes — any consistent bank statement history showing regular deposits satisfies this requirement regardless of the specific time period covered. / Sí — cualquier historial de estado de cuenta consistente satisface el requisito sin importar el periodo específico.",
+    "No — the specific requirement for cash-paid customers is 2 full months of bank statements, and 6 weeks doesn't reach that threshold even though it's a reasonably long window. / No — el requisito específico para clientes pagados en efectivo es 2 meses completos, y 6 semanas no alcanza ese umbral.",
+    "Yes, but only if the deposits are for the exact same dollar amount each time, since irregular deposit amounts would disqualify the documentation regardless of how many weeks are covered. / Sí, pero solo si los depósitos son exactamente el mismo monto cada vez.",
+    "No — cash-paid customers cannot use bank statements at all under any circumstances and must instead provide a signed employer letter confirming their income directly. / No — los clientes pagados en efectivo no pueden usar estados de cuenta bajo ninguna circunstancia."
   ],
-  correct:2,
-  explanation:"Twilio phone verification is a mandatory fraud gate — non-negotiable, non-bypassable, regardless of impatience, document completeness, or time pressure. The correct response is to help troubleshoot (correct number? check spam? carrier delay?) and wait, not circumvent. Using someone else's phone number is a fraud risk. Submitting without verification, even with a note, blocks the application at the system level anyway."
+  correct:1,
+  explanation:"The specific requirement is 2 months of bank statements for cash-paid customers — 6 weeks (about 1.5 months) doesn't reach that threshold, even though it might feel like 'enough' time. There's no same-amount requirement (deposits showing regular activity is what matters, not identical amounts), and bank statements are explicitly named as the accepted path for cash income — not disqualified in favor of an employer letter."
 },
 
 {
   section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
-  q:"You run a customer through the waterfall. They have a FICO of 572 and are buying a sectional for $1,800 with $300 down. The system does not auto-approve and it goes to manual review. While waiting, the customer asks you: 'What are my chances?' What do you say? / Corres a un cliente por la cascada. Tiene FICO 572 y compra un seccional de $1,800 con $300 de enganche. El sistema no auto-aprueba y va a revisión manual. El cliente pregunta: '¿Cuáles son mis posibilidades?' ¿Qué dices?",
+  q:"A customer's Twilio verification text doesn't arrive after 2 minutes. What is the specific correct next step before assuming anything is broken? / El mensaje de verificación Twilio de un cliente no llega después de 2 minutos. ¿Cuál es el siguiente paso correcto específico antes de asumir que algo está roto?",
   scenario:null, sub:null,
   opts:[
-    "'With your down payment and the product you chose, I think you have a solid shot,' offering an encouraging read based on the specific numbers you already entered into the application together. / 'Con tu enganche y el producto que elegiste, creo que tienes buenas posibilidades.'",
-    "'Your FICO is a little low but the down payment helps — we will see,' giving a cautiously honest read that acknowledges the risk factor without committing to a specific outcome either way — a common assumption that turns out not to match how this particular situation is supposed to be handled. / 'Tu FICO está un poco bajo pero el enganche ayuda — veremos.'",
-    "'I honestly cannot tell you — the approver makes that call, not me. What I can tell you is that we submitted everything correctly and completely, which is exactly what gives you the best shot. Let me show you a couple of other things while we wait.' / 'Honestamente no puedo decirte — el aprobador toma esa decisión, no yo.'",
-    "'Manual review usually means approval — do not worry,' reassuring the customer with what most associates on the floor have generally observed happens once an application reaches this stage of the process. / 'La revisión manual usualmente significa aprobación — no te preocupes.'"
+    "Immediately resubmit the entire application with a different phone number on file, since a delayed text after any wait time is treated as a failed verification requiring a fresh attempt. / Reenviar la solicitud completa con un número diferente de inmediato, ya que un mensaje tardío se trata como verificación fallida.",
+    "Confirm the number entered is correct and current, then have the customer check spam or any secondary messaging app, since carrier delays are common and Twilio remains a mandatory step regardless of wait time. / Confirmar que el número ingresado es correcto y vigente, y pedir al cliente que revise spam o alguna app secundaria de mensajería, ya que las demoras de operador son comunes y Twilio sigue siendo un paso obligatorio sin importar el tiempo de espera.",
+    "Escalate directly to the approver to manually override the verification requirement, since a 2-minute delay is long enough to justify bypassing this specific fraud gate for this one application. / Escalar directamente al aprobador para anular manualmente el requisito de verificación.",
+    "Ask the customer to restart their phone and wait a full 10 minutes before trying again, since Twilio verification texts are specifically described as requiring a completely fresh network connection to be received successfully at all. / Pedirle al cliente que reinicie su teléfono e intente en 10 minutos."
   ],
-  correct:2,
-  explanation:"Never predict outcomes — even when you think you know. 'I think you have a solid shot' sets an expectation you cannot fulfill. 'Manual review usually means approval' is factually wrong and professionally dangerous. The correct answer redirects honestly: the approver decides, you submitted everything correctly, and you keep the customer engaged productively while waiting."
+  correct:1,
+  explanation:"Twilio is a mandatory, non-bypassable fraud gate — no wait-time threshold makes it optional, and no one (not even an approver) can override it. The correct troubleshooting is checking the number and having the customer check spam/other apps, since carrier delays are a known, ordinary cause — not restarting the phone (not a stated fix) or resubmitting with a different number (which doesn't address a delay, just changes what's being verified)."
 },
 
 {
   section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
-  q:"The approver returns an APPROVED decision — through SNAP (lease-to-own), not in-house. The customer did not know lease-to-own was an option and asks 'What does that mean exactly?' What is your role? / El aprobador regresa una decisión APROBADA — a través de SNAP (arrendamiento con opción de compra), no en casa. El cliente no sabía que era una opción y pregunta '¿Qué significa eso exactamente?' ¿Cuál es tu rol?",
+  q:"A customer's spouse is a co-applicant but is currently at work. Per the specific requirement, what must happen before the application can be submitted? / El cónyuge de un cliente es co-solicitante pero está trabajando. Según el requisito específico, ¿qué debe pasar antes de poder enviar la solicitud?",
   scenario:null, sub:null,
   opts:[
-    "Explain lease-to-own in detail yourself, including approximate total cost, term length, and buyout options, since the customer is asking you directly and you have seen enough SNAP approvals over time to feel confident answering accurately without waiting on anyone else, even though a closer look at the specific circumstances here shows that isn't quite right. / Explicar el arrendamiento con opción de compra en detalle incluyendo el costo total aproximado y opciones de compra.",
-    "Tell the customer lease-to-own is basically the same as financing, just with a different name, so they don't feel like they are being routed into something fundamentally different from what they originally asked for — the kind of response that sounds reasonable out loud but doesn't line up with what's actually correct in this case, though it's built on an assumption the actual scenario doesn't really support. / Decirle al cliente que el arrendamiento es básicamente lo mismo que el financiamiento, solo con un nombre diferente.",
-    "Stay positive and let them know they've been approved through a financing partner that works with many different credit situations. Help them get started with the partner's application — that is where the partner explains the specific terms (lease structure, buyout, total cost). Do not try to explain those terms yourself. / Mantener actitud positiva y decirle que fue aprobado a través de un socio financiero que trabaja con distintas situaciones de crédito. Ayudarlo a comenzar la solicitud del socio — ahí es donde se explican los términos específicos. No intentar explicar tú esos términos.",
-    "Warn the customer that lease-to-own has a higher total cost so they can decide if they want to proceed, walking them through a rough cost comparison against what in-house financing would have looked like, which might seem like the practical choice at first glance but overlooks a detail that actually matters here — a reasonable-sounding instinct that doesn't actually fit the specific facts described here. / Advertir al cliente que el arrendamiento tiene un costo total más alto para que puedan decidir si proceden."
+    "The primary applicant can provide the spouse's documents and sign on their behalf, since a legally married co-applicant's presence is not specifically required as long as accurate information is submitted for both. / El solicitante principal puede proporcionar los documentos del cónyuge y firmar en su nombre.",
+    "Both applicants must individually provide documents, complete identity verification (including their own Twilio step), and sign — this can't be completed by proxy for either applicant, spouse or not. / Ambos solicitantes deben proporcionar documentos individualmente, completar verificación de identidad (incluyendo su propio paso de Twilio), y firmar — esto no puede completarse por poder para ninguno de los dos.",
+    "The application can proceed today with just the primary applicant's information, and the spouse's documents can be added afterward once the approver has already made an initial decision. / La solicitud puede proceder hoy solo con la información del solicitante principal, y los documentos del cónyuge se pueden agregar después.",
+    "A phone call from the spouse verbally confirming their consent to be a co-applicant is sufficient to proceed without their documents or signature being physically present today. / Una llamada telefónica del cónyuge confirmando verbalmente su consentimiento es suficiente para proceder sin sus documentos o firma."
   ],
-  correct:2,
-  explanation:"The approver's role ends at communicating the decision — they don't walk the customer through lease-to-own terms directly, and neither do you. Per the credit guide's actual script, your role is to stay positive and connect the customer to the partner's own application, where the partner explains their terms (lease structure, buyout options, total cost). Explaining those terms yourself, minimizing them as 'basically financing,' or improvising a cost comparison all misrepresent how the handoff actually works."
+  correct:1,
+  explanation:"Each co-applicant — spouse or not — must individually provide documents, complete their own identity verification (their own Twilio step specifically), and sign; this requirement applies per-person, not per-household, and can't be satisfied by proxy, a verbal phone consent, or submitting the primary applicant alone with plans to add the co-applicant after a decision is already made."
+},
+
+{
+  section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
+  q:"A customer's total purchase is furniture-only at $1,200. Per the specific waterfall stage that adjusts down payment by product type, how would this compare to an identical $1,200 purchase that's electronics-only? / La compra de un cliente es solo muebles por $1,200. Según la etapa específica de la cascada que ajusta el enganche por tipo de producto, ¿cómo se compararía con una compra idéntica de $1,200 solo en electrónicos?",
+  scenario:null, sub:null,
+  opts:[
+    "They would require the identical down payment, since the Product & Amount Check stage only adjusts based on total dollar amount, not the specific category of product being financed. / Requerirían el mismo enganche, ya que la etapa de Verificación de Producto y Monto solo ajusta según el monto total, no la categoría.",
+    "Furniture generally has more flexibility (lower required down payment potential) than electronics at the same price point, since the Product & Amount Check stage specifically adjusts required down payment by product category, and electronics are treated as higher-risk. / Los muebles generalmente tienen más flexibilidad que los electrónicos al mismo precio, ya que la etapa de Verificación de Producto y Monto ajusta el enganche por categoría, y los electrónicos se tratan como mayor riesgo.",
+    "Electronics generally require a lower down payment than furniture at the same price point, since electronics are considered easier to resell if the account defaults, which lowers the effective risk to Daniel's. / Los electrónicos generalmente requieren menor enganche que los muebles, ya que se consideran más fáciles de revender si la cuenta cae en default.",
+    "The down payment difference between categories only applies above $2,000 in total purchase price, meaning a $1,200 purchase in either category would be treated identically regardless of what specific product is actually being financed here. / La diferencia de enganche entre categorías solo aplica arriba de $2,000."
+  ],
+  correct:1,
+  explanation:"The Product & Amount Check stage explicitly adjusts required down payment based on product category — furniture has more flexibility (options) than electronics, which is treated as higher-risk and carries stricter down payment requirements at a comparable price point. This isn't purely dollar-amount-based, doesn't run in the opposite direction (electronics being 'easier to resell' isn't the stated logic), and doesn't have a $2,000 exemption threshold."
+},
+
+{
+  section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
+  q:"A customer's application is submitted and pending. What is the SPECIFIC guidance on what the associate should do while waiting — not just a general 'be patient' instruction? / La solicitud de un cliente está enviada y pendiente. ¿Cuál es la guía ESPECÍFICA sobre qué debe hacer el asociado mientras espera — no solo una instrucción general de 'ser paciente'?",
+  scenario:null, sub:null,
+  opts:[
+    "Step back, keep the customer engaged with something else, and specifically avoid checking in with the approver every couple of minutes, since the guidance names that exact behavior as something to avoid. / Dar un paso atrás, mantener al cliente ocupado con algo más, y específicamente evitar preguntarle al aprobador cada un par de minutos, ya que la guía nombra ese comportamiento exacto como algo a evitar.",
+    "Check in with the approver once, exactly at the 10-minute mark, since the guidance specifies a single allowed status check at that interval before further inquiries become inappropriate. / Preguntar al aprobador una vez, exactamente a los 10 minutos, ya que la guía especifica una sola consulta permitida en ese intervalo.",
+    "Remain completely silent and avoid any further conversation with the customer until a decision comes back, since engaging them further while a decision is pending could be seen as presumptuous about the outcome. / Permanecer completamente en silencio y evitar más conversación con el cliente hasta que regrese una decisión.",
+    "Contact the approver only if the wait exceeds 30 minutes specifically, which the guidance identifies as the maximum acceptable processing time before a check-in becomes appropriate. / Contactar al aprobador solo si la espera excede 30 minutos específicamente."
+  ],
+  correct:0,
+  explanation:"The specific, named guidance is: step back, keep the customer engaged with something else, and don't check in with the approver every 2 minutes — that exact frequency is named as the behavior to avoid. There's no stated '10-minute single check-in allowance' or '30-minute maximum wait' threshold, and going silent with the customer contradicts the explicit instruction to keep them engaged."
+},
+
+{
+  section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
+  q:"A customer asks what happens if they're approved through an external partner rather than in-house. Per the specific guidance on this exact outcome, what is the associate's role? / Un cliente pregunta qué pasa si es aprobado a través de un socio externo en vez de en casa. Según la guía específica sobre este resultado exacto, ¿cuál es el rol del asociado?",
+  scenario:null, sub:null,
+  opts:[
+    "Explain the external partner's specific terms directly to the customer, since the associate has typically seen enough similar approvals to accurately walk through what to expect from that partner. / Explicar directamente al cliente los términos específicos del socio externo, ya que el asociado ha visto suficientes aprobaciones similares.",
+    "Let the approver communicate the outcome, then help the customer get started with the partner's own application — the associate's specific role is facilitation and staying positive, not explaining terms that belong to the partner. / Dejar que el aprobador comunique el resultado, y luego ayudar al cliente a comenzar la solicitud del socio — el rol específico del asociado es facilitar y mantener actitud positiva, no explicar términos que pertenecen al socio.",
+    "Offer to keep the in-house option open as a backup in case the customer isn't fully satisfied with the external partner's specific terms once they actually see the full details laid out. / Ofrecer mantener la opción en casa abierta como respaldo por si el cliente no queda satisfecho con los términos del socio externo.",
+    "Present both the external approval and a summary comparison against what in-house terms would likely have looked like, so the customer can weigh the two paths side by side before deciding. / Presentar tanto la aprobación externa como una comparación resumida de cómo se hubieran visto los términos en casa."
+  ],
+  correct:1,
+  explanation:"The specific guidance names the associate's role precisely: help the customer get started with the partner's application and stay positive — not explaining the partner's specific terms (that's the partner's role), and specifically not revisiting in-house as a backup once the routing decision is communicated, since the guide explicitly states the routing decision is final once communicated, and offering an in-house comparison after the fact undermines that."
+},
+
+{
+  section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
+  q:"A customer's application shows self-employment income documented via 2 months of business bank statements. Per the specific handoff guidance, what must the associate do regarding this detail? / La solicitud de un cliente muestra ingreso de trabajo independiente documentado con 2 meses de estados de cuenta de negocio. Según la guía específica de entrega, ¿qué debe hacer el asociado respecto a este detalle?",
+  scenario:null, sub:null,
+  opts:[
+    "Nothing beyond submitting the standard application — self-employment documentation via bank statements is treated identically to any other income verification method once it's attached to the file. / Nada más allá de enviar la solicitud estándar — la documentación de trabajo independiente se trata igual que cualquier otro método una vez adjunta.",
+    "Flag it specifically as an unusual circumstance when alerting the approver, since self-employed income is explicitly named as one of the examples the handoff guidance calls out for flagging. / Marcarlo específicamente como circunstancia inusual al avisar al aprobador, ya que el ingreso de trabajo independiente está explícitamente nombrado como uno de los ejemplos que la guía de entrega señala para marcar.",
+    "Request a third month of business bank statements before submitting, since two months is described as the minimum acceptable but three is specifically recommended for self-employed applicants in the handoff stage. / Solicitar un tercer mes de estados de cuenta antes de enviar, ya que dos meses es el mínimo pero se recomienda específicamente un tercero.",
+    "Convert the self-employment income into an estimated equivalent W2 salary figure before submitting, since the application system specifically requires a standardized income format regardless of employment type. / Convertir el ingreso de trabajo independiente a un salario W2 estimado equivalente antes de enviar."
+  ],
+  correct:1,
+  explanation:"The handoff guidance specifically names self-employed income as one of the example circumstances that should be flagged for the approver — not treated as routine, not requiring a third month beyond the stated 2-month requirement (no such 'recommended third month' exists), and not converted into a W2-equivalent figure, which isn't a real step in the process."
+},
+
+{
+  section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
+  q:"A customer's application hits a hard stop for a prior Daniel's default. Per the specific hard-stop rule, what happens next, precisely? / La solicitud de un cliente choca con un freno absoluto por default previo con Daniel's. Según la regla específica de freno absoluto, ¿qué pasa después, con precisión?",
+  scenario:null, sub:null,
+  opts:[
+    "The associate documents the situation and routes it to a manager, since prior-default hard stops specifically require manager-level review rather than standard approver review. / El asociado documenta la situación y la enruta a un gerente, ya que los frenos absolutos por default previo requieren revisión a nivel gerencial.",
+    "The application is automatically declined without any scoring or further review — this hard stop, like the others, ends the process at Stage 1 regardless of income, FICO, or down payment offered. / La solicitud se rechaza automáticamente sin más puntuación o revisión — este freno, como los demás, termina el proceso en la Etapa 1 sin importar ingreso, FICO, o enganche ofrecido.",
+    "The customer can still proceed to Stage 2 (FICO Gate) since a prior default only affects in-house eligibility specifically, not eligibility for external financing partners at the scoring stage. / El cliente aún puede avanzar a la Etapa 2 ya que un default previo solo afecta la elegibilidad en casa.",
+    "The application proceeds normally but with a mandatory larger down payment requirement automatically applied to offset the additional risk represented by the prior default on file. / La solicitud procede normalmente pero con un enganche mayor obligatorio aplicado automáticamente."
+  ],
+  correct:1,
+  explanation:"Hard stops end the process entirely at Stage 1 — no scoring, no negotiation, regardless of any other factor like income or a larger down payment offered. This isn't specifically routed to a manager (it's a system-level hard stop, not a manager-review trigger), and it doesn't allow proceeding to Stage 2 for external options — hard stops block the waterfall before any path, in-house or external, is evaluated."
+},
+
+{
+  section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
+  q:"A customer's FICO comes back at exactly 550. Per the specific hard-stop threshold, is this customer subject to the hard stop? / El FICO de un cliente regresa exactamente en 550. Según el umbral específico de freno absoluto, ¿este cliente está sujeto al freno?",
+  scenario:null, sub:null,
+  opts:[
+    "Yes — the hard stop applies at 550 and below, so a score of exactly 550 falls within the blocked range. / Sí — el freno aplica en 550 y por debajo, así que un puntaje de exactamente 550 cae dentro del rango bloqueado.",
+    "No — the hard stop specifically applies below 550, meaning a score of exactly 550 clears the threshold and proceeds to the next waterfall stage rather than being blocked outright. / No — el freno aplica específicamente por debajo de 550, lo que significa que un puntaje de exactamente 550 libra el umbral y avanza a la siguiente etapa de la cascada.",
+    "It depends on which specific product the customer is purchasing, since the 550 threshold shifts slightly higher or lower depending on whether the item is furniture or electronics. / Depende del producto específico que compra el cliente, ya que el umbral de 550 varía según sea mueble o electrónico.",
+    "Yes, but only if the customer also has a prior Daniel's default on file — a FICO of exactly 550 alone, without any other flag present, does not trigger the hard stop by itself. / Sí, pero solo si también tiene un default previo con Daniel's en el archivo."
+  ],
+  correct:1,
+  explanation:"The threshold is specifically 'below 550' — a score of exactly 550 clears it and proceeds to the next stage, rather than being caught by the hard stop, which is reserved for scores under that number. The threshold doesn't shift by product category, and it isn't conditional on an additional flag like a prior default being present — the FICO threshold operates independently."
+},
+
+{
+  section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
+  q:"A customer's application is flagged for having 5 credit inquiries in the last 12 months. Per the specific hard-stop criteria, is this alone enough to trigger a hard stop? / La solicitud de un cliente se marca por tener 5 consultas de crédito en los últimos 12 meses. Según los criterios específicos de freno absoluto, ¿esto solo es suficiente para activar un freno?",
+  scenario:null, sub:null,
+  opts:[
+    "No — the specific threshold named in the hard-stop criteria is 5 or more inquiries in the last 12 months, so this customer's exact count of 5 does trigger it, not fall just short of it. / No — el umbral específico nombrado en los criterios de freno es 5 o más consultas en los últimos 12 meses, así que el conteo exacto de 5 de este cliente sí lo activa.",
+    "No — the hard-stop threshold for inquiries is specifically 6 or more, meaning 5 inquiries falls just short and does not, on its own, trigger a hard stop under this specific criterion. / No — el umbral de freno para consultas es específicamente 6 o más, lo que significa que 5 consultas no activa el freno por sí solo bajo este criterio específico.",
+    "Yes — any number of credit inquiries above 3 in a 12-month period automatically triggers a hard stop regardless of the exact count, since this is treated as a strict ceiling rather than a graduated scale.",
+    "It depends on whether the inquiries are all from the same type of lender (e.g., all furniture retailers vs. a mix of different industries), which the hard-stop criteria weighs more heavily than the raw count itself."
+  ],
+  correct:1,
+  explanation:"The specific named threshold is '5 or more credit inquiries in the last 12 months' — meaning this customer's exact count of 5 DOES meet and trigger the criterion, not fall short of it. Reading the exact wording matters here: 'or more' includes the number itself, so 5 is the trigger point, not a near-miss. There's no lender-type distinction in the stated criteria, and a flat '3 or more' framing misstates the actual number."
+},
+
+{
+  section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
+  q:"A customer asks if they can resubmit tomorrow with the same information after being declined today. Per the accurate, specific answer, what determines whether a different outcome is possible? / Un cliente pregunta si puede volver a solicitar mañana con la misma información después de ser rechazado hoy. Según la respuesta precisa y específica, ¿qué determina si es posible un resultado diferente?",
+  scenario:null, sub:null,
+  opts:[
+    "Which specific associate submits the application, since different associates' submission styles and framing can meaningfully influence how the underlying evaluation model reads the same application data. / Qué asociado específico envía la solicitud, ya que el estilo de presentación puede influir en cómo el modelo lee los datos.",
+    "Whether anything about the actual profile or documents has genuinely changed — resubmitting identical information the next day would be expected to produce the identical result, since the decision reflects the data, not who submits it or when. / Si algo sobre el perfil o documentos realmente cambió — reenviar información idéntica al día siguiente produciría el mismo resultado, ya que la decisión refleja los datos, no quién la envía ni cuándo.",
+    "How much time has passed since the original decline, since the evaluation model specifically applies a 24-hour cooldown after which the same information may be scored differently. / Cuánto tiempo ha pasado desde el rechazo original, ya que el modelo aplica un enfriamiento de 24 horas.",
+    "Whether the resubmission happens at a different store location, since each Daniel's location's approver pool applies slightly different judgment to otherwise identical applications. / Si la solicitud se envía en una ubicación de tienda diferente, ya que cada aprobador aplica juicio ligeramente distinto."
+  ],
+  correct:1,
+  explanation:"The decision reflects the actual data submitted — identical information resubmitted produces the identical result, regardless of associate, elapsed time, or store location, none of which are named factors in the evaluation. There's no stated 24-hour cooldown mechanic, no associate-dependent variation, and no location-based approver variation — what has to change is the underlying profile or documents themselves."
+},
+
+{
+  section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
+  q:"A customer wants to know specifically what changes about their application if their spouse, also a co-applicant, is retired and receives SSA income. What is the specific correct handling of this detail? / Un cliente quiere saber específicamente qué cambia en su solicitud si su cónyuge, también co-solicitante, está jubilado y recibe ingreso de SSA. ¿Cuál es el manejo correcto específico de este detalle?",
+  scenario:null, sub:null,
+  opts:[
+    "SSA income cannot be used as proof of income for a co-applicant under any circumstance, meaning the retired spouse would need to be removed from the application entirely rather than included as a co-applicant. / El ingreso de SSA no puede usarse como comprobante para un co-solicitante bajo ninguna circunstancia.",
+    "The retired spouse's SSA award letter or pension statement is an accepted proof-of-income document, and their status as retired/SSI income is specifically named as one of the examples the handoff guidance flags for the approver's awareness. / La carta de adjudicación de SSA o estado de cuenta de pensión del cónyuge jubilado es un documento de comprobante de ingreso aceptado, y su estatus de jubilado/ingreso SSI está nombrado específicamente como uno de los ejemplos que la guía de entrega marca.",
+    "SSA income is accepted, but only if it is supplemented with 2 additional months of bank statements showing the deposits, since award letters alone are not considered sufficient standalone proof for a co-applicant specifically. / El ingreso de SSA se acepta, pero solo si se complementa con 2 meses adicionales de estados de cuenta.",
+    "The retired spouse's income can be used, but only up to 50% of its stated value when combined with the primary applicant's income for underwriting purposes, per what the associate understands to be the specific co-applicant income blending rule. / El ingreso del cónyuge jubilado puede usarse, pero solo hasta el 50% de su valor declarado."
+  ],
+  correct:1,
+  explanation:"An SSA award letter or pension statement is explicitly named as accepted proof of income for retired/SSI customers, and this specific circumstance (retired, SSI income) is one of the named examples the handoff guidance calls out for flagging to the approver — it isn't disqualifying, doesn't require extra bank statements on top of the award letter, and there's no stated 50% income-blending discount for retired co-applicants."
+},
+
+{
+  section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
+  q:"A customer's proof of address is a bank statement (not a utility bill) showing their name and current address, since all utility bills are in a roommate's name. Per the specific guidance, is this acceptable? / El comprobante de domicilio de un cliente es un estado de cuenta bancario (no un recibo de servicios) mostrando su nombre y domicilio actual, ya que todos los recibos están a nombre de un roommate. Según la guía específica, ¿esto es aceptable?",
+  scenario:null, sub:null,
+  opts:[
+    "No — proof of address specifically requires a utility bill (gas, electric, water, or cable); a bank statement is only accepted as proof of income, not proof of address, regardless of the roommate situation. / No — el comprobante de domicilio requiere específicamente un recibo de servicios; un estado de cuenta bancario solo se acepta como comprobante de ingreso, no de domicilio.",
+    "Yes — the specific guidance for this exact situation (bills in a roommate's or spouse's name) names a bank statement with the customer's name and address as an accepted alternative. / Sí — la guía específica para esta situación exacta (recibos a nombre de un roommate o cónyuge) nombra un estado de cuenta bancario con nombre y domicilio del cliente como alternativa aceptada.",
+    "Yes, but only if the bank statement is also less than 30 days old, which is a stricter timeline than the standard 60-day utility bill window, specifically for this alternative-document scenario. / Sí, pero solo si el estado de cuenta también tiene menos de 30 días, un plazo más estricto que el estándar de 60 días.",
+    "No — the only acceptable alternative in this specific roommate scenario is a phone bill in the customer's own name; a bank statement is not named as an acceptable substitute for proof of address. / No — la única alternativa aceptable en este escenario de roommate es un recibo telefónico a nombre del cliente."
+  ],
+  correct:1,
+  explanation:"The guide specifically names this exact situation — bills in a spouse's or roommate's name — and lists a bank statement with the customer's name and address as an accepted alternative (alongside a phone bill). It's not restricted to a stricter 30-day window (the standard 60-day proof-of-address window still applies), and a bank statement IS explicitly named, not excluded in favor of only a phone bill."
+},
+
+{
+  section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
+  q:"A customer's application shows a FICO of 605. Per the specific external-financing path criteria, would this customer be eligible for Synchrony/Wells Fargo if in-house doesn't qualify? / La solicitud de un cliente muestra FICO de 605. Según los criterios específicos de la ruta de financiamiento externo, ¿este cliente sería elegible para Synchrony/Wells Fargo si en casa no califica?",
+  scenario:null, sub:null,
+  opts:[
+    "No — Synchrony/Wells Fargo eligibility specifically requires a FICO of 620 or higher, and 605 falls short of that threshold, routing instead toward SNAP/Koalafi. / No — la elegibilidad para Synchrony/Wells Fargo requiere específicamente FICO de 620 o más, y 605 no alcanza ese umbral.",
+    "Yes — the specific threshold for Synchrony/Wells Fargo eligibility is FICO 600+, and 605 clears that threshold, making this customer eligible for that path if in-house doesn't work out. / Sí — el umbral específico para elegibilidad de Synchrony/Wells Fargo es FICO 600+, y 605 libra ese umbral, haciendo a este cliente elegible para esa ruta si en casa no funciona.",
+    "No — external financing partners require the same FICO threshold as in-house financing (550), meaning eligibility for Synchrony/Wells Fargo doesn't actually differ from the in-house threshold at all. / No — los socios externos requieren el mismo umbral de FICO que en casa (550).",
+    "It depends on income level rather than FICO score specifically — Synchrony/Wells Fargo eligibility is determined primarily by income-to-purchase ratio, not by the FICO threshold at all. / Depende del nivel de ingreso más que del puntaje FICO específicamente."
+  ],
+  correct:1,
+  explanation:"The specific stated threshold for Synchrony/Wells Fargo eligibility is FICO 600+ — 605 clears it. This is a distinct, higher threshold than the 550 hard-stop floor for in-house eligibility, not the same number, and FICO (not income-to-purchase ratio) is the specifically named criterion for this particular path distinction."
+},
+
+{
+  section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
+  q:"A customer's income field shows $3,200/month, but the associate accidentally entered $2,300 (a transposition). The application was already submitted. What is the specific correct next step upon noticing the error? / El campo de ingreso de un cliente muestra $3,200/mes, pero el asociado accidentalmente ingresó $2,300 (una transposición). La solicitud ya se envió. ¿Cuál es el siguiente paso correcto específico al notar el error?",
+  scenario:null, sub:null,
+  opts:[
+    "Leave it as submitted, since the approver's manual review process is specifically designed to catch and correct minor data entry errors like this one without needing associate intervention. / Dejarlo como está enviado, ya que la revisión manual del aprobador está diseñada para detectar errores menores.",
+    "Alert the approver directly and promptly about the specific data entry error, since 'the approver's decision is only as good as the data you enter' and an inaccurate income figure can distort the risk tier and structure the system calculates. / Avisar al aprobador directamente y con prontitud sobre el error específico de captura, ya que 'la decisión del aprobador es tan buena como los datos que capturas' y una cifra de ingreso inexacta puede distorsionar el nivel de riesgo.",
+    "Wait to see the outcome first, and only correct the figure afterward if the customer is declined, since a correction after approval could complicate an already-favorable result unnecessarily. / Esperar a ver el resultado primero, y corregir la cifra después solo si el cliente es rechazado.",
+    "Have the customer resubmit an entirely new application from scratch, since a data entry error discovered after submission specifically requires starting over rather than correcting the existing file. / Pedirle al cliente que reenvíe una solicitud completamente nueva desde cero."
+  ],
+  correct:1,
+  explanation:"The specific named principle — 'the approver's decision is only as good as the data you enter' — means a known error should be flagged immediately, not left for the approver to catch on their own, not held pending the outcome, and not treated as requiring a full application restart when a direct correction/alert accomplishes the same thing faster and more accurately."
 },
 
 {
@@ -807,174 +975,6 @@ const QUESTIONS = [
   ],
   correct:1,
   explanation:"This tests the critical price-based warranty distinction: items under $399 get 90-day coverage (not the standard 1-year). At $350, this microwave qualifies for the shorter window — and at 75 days, it's still inside that 90-day coverage. This is a WARRANTY claim (Section 5), separate from the 14-day EXCHANGE window for non-defective reselections — defective items past 14 days move into warranty territory, not exchange territory, and the price does determine which tier applies. The correct first step is always Infinity case + CS-Service tag, never an automatic swap or a full-price replacement."
-},
-
-{
-  section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
-  q:"A customer hands over their documents: a valid driver's license, a utility bill from 45 days ago, and a pay stub. The associate notices the name on the pay stub is spelled slightly differently than the name on the license (a middle name included on one, not the other). What is the correct handling? / Un cliente entrega sus documentos: licencia de conducir válida, recibo de servicios de hace 45 días, y talón de pago. El asociado nota que el nombre en el talón de pago está escrito ligeramente distinto al de la licencia (un segundo nombre incluido en uno, no en el otro). ¿Cuál es el manejo correcto?",
-  scenario:null, sub:null,
-  opts:[
-    "Reject the pay stub outright as invalid documentation, since any discrepancy at all between the name on two different documents disqualifies one of them from being used in the application.",
-    "Accept both documents without comment, since minor formatting differences in how a name appears across different documents (middle name included or omitted) are common and don't typically indicate a real identity issue on their own.",
-    "Submit the application with a note flagging the discrepancy for the approver's awareness, rather than silently ignoring it or unilaterally rejecting a document based on a common, minor naming variation.",
-    "Ask the customer to obtain a new pay stub with their name spelled to exactly match their driver's license before accepting anything, treating this as a hard requirement before the application can move forward at all."
-  ],
-  correct:2,
-  explanation:"A minor naming variation (middle name present on one document, absent on another) is common and not automatically a fraud signal — but it's also not something to simply ignore without any acknowledgment. The professional middle path is accepting the documents while flagging the discrepancy for the approver, who has the full picture to judge whether it matters — not unilaterally rejecting a valid document or silently proceeding as if nothing was noticed."
-},
-
-{
-  section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
-  q:"A customer says: 'My spouse and I are buying this together, but she's at work — can I just apply using her information along with mine?' What is the correct response regarding co-applicants? / Un cliente dice: 'Mi esposa y yo compramos esto juntos, pero ella está trabajando — ¿puedo aplicar usando su información junto con la mía?' ¿Cuál es la respuesta correcta sobre co-solicitantes?",
-  scenario:null, sub:null,
-  opts:[
-    "Yes, this is fine — as long as the customer provides accurate information for both people, the application can be submitted without the second applicant needing to be present or sign anything themselves — this is the kind of answer that works in general but not for this particular case.",
-    "No — when a spouse is a co-applicant, both individuals need to provide their own documents and both must sign the application themselves; the customer can begin the process today and the household's documents can be gathered, but the absent spouse's own signature and identity verification cannot be completed by proxy.",
-    "Yes, but only if the customer can show a valid ID for the absent spouse as proof that the information being entered is accurate, which satisfies the requirement without the second person needing to be physically present.",
-    "No — Daniels does not accept co-applicants in this kind of situations, so the customer would need to apply individually using only their own income and credit information for the full amount, even though the details given here point pretty clearly in a different direction."
-  ],
-  correct:1,
-  explanation:"When a spouse is a co-applicant, both must apply and sign — this can't be done by proxy even with good intentions and accurate information, since identity verification (including Twilio) and signature requirements apply to each applicant individually. This isn't a blanket rejection of co-applicants (they're explicitly supported elsewhere in the process) — it just requires both people to actually be part of the application themselves, not just documented by the other."
-},
-
-{
-  section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
-  q:"A customer's Infinity application has been submitted and is pending. Ten minutes later, the customer asks: 'Can you just call and check on it? I don't want to wait around not knowing.' What is the correct way to balance the customer's anxiety with the 'step back' guidance? / La solicitud Infinity de un cliente ya se envió y está pendiente. Diez minutos después, el cliente pregunta: '¿Puedes llamar y checar? No quiero esperar sin saber.' ¿Cómo se balancea correctamente la ansiedad del cliente con la guía de 'dar un paso atrás'?",
-  scenario:null, sub:null,
-  opts:[
-    "Call the approver immediately as requested, since directly honoring a customer's explicit request for an update is usually the right move regardless of how recently the application was submitted, which is an understandable guess but not one supported by the details provided.",
-    "Acknowledge the wait is uncomfortable, explain that reviews typically don't take long, and actively keep the customer engaged with something else (other options, a related question) rather than pressuring the approver — the 'step back' guidance is about not disrupting the approver's process, not about leaving the customer sitting in silence with their anxiety unaddressed.",
-    "Tell the customer firmly that checking in is not allowed in this kind of situations and they simply need to wait without any further explanation or engagement until a decision comes back, which is a fair instinct in isolation but doesn't hold up once the full context is considered.",
-    "Offer to guess at the likely outcome based on what was submitted, giving the customer something concrete to hold onto while they wait for the actual decision to come back from the approver — a common assumption that turns out not to match how this particular situation is supposed to be handled, though the specific circumstances described point toward a different answer."
-  ],
-  correct:1,
-  explanation:"'Step back' addresses not pressuring the approver — it doesn't mean abandoning the customer to sit in anxious silence. The correct balance acknowledges the discomfort, sets a realistic expectation, and actively keeps them engaged with something productive, rather than either checking in with the approver (which the guidance explicitly discourages) or leaving the customer with nothing, or worse, guessing at an outcome that isn't confirmed."
-},
-
-{
-  section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
-  q:"A customer's application comes back 'Needs More Documents' — specifically, the proof of income doesn't clearly show the stated monthly amount. The customer says they'll bring a better document 'sometime this week.' What is the correct associate response? / La solicitud de un cliente regresa 'Necesita Más Documentos' — específicamente, el comprobante de ingreso no muestra claramente el monto mensual declarado. El cliente dice que traerá un mejor documento 'en algún momento esta semana.' ¿Cuál es la respuesta correcta del asociado?",
-  scenario:null, sub:null,
-  opts:[
-    "Accept 'sometime this week' as sufficient and let the customer leave without the merchandise held or a specific plan, since pushing further on timing might feel like unnecessary pressure on a customer who already said they'll return.",
-    "Push for specificity now — hold the merchandise, set a specific day and time to bring the better document, and get as much of the rest of the process finalized today as possible; per the manual's explicit guidance, letting a customer leave with a vague 'later' is the documented common mistake to avoid.",
-    "Cancel the application largely and tell the customer to start over from scratch once they have better proof of income, treating an unclear document as equivalent to no document rather than something that can simply be replaced.",
-    "Approve the application anyway using the income figure the customer verbally stated, since the associate has no reason to doubt what the customer said even though the submitted document doesn't clearly support it, which would make sense in a simpler version of this situation, but not in the one actually presented."
-  ],
-  correct:1,
-  explanation:"This is explicitly the documented common mistake: 'letting the customer leave without submitting because they will come back with the documents later.' The correction is holding the merchandise and setting a specific time — vague timing is exactly the pattern to avoid. Canceling and restarting is unnecessarily punitive for a fixable documentation gap, and approving based on an unverified verbal claim ignores the entire purpose of requiring proof."
-},
-
-{
-  section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
-  q:"A customer's approval comes back In-House with specific monthly payment and down payment terms. The customer asks: 'Can I pay a bit less down and make it up with a slightly higher monthly?' Who has the authority to adjust these terms? / La aprobación de un cliente regresa En Casa con términos específicos de pago mensual y enganche. El cliente pregunta: '¿Puedo pagar un poco menos de enganche y compensarlo con un mensual un poco más alto?' ¿Quién tiene la autoridad de ajustar estos términos?",
-  scenario:null, sub:null,
-  opts:[
-    "The sales associate can make this adjustment directly on the spot, since down payment and monthly payment are just two ways of expressing the same total and either can be modified freely once an approval has already come back — this leans on a general assumption that doesn't actually apply to the specific scenario at hand.",
-    "This is outside the sales associate's role — quoting or adjusting terms belongs to the approver, since the specific down payment and monthly figures reflect the approved structure the system calculated, not something the floor associate can renegotiate; the request should be relayed to the approver rather than answered directly.",
-    "The customer cannot request any change to the terms once an approval has been issued, and the associate should tell them the numbers presented are largely fixed with no further discussion possible from anyone at any point, though the scenario as described doesn't really support this conclusion.",
-    "The Finance Desk associate specifically (as opposed to the floor associate or the approver) is the one authorized to adjust down payment and monthly terms, since that adjustment is considered part of finalizing paperwork rather than part of the credit decision itself."
-  ],
-  correct:1,
-  explanation:"'Do not quote terms or down payments' is explicit sales-associate guidance — the approved structure came from the approver's evaluation, and adjusting it (even a reasonable-sounding trade-off between down payment and monthly) is a term change that belongs to the approver, not the floor or Finance Desk associate. This isn't a fixed-forever number either — it's simply not the associate's call to make unilaterally; the request gets relayed, not answered on the spot."
-},
-
-{
-  section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
-  q:"A customer mentions during document collection that they recently changed their name after marriage, and their driver's license still shows their maiden name while their pay stub shows their married name. What is the correct way to handle this specific situation? / Un cliente menciona durante la recolección de documentos que recientemente cambió su nombre tras casarse, y su licencia sigue mostrando su apellido de soltera mientras su talón de pago muestra su apellido de casada. ¿Cuál es la forma correcta de manejar esta situación específica?",
-  scenario:null, sub:null,
-  opts:[
-    "Reject both documents since neither one alone proves identity under the current legal name, and require the customer to obtain largely new documentation before any part of the application can proceed — a plausible guess, but one that doesn't square with the specifics laid out here.",
-    "Accept both documents as presented, noting the name change context for the approver, since a recent legal name change explaining a mismatch between an ID and other documents is a common, verifiable situation rather than a fraud indicator, and flagging it (rather than ignoring or rejecting outright) gives the approver what they need to evaluate it properly.",
-    "Only accept the pay stub with the current married name and disregard the driver's license largely, treating the more recently issued document as automatically the more valid one for identity purposes — this would work as a general rule of thumb, just not for the specific circumstances described.",
-    "Proceed with the application without mentioning the discrepancy to the approver at all, since the customer offered a reasonable, believable explanation and no further documentation of the name change itself was requested or needed, though the specific circumstances described point toward a different answer."
-  ],
-  correct:1,
-  explanation:"A recent legal name change is a common, real-world situation, not inherently suspicious — the correct move is accepting both documents with the explanation flagged for the approver's awareness, similar to any other minor identity discrepancy. Rejecting everything outright, unilaterally deciding which document to disregard, or proceeding silently without flagging it at all are all less appropriate than transparent handling that lets the approver make the informed call."
-},
-
-{
-  section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
-  q:"A customer is filling out the Infinity application and pauses at the income field, saying: 'I don't want to put my exact income, can I just round it down a bit to be safe?' What should the associate say? / Un cliente llena la solicitud Infinity y se detiene en el campo de ingreso, diciendo: 'No quiero poner mi ingreso exacto, ¿puedo redondearlo hacia abajo para estar seguro?' ¿Qué debe decir el asociado?",
-  scenario:null, sub:null,
-  opts:[
-    "Agree that rounding down is a reasonable, cautious approach, since a lower stated income is unlikely to cause any problems with the application and errs on the side of conservative reporting — a natural first guess, but one that misses the specific wrinkle this situation actually presents.",
-    "Explain that accuracy matters specifically because the data entered directly drives the risk assessment — 'the approver's decision is only as good as the data you enter' — so both overstating and understating income can distort the result and potentially lead to a worse outcome (a lower approval amount or the wrong risk tier) rather than a safer one.",
-    "Tell the customer that rounding of any kind is against policy and the exact figure down to the last dollar must be entered precisely as shown on their pay stub, with no flexibility in how the number is recorded, which misses a detail that the scenario goes out of its way to include.",
-    "Let the customer decide largely on their own without further explanation, since income reporting preferences are ultimately the customer's choice and not something the associate should weigh in on either way — this would work as a general rule of thumb, just not for the specific circumstances described."
-  ],
-  correct:1,
-  explanation:"The principle that 'the approver's decision is only as good as the data you enter' applies in both directions — inaccurate income, even rounded down 'to be safe,' distorts the risk assessment and can produce a worse outcome, not a safer one (a lower approval, wrong tier, or unnecessary decline). This isn't about rigid dollar-for-dollar precision as a policy rule, and it's also not something to leave entirely to the customer's preference without explaining why accuracy actually matters here."
-},
-
-{
-  section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
-  q:"During the handoff conversation, an associate tells the approver: 'This one's easy, should be a quick approve.' Is this consistent with the correct handoff procedure? / Durante la conversación de entrega, un asociado le dice al aprobador: 'Este es fácil, debería ser una aprobación rápida.' ¿Es esto consistente con el procedimiento correcto de entrega?",
-  scenario:null, sub:null,
-  opts:[
-    "Yes — sharing the associate's read on how straightforward an application looks helps the approver prioritize their workload efficiently, and this kind of informal color commentary is a normal, encouraged part of a smooth handoff — a reasonable-sounding instinct that doesn't actually fit the specific facts described here.",
-    "No — the handoff should focus on facts the approver actually needs (documents complete, Twilio verified, application fields accurate, unusual circumstances flagged), not the associate's prediction about the outcome; predicting or characterizing the likely decision isn't the associate's role and can subtly pressure the approver's independent judgment.",
-    "Yes, but only if the associate has significant experience and a track record of accurate predictions, in which case sharing an informed read on likely outcomes becomes a reasonable part of the handoff process — this is the kind of answer that works in general but not for this particular case.",
-    "No, but only because the specific phrase 'should be a quick approve' is too informal in tone — the same prediction delivered in more professional, formal language would be an appropriate part of the handoff — an understandable read of the situation, but one that skips past what actually makes this case different."
-  ],
-  correct:1,
-  explanation:"The handoff procedure specifies factual items — documents, verification status, accurate fields, unusual circumstances — not predictions about the outcome. Characterizing an application as 'easy' or likely to approve isn't part of the associate's role and risks subtly influencing the approver's independent judgment, regardless of the associate's experience level or how formally the prediction is phrased."
-},
-
-{
-  section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
-  q:"A customer's application is flagged with an unusual circumstance: they are self-employed AND have a co-applicant AND recently changed jobs. The associate is unsure how much detail to include when alerting the approver. What is the correct approach? / La solicitud de un cliente se marca con una circunstancia inusual: es independiente Y tiene co-solicitante Y cambió de trabajo recientemente. El asociado no está seguro de cuánto detalle incluir al alertar al aprobador. ¿Cuál es el enfoque correcto?",
-  scenario:null, sub:null,
-  opts:[
-    "Mention only the single most unusual circumstance to keep the handoff brief and avoid overwhelming the approver with too many details about one application at once — an answer that leans on convenience rather than on what the specific circumstances actually call for.",
-    "Flag all three circumstances clearly, since the handoff guidance calls for flagging unusual circumstances generally (with self-employed, SSI (Supplemental Security Income), and co-applicant given as explicit examples) rather than limiting to just one — an approver evaluating a genuinely more complex file benefits from having the complete picture, not a partial one.",
-    "Avoid mentioning any of the three circumstances directly and instead let the approver discover them independently while reviewing the submitted application and documents on their own, even though a closer look at the specific circumstances here shows that isn't quite right, though it overlooks the one detail in this scenario that actually changes what the right call is.",
-    "Escalate the application to a manager instead of the standard approver, since three unusual circumstances occurring together in a single application is unusual enough to require handling outside the normal process largely, which sounds like a sensible shortcut but ends up missing the point of what's really going on here."
-  ],
-  correct:1,
-  explanation:"The handoff guidance explicitly names flagging unusual circumstances as part of the process, with self-employed and co-applicant given as direct examples — when multiple genuinely apply, all of them are relevant, not just one selected for brevity. Withholding the flags and making the approver discover them independently defeats the purpose of the handoff, and there's no rule requiring automatic escalation just because multiple factors are present at once."
-},
-
-{
-  section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
-  q:"A customer asks: 'If I get declined today, can I try again tomorrow with a different associate, maybe I'll get a different answer?' What is the most accurate response? / Un cliente pregunta: '¿Si me rechazan hoy, puedo intentar otra vez mañana con otro asociado, tal vez me den otra respuesta?' ¿Cuál es la respuesta más precisa?",
-  scenario:null, sub:null,
-  opts:[
-    "Yes, encourage them to try again with someone else tomorrow, since a different associate presenting the same information might genuinely produce a different outcome from the underlying evaluation system, which is a fair instinct in isolation but doesn't hold up once the full context is considered.",
-    "Explain honestly that the decision comes from the evaluation of their actual financial profile and documents, not from which associate happens to submit it — resubmitting the identical information the next day with a different associate would be expected to produce the same result, though something that's genuinely changed (updated documents, corrected information) could matter.",
-    "Tell them declines are permanent and no application can be resubmitted at any future point, closing the door largely rather than explaining what would or wouldn't change a future outcome — this is the kind of answer that works in general but not for this particular case.",
-    "Avoid answering the question directly and instead redirect immediately to suggesting a lease-to-own option, without addressing what the customer actually asked about trying again, which many people would guess instinctively without stopping to check whether it actually applies here, though the specific details given here don't really back this up once you look closely."
-  ],
-  correct:1,
-  explanation:"Honesty matters here — the decision reflects the actual profile and documents submitted, not who happens to submit them, so a same-day resubmission with different information unchanged would reasonably be expected to produce the same result. This isn't a permanent, all-time ban (genuinely updated circumstances or documents could matter later), and dodging the direct question by pivoting to a different product avoids giving the customer an honest, useful answer."
-},
-
-{
-  section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
-  q:"A customer provides two months of bank statements as proof of income (they get paid cash), but one of the two months shows noticeably lower deposits than the other and the stated monthly income. What is the correct next step? / Un cliente proporciona dos meses de estados de cuenta como comprobante de ingreso (le pagan en efectivo), pero uno de los dos meses muestra depósitos notablemente más bajos que el otro y que el ingreso mensual declarado. ¿Cuál es el siguiente paso correcto?",
-  scenario:null, sub:null,
-  opts:[
-    "Use only the stronger of the two months as the basis for the application and simply set aside the weaker one, since the goal is to present the most favorable possible picture of the customer's income.",
-    "Submit both months exactly as provided along with the stated income figure, letting the approver see the actual variation and make their own determination rather than the associate selectively deciding what to include or exclude based on which numbers look better.",
-    "Reject the bank statements as invalid proof of income largely because of the inconsistency between the two months, requiring the customer to find a different way to document their income altogether.",
-    "Average the two months together and report only that single averaged number to the approver as the customer's income, rather than submitting the actual underlying bank statements themselves, even though the details given here point pretty clearly in a different direction."
-  ],
-  correct:1,
-  explanation:"The associate's role is collecting accurate documentation, not curating it to look most favorable — submitting both months as provided, with the real variation visible, lets the approver make an informed judgment. Cherry-picking the stronger month, rejecting valid (if inconsistent) documentation outright, or substituting the associate's own averaged calculation for the actual bank statements all interfere with the approver getting the real picture."
-},
-
-{
-  section:"Credit & Financing Process / Proceso de Crédito y Financiamiento", pts:3,
-  q:"A customer's Twilio verification succeeds, but 20 minutes later — before the application has been submitted — they ask to change the phone number on file to a different one because 'that first number is actually my old phone.' What is the correct handling? / La verificación Twilio de un cliente tiene éxito, pero 20 minutos después — antes de enviar la solicitud — pide cambiar el número de teléfono a uno diferente porque 'ese primer número es en realidad mi teléfono viejo.' ¿Cuál es el manejo correcto?",
-  scenario:null, sub:null,
-  opts:[
-    "Simply update the phone number in the system without re-running verification, since the original verification already succeeded and the application hasn't been submitted yet regardless of which number ends up on the final record.",
-    "Update the number and re-run Twilio verification on the new number before submitting — since verification is a fraud gate tied to the specific number on the application, changing the number after verification but before submission means the verification no longer actually matches what's being submitted.",
-    "Refuse to change the number at all and require the customer to proceed with the original number even though they've explained it's no longer their active phone, since any change at this stage disrupts the process unnecessarily, which is a fair instinct in isolation but doesn't hold up once the full context is considered.",
-    "Submit the application with the new number without additional verification, but add a note for the approver mentioning that the number was changed after the original verification occurred, treating a note as a sufficient substitute for re-verifying."
-  ],
-  correct:1,
-  explanation:"Twilio verification is tied to the specific number being verified — if the number changes after verification succeeds but before submission, the verification no longer actually corresponds to what's being submitted, defeating its purpose as a fraud gate. The fix is straightforward: update the number and re-verify before submitting, rather than treating the original verification as still valid, refusing a reasonable correction, or substituting a note for actual re-verification."
 },
 
 {
