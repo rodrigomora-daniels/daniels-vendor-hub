@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daniels · Certificación Managers Tier 1</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f4f4f0;color:#1a1a1a;min-height:100vh}
+.screen{display:none;min-height:100vh}
+.screen.active{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+
+/* LOGIN */
+.login-card{background:#fff;border-radius:16px;padding:40px;width:100%;max-width:420px;box-shadow:0 2px 20px rgba(0,0,0,.08)}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-logo h1{font-size:22px;font-weight:700;color:#1a1a1a;letter-spacing:-.5px}
+.login-logo p{font-size:13px;color:#888;margin-top:6px}
+.badge-mgr{display:inline-block;background:#1a1a1a;color:#fff;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;margin-top:8px;letter-spacing:.5px}
+.field-label{font-size:12px;font-weight:600;color:#555;margin-bottom:6px;display:block}
+.field-wrap{margin-bottom:16px}
+input[type=text],input[type=password]{width:100%;padding:10px 14px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:14px;outline:none;transition:border .15s}
+input:focus{border-color:#1a1a1a}
+.btn-primary{width:100%;background:#1a1a1a;color:#fff;border:none;padding:13px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;transition:opacity .15s}
+.btn-primary:hover{opacity:.85}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed}
+.login-error{color:#c0392b;font-size:13px;margin-top:12px;text-align:center;display:none}
+.login-info{background:#f9f9f7;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:12px;color:#666;line-height:1.6}
+
+/* EXAM */
+.exam-wrap{width:100%;max-width:700px}
+.exam-header{background:#fff;border-radius:12px;padding:16px 20px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 1px 6px rgba(0,0,0,.06)}
+.exam-meta{font-size:13px;color:#888}
+.exam-meta strong{color:#1a1a1a;font-weight:600}
+.timer{font-size:20px;font-weight:700;color:#1a1a1a;font-variant-numeric:tabular-nums}
+.timer.urgent{color:#c0392b}
+.progress-bar{height:4px;background:#e8e8e8;border-radius:2px;margin-bottom:20px;overflow:hidden}
+.progress-fill{height:100%;background:#1a1a1a;border-radius:2px;transition:width .3s}
+.question-card{background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.07);margin-bottom:16px}
+.q-badge{font-size:11px;font-weight:600;color:#888;letter-spacing:.5px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.q-module-tag{background:#f0f0ec;color:#555;padding:2px 8px;border-radius:4px;font-size:11px}
+.q-text{font-size:16px;line-height:1.6;color:#1a1a1a;font-weight:500;margin-bottom:20px}
+.option-btn{width:100%;text-align:left;padding:14px 16px;border:1.5px solid #e8e8e8;border-radius:10px;font-size:14px;line-height:1.5;background:#fff;cursor:pointer;transition:all .15s;margin-bottom:8px;color:#1a1a1a}
+.option-btn:hover:not(:disabled){border-color:#1a1a1a;background:#f9f9f7}
+.option-btn.selected{border-color:#1a1a1a;background:#1a1a1a;color:#fff}
+.option-btn.correct{border-color:#27ae60;background:#eafaf1;color:#1e8449}
+.option-btn.wrong{border-color:#c0392b;background:#fdedec;color:#a93226}
+.option-btn:disabled{cursor:not-allowed}
+.confirm-row{display:flex;gap:10px;margin-top:4px}
+.btn-confirm{flex:1;padding:12px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:opacity .15s}
+.btn-lock{background:#1a1a1a;color:#fff}
+.btn-lock:hover{opacity:.85}
+.btn-cancel{background:#f0f0ec;color:#555}
+.btn-cancel:hover{background:#e8e8e4}
+.btn-next{width:100%;padding:13px;border-radius:8px;background:#1a1a1a;color:#fff;border:none;font-size:15px;font-weight:600;cursor:pointer;margin-top:8px;transition:opacity .15s}
+.btn-next:hover{opacity:.85}
+.btn-next:disabled{opacity:.3;cursor:not-allowed}
+.nav-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.nav-dot{width:30px;height:30px;border-radius:50%;border:1.5px solid #e0e0e0;background:#fff;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:#888}
+.nav-dot.answered{background:#1a1a1a;border-color:#1a1a1a;color:#fff}
+.nav-dot.current{border-color:#1a1a1a;color:#1a1a1a}
+.nav-dot.flagged{background:#f39c12;border-color:#f39c12;color:#fff}
+
+/* RESULTS */
+.result-card{background:#fff;border-radius:20px;padding:48px 40px;width:100%;max-width:600px;text-align:center;box-shadow:0 4px 30px rgba(0,0,0,.1)}
+.result-icon{font-size:56px;margin-bottom:16px}
+.result-title{font-size:26px;font-weight:700;margin-bottom:8px}
+.result-subtitle{font-size:15px;color:#888;margin-bottom:28px}
+.score-circle{width:120px;height:120px;border-radius:50%;border:6px solid;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto 28px}
+.score-num{font-size:32px;font-weight:700;line-height:1}
+.score-label{font-size:12px;color:#888;margin-top:4px}
+.score-pass{border-color:#27ae60;color:#27ae60}
+.score-fail{border-color:#c0392b;color:#c0392b}
+.result-details{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:28px}
+.detail-box{background:#f9f9f7;border-radius:10px;padding:14px}
+.detail-val{font-size:18px;font-weight:700;color:#1a1a1a}
+.detail-label{font-size:12px;color:#888;margin-top:2px}
+.btn-retry{width:100%;padding:13px;border-radius:10px;background:#f0f0ec;color:#1a1a1a;border:none;font-size:15px;font-weight:600;cursor:pointer;margin-top:10px;transition:opacity .15s}
+.btn-retry:hover{opacity:.7}
+.attempts-msg{font-size:13px;color:#e74c3c;font-weight:600}
+
+/* CERTIFICATE */
+.cert-wrap{width:100%;max-width:700px}
+.cert{background:#fff;border-radius:20px;padding:56px 48px;text-align:center;border:2px solid #1a1a1a;position:relative;margin-bottom:20px;overflow:hidden}
+.cert::before{content:'';position:absolute;top:0;left:0;right:0;height:6px;background:#1a1a1a}
+.cert::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:#e8e8e8}
+.cert-watermark{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-20deg);font-size:80px;opacity:.03;font-weight:900;pointer-events:none;white-space:nowrap}
+.cert-logo{font-size:13px;font-weight:700;letter-spacing:3px;color:#888;text-transform:uppercase;margin-bottom:28px}
+.cert-presents{font-size:13px;color:#888;margin-bottom:6px}
+.cert-title{font-size:32px;font-weight:700;color:#1a1a1a;margin-bottom:4px;letter-spacing:-.5px}
+.cert-subtitle{font-size:14px;color:#666;margin-bottom:32px}
+.cert-name{font-size:42px;font-weight:300;color:#1a1a1a;font-style:italic;margin-bottom:32px;font-family:Georgia,serif;border-bottom:1.5px solid #e0e0e0;display:inline-block;padding-bottom:12px}
+.cert-desc{font-size:14px;color:#555;line-height:1.7;max-width:480px;margin:0 auto 36px}
+.cert-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:8px}
+.cert-meta-item{text-align:center}
+.cert-meta-val{font-size:13px;font-weight:700;color:#1a1a1a}
+.cert-meta-label{font-size:11px;color:#888;margin-top:2px}
+.cert-seal{width:70px;height:70px;border-radius:50%;background:#1a1a1a;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin:28px auto 0;letter-spacing:.5px;text-align:center;line-height:1.4}
+.btn-download{width:100%;padding:14px;border-radius:10px;background:#1a1a1a;color:#fff;border:none;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;transition:opacity .15s}
+.btn-download:hover{opacity:.85}
+.btn-back{width:100%;padding:12px;border-radius:10px;background:#f0f0ec;color:#1a1a1a;border:none;font-size:14px;font-weight:600;cursor:pointer;transition:opacity .15s}
+.btn-back:hover{opacity:.7}
+.toast{position:fixed;top:20px;right:20px;background:#1a1a1a;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;opacity:0;transition:opacity .3s;z-index:999;pointer-events:none}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="screen active" id="screen-login">
+  <div class="login-card">
+    <div class="login-logo">
+      <h1>Daniels Home Center</h1>
+      <p>My Daniels Workspace</p>
+      <span class="badge-mgr">MANAGERS TIER 1</span>
+    </div>
+    <div class="login-info">
+      Esta certificación evalúa los fundamentos de liderazgo gerencial. Se presentarán <strong>14 preguntas</strong> en un tiempo límite de <strong>25 minutos</strong>. Puntaje mínimo para aprobar: <strong>80%</strong>. Tienes <strong>3 intentos</strong> disponibles.
+    </div>
+    <div class="field-wrap">
+      <label class="field-label">Usuario</label>
+      <input type="text" id="inp-user" placeholder="Tu usuario" autocomplete="username" />
+    </div>
+    <div class="field-wrap">
+      <label class="field-label">Contraseña</label>
+      <input type="password" id="inp-pass" placeholder="••••••••" autocomplete="current-password" />
+    </div>
+    <button class="btn-primary" id="btn-login" onclick="doLogin()">Ingresar</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- EXAM -->
+<div class="screen" id="screen-exam">
+  <div class="exam-wrap">
+    <div class="exam-header">
+      <div class="exam-meta">
+        Pregunta <strong id="q-num">1</strong> de <strong>14</strong>
+        <span id="attempt-label" style="margin-left:12px;font-size:12px;color:#aaa"></span>
+      </div>
+      <div class="timer" id="timer">25:00</div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+    <div class="nav-row" id="nav-dots"></div>
+    <div class="question-card" id="q-card">
+      <div class="q-badge">
+        <span id="q-num-badge">1 / 14</span>
+        <span class="q-module-tag" id="q-module-tag"></span>
+      </div>
+      <div class="q-text" id="q-text"></div>
+      <div id="q-options"></div>
+      <div class="confirm-row" id="confirm-row" style="display:none">
+        <button class="btn-confirm btn-cancel" onclick="cancelConfirm()">Cancelar</button>
+        <button class="btn-confirm btn-lock" onclick="lockAnswer()">Confirmar respuesta</button>
+      </div>
+      <button class="btn-next" id="btn-next" onclick="nextQ()" disabled>
+        Siguiente pregunta →
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- RESULTS / CERTIFICATE -->
+<div class="screen" id="screen-result">
+  <div id="result-inner"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ─── CONFIG ─── */
+const SB_URL = 'https://ecfxeebhtgkbsdeuiueb.supabase.co';
+const SB_KEY = 'REPLACE_WITH_ANON_KEY';
+const CERT_ID = 'manager_tier1';
+const EXAM_SECS = 25 * 60;
+const TOTAL_PER_ATTEMPT = 14;
+const PASS_SCORE = 0.80;
+const MAX_ATTEMPTS = 3;
+
+/* ─── QUESTION POOL (40 questions, 5 per module) ─── */
+const POOL = [
+/* ── M0: MENTALIDAD ── */
+{sec:0,mod:"Mentalidad",
+ q:"Según John Maxwell, ¿en qué nivel de liderazgo opera la mayoría de los managers de piso de ventas cuando son nuevos en su rol?",
+ opts:["Nivel 3 (Producción) — el equipo los sigue porque el manager produce resultados medibles","Nivel 4 (Desarrollo) — los siguen porque el manager está formando futuros líderes","Nivel 1–2 (Posición/Permiso) — los siguen porque tienen que hacerlo o por una relación básica","Nivel 5 (Pináculo) — el respeto ganado al inicio de carrera establece la autoridad"],
+ ans:2},
+{sec:0,mod:"Mentalidad",
+ q:"Jim Collins identifica que los líderes de Nivel 5 manejan el éxito y el fracaso de una manera específica. ¿Cuál es?",
+ opts:["Comparten el éxito con los clientes y asumen responsabilidad pública de los fracasos","Atribuyen el éxito al equipo y asumen responsabilidad personal de los fracasos","Documentan el éxito en reportes y distribuyen la responsabilidad del fracaso equitativamente","Presentan el éxito ante la dirección y delegan el manejo del fracaso a sus supervisores"],
+ ans:1},
+{sec:0,mod:"Mentalidad",
+ q:"Brian Tracy establece en 'No Excuses' que el 95% del éxito gerencial se determina:",
+ opts:["En las decisiones de contratación y selección de equipo durante los primeros 90 días","En los hábitos que el manager practica antes de que el piso de ventas abra","En la calidad de las conversaciones de coaching durante el turno","En la consistencia del seguimiento de métricas a lo largo del trimestre"],
+ ans:1},
+{sec:0,mod:"Mentalidad",
+ q:"Un manager que atribuye los resultados bajos de ventas a 'que el tráfico estuvo muy bajo esta semana' está exhibiendo:",
+ opts:["Análisis de causa raíz que informa la estrategia de seguimiento de leads activos","Mentalidad fija — está culpando al mercado en lugar de examinar el proceso del equipo","Liderazgo situacional apropiado al contexto de un periodo difícil","Enfoque de Nivel 3 orientado a identificar barreras operacionales"],
+ ans:1},
+{sec:0,mod:"Mentalidad",
+ q:"La paradoja del liderazgo de Nivel 5 (Collins) que distingue a los mejores managers de retail de los promedio es:",
+ opts:["Son altamente visibles en el piso pero delegan completamente las decisiones de ventas","Establecen metas ambiciosas pero aceptan resultados variables sin consecuencias","Son humildes en cuanto a su propio mérito pero ferozmente determinados con los estándares","Son empáticos con el rendimiento individual pero inflexibles con las políticas de la empresa"],
+ ans:2},
+
+/* ── M1: PIPELINE ── */
+{sec:1,mod:"Pipeline",
+ q:"Según los datos de los 35 top managers (Furniture World 2026), ¿cuánto más revenue generan los equipos con prácticas disciplinadas de follow-up?",
+ opts:["El doble del revenue del mismo tráfico de clientes","Un 50% más de conversiones del mismo número de visitas","Tres veces más revenue del mismo tráfico","Un 75% mayor tasa de cierre en el mismo periodo"],
+ ans:2},
+{sec:1,mod:"Pipeline",
+ q:"El problema número uno identificado por los 35 managers fue que sus equipos eran:",
+ opts:["Débiles grabando información de leads en el CRM durante el turno","Decentes grabando leads potenciales pero débiles trabajándolos activamente","Inconsistentes en el greeting pero fuertes en el proceso de cierre","Buenos en el seguimiento pero lentos en mover las cotizaciones a transacción"],
+ ans:1},
+{sec:1,mod:"Pipeline",
+ q:"Según Brian Tracy ('The Psychology of Selling'), ¿cuántos intentos de seguimiento hace en promedio un vendedor promedio antes de rendirse?",
+ opts:["Tres intentos distribuidos en un periodo de dos semanas","Dos intentos — uno inmediato y uno de confirmación posterior","Un solo intento de seguimiento antes de abandonar el lead","Cuatro intentos pero sin un script o estructura definida para cada uno"],
+ ans:2},
+{sec:1,mod:"Pipeline",
+ q:"El target de Sales per Guest (SPG) para los top performers individuales identificado en el módulo es:",
+ opts:["$700–$900 como rango de alto desempeño consistente","$1,300+ como benchmark de los mejores performers","$500–$700 como estándar mínimo de la industria","$900–$1,100 como zona de performance óptima sostenida"],
+ ans:1},
+{sec:1,mod:"Pipeline",
+ q:"En el Modelo de Liderazgo Situacional (SLII) de Blanchard aplicado al follow-up, ¿qué estilo corresponde a un rep nuevo en su función?",
+ opts:["Supporting — baja dirección y alto apoyo para desarrollar su confianza natural","Delegating — autonomía total para que descubra su propio ritmo de seguimiento","Directing — el manager define el script y revisa cada contacto de seguimiento","Coaching — el rep propone la acción y el manager la valida antes de ejecutar"],
+ ans:2},
+
+/* ── M2: COACHING ── */
+{sec:2,mod:"Coaching",
+ q:"En el modelo SLII de Ken Blanchard, el estilo S2 (Coaching) se aplica cuando el rep:",
+ opts:["Tiene experiencia probada pero está desmotivado en el periodo actual","Es completamente nuevo y no tiene contexto del proceso ni del producto","Tiene potencial pero le falta confianza — necesita dirección y apoyo simultáneamente","Es autónomo y comprometido — solo necesita visibilidad de sus propios resultados"],
+ ans:2},
+{sec:2,mod:"Coaching",
+ q:"¿Cuál es la duración y frecuencia recomendada para una sesión de coaching 1:1 estructurada según el módulo?",
+ opts:["30–45 minutos una vez por quincena para profundidad real de conversación","10–15 minutos en el piso después de observar una interacción con un cliente","15–20 minutos semanales, sin interrupciones, a la misma hora cada semana","45–60 minutos mensualmente con agenda formal y documentación de compromisos"],
+ ans:2},
+{sec:2,mod:"Coaching",
+ q:"Marcus Buckingham ('First, Break All the Rules') encontró que los managers más efectivos se diferencian porque:",
+ opts:["Establecen estándares más altos de desempeño y los miden con mayor frecuencia","Construyen sobre los talentos naturales de cada persona en lugar de intentar arreglar debilidades","Desarrollan sistemas de accountability más claros con consecuencias definidas","Invierten más tiempo en selección de personal que en desarrollo de los actuales"],
+ ans:1},
+{sec:2,mod:"Coaching",
+ q:"El problema central del onboarding 'freestyle' identificado por los managers en la sesión de Furniture World 2026 es:",
+ opts:["Los nuevos hires aprenden más lento porque no tienen acceso a materiales escritos","El costo por rep de la curva de aprendizaje es significativamente más alto","No cada rep experimentado es buen maestro, y no todos dan el mismo mensaje dos veces","Los reps que aprenden por shadowing desarrollan dependencia de sus mentores"],
+ ans:2},
+{sec:2,mod:"Coaching",
+ q:"En el 1:1 estructurado semanal, ¿en cuántas áreas de mejora debe enfocarse el manager?",
+ opts:["En todas las áreas identificadas en el periodo para maximizar el desarrollo del rep","En las tres más críticas ordenadas por impacto en las métricas del equipo","En un área de enfoque específica — no cinco — con compromisos concretos para la semana","En las áreas que el propio rep identifica como prioritarias en su autoevaluación"],
+ ans:2},
+
+/* ── M3: MÉTRICAS ── */
+{sec:3,mod:"Métricas",
+ q:"Brian Tracy aplica la regla 80/20 a la gestión del manager de retail. ¿Cuál es el 20% de actividades que produce el 80% de resultados?",
+ opts:["Recruitment, onboarding y retención de talento como función estratégica central","SPG diario, tasa de cierre semanal y pipeline activo — todo lo demás es ruido","Coaching, métricas y presencia en piso como las tres funciones no delegables","Planificación semanal, revisión de inventario y análisis de competidores locales"],
+ ans:1},
+{sec:3,mod:"Métricas",
+ q:"El target de protection plan attachment identificado como objetivo de los top managers es:",
+ opts:["2.5% del total de transacciones en el periodo mensual","5% del revenue total como porcentaje de ventas con protección activa","3.5% de attachment rate sobre el total de tickets elegibles","4% de unidades vendidas con protection plan activo al momento del cierre"],
+ ans:2},
+{sec:3,mod:"Métricas",
+ q:"¿Cuál de los siguientes aparece en la categoría 'What's NOT Working' identificada por los 35 managers?",
+ opts:["Daily pipeline printouts — demoran demasiado en equipos grandes","Morning floor walks — interrumpen la preparación individual del rep","One-and-done follow-up — un solo intento sin estructura de continuación","Stand-up sales reviews — generan ansiedad en reps de bajo desempeño"],
+ ans:2},
+{sec:3,mod:"Métricas",
+ q:"¿Cuál es el close rate objetivo al que apuntan los managers de mayor desempeño según el módulo?",
+ opts:["45%+ como benchmark de excelencia operacional en retail de muebles","25–30% como rango realista para la mayoría de las operaciones","37% como target al que apuntan los managers de mayor desempeño","50% como estándar mínimo en tiendas con tráfico calificado alto"],
+ ans:2},
+{sec:3,mod:"Métricas",
+ q:"Los reportes de desempeño generados automáticamente por IA para cada rep incluyen específicamente:",
+ opts:["Predicciones de abandono por rep basadas en patrones históricos de actividad","SPG, tasa de cierre, cotización activa, actividad en CRM y benchmark entre pares","Análisis de sentimiento del cliente basado en interacciones grabadas en el CRM","Proyecciones de ventas por rep para las próximas cuatro semanas del periodo"],
+ ans:1},
+
+/* ── M4: ACCOUNTABILITY ── */
+{sec:4,mod:"Accountability",
+ q:"Según Patrick Lencioni, la disfunción base de la pirámide que impide construir accountability real en un equipo es:",
+ opts:["La falta de métricas claras que permitan comparar el desempeño individual objetivamente","La ausencia de un líder que establezca estándares y consecuencias formales","La falta de confianza — sin vulnerabilidad, el equipo actúa en lugar de colaborar genuinamente","El miedo al conflicto que evita que los problemas de desempeño sean discutidos abiertamente"],
+ ans:2},
+{sec:4,mod:"Accountability",
+ q:"Según Covey, la mayoría de los problemas de desempeño en un equipo de ventas no son de actitud sino de:",
+ opts:["Falta de motivación intrínseca que el manager debe identificar y activar","Ambigüedad — el equipo no sabe exactamente qué se espera de ellos con claridad","Insuficiencia de training técnico en el producto que se vende","Desalineación entre los objetivos personales del rep y los de la empresa"],
+ ans:1},
+{sec:4,mod:"Accountability",
+ q:"En el modelo de conversación difícil de 4 pasos del módulo, ¿cuál es el primer paso?",
+ opts:["Escuchar activamente la perspectiva del rep antes de presentar cualquier dato","Establecer el impacto del comportamiento en el equipo y en los resultados","Presentar los hechos concretos sin juicios — números, frecuencia, observaciones específicas","Definir el compromiso de mejora y la forma en que se medirá el progreso"],
+ ans:2},
+{sec:4,mod:"Accountability",
+ q:"Cuando un manager hace una excepción al estándar para un rep de alto desempeño, el efecto en la cultura del equipo es:",
+ opts:["Refuerza la meritocracia — los mejores performers tienen flexibilidad ganada","El estándar baja para todos — la excepción comunica que el estándar es negociable","Motiva al resto del equipo a mejorar para acceder al mismo nivel de autonomía","Es aceptable si es aislado y el manager lo comunica con transparencia al equipo"],
+ ans:1},
+{sec:4,mod:"Accountability",
+ q:"¿Cuándo debe darse el reconocimiento positivo para ser más efectivo según el módulo?",
+ opts:["En la reunión mensual de desempeño con todo el equipo para máximo impacto","Dentro de las primeras 24 horas del comportamiento que se quiere reforzar","Al final del turno cuando el manager puede documentarlo con contexto completo","En el 1:1 semanal para que el rep pueda relacionarlo con sus métricas del periodo"],
+ ans:1},
+
+/* ── M5: IA ── */
+{sec:5,mod:"IA & Datos",
+ q:"Las tres grandes aplicaciones de IA en retail de muebles identificadas por los top managers en 2026 son:",
+ opts:["Precios dinámicos, gestión de inventario y predicción de demanda estacional","Training, coaching y reportes de desempeño individualizados","Atención al cliente automatizada, generación de leads y análisis de competidores","Programación de turnos, asignación de zonas de piso y gestión de comisiones"],
+ ans:1},
+{sec:5,mod:"IA & Datos",
+ q:"Según el consenso de los managers en la sesión de Furniture World 2026, la IA en sus tiendas:",
+ opts:["Está reemplazando funciones de seguimiento que antes hacían los managers","Aún está en etapa experimental — la mayoría la prueba pero pocos la integran","No está reemplazando a nadie — está acelerando lo que las buenas personas ya hacen","Es útil principalmente para training de nuevos hires pero limitada para reps experimentados"],
+ ans:2},
+{sec:5,mod:"IA & Datos",
+ q:"¿De qué depende casi completamente la adopción de herramientas de IA en el piso de ventas?",
+ opts:["De la facilidad de uso de la interfaz y el tiempo de capacitación requerido para el rep","Del manager — si no las usa y no las modela, el equipo no las adopta","De la dirección corporativa y el nivel de soporte técnico disponible en tienda","De la disposición individual de cada rep y su familiaridad previa con tecnología"],
+ ans:1},
+{sec:5,mod:"IA & Datos",
+ q:"Rachel Stewart (Gardner White) definió la postura estratégica ideal del manager ante la tecnología como:",
+ opts:["Adopción sistemática con ROI medible antes de expansión a toda la operación","Liderazgo por ejemplo — el CEO debe usar cada herramienta antes de requerirla al equipo","Permanecer curiosos y seguir evolucionando junto con las oportunidades — sin certezas forzadas","Inversión prioritaria en las herramientas con mayor adopción en los competidores directos"],
+ ans:2},
+{sec:5,mod:"IA & Datos",
+ q:"Las empresas que están creciendo más rápido con IA en retail de muebles la tratan como:",
+ opts:["Una ventaja competitiva temporal que deben implementar antes que sus competidores","Una herramienta de reducción de costos que libera tiempo del equipo para el cliente","Parte estándar de su flujo de trabajo con expectativas de uso asignadas y métricas medibles","Una inversión a largo plazo cuyo ROI se verá principalmente en el siguiente ejercicio fiscal"],
+ ans:2},
+
+/* ── M6: RUTINAS ── */
+{sec:6,mod:"Rutinas",
+ q:"¿Qué proporciona la morning floor walk + stand-up review según los managers que han cambiado cómo empiezan el día?",
+ opts:["Un espacio para que los reps planifiquen su estrategia de ventas con apoyo del manager","Visibilidad sobre quién necesita ser contactado y qué acción se requiere ese día","Una oportunidad para resolver conflictos del día anterior antes de que el piso abra","Datos preliminares del tráfico esperado para ajustar la asignación de turnos"],
+ ans:1},
+{sec:6,mod:"Rutinas",
+ q:"Según Brian Tracy ('Eat That Frog'), ¿cuándo debe planificar el manager su tarea más importante del día siguiente?",
+ opts:["En la primera hora del día, después de revisar las métricas del cierre anterior","En la reunión matutina, alineado con las prioridades colectivas del equipo","La noche anterior — para comenzar el día ejecutando, no planificando","Al inicio del turno, después de la floor walk y antes del stand-up con el equipo"],
+ ans:2},
+{sec:6,mod:"Rutinas",
+ q:"¿Cuándo deja de ser opcional el follow-up del equipo según el modelo de rutinas del módulo?",
+ opts:["Cuando el manager establece consecuencias formales de no-seguimiento en la política del equipo","Cuando se discute frente a todos en la reunión matutina todos los días","Cuando el CRM bloquea el registro de nuevos leads sin confirmar el follow-up de los anteriores","Cuando se incluye como métrica formal en la evaluación de desempeño mensual del rep"],
+ ans:1},
+{sec:6,mod:"Rutinas",
+ q:"¿Cuántos temas de ventas debe abordar la reunión matutina por semana según el módulo?",
+ opts:["Todos los temas relevantes del periodo para maximizar el tiempo de capacitación colectiva","1–2 temas específicos de ventas por semana en lugar de hacer anuncios generales","Un tema diferente cada día para cobertura completa mensual del contenido del programa","Los temas que el equipo identifique como más relevantes en su autoevaluación semanal"],
+ ans:1},
+{sec:6,mod:"Rutinas",
+ q:"En el modelo de Covey, el Cuadrante II incluye actividades 'no urgentes pero importantes'. ¿Cuáles son ejemplos en retail?",
+ opts:["Responder a un cliente insatisfecho que pide hablar con el manager inmediatamente","Atender una falla en el sistema de POS que está deteniendo transacciones en el piso","Coaching proactivo, planificación de onboarding y construcción de relaciones del equipo","Gestionar el piso durante un evento de ventas con tráfico significativamente más alto"],
+ ans:2},
+
+/* ── M7: CULTURA ── */
+{sec:7,mod:"Cultura",
+ q:"Según Jim Collins en 'Good to Great', ¿qué hicieron primero las empresas que pasaron de buenas a grandes?",
+ opts:["Definieron claramente el destino estratégico antes de construir el equipo que los llevaría","Identificaron su 'Hedgehog Concept' — lo que podían ser los mejores del mundo haciendo","Decidieron quién sube al bus — las personas correctas — antes de decidir a dónde ir","Establecieron una cultura de medición rigurosa antes de comprometerse con objetivos"],
+ ans:2},
+{sec:7,mod:"Cultura",
+ q:"La cultura de un equipo de ventas, según el módulo, se define principalmente por:",
+ opts:["Los valores declarados y la misión publicada en los materiales internos de la empresa","Lo que el manager tolera y lo que celebra — no por lo que pone en la pared","El nivel de cohesión interpersonal y la satisfacción colectiva con el ambiente de trabajo","Los reconocimientos y premios que el equipo recibe de la dirección corporativa"],
+ ans:1},
+{sec:7,mod:"Cultura",
+ q:"¿Qué porcentaje del éxito gerencial está determinado por la inteligencia emocional (IE) según Daniel Goleman?",
+ opts:["El 50% — IE y habilidades técnicas tienen igual peso en el desempeño gerencial","El 60% — la IE supera a las habilidades técnicas pero no de manera abrumadora","El 80% — la IE es por lejos el predictor dominante del éxito como manager","El 95% — las habilidades técnicas son casi irrelevantes comparadas con la IE"],
+ ans:2},
+{sec:7,mod:"Cultura",
+ q:"La práctica de auto-attachment de protection plans (requiriendo acción del manager para removerlo) ilustra:",
+ opts:["Una política de compliance que protege el ingreso mínimo por transacción","Una cultura de estándares no negociables que produce resultados medibles y significativos","Un sistema de accountability estructural que no depende de la motivación individual","Un benchmark de la industria adoptado para competir con los retailers nacionales"],
+ ans:1},
+{sec:7,mod:"Cultura",
+ q:"El plan de desarrollo de 90 días post-capacitación establece que en los primeros 30 días el manager debe enfocarse en:",
+ opts:["Rediseñar el programa de onboarding e implementar la primera herramienta de IA con el equipo","Revisar KPIs vs. baseline y preparar la presentación de resultados para el director","Implementar el pipeline visual diario y tener el primer 1:1 estructurado con cada rep","Completar las evaluaciones de desempeño pendientes y definir metas del equipo para el quarter"],
+ ans:2}
+];
+
+/* ─── SECTION TARGETS: 40 pool → 14 per attempt ─── */
+const SECTION_TARGETS = {0:2,1:2,2:2,3:1,4:2,5:1,6:2,7:2};
+
+/* ─── STATE ─── */
+let loggedEmployee = null;
+let examQuestions = [];
+let answers = {};
+let currentQ = 0;
+let selectedOpt = null;
+let confirmed = false;
+let timerInterval = null;
+let secsLeft = EXAM_SECS;
+let attemptCount = 0;
+
+/* ─── SUPABASE HELPER ─── */
+async function sb(path,opts={}){
+  const r=await fetch(SB_URL+'/rest/v1/'+path,{
+    headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation',...(opts.headers||{})},
+    ...opts
+  });
+  if(!r.ok){const t=await r.text();throw new Error(t)}
+  return r.status===204?null:r.json();
+}
+
+/* ─── LOGIN ─── */
+async function doLogin(){
+  const u=document.getElementById('inp-user').value.trim();
+  const p=document.getElementById('inp-pass').value.trim();
+  const err=document.getElementById('login-error');
+  const btn=document.getElementById('btn-login');
+  if(!u||!p){showErr('Ingresa tu usuario y contraseña');return}
+  btn.disabled=true;btn.textContent='Verificando...';err.style.display='none';
+  try{
+    const rows=await sb(`empleados?usuario=eq.${encodeURIComponent(u)}&select=id,nombre,rol,es_admin`);
+    if(!rows||rows.length===0){showErr('Usuario no encontrado');return}
+    const emp=rows[0];
+    // simple pass check via separate query
+    const auth=await sb(`empleados?usuario=eq.${encodeURIComponent(u)}&password=eq.${encodeURIComponent(p)}&select=id`);
+    if(!auth||auth.length===0){showErr('Contraseña incorrecta');return}
+    loggedEmployee=emp;
+    // check attempts
+    const atts=await sb(`certificaciones_progreso?empleado_id=eq.${emp.id}&certificacion=eq.${CERT_ID}&select=id`);
+    attemptCount=atts?atts.length:0;
+    if(attemptCount>=MAX_ATTEMPTS&&!emp.es_admin){showErr(`Ya usaste tus ${MAX_ATTEMPTS} intentos disponibles para esta certificación.`);return}
+    startExam();
+  }catch(e){showErr('Error de conexión: '+e.message)}
+  finally{btn.disabled=false;btn.textContent='Ingresar'}
+}
+function showErr(msg){const e=document.getElementById('login-error');e.textContent=msg;e.style.display='block'}
+
+/* ─── BUILD EXAM (stratified sampling) ─── */
+function buildExam(){
+  const bySection={};
+  POOL.forEach((q,i)=>{if(!bySection[q.sec])bySection[q.sec]=[];bySection[q.sec].push(i)});
+  const selected=[];
+  Object.entries(SECTION_TARGETS).forEach(([sec,n])=>{
+    const pool=(bySection[sec]||[]).slice();
+    shuffle(pool);
+    selected.push(...pool.slice(0,Math.min(n,pool.length)));
+  });
+  shuffle(selected);
+  examQuestions=selected.map(i=>({...POOL[i],optOrder:shuffled([0,1,2,3])}));
+}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function shuffled(a){return shuffle([...a])}
+
+/* ─── START EXAM ─── */
+function startExam(){
+  buildExam();
+  answers={};currentQ=0;selectedOpt=null;confirmed=false;secsLeft=EXAM_SECS;
+  showScreen('exam');
+  renderNavDots();
+  renderQuestion();
+  startTimer();
+  document.getElementById('attempt-label').textContent=`Intento ${attemptCount+1} de ${MAX_ATTEMPTS}`;
+}
+
+/* ─── TIMER ─── */
+function startTimer(){
+  clearInterval(timerInterval);
+  timerInterval=setInterval(()=>{
+    secsLeft--;
+    const m=Math.floor(secsLeft/60),s=secsLeft%60;
+    const el=document.getElementById('timer');
+    el.textContent=`${m}:${s.toString().padStart(2,'0')}`;
+    el.classList.toggle('urgent',secsLeft<=120);
+    if(secsLeft<=0){clearInterval(timerInterval);finishExam(true)}
+  },1000);
+}
+
+/* ─── RENDER QUESTION ─── */
+function renderQuestion(){
+  const q=examQuestions[currentQ];
+  document.getElementById('q-num').textContent=currentQ+1;
+  document.getElementById('q-num-badge').textContent=`${currentQ+1} / ${examQuestions.length}`;
+  document.getElementById('q-module-tag').textContent=q.mod;
+  document.getElementById('q-text').textContent=q.q;
+  document.getElementById('prog-fill').style.width=((currentQ/examQuestions.length)*100)+'%';
+  const locked=answers[currentQ]!==undefined;
+  const optDiv=document.getElementById('q-options');
+  optDiv.innerHTML='';
+  q.optOrder.forEach((origIdx)=>{
+    const btn=document.createElement('button');
+    btn.className='option-btn';
+    btn.textContent=q.opts[origIdx];
+    btn.dataset.orig=origIdx;
+    if(locked){
+      btn.disabled=true;
+      if(origIdx===q.ans) btn.classList.add('correct');
+      else if(origIdx===answers[currentQ].orig&&answers[currentQ].orig!==q.ans) btn.classList.add('wrong');
+    } else {
+      if(selectedOpt===origIdx) btn.classList.add('selected');
+      btn.onclick=()=>selectOpt(origIdx,btn);
+    }
+    optDiv.appendChild(btn);
+  });
+  const confirmRow=document.getElementById('confirm-row');
+  const btnNext=document.getElementById('btn-next');
+  if(locked){
+    confirmRow.style.display='none';
+    btnNext.disabled=false;
+    btnNext.textContent=currentQ===examQuestions.length-1?'Ver resultados':'Siguiente pregunta →';
+  } else {
+    confirmRow.style.display=selectedOpt!==null?'flex':'none';
+    btnNext.disabled=true;
+    btnNext.textContent='Siguiente pregunta →';
+  }
+  updateNavDots();
+}
+
+function selectOpt(origIdx,btn){
+  if(answers[currentQ]!==undefined) return;
+  selectedOpt=origIdx;
+  document.querySelectorAll('.option-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  document.getElementById('confirm-row').style.display='flex';
+}
+function cancelConfirm(){
+  selectedOpt=null;
+  document.querySelectorAll('.option-btn').forEach(b=>b.classList.remove('selected'));
+  document.getElementById('confirm-row').style.display='none';
+}
+function lockAnswer(){
+  if(selectedOpt===null) return;
+  const q=examQuestions[currentQ];
+  answers[currentQ]={orig:selectedOpt,correct:selectedOpt===q.ans};
+  confirmed=true;
+  renderQuestion();
+  updateNavDots();
+}
+function nextQ(){
+  if(currentQ===examQuestions.length-1){finishExam(false);return}
+  currentQ++;selectedOpt=null;confirmed=false;
+  renderQuestion();
+}
+
+/* ─── NAV DOTS ─── */
+function renderNavDots(){
+  const row=document.getElementById('nav-dots');
+  row.innerHTML='';
+  examQuestions.forEach((_,i)=>{
+    const d=document.createElement('button');
+    d.className='nav-dot';d.textContent=i+1;
+    d.onclick=()=>{currentQ=i;selectedOpt=null;renderQuestion()};
+    row.appendChild(d);
+  });
+}
+function updateNavDots(){
+  document.querySelectorAll('.nav-dot').forEach((d,i)=>{
+    d.className='nav-dot';
+    if(answers[i]!==undefined) d.classList.add('answered');
+    if(i===currentQ) d.classList.add('current');
+  });
+}
+
+/* ─── FINISH EXAM ─── */
+async function finishExam(timeout){
+  clearInterval(timerInterval);
+  const total=examQuestions.length;
+  const correct=Object.values(answers).filter(a=>a.correct).length;
+  const pct=correct/total;
+  const passed=pct>=PASS_SCORE;
+  const now=new Date().toISOString();
+  const selIds=examQuestions.map(q=>POOL.indexOf(POOL.find(p=>p.q===q.q)));
+
+  try{
+    await sb('certificaciones_progreso',{
+      method:'POST',
+      body:JSON.stringify({
+        empleado_id:loggedEmployee.id,
+        certificacion:CERT_ID,
+        puntaje:Math.round(pct*100),
+        aprobado:passed,
+        timestamp:now,
+        preguntas_seleccionadas:selIds
+      })
+    });
+  } catch(e){console.warn('Supabase save error:',e.message)}
+
+  showResultScreen(correct,total,passed,timeout,now);
+}
+
+/* ─── RESULT SCREEN ─── */
+function showResultScreen(correct,total,passed,timeout,ts){
+  showScreen('result');
+  const pct=Math.round((correct/total)*100);
+  const attLeft=MAX_ATTEMPTS-(attemptCount+1);
+  const container=document.getElementById('result-inner');
+
+  if(passed){
+    container.innerHTML=`
+    <div class="cert-wrap">
+      <div class="cert">
+        <div class="cert-watermark">DANIELS</div>
+        <div class="cert-logo">Daniels Home Center</div>
+        <div class="cert-presents">My Daniels Workspace · Certifica que</div>
+        <div class="cert-name" id="cert-name">${loggedEmployee.nombre||loggedEmployee.usuario}</div>
+        <div class="cert-title">Managers Tier 1</div>
+        <div class="cert-subtitle">Certificación en Liderazgo Gerencial — Home Furnishings</div>
+        <div class="cert-desc">Ha completado satisfactoriamente el programa de formación gerencial, demostrando dominio de los fundamentos de liderazgo, gestión de pipeline, coaching de equipos, cultura de accountability y adopción tecnológica para managers de retail de home furnishings.</div>
+        <div class="cert-meta">
+          <div class="cert-meta-item">
+            <div class="cert-meta-val">${pct}%</div>
+            <div class="cert-meta-label">Puntaje final</div>
+          </div>
+          <div class="cert-meta-item">
+            <div class="cert-meta-val">${correct} / ${total}</div>
+            <div class="cert-meta-label">Respuestas correctas</div>
+          </div>
+          <div class="cert-meta-item">
+            <div class="cert-meta-val">${new Date(ts).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'})}</div>
+            <div class="cert-meta-label">Fecha de emisión</div>
+          </div>
+        </div>
+        <div class="cert-seal">CERT<br>MGR<br>T1</div>
+      </div>
+      <button class="btn-download" onclick="printCert()">⬇ Descargar certificado</button>
+      <button class="btn-back" onclick="showScreen('login');resetLogin()">← Salir</button>
+    </div>`;
+  } else {
+    container.innerHTML=`
+    <div class="result-card">
+      <div class="result-icon">📋</div>
+      <div class="result-title" style="color:#c0392b">No aprobado</div>
+      <div class="result-subtitle">${timeout?'Se agotó el tiempo.':''} Puntaje mínimo requerido: 80%</div>
+      <div class="score-circle score-fail" style="margin:20px auto 20px">
+        <div class="score-num">${pct}%</div>
+        <div class="score-label">${correct}/${total} correctas</div>
+      </div>
+      <div class="result-details">
+        <div class="detail-box"><div class="detail-val">${correct}</div><div class="detail-label">Correctas</div></div>
+        <div class="detail-box"><div class="detail-val">${total-correct}</div><div class="detail-label">Incorrectas</div></div>
+      </div>
+      ${attLeft>0
+        ?`<p style="font-size:13px;color:#888;margin-bottom:16px">Te quedan <strong>${attLeft}</strong> intento${attLeft===1?'':'s'} disponible${attLeft===1?'':'s'}.</p>
+           <button class="btn-primary" onclick="startExam()">Intentar de nuevo</button>`
+        :`<p class="attempts-msg" style="margin-bottom:16px">Has usado todos tus intentos disponibles.</p>`}
+      <button class="btn-retry" onclick="showScreen('login');resetLogin()">← Salir</button>
+    </div>`;
+  }
+}
+
+function printCert(){
+  const el=document.querySelector('.cert');
+  if(!el) return;
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><title>Certificado Manager Tier 1</title>
+  <style>body{margin:0;font-family:-apple-system,sans-serif;background:#f4f4f0;display:flex;justify-content:center;padding:40px}
+  .cert{background:#fff;border-radius:20px;padding:56px 48px;text-align:center;border:2px solid #1a1a1a;position:relative;max-width:700px;width:100%;overflow:hidden}
+  .cert::before{content:'';position:absolute;top:0;left:0;right:0;height:6px;background:#1a1a1a}
+  .cert-watermark{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-20deg);font-size:80px;opacity:.03;font-weight:900;pointer-events:none;white-space:nowrap}
+  .cert-logo{font-size:13px;font-weight:700;letter-spacing:3px;color:#888;text-transform:uppercase;margin-bottom:28px}
+  .cert-presents{font-size:13px;color:#888;margin-bottom:6px}
+  .cert-title{font-size:32px;font-weight:700;color:#1a1a1a;margin-bottom:4px}
+  .cert-subtitle{font-size:14px;color:#666;margin-bottom:32px}
+  .cert-name{font-size:42px;font-weight:300;color:#1a1a1a;font-style:italic;margin-bottom:32px;font-family:Georgia,serif;border-bottom:1.5px solid #e0e0e0;display:inline-block;padding-bottom:12px}
+  .cert-desc{font-size:14px;color:#555;line-height:1.7;max-width:480px;margin:0 auto 36px}
+  .cert-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:8px}
+  .cert-meta-item{text-align:center}
+  .cert-meta-val{font-size:13px;font-weight:700;color:#1a1a1a}
+  .cert-meta-label{font-size:11px;color:#888;margin-top:2px}
+  .cert-seal{width:70px;height:70px;border-radius:50%;background:#1a1a1a;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin:28px auto 0;letter-spacing:.5px;text-align:center;line-height:1.4}
+  @media print{body{background:#fff;padding:0}}</style>
+  </head><body><div class="cert">${el.innerHTML}</div></body></html>`);
+  w.document.close();
+  setTimeout(()=>w.print(),500);
+  showToast('Abriendo ventana de impresión...');
+}
+
+/* ─── UTILS ─── */
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+}
+function resetLogin(){
+  loggedEmployee=null;examQuestions=[];answers={};
+  document.getElementById('inp-user').value='';
+  document.getElementById('inp-pass').value='';
+  document.getElementById('login-error').style.display='none';
+}
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+document.getElementById('inp-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
+</script>
+</body>
+</html>
