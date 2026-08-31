@@ -309,6 +309,7 @@ async function initEmployeeContext() {
     attemptCount = status.attempts;
     certPassed = status.passed;
     lastKnownValidAttemptIds = status.validIds; // null = couldn't verify (network issue) — tryResumeExam treats null as "don't second-guess the snapshot"
+    effectiveMaxAttempts = status.maxAttempts; // base 3 + any admin-granted extra attempts (Cockpit "Unlock +1")
     const startBtn = document.querySelector('button[onclick="confirmStartExam()"]');
     if (certPassed) {
       document.querySelector('.card-title').insertAdjacentHTML('afterend',
@@ -318,10 +319,10 @@ async function initEmployeeContext() {
       startBtn.disabled = true;
       startBtn.style.opacity = '0.5';
       startBtn.style.cursor = 'not-allowed';
-    } else if (attemptCount >= MAX_ATTEMPTS) {
+    } else if (attemptCount >= effectiveMaxAttempts) {
       document.querySelector('.card-title').insertAdjacentHTML('afterend',
         `<div style="background:#fdecea;border-left:4px solid var(--red);color:var(--red);padding:14px 16px;border-radius:6px;font-size:14px;margin-bottom:18px;">
-          You have already used all ${MAX_ATTEMPTS} attempts for this certification without passing. This certification is locked until your manager resets it. / Ya usaste los ${MAX_ATTEMPTS} intentos sin aprobar. Esta certificación está bloqueada hasta que tu gerente la reinicie.
+          You have already used all ${effectiveMaxAttempts} attempts for this certification without passing. This certification is locked until your manager unlocks more attempts. / Ya usaste los ${effectiveMaxAttempts} intentos sin aprobar. Esta certificación está bloqueada hasta que tu gerente desbloquee más intentos.
         </div>`);
       startBtn.disabled = true;
       startBtn.style.opacity = '0.5';
@@ -329,7 +330,7 @@ async function initEmployeeContext() {
     } else if (attemptCount > 0) {
       document.querySelector('.card-title').insertAdjacentHTML('afterend',
         `<div style="background:#fff3cd;border-left:4px solid var(--gold);padding:12px 16px;border-radius:6px;font-size:13px;margin-bottom:18px;">
-          Attempt ${attemptCount + 1} of ${MAX_ATTEMPTS} / Intento ${attemptCount + 1} de ${MAX_ATTEMPTS}
+          Attempt ${attemptCount + 1} of ${effectiveMaxAttempts} / Intento ${attemptCount + 1} de ${effectiveMaxAttempts}
         </div>`);
     }
   }
@@ -379,10 +380,11 @@ async function saveResultToSupabase(scored, totalPts, pct, pass, elapsed) {
 let attemptCount = 0;
 let certPassed = false;
 const MAX_ATTEMPTS = 3;
+let effectiveMaxAttempts = MAX_ATTEMPTS; // may be raised via admin-granted extra attempts; set by checkCertificationStatus()
 
 async function checkCertificationStatus() {
-  if (!loggedInEmployee) return {attempts:0, passed:false, validIds:[]};
-  if (loggedInEmployee.es_admin) return {attempts:0, passed:false, validIds:[]};
+  if (!loggedInEmployee) return {attempts:0, passed:false, validIds:[], maxAttempts:MAX_ATTEMPTS};
+  if (loggedInEmployee.es_admin) return {attempts:0, passed:false, validIds:[], maxAttempts:MAX_ATTEMPTS};
   try {
     const resetRows = await sbFetch(`certificacion_resets?empleado_id=eq.${loggedInEmployee.id}&certificacion=eq.${TIER_KEY}&select=reset_at&order=reset_at.desc&limit=1`);
     const lastReset = (resetRows && resetRows.length) ? resetRows[0].reset_at : null;
@@ -391,14 +393,22 @@ async function checkCertificationStatus() {
     const rows = await sbFetch(query);
     const attempts = rows ? rows.length : 0;
     const passed = rows ? rows.some(r => r.aprobado === true) : false;
-    // validIds: attempt records the server currently considers real/current for this
-    // employee+cert. Used to detect a stale sessionStorage snapshot pointing at a
-    // record an admin has since deleted or invalidated via reset — see tryResumeExam().
     const validIds = rows ? rows.map(r => r.id) : [];
-    return {attempts, passed, validIds};
+    // Extra attempts an admin has explicitly unlocked (Cockpit "Unlock +1" button).
+    // Nothing here ever deletes or hides past attempts — this just raises the ceiling
+    // before the automatic 3-strikes lock re-engages.
+    let extraGranted = 0;
+    try {
+      const extraRows = await sbFetch(`certificacion_intentos_extra?empleado_id=eq.${loggedInEmployee.id}&certificacion=eq.${TIER_KEY}&select=cantidad`);
+      extraGranted = (extraRows || []).reduce((sum, r) => sum + (r.cantidad || 0), 0);
+    } catch (err) {
+      console.warn('certificacion_intentos_extra table not available yet:', err);
+    }
+    const maxAttempts = MAX_ATTEMPTS + extraGranted;
+    return {attempts, passed, validIds, maxAttempts};
   } catch (err) {
     console.error('Could not check certification status:', err);
-    return {attempts:0, passed:false, validIds:null}; // null = "couldn't verify", not "known empty" — don't wipe a resumable session on a network blip
+    return {attempts:0, passed:false, validIds:null, maxAttempts:MAX_ATTEMPTS};
   }
 }
 
@@ -411,8 +421,8 @@ function handleRetake() {
     alert('You already passed this certification. / Ya aprobaste esta certificación.');
     return;
   }
-  if (attemptCount >= MAX_ATTEMPTS) {
-    alert('You have used all ' + MAX_ATTEMPTS + ' attempts. Please see your manager. / Ya usaste tus ' + MAX_ATTEMPTS + ' intentos. Contacta a tu gerente.');
+  if (attemptCount >= effectiveMaxAttempts) {
+    alert('You have used all ' + effectiveMaxAttempts + ' attempts. Please see your manager. / Ya usaste tus ' + effectiveMaxAttempts + ' intentos. Contacta a tu gerente.');
     return;
   }
   location.reload();
@@ -2053,7 +2063,7 @@ let state={empName:'',empId:'',empStore:'',current:0,answers:new Array(QUESTIONS
 
 function confirmStartExam(){
   if (certPassed) { alert('You already passed this certification. Retakes are not available. / Ya aprobaste esta certificación. No se permite reintentar.'); return; }
-  if (attemptCount >= MAX_ATTEMPTS && !(loggedInEmployee && loggedInEmployee.es_admin)) { alert('You have used all attempts. Please see your manager. / Ya usaste todos tus intentos. Contacta a tu gerente.'); return; }
+  if (attemptCount >= effectiveMaxAttempts && !(loggedInEmployee && loggedInEmployee.es_admin)) { alert('You have used all attempts. Please see your manager. / Ya usaste todos tus intentos. Contacta a tu gerente.'); return; }
   const n=document.getElementById('emp-name').value.trim();
   const i=document.getElementById('emp-id').value.trim();
   const s=document.getElementById('emp-store').value;
@@ -2061,7 +2071,7 @@ function confirmStartExam(){
   state.empName=n;state.empId=i;state.empStore=s;
   const attemptLabel = (loggedInEmployee && loggedInEmployee.es_admin)
     ? 'Admin Preview Mode — this run will not be saved. / Modo vista previa de administrador — esta sesión no se guardará.'
-    : `This will count as Attempt ${attemptCount + 1} of ${MAX_ATTEMPTS}. The timer starts immediately once you begin and cannot be paused — closing or leaving this page before submitting still uses this attempt. / Esto contará como el Intento ${attemptCount + 1} de ${MAX_ATTEMPTS}. El cronómetro inicia de inmediato y no se puede pausar — cerrar o salir de esta página antes de enviar también usa este intento.`;
+    : `This will count as Attempt ${attemptCount + 1} of ${effectiveMaxAttempts}. The timer starts immediately once you begin and cannot be paused — closing or leaving this page before submitting still uses this attempt. / Esto contará como el Intento ${attemptCount + 1} de ${effectiveMaxAttempts}. El cronómetro inicia de inmediato y no se puede pausar — cerrar o salir de esta página antes de enviar también usa este intento.`;
   document.getElementById('start-confirm-text').textContent = attemptLabel;
   document.getElementById('start-confirm-modal').style.display='flex';
 }
@@ -2314,7 +2324,7 @@ function finishExam(){
     document.getElementById('btn-retake').style.display = 'none';
   } else {
     attemptCount++;
-    if (attemptCount >= MAX_ATTEMPTS) {
+    if (attemptCount >= effectiveMaxAttempts) {
       document.getElementById('btn-retake').style.display = 'none';
       document.getElementById('attempts-locked-msg').style.display = 'block';
     }

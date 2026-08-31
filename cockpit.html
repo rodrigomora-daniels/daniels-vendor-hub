@@ -304,6 +304,23 @@
   </div>
 </div>
 
+<!-- ══════════ MODAL: UNLOCK EXTRA ATTEMPTS (Super Admin + Admin Secundario) ══════════ -->
+<div class="modal-overlay" id="modal-unlock-attempts">
+  <div class="modal-box">
+    <h3>🔓 Unlock Extra Attempts</h3>
+    <p style="font-size:13px;color:var(--mgray);margin-bottom:14px" id="unlock-attempts-desc"></p>
+    <label class="field-label">How many extra attempts?</label>
+    <input type="number" class="field-input" id="unlock-attempts-qty" value="1" min="1" max="10">
+    <label class="field-label" style="margin-top:10px">Reason / Notes (optional)</label>
+    <input type="text" class="field-input" id="unlock-attempts-notes" placeholder="e.g. approved by Ted, retrained">
+    <p style="font-size:11px;color:var(--mgray);margin-top:8px;line-height:1.5">This does not delete or reset anything — every past attempt stays in their history exactly as it happened. It simply raises how many total attempts they're allowed before locking again.</p>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-unlock-attempts')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="submitUnlockAttempts()">Unlock Attempts</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════ MODAL: CHANGE ROLE (Super Admin only) ══════════ -->
 <div class="modal-overlay" id="modal-change-role">
   <div class="modal-box">
@@ -518,8 +535,8 @@ function renderEmployeesTable(employees) {
     const t2Lock = !e.es_admin ? certLockStatus(e.id, 'tier2') : null;
     const escName = (e.nombre_completo || '').replace(/'/g, "\\'");
     const resetBtns = [
-      (t1Lock && t1Lock.locked) ? `<button class="btn btn-red" onclick="openCertResetModal('${e.id}','${escName}','tier1')">Reset T1</button>` : '',
-      (t2Lock && t2Lock.locked) ? `<button class="btn btn-red" onclick="openCertResetModal('${e.id}','${escName}','tier2')">Reset T2</button>` : ''
+      (t1Lock && t1Lock.locked) ? `<button class="btn btn-red" onclick="openUnlockAttemptsModal('${e.id}','${escName}','tier1')">Unlock +1 (T1)</button>` : '',
+      (t2Lock && t2Lock.locked) ? `<button class="btn btn-red" onclick="openUnlockAttemptsModal('${e.id}','${escName}','tier2')">Unlock +1 (T2)</button>` : ''
     ].join('');
     let adminBadgeLabel = 'ADMIN';
     if (e.nivel_admin === 'super_admin') adminBadgeLabel = 'SUPER ADMIN';
@@ -579,12 +596,20 @@ function attemptsSinceReset(empId, cert, rows, resets) {
     (!lastReset || new Date(r.started_at || r.fecha_completado) > new Date(lastReset)));
 }
 
+function extraAttemptsFor(empId, cert, extras) {
+  return (extras || []).filter(x => x.empleado_id === empId && x.certificacion === cert)
+    .reduce((sum, x) => sum + (x.cantidad || 0), 0);
+}
+
 function certLockStatus(empId, cert) {
   const rows = cachedData.certAttempts || [];
   const resets = cachedData.certResets || [];
+  const extras = cachedData.certExtraAttempts || [];
   const attempts = attemptsSinceReset(empId, cert, rows, resets);
   const passed = attempts.some(r => r.aprobado === true);
-  return { passed, attemptCount: attempts.length, locked: !passed && attempts.length >= 3 };
+  const extraGranted = extraAttemptsFor(empId, cert, extras);
+  const effectiveMax = 3 + extraGranted;
+  return { passed, attemptCount: attempts.length, extraGranted, effectiveMax, locked: !passed && attempts.length >= effectiveMax };
 }
 
 async function loadCertAttempts() {
@@ -596,8 +621,15 @@ async function loadCertAttempts() {
     } catch (err) {
       console.warn('certificacion_resets table not available yet:', err);
     }
+    let extras = [];
+    try {
+      extras = await sbFetch('certificacion_intentos_extra?select=empleado_id,certificacion,cantidad,created_at&order=created_at.desc');
+    } catch (err) {
+      console.warn('certificacion_intentos_extra table not available yet:', err);
+    }
     cachedData.certAttempts = rows || [];
     cachedData.certResets = resets || [];
+    cachedData.certExtraAttempts = extras || [];
     renderCertKPIs(cachedData.certAttempts, cachedData.certResets);
     renderCertAttemptsTable(cachedData.certAttempts);
   } catch (err) {
@@ -775,6 +807,41 @@ async function submitCertReset() {
     loadAllData();
   } catch (err) {
     alert('Error resetting certification: ' + err.message);
+  }
+}
+
+let unlockAttemptsTarget = null;
+function openUnlockAttemptsModal(empId, empName, cert) {
+  unlockAttemptsTarget = { empId, empName, certificacion: cert };
+  const certLabel = cert === 'tier1' ? 'Sales Tier 1' : 'Sales Tier 2';
+  document.getElementById('unlock-attempts-desc').textContent =
+    `${empName} is locked on ${certLabel} after 3 failed attempts. Choose how many additional attempts to unlock — their full attempt history stays exactly as-is, nothing gets deleted or wiped.`;
+  document.getElementById('unlock-attempts-qty').value = '1';
+  document.getElementById('unlock-attempts-notes').value = '';
+  document.getElementById('modal-unlock-attempts').classList.add('show');
+}
+
+async function submitUnlockAttempts() {
+  if (!unlockAttemptsTarget) return;
+  const qty = parseInt(document.getElementById('unlock-attempts-qty').value, 10);
+  const notes = document.getElementById('unlock-attempts-notes').value.trim();
+  if (!qty || qty < 1) { alert('Enter a quantity of at least 1.'); return; }
+  try {
+    const rows = await sbFetch('rpc/admin_otorgar_intentos_extra', {
+      method: 'POST',
+      body: JSON.stringify({
+        p_admin_id: admin.id,
+        p_empleado_id: unlockAttemptsTarget.empId,
+        p_certificacion: unlockAttemptsTarget.certificacion,
+        p_cantidad: qty,
+        p_notas: notes || null
+      })
+    });
+    if (!rows[0].success) { alert(rows[0].message); return; }
+    closeModal('modal-unlock-attempts');
+    loadAllData();
+  } catch (err) {
+    alert('Error unlocking attempts: ' + err.message);
   }
 }
 
