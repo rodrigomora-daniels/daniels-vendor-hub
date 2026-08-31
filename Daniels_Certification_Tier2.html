@@ -308,6 +308,7 @@ async function initEmployeeContext() {
     const status = await checkCertificationStatus();
     attemptCount = status.attempts;
     certPassed = status.passed;
+    lastKnownValidAttemptIds = status.validIds; // null = couldn't verify (network issue) — tryResumeExam treats null as "don't second-guess the snapshot"
     const startBtn = document.querySelector('button[onclick="confirmStartExam()"]');
     if (certPassed) {
       document.querySelector('.card-title').insertAdjacentHTML('afterend',
@@ -380,8 +381,8 @@ let certPassed = false;
 const MAX_ATTEMPTS = 3;
 
 async function checkCertificationStatus() {
-  if (!loggedInEmployee) return {attempts:0, passed:false};
-  if (loggedInEmployee.es_admin) return {attempts:0, passed:false};
+  if (!loggedInEmployee) return {attempts:0, passed:false, validIds:[]};
+  if (loggedInEmployee.es_admin) return {attempts:0, passed:false, validIds:[]};
   try {
     const resetRows = await sbFetch(`certificacion_resets?empleado_id=eq.${loggedInEmployee.id}&certificacion=eq.${TIER_KEY}&select=reset_at&order=reset_at.desc&limit=1`);
     const lastReset = (resetRows && resetRows.length) ? resetRows[0].reset_at : null;
@@ -390,10 +391,14 @@ async function checkCertificationStatus() {
     const rows = await sbFetch(query);
     const attempts = rows ? rows.length : 0;
     const passed = rows ? rows.some(r => r.aprobado === true) : false;
-    return {attempts, passed};
+    // validIds: attempt records the server currently considers real/current for this
+    // employee+cert. Used to detect a stale sessionStorage snapshot pointing at a
+    // record an admin has since deleted or invalidated via reset — see tryResumeExam().
+    const validIds = rows ? rows.map(r => r.id) : [];
+    return {attempts, passed, validIds};
   } catch (err) {
     console.error('Could not check certification status:', err);
-    return {attempts:0, passed:false};
+    return {attempts:0, passed:false, validIds:null}; // null = "couldn't verify", not "known empty" — don't wipe a resumable session on a network blip
   }
 }
 
@@ -1993,6 +1998,7 @@ const QUESTIONS = [
 const EXAM_SECONDS = 3600;
 let currentRecordId = null;
 const SESSION_KEY = () => `examSession_${TIER_KEY}_${(loggedInEmployee && loggedInEmployee.id) || 'guest'}`;
+let lastKnownValidAttemptIds = null; // set by checkCertificationStatus(); used by tryResumeExam() to detect a stale/deleted session
 let displayOrder = [];
 let optionOrder = {};
 
@@ -2117,6 +2123,16 @@ function tryResumeExam(){
   let snap;
   try { snap = JSON.parse(raw); } catch(err){ return false; }
   if (!snap) return false;
+  // Guard against a stale snapshot: if we successfully fetched the employee's current
+  // valid attempt ids and this session's recordId isn't among them, the underlying
+  // attempt was deleted or invalidated by an admin reset since this session was saved.
+  // Discard it and let the person start a clean new attempt instead of getting stuck
+  // trying to resume/save against a record that no longer exists.
+  if (Array.isArray(lastKnownValidAttemptIds) && snap.recordId && !lastKnownValidAttemptIds.includes(snap.recordId)) {
+    console.warn('Discarding stale exam session — underlying attempt no longer exists (likely deleted/reset by admin).');
+    clearSessionSnapshot();
+    return false;
+  }
   const elapsedSinceStart = Math.floor((Date.now()-snap.startTime)/1000);
   const remaining = EXAM_SECONDS - elapsedSinceStart;
   currentRecordId = snap.recordId;
