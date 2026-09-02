@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Evaluación de Desempeño — Ventas</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0f172a;
+      --surface: #1e293b;
+      --border:  #334155;
+      --text:    #e2e8f0;
+      --muted:   #94a3b8;
+      --dim:     #64748b;
+      --green:   #22c55e;
+      --green-d: #16a34a;
+      --red:     #ef4444;
+      --amber:   #f59e0b;
+      --blue:    #3b82f6;
+    }
+
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+
+    /* ── HEADER ── */
+    .hdr { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 50; }
+    .hdr-logo { width: 34px; height: 34px; background: var(--green); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #0f172a; font-size: 16px; }
+    .hdr h1 { font-size: 15px; font-weight: 700; }
+    .hdr p  { font-size: 11px; color: var(--dim); }
+    .back-btn { margin-left: auto; color: var(--muted); font-size: 13px; text-decoration: none; transition: color .2s; }
+    .back-btn:hover { color: var(--green); }
+
+    /* ── STEP BAR ── */
+    .step-bar { display: flex; align-items: center; gap: 0; padding: 20px 32px; }
+    .step { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--dim); }
+    .step-num { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; transition: all .3s; }
+    .step.active .step-num  { border-color: var(--green); background: var(--green); color: #0f172a; }
+    .step.done .step-num    { border-color: var(--green-d); background: var(--green-d); color: #0f172a; }
+    .step.active            { color: var(--text); font-weight: 600; }
+    .step-line { flex: 1; height: 2px; background: var(--border); margin: 0 8px; min-width: 20px; transition: background .3s; }
+    .step-line.done { background: var(--green-d); }
+
+    /* ── MAIN ── */
+    .main { max-width: 760px; margin: 0 auto; padding: 0 24px 60px; }
+
+    .section-title { font-size: 19px; font-weight: 700; margin-bottom: 4px; }
+    .section-sub   { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+
+    /* ── EMPLOYEE CARD ── */
+    .emp-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; margin-bottom: 28px; display: flex; align-items: center; gap: 14px; }
+    .emp-avatar { width: 42px; height: 42px; border-radius: 50%; background: var(--green-d); display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 800; color: #fff; }
+    .emp-name   { font-size: 15px; font-weight: 700; }
+    .emp-role   { font-size: 12px; color: var(--muted); }
+    .mode-badge { margin-left: auto; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px; }
+    .mode-badge.supervisor { background: #1e3a5f; color: #93c5fd; }
+    .mode-badge.self       { background: #14532d; color: #86efac; }
+
+    /* ── QUOTA SECTION ── */
+    .quota-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    .q-input-wrap label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+    .q-input-wrap input { width: 100%; background: var(--bg); border: 1.5px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 20px; font-weight: 700; color: var(--text); text-align: center; outline: none; transition: border-color .2s; }
+    .q-input-wrap input:focus { border-color: var(--green); }
+
+    .quota-result { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
+    .qr-label  { font-size: 12px; color: var(--muted); }
+    .qr-value  { font-size: 22px; font-weight: 800; }
+    .qr-value.high   { color: var(--green); }
+    .qr-value.mid    { color: var(--amber); }
+    .qr-value.low    { color: var(--red); }
+
+    /* ── BARS QUESTION ── */
+    .bars-q { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px 24px; margin-bottom: 20px; }
+    .bars-dim { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; color: var(--green); margin-bottom: 6px; }
+    .bars-text { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 18px; line-height: 1.5; }
+    .bars-scale { display: flex; gap: 8px; }
+    .bars-btn {
+      flex: 1; padding: 12px 6px; border-radius: 8px; border: 1.5px solid var(--border);
+      background: var(--bg); color: var(--muted); cursor: pointer;
+      text-align: center; font-size: 18px; font-weight: 800; transition: all .2s;
+      position: relative;
+    }
+    .bars-btn:hover { border-color: var(--green); color: var(--text); }
+    .bars-btn.selected { border-color: var(--green); background: #0a2010; color: var(--green); }
+    .bars-anchor { font-size: 9px; font-weight: 500; line-height: 1.3; margin-top: 4px; color: inherit; display: block; }
+
+    /* ── FORCED CHOICE ── */
+    .fc-q { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px 24px; margin-bottom: 20px; }
+    .fc-dim  { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; color: var(--blue); margin-bottom: 6px; }
+    .fc-text { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+    .fc-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .fc-opt {
+      border: 1.5px solid var(--border); border-radius: 9px; padding: 14px 16px;
+      cursor: pointer; font-size: 13px; line-height: 1.5; color: var(--muted);
+      transition: all .2s; background: var(--bg);
+    }
+    .fc-opt:hover { border-color: var(--blue); color: var(--text); }
+    .fc-opt.selected { border-color: var(--blue); background: #05111f; color: var(--text); }
+    .fc-letter { font-size: 11px; font-weight: 800; color: var(--dim); margin-bottom: 6px; display: block; }
+    .fc-opt.selected .fc-letter { color: var(--blue); }
+
+    /* ── SCORE PREVIEW ── */
+    .score-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: 14px; padding: 28px; margin-bottom: 24px; }
+    .score-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 20px; }
+    .score-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+    .score-row:last-of-type { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .score-row-label { font-size: 13px; color: var(--muted); }
+    .score-row-weight { font-size: 11px; color: var(--dim); }
+    .score-row-val { font-size: 20px; font-weight: 800; }
+
+    .final-score-wrap { text-align: center; margin: 24px 0; }
+    .final-score-num { font-size: 64px; font-weight: 900; line-height: 1; }
+    .final-score-cat { font-size: 14px; font-weight: 700; margin-top: 6px; letter-spacing: .5px; }
+    .final-score-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    .cat-exceeds  { color: var(--green); }
+    .cat-meets    { color: #4ade80; }
+    .cat-develop  { color: var(--amber); }
+    .cat-pip      { color: var(--red); }
+
+    /* ── FEEDBACK ── */
+    .feedback-wrap label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+    .feedback-wrap textarea { width: 100%; background: var(--bg); border: 1.5px solid var(--border); border-radius: 9px; padding: 14px; font-size: 13px; color: var(--text); outline: none; resize: vertical; min-height: 100px; line-height: 1.6; transition: border-color .2s; font-family: inherit; }
+    .feedback-wrap textarea:focus { border-color: var(--green); }
+    .feedback-wrap { margin-bottom: 20px; }
+
+    /* ── BUTTONS ── */
+    .btn-row { display: flex; gap: 12px; margin-top: 28px; }
+    .btn-primary { flex: 1; padding: 14px; background: var(--green); color: #0f172a; font-size: 14px; font-weight: 800; border: none; border-radius: 9px; cursor: pointer; transition: background .2s, transform .1s; }
+    .btn-primary:hover { background: var(--green-d); }
+    .btn-primary:active { transform: scale(.98); }
+    .btn-primary:disabled { background: var(--border); color: var(--dim); cursor: not-allowed; }
+    .btn-secondary { padding: 14px 20px; background: transparent; color: var(--muted); font-size: 14px; border: 1.5px solid var(--border); border-radius: 9px; cursor: pointer; transition: all .2s; }
+    .btn-secondary:hover { border-color: var(--muted); color: var(--text); }
+
+    /* ── PROGRESS BAR ── */
+    .prog-bar-wrap { height: 3px; background: var(--border); border-radius: 2px; margin-bottom: 28px; }
+    .prog-bar { height: 100%; background: var(--green); border-radius: 2px; transition: width .4s; }
+
+    /* ── NOTICE ── */
+    .notice { border-radius: 9px; padding: 14px 16px; font-size: 13px; line-height: 1.5; margin-bottom: 20px; }
+    .notice.info  { background: #0c2340; border: 1px solid #1e3a5f; color: #93c5fd; }
+    .notice.warn  { background: #2d1a00; border: 1px solid #78350f; color: #fcd34d; }
+    .notice.ok    { background: #0a2010; border: 1px solid #14532d; color: #86efac; }
+
+    /* ── SUCCESS STATE ── */
+    .success-screen { text-align: center; padding: 60px 20px; }
+    .success-icon { font-size: 56px; margin-bottom: 16px; }
+    .success-screen h2 { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+    .success-screen p  { font-size: 14px; color: var(--muted); max-width: 380px; margin: 0 auto; line-height: 1.6; }
+
+    /* ── LOADING ── */
+    .loading { text-align: center; padding: 80px 20px; color: var(--muted); font-size: 14px; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="hdr-logo">D</div>
+  <div>
+    <h1>My Daniels Workspace</h1>
+    <p id="hdr-sub">Evaluación de Desempeño — Ventas</p>
+  </div>
+  <a href="index.html" class="back-btn">← Hub</a>
+</header>
+
+<!-- STEP BAR -->
+<div class="step-bar" id="step-bar">
+  <div class="step active" id="st1"><div class="step-num">1</div><span id="st1-label">Desempeño en Cuota</span></div>
+  <div class="step-line" id="sl1"></div>
+  <div class="step" id="st2"><div class="step-num">2</div><span>Evaluación Conductual</span></div>
+  <div class="step-line" id="sl2"></div>
+  <div class="step" id="st3"><div class="step-num">3</div><span>Revisión y Envío</span></div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- Loading -->
+  <div id="loading-screen" class="loading">Cargando ciclo activo…</div>
+
+  <!-- STEP 1: QUOTA (supervisor) or INTRO (self) -->
+  <div id="step1-panel" class="hidden">
+    <div class="prog-bar-wrap"><div class="prog-bar" id="prog" style="width:33%"></div></div>
+    <div id="emp-card-wrap"></div>
+
+    <!-- Supervisor quota entry -->
+    <div id="quota-panel" class="hidden">
+      <div class="section-title">Desempeño en Cuota</div>
+      <div class="section-sub" id="ciclo-label">Ciclo activo</div>
+
+      <div class="notice info">El desempeño en cuota representa el <strong>40%</strong> del score final. Ingresa los datos del período de evaluación.</div>
+
+      <div class="quota-grid">
+        <div class="q-input-wrap">
+          <label>Períodos con meta cumplida</label>
+          <input type="number" id="inp-meta" min="0" max="12" placeholder="0">
+        </div>
+        <div class="q-input-wrap">
+          <label>Total de períodos evaluados</label>
+          <input type="number" id="inp-total" min="1" max="12" placeholder="6">
+        </div>
+        <div class="q-input-wrap">
+          <label>% promedio de cuota</label>
+          <input type="number" id="inp-pct" min="0" max="300" placeholder="100">
+        </div>
+      </div>
+
+      <div class="quota-result">
+        <div>
+          <div class="qr-label">Score de cuota (pre-cálculo)</div>
+          <div style="font-size:11px;color:var(--dim);margin-top:3px;">50% tasa de cumplimiento + 50% % promedio (cap 100)</div>
+        </div>
+        <div class="qr-value" id="quota-score-display">—</div>
+      </div>
+    </div>
+
+    <!-- Self-eval intro -->
+    <div id="self-intro-panel" class="hidden">
+      <div class="section-title">Tu Autoevaluación</div>
+      <div class="section-sub">Ciclo: <span id="ciclo-label-self"></span></div>
+      <div class="notice info">
+        A continuación verás <strong>5 situaciones</strong>. Para cada una, selecciona la opción que describe mejor lo que <em>realmente haces</em> en tu día a día — no lo que crees que deberías hacer.<br><br>
+        No hay respuestas correctas o incorrectas. La honestidad en esta sección es lo que hace útil tu autoevaluación para tu supervisor y para ti.
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-primary" id="btn-step1-next" disabled>Continuar →</button>
+    </div>
+  </div>
+
+  <!-- STEP 2: BARS (supervisor) or FORCED CHOICE (self) -->
+  <div id="step2-panel" class="hidden">
+    <div class="prog-bar-wrap"><div class="prog-bar" style="width:66%"></div></div>
+    <div id="questions-container"></div>
+    <div class="btn-row">
+      <button class="btn-secondary" id="btn-step2-back">← Atrás</button>
+      <button class="btn-primary" id="btn-step2-next" disabled>Continuar →</button>
+    </div>
+  </div>
+
+  <!-- STEP 3: REVIEW + FEEDBACK + SUBMIT -->
+  <div id="step3-panel" class="hidden">
+    <div class="prog-bar-wrap"><div class="prog-bar" style="width:100%"></div></div>
+
+    <div class="section-title">Revisión Final</div>
+    <div class="section-sub">Verifica el resumen antes de enviar. Esta acción no se puede deshacer.</div>
+
+    <div class="score-card">
+      <h3>Desglose del Score</h3>
+      <div id="score-breakdown"></div>
+      <div class="final-score-wrap">
+        <div class="final-score-num" id="final-score-num">—</div>
+        <div class="final-score-cat" id="final-score-cat"></div>
+        <div class="final-score-sub" id="final-score-sub"></div>
+      </div>
+    </div>
+
+    <!-- Feedback (supervisor only) -->
+    <div id="feedback-section" class="hidden">
+      <div class="notice warn">El feedback narrativo es <strong>obligatorio</strong> para enviar. Describe de manera específica las áreas de oportunidad y fortalezas observadas.</div>
+      <div class="feedback-wrap" style="margin-top:16px;">
+        <label>Feedback del supervisor</label>
+        <textarea id="feedback-txt" placeholder="Ejemplo: Juan muestra un dominio sólido de Good/Better/Best, logrando cerrar en Better o Best en aproximadamente 6 de cada 10 tickets. Su área de mayor oportunidad es la presentación de financiamiento — en las últimas semanas evitó el tema en 3 interacciones observadas. Se recomienda reforzar el uso del pre-screen como herramienta de cierre antes del siguiente ciclo."></textarea>
+      </div>
+    </div>
+
+    <!-- Acknowledge notice (self) -->
+    <div id="ack-section" class="hidden">
+      <div class="notice ok">Al enviar confirmas que estas respuestas reflejan tu desempeño real durante el período evaluado. Tu supervisor verá tu autoevaluación junto con la suya para generar el score combinado.</div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-secondary" id="btn-step3-back">← Atrás</button>
+      <button class="btn-primary" id="btn-submit">Enviar Evaluación</button>
+    </div>
+  </div>
+
+  <!-- SUCCESS -->
+  <div id="success-screen" class="hidden success-screen">
+    <div class="success-icon">✅</div>
+    <h2>Evaluación enviada</h2>
+    <p id="success-msg">La evaluación ha sido registrada. El empleado recibirá una notificación para revisar y firmar sus resultados.</p>
+    <div style="margin-top:28px;">
+      <a href="index.html" class="btn-primary" style="display:inline-block;padding:12px 28px;text-decoration:none;">Volver al Hub</a>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+  /* ═══════════════════════════════════════════════
+     CONFIG
+  ═══════════════════════════════════════════════ */
+  const SUPABASE_URL = 'https://ecfxeebhtgkbsdeuiueb.supabase.co';
+  const SUPABASE_KEY = 'REPLACE_WITH_ANON_KEY';
+
+  /* ═══════════════════════════════════════════════
+     QUESTION BANK
+  ═══════════════════════════════════════════════ */
+
+  // BARS for supervisor — 5 dimensions, 5-point behavioral anchors
+  const BARS_QUESTIONS = [
+    {
+      key: 'apertura_cliente',
+      dim: 'Manejo del Piso y Apertura',
+      text: '¿Con qué consistencia este vendedor ejecuta una apertura estructurada con el cliente?',
+      anchors: [
+        'Espera a que el cliente se acerque o solicite ayuda antes de iniciar contacto.',
+        'Saluda al cliente pero no siempre realiza una apertura estructurada.',
+        'Saluda, hace preguntas de descubrimiento y establece rapport antes de mostrar producto.',
+        'Ejecuta apertura consistente: identifica necesidad y presupuesto antes de dirigir al cliente al piso.',
+        'Ejecuta apertura completa, identifica necesidad, presupuesto y motivador emocional; adapta toda la presentación en consecuencia.'
+      ]
+    },
+    {
+      key: 'good_better_best',
+      dim: 'Presentación Good / Better / Best',
+      text: '¿Cómo ejecuta este vendedor la presentación de los tres niveles de producto?',
+      anchors: [
+        'Muestra el producto que el cliente eligió sin presentar alternativas.',
+        'Menciona opciones adicionales solo si el cliente pregunta directamente.',
+        'Presenta consistentemente una opción en cada nivel G/B/B con diferenciación de valor.',
+        'Presenta G/B/B con beneficios específicos al cliente y maneja objeciones de precio.',
+        'Presenta G/B/B, conecta cada nivel a necesidades identificadas; cierra en Better o Best en la mayoría de los casos.'
+      ]
+    },
+    {
+      key: 'financiamiento',
+      dim: 'Presentación de Financiamiento',
+      text: '¿Cómo integra este vendedor la opción de financiamiento al proceso de venta?',
+      anchors: [
+        'Evita el tema de crédito o lo menciona solo si el cliente lo pregunta.',
+        'Informa de la opción de financiamiento pero no la integra al proceso de venta.',
+        'Presenta financiamiento como parte natural del proceso antes del cierre.',
+        'Utiliza el pre-screen como herramienta de cierre y maneja preguntas sobre términos con confianza.',
+        'Integra el pre-screen de forma fluida; explica términos con claridad y usa el resultado para estructurar o cerrar la venta.'
+      ]
+    },
+    {
+      key: 'ejecucion_politicas',
+      dim: 'Ejecución de Políticas',
+      text: '¿Con qué precisión aplica este vendedor las políticas de la empresa (Haul Away, Price Match, Garantías, Devoluciones)?',
+      anchors: [
+        'Desconoce o aplica incorrectamente al menos una política clave.',
+        'Conoce las políticas pero las consulta con frecuencia o las aplica con inconsistencia.',
+        'Aplica las políticas correctamente en situaciones estándar.',
+        'Aplica políticas con precisión en situaciones estándar y atípicas sin necesitar consulta.',
+        'Domina todas las políticas; las usa como herramienta de cierre y orienta a compañeros cuando es necesario.'
+      ]
+    },
+    {
+      key: 'equipo_cultura',
+      dim: 'Trabajo en Equipo y Cultura de Piso',
+      text: '¿Cómo contribuye este vendedor a la dinámica general del piso y al equipo?',
+      anchors: [
+        'Trabaja de manera aislada; no contribuye fuera de sus propias ventas.',
+        'Apoya a compañeros ocasionalmente pero solo cuando se le solicita.',
+        'Participa en la dinámica del piso, cubre gaps cuando es necesario y mantiene actitud positiva.',
+        'Apoya proactivamente a compañeros, comparte técnicas y mantiene el piso organizado sin instrucción.',
+        'Es referente de cultura en el equipo; eleva el desempeño de otros y actúa como punto de apoyo para empleados nuevos.'
+      ]
+    }
+  ];
+
+  // FORCED-CHOICE for self-eval — B is the higher-performance option
+  const FC_QUESTIONS = [
+    {
+      key: 'fc_cliente_dificil',
+      dim: 'Manejo de Clientes',
+      text: 'Selecciona la opción que mejor describe tu forma de actuar habitual:',
+      optA: 'Cuando un cliente está difícil o frustrado, prefiero darle espacio y dejar que se calme antes de continuar la conversación.',
+      optB: 'Cuando un cliente está difícil o frustrado, busco identificar la causa raíz de su frustración y la atiendo directamente en el momento.'
+    },
+    {
+      key: 'fc_conocimiento',
+      dim: 'Conocimiento de Producto',
+      text: 'Selecciona la opción que mejor describe tu nivel de conocimiento:',
+      optA: 'Conozco bien los productos que vendo con más frecuencia y puedo responder preguntas sobre ellos con confianza.',
+      optB: 'Conozco los productos que vendo frecuentemente y también los que vendo poco; me mantengo actualizado en los cambios de catálogo.'
+    },
+    {
+      key: 'fc_financiamiento',
+      dim: 'Presentación de Financiamiento',
+      text: 'Selecciona la opción que mejor describe tu práctica con el crédito:',
+      optA: 'Presento la opción de financiamiento a los clientes que parecen interesados o que me preguntan por ella.',
+      optB: 'Presento la opción de financiamiento como parte de mi proceso con todos los clientes, sin importar cómo califico a primera vista su situación.'
+    },
+    {
+      key: 'fc_metas',
+      dim: 'Respuesta ante la Meta',
+      text: 'Selecciona la opción que mejor refleja tu comportamiento cuando vas abajo de meta:',
+      optA: 'Cuando no voy en camino a mi meta mensual, me concentro en cerrar las ventas que ya tengo en proceso.',
+      optB: 'Cuando no voy en camino a mi meta mensual, analizo qué estoy haciendo diferente y ajusto mi approach antes de que termine el mes.'
+    },
+    {
+      key: 'fc_desarrollo',
+      dim: 'Desarrollo e Iniciativa',
+      text: 'Selecciona la opción que mejor describe tu relación con el entrenamiento:',
+      optA: 'He completado las certificaciones requeridas y las reviso cuando necesito recordar algo específico.',
+      optB: 'He completado las certificaciones requeridas y además aplico activamente lo aprendido en mi trabajo diario, sin esperar que me lo recuerden.'
+    }
+  ];
+
+  /* ═══════════════════════════════════════════════
+     STATE
+  ═══════════════════════════════════════════════ */
+  let MODE       = '';    // 'supervisor' | 'self'
+  let EMP        = null;  // current logged-in employee from sessionStorage
+  let EVALUADO   = null;  // employee being evaluated (supervisor mode)
+  let CICLO      = null;  // active cycle from Supabase
+  let EVAL_ID    = null;  // evaluacion record id (created on submit)
+
+  const state = {
+    quotaMeta:  null,
+    quotaTotal: null,
+    quotaPct:   null,
+    quotaScore: null,
+
+    barsScores: {},   // key → 1-5
+    fcAnswers:  {},   // key → 'A' | 'B'
+
+    conductualScore: null,
+    selfScore: null,
+    finalScore: null,
+  };
+
+  /* ═══════════════════════════════════════════════
+     SUPABASE HELPERS
+  ═══════════════════════════════════════════════ */
+  const hdrs = { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` };
+
+  async function sbGet(path, params = '') {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}${params}`, { headers: hdrs });
+    return r.json();
+  }
+
+  async function sbPost(path, body) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+      method: 'POST', headers: { ...hdrs, 'Prefer': 'return=representation' },
+      body: JSON.stringify(body)
+    });
+    return r.json();
+  }
+
+  /* ═══════════════════════════════════════════════
+     SCORE CALCULATIONS
+  ═══════════════════════════════════════════════ */
+  function calcQuotaScore(meta, total, pct) {
+    if (!total || total === 0) return null;
+    const hitRate = (meta / total) * 100;
+    const avgPct  = Math.min(pct, 100);
+    return Math.round((hitRate * 0.5) + (avgPct * 0.5));
+  }
+
+  function calcBarsScore() {
+    const scores = Object.values(state.barsScores);
+    if (scores.length < BARS_QUESTIONS.length) return null;
+    const sum = scores.reduce((a,b) => a+b, 0);
+    // scale: 5–25 → 0–100
+    return Math.round(((sum - 5) / 20) * 100);
+  }
+
+  function calcFcScore() {
+    const answers = Object.values(state.fcAnswers);
+    if (answers.length < FC_QUESTIONS.length) return null;
+    const bCount = answers.filter(a => a === 'B').length;
+    return Math.round((bCount / FC_QUESTIONS.length) * 100);
+  }
+
+  function calcFinal() {
+    if (MODE === 'supervisor') {
+      if (state.quotaScore === null || state.conductualScore === null) return null;
+      return Math.round(state.quotaScore * 0.40 + state.conductualScore * 0.40);
+    } else {
+      if (state.selfScore === null) return null;
+      return state.selfScore;
+    }
+  }
+
+  function scoreCategory(s) {
+    if (s >= 90) return { label: 'EXCEEDS EXPECTATIONS', cls: 'cat-exceeds', sub: 'Base para conversación de beneficio o compensación.' };
+    if (s >= 75) return { label: 'MEETS EXPECTATIONS',   cls: 'cat-meets',   sub: 'Desempeño sólido. Sin acción correctiva requerida.' };
+    if (s >= 60) return { label: 'NEEDS DEVELOPMENT',    cls: 'cat-develop',  sub: 'Plan de mejora informal (30 días, hasta 3 compromisos).' };
+    return               { label: 'BELOW STANDARD',      cls: 'cat-pip',      sub: 'Performance Improvement Plan requerido (60 días).' };
+  }
+
+  function scoreColor(s) {
+    if (s >= 90) return 'high';
+    if (s >= 60) return 'mid';
+    return 'low';
+  }
+
+  /* ═══════════════════════════════════════════════
+     INIT
+  ═══════════════════════════════════════════════ */
+  async function init() {
+    // Auth
+    const raw = sessionStorage.getItem('empleado_data');
+    if (!raw) { window.location.href = 'index.html'; return; }
+    EMP = JSON.parse(raw);
+
+    // Parse URL params
+    const params = new URLSearchParams(window.location.search);
+    MODE = params.get('mode') || 'self';
+
+    if (MODE === 'supervisor') {
+      const evalId = params.get('evaluado');
+      // Load employee being evaluated (by empleado_id or username)
+      if (evalId) {
+        const rows = await sbGet('empleados', `?id=eq.${evalId}&select=id,nombre,puesto,tienda`);
+        EVALUADO = rows[0] || null;
+      }
+      if (!EVALUADO) EVALUADO = { nombre: 'Empleado', puesto: 'Vendedor', tienda: '' };
+      document.getElementById('st1-label').textContent = 'Desempeño en Cuota';
+    } else {
+      EVALUADO = EMP;
+      document.getElementById('st1-label').textContent = 'Autoevaluación';
+    }
+
+    // Load active cycle
+    const cycles = await sbGet('evaluacion_ciclos', `?activo=eq.true&limit=1`);
+    CICLO = cycles[0] || null;
+
+    document.getElementById('loading-screen').classList.add('hidden');
+    renderStep1();
+  }
+
+  /* ═══════════════════════════════════════════════
+     RENDER
+  ═══════════════════════════════════════════════ */
+  function renderEmpCard() {
+    const initials = (EVALUADO.nombre || '?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const modeLabel = MODE === 'supervisor' ? 'Evaluando como Supervisor' : 'Autoevaluación';
+    const modeCls   = MODE === 'supervisor' ? 'supervisor' : 'self';
+    return `
+      <div class="emp-card">
+        <div class="emp-avatar">${initials}</div>
+        <div>
+          <div class="emp-name">${EVALUADO.nombre || 'Empleado'}</div>
+          <div class="emp-role">${EVALUADO.puesto || ''} ${EVALUADO.tienda ? '— ' + EVALUADO.tienda : ''}</div>
+        </div>
+        <div class="mode-badge ${modeCls}">${modeLabel}</div>
+      </div>
+    `;
+  }
+
+  function renderStep1() {
+    document.getElementById('step1-panel').classList.remove('hidden');
+    document.getElementById('emp-card-wrap').innerHTML = renderEmpCard();
+
+    if (!CICLO) {
+      document.getElementById('step1-panel').innerHTML += `
+        <div class="notice warn">⚠ No hay ningún ciclo de evaluación activo en este momento. Contacta a Recursos Humanos para activar un ciclo antes de continuar.</div>`;
+      return;
+    }
+
+    setStep(1);
+
+    if (MODE === 'supervisor') {
+      document.getElementById('quota-panel').classList.remove('hidden');
+      document.getElementById('ciclo-label').textContent = CICLO.nombre;
+
+      const inpMeta  = document.getElementById('inp-meta');
+      const inpTotal = document.getElementById('inp-total');
+      const inpPct   = document.getElementById('inp-pct');
+      inpTotal.value = 6; // default for formal cycle
+
+      function updateQuota() {
+        const m = parseInt(inpMeta.value);
+        const t = parseInt(inpTotal.value);
+        const p = parseFloat(inpPct.value);
+        if (!isNaN(m) && !isNaN(t) && !isNaN(p) && t > 0 && m <= t) {
+          state.quotaMeta  = m;
+          state.quotaTotal = t;
+          state.quotaPct   = p;
+          const s = calcQuotaScore(m, t, p);
+          state.quotaScore = s;
+          const el = document.getElementById('quota-score-display');
+          el.textContent = s;
+          el.className   = 'qr-value ' + scoreColor(s);
+          document.getElementById('btn-step1-next').disabled = false;
+        } else {
+          document.getElementById('btn-step1-next').disabled = true;
+          document.getElementById('quota-score-display').textContent = '—';
+        }
+      }
+      inpMeta.addEventListener('input', updateQuota);
+      inpTotal.addEventListener('input', updateQuota);
+      inpPct.addEventListener('input', updateQuota);
+
+    } else {
+      document.getElementById('self-intro-panel').classList.remove('hidden');
+      document.getElementById('ciclo-label-self').textContent = CICLO.nombre;
+      document.getElementById('btn-step1-next').disabled = false;
+    }
+
+    document.getElementById('btn-step1-next').addEventListener('click', () => {
+      document.getElementById('step1-panel').classList.add('hidden');
+      renderStep2();
+    });
+  }
+
+  function renderStep2() {
+    document.getElementById('step2-panel').classList.remove('hidden');
+    setStep(2);
+    const container = document.getElementById('questions-container');
+    container.innerHTML = '';
+
+    if (MODE === 'supervisor') {
+      // BARS questions
+      container.innerHTML = `<div class="section-title">Evaluación Conductual</div>
+        <div class="section-sub">Para cada dimensión, selecciona el número que mejor describe el comportamiento observado en el período.</div>`;
+      BARS_QUESTIONS.forEach(q => {
+        const div = document.createElement('div');
+        div.className = 'bars-q';
+        div.innerHTML = `
+          <div class="bars-dim">${q.dim}</div>
+          <div class="bars-text">${q.text}</div>
+          <div class="bars-scale" id="scale-${q.key}">
+            ${[1,2,3,4,5].map(n => `
+              <button class="bars-btn" data-key="${q.key}" data-val="${n}">
+                ${n}
+                <span class="bars-anchor">${q.anchors[n-1]}</span>
+              </button>`).join('')}
+          </div>`;
+        container.appendChild(div);
+      });
+
+      container.querySelectorAll('.bars-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const key = btn.dataset.key;
+          const val = parseInt(btn.dataset.val);
+          state.barsScores[key] = val;
+          document.querySelectorAll(`.bars-btn[data-key="${key}"]`).forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+          checkStep2Complete();
+        });
+      });
+
+    } else {
+      // Forced-choice
+      container.innerHTML = `<div class="section-title">Situaciones de Trabajo</div>
+        <div class="section-sub">En cada situación, selecciona la opción que describe más fielmente tu comportamiento habitual.</div>`;
+      FC_QUESTIONS.forEach(q => {
+        const div = document.createElement('div');
+        div.className = 'fc-q';
+        div.innerHTML = `
+          <div class="fc-dim">${q.dim}</div>
+          <div class="fc-text">${q.text}</div>
+          <div class="fc-options">
+            <div class="fc-opt" data-key="${q.key}" data-choice="A">
+              <span class="fc-letter">A</span>${q.optA}
+            </div>
+            <div class="fc-opt" data-key="${q.key}" data-choice="B">
+              <span class="fc-letter">B</span>${q.optB}
+            </div>
+          </div>`;
+        container.appendChild(div);
+      });
+
+      container.querySelectorAll('.fc-opt').forEach(opt => {
+        opt.addEventListener('click', () => {
+          const key    = opt.dataset.key;
+          const choice = opt.dataset.choice;
+          state.fcAnswers[key] = choice;
+          document.querySelectorAll(`.fc-opt[data-key="${key}"]`).forEach(o => o.classList.remove('selected'));
+          opt.classList.add('selected');
+          checkStep2Complete();
+        });
+      });
+    }
+
+    document.getElementById('btn-step2-back').addEventListener('click', () => {
+      document.getElementById('step2-panel').classList.add('hidden');
+      document.getElementById('step1-panel').classList.remove('hidden');
+      setStep(1);
+    });
+
+    document.getElementById('btn-step2-next').addEventListener('click', () => {
+      document.getElementById('step2-panel').classList.add('hidden');
+      renderStep3();
+    });
+  }
+
+  function checkStep2Complete() {
+    let done = false;
+    if (MODE === 'supervisor') {
+      done = Object.keys(state.barsScores).length === BARS_QUESTIONS.length;
+      if (done) {
+        state.conductualScore = calcBarsScore();
+      }
+    } else {
+      done = Object.keys(state.fcAnswers).length === FC_QUESTIONS.length;
+      if (done) {
+        state.selfScore = calcFcScore();
+      }
+    }
+    document.getElementById('btn-step2-next').disabled = !done;
+  }
+
+  function renderStep3() {
+    document.getElementById('step3-panel').classList.remove('hidden');
+    setStep(3);
+
+    state.finalScore = calcFinal();
+    const cat = scoreCategory(state.finalScore || 0);
+
+    // Score breakdown
+    let bHtml = '';
+    if (MODE === 'supervisor') {
+      bHtml = `
+        <div class="score-row">
+          <div><div class="score-row-label">Cuota (${state.quotaMeta}/${state.quotaTotal} períodos, ${state.quotaPct}% prom.)</div><div class="score-row-weight">Peso: 40%</div></div>
+          <div class="score-row-val" style="color:${state.quotaScore>=75?'var(--green)':state.quotaScore>=60?'var(--amber)':'var(--red)'}">${state.quotaScore}</div>
+        </div>
+        <div class="score-row">
+          <div><div class="score-row-label">Evaluación Conductual (BARS)</div><div class="score-row-weight">Peso: 40%</div></div>
+          <div class="score-row-val" style="color:${state.conductualScore>=75?'var(--green)':state.conductualScore>=60?'var(--amber)':'var(--red)'}">${state.conductualScore}</div>
+        </div>
+        <div class="score-row">
+          <div><div class="score-row-label">Autoevaluación del empleado</div><div class="score-row-weight">Peso: 20% · Pendiente</div></div>
+          <div class="score-row-val" style="color:var(--dim)">—</div>
+        </div>`;
+      document.getElementById('feedback-section').classList.remove('hidden');
+    } else {
+      bHtml = `
+        <div class="score-row">
+          <div><div class="score-row-label">Autoevaluación (5 situaciones)</div><div class="score-row-weight">Peso: 20% del score final</div></div>
+          <div class="score-row-val" style="color:var(--green)">${state.selfScore}</div>
+        </div>`;
+      document.getElementById('ack-section').classList.remove('hidden');
+    }
+
+    document.getElementById('score-breakdown').innerHTML = bHtml;
+    document.getElementById('final-score-num').textContent = state.finalScore ?? '—';
+    document.getElementById('final-score-num').className = `final-score-num ${cat.cls}`;
+    document.getElementById('final-score-cat').textContent = cat.label;
+    document.getElementById('final-score-cat').className = `final-score-cat ${cat.cls}`;
+    document.getElementById('final-score-sub').textContent = cat.sub;
+
+    // Feedback validation
+    if (MODE === 'supervisor') {
+      const feedbackTxt = document.getElementById('feedback-txt');
+      const btnSubmit   = document.getElementById('btn-submit');
+      btnSubmit.disabled = true;
+      feedbackTxt.addEventListener('input', () => {
+        btnSubmit.disabled = feedbackTxt.value.trim().length < 60;
+      });
+    }
+
+    document.getElementById('btn-step3-back').addEventListener('click', () => {
+      document.getElementById('step3-panel').classList.add('hidden');
+      document.getElementById('step2-panel').classList.remove('hidden');
+      setStep(2);
+    });
+
+    document.getElementById('btn-submit').addEventListener('click', submitEval);
+  }
+
+  /* ═══════════════════════════════════════════════
+     SUBMIT
+  ═══════════════════════════════════════════════ */
+  async function submitEval() {
+    const btn = document.getElementById('btn-submit');
+    btn.disabled = true;
+    btn.textContent = 'Guardando…';
+
+    try {
+      // 1. Create evaluacion record
+      const evalBody = {
+        ciclo_id:          CICLO.id,
+        evaluado_id:       EVALUADO.id || null,
+        evaluador_id:      EMP.id || null,
+        tipo_evaluador:    MODE === 'supervisor' ? 'supervisor' : 'self',
+        track:             'sales',
+        estado:            'completada',
+        periodos_meta:     state.quotaMeta,
+        periodos_total:    state.quotaTotal,
+        pct_promedio_cuota: state.quotaPct,
+        score_cuota:       state.quotaScore,
+        score_conductual:  state.conductualScore ?? state.selfScore,
+        score_final:       state.finalScore,
+        peso_aplicado:     MODE === 'supervisor' ? 0.4 : 0.2,
+        feedback_narrativo: MODE === 'supervisor'
+          ? document.getElementById('feedback-txt').value.trim()
+          : null,
+        completada_at: new Date().toISOString()
+      };
+
+      const evalResult = await sbPost('evaluaciones', evalBody);
+      EVAL_ID = evalResult[0]?.id;
+
+      // 2. Save individual responses
+      const respRows = [];
+      if (MODE === 'supervisor') {
+        BARS_QUESTIONS.forEach(q => {
+          respRows.push({
+            evaluacion_id:  EVAL_ID,
+            dimension:      q.key,
+            pregunta_key:   q.key,
+            pregunta_texto: q.text,
+            respuesta_score: state.barsScores[q.key]
+          });
+        });
+      } else {
+        FC_QUESTIONS.forEach(q => {
+          respRows.push({
+            evaluacion_id:  EVAL_ID,
+            dimension:      q.key,
+            pregunta_key:   q.key,
+            pregunta_texto: q.text,
+            respuesta_texto: state.fcAnswers[q.key]
+          });
+        });
+      }
+      if (respRows.length && EVAL_ID) {
+        await sbPost('evaluacion_respuestas', respRows);
+      }
+
+      // 3. Show success
+      document.getElementById('step3-panel').classList.add('hidden');
+      const successScreen = document.getElementById('success-screen');
+      successScreen.classList.remove('hidden');
+      if (MODE === 'self') {
+        document.getElementById('success-msg').textContent =
+          'Tu autoevaluación ha sido registrada. Tu supervisor verá tu respuesta junto con su evaluación para generar el score combinado del ciclo.';
+      }
+
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'Enviar Evaluación';
+      alert('Error al guardar: ' + err.message + '\n\nRevisa la conexión e intenta de nuevo.');
+    }
+  }
+
+  /* ═══════════════════════════════════════════════
+     STEP UI
+  ═══════════════════════════════════════════════ */
+  function setStep(n) {
+    [1,2,3].forEach(i => {
+      const s = document.getElementById('st'+i);
+      s.classList.remove('active','done');
+      if (i < n) s.classList.add('done');
+      else if (i === n) s.classList.add('active');
+    });
+    [1,2].forEach(i => {
+      const l = document.getElementById('sl'+i);
+      if (l) l.classList.toggle('done', i < n);
+    });
+  }
+
+  /* ═══════════════════════════════════════════════
+     START
+  ═══════════════════════════════════════════════ */
+  init();
+</script>
+</body>
+</html>
