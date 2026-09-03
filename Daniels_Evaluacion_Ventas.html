@@ -167,7 +167,14 @@
     <h1>My Daniels Workspace</h1>
     <p id="hdr-sub">Evaluación de Desempeño — Ventas</p>
   </div>
-  <a href="index.html" class="back-btn">← Hub</a>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:12px;">
+    <div id="lang-toggle" onclick="toggleLang()"
+      style="cursor:pointer;background:#1e293b;border:1.5px solid #334155;border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;color:#94a3b8;transition:all .2s;user-select:none;"
+      title="Switch language / Cambiar idioma">
+      EN | <span style="color:#22c55e">ES</span>
+    </div>
+    <a href="index.html" class="back-btn" id="back-btn-txt">← Hub</a>
+  </div>
 </header>
 
 <!-- STEP BAR -->
@@ -183,7 +190,7 @@
 <div class="main">
 
   <!-- Loading -->
-  <div id="loading-screen" class="loading">Cargando ciclo activo…</div>
+  <div id="loading-screen" class="loading">' + t('loading') + '</div>
 
   <!-- STEP 1: QUOTA (supervisor) or INTRO (self) -->
   <div id="step1-panel" class="hidden">
@@ -307,114 +314,224 @@
      QUESTION BANK
   ═══════════════════════════════════════════════ */
 
-  // BARS for supervisor — 5 dimensions, 5-point behavioral anchors
+  // BARS questions — bilingual
   const BARS_QUESTIONS = [
     {
       key: 'apertura_cliente',
-      dim: 'Manejo del Piso y Apertura',
-      text: '¿Con qué consistencia este vendedor ejecuta una apertura estructurada con el cliente?',
-      anchors: [
-        'Espera a que el cliente se acerque o solicite ayuda antes de iniciar contacto.',
-        'Saluda al cliente pero no siempre realiza una apertura estructurada.',
-        'Saluda, hace preguntas de descubrimiento y establece rapport antes de mostrar producto.',
-        'Ejecuta apertura consistente: identifica necesidad y presupuesto antes de dirigir al cliente al piso.',
-        'Ejecuta apertura completa, identifica necesidad, presupuesto y motivador emocional; adapta toda la presentación en consecuencia.'
-      ]
+      dim: { es:'Manejo del Piso y Apertura', en:'Floor Management & Customer Opening' },
+      text: { es:'¿Con qué consistencia este vendedor ejecuta una apertura estructurada con el cliente?', en:'How consistently does this associate execute a structured opening with the customer?' },
+      anchors: {
+        es:['Espera a que el cliente se acerque o solicite ayuda antes de iniciar contacto.','Saluda al cliente pero no siempre realiza una apertura estructurada.','Saluda, hace preguntas de descubrimiento y establece rapport antes de mostrar producto.','Ejecuta apertura consistente: identifica necesidad y presupuesto antes de dirigir al cliente al piso.','Ejecuta apertura completa, identifica necesidad, presupuesto y motivador emocional; adapta toda la presentación en consecuencia.'],
+        en:['Waits for the customer to approach or ask for help before initiating contact.','Greets the customer but does not always execute a structured opening.','Greets, asks discovery questions, and builds rapport before showing product.','Executes consistent opening: identifies need and budget before directing customer to the floor.','Executes full opening, identifies need, budget, and emotional motivator; adapts entire presentation accordingly.']
+      }
     },
     {
       key: 'good_better_best',
-      dim: 'Presentación Good / Better / Best',
-      text: '¿Cómo ejecuta este vendedor la presentación de los tres niveles de producto?',
-      anchors: [
-        'Muestra el producto que el cliente eligió sin presentar alternativas.',
-        'Menciona opciones adicionales solo si el cliente pregunta directamente.',
-        'Presenta consistentemente una opción en cada nivel G/B/B con diferenciación de valor.',
-        'Presenta G/B/B con beneficios específicos al cliente y maneja objeciones de precio.',
-        'Presenta G/B/B, conecta cada nivel a necesidades identificadas; cierra en Better o Best en la mayoría de los casos.'
-      ]
+      dim: { es:'Presentación Good / Better / Best', en:'Good / Better / Best Presentation' },
+      text: { es:'¿Cómo ejecuta este vendedor la presentación de los tres niveles de producto?', en:'How does this associate execute the three-tier product presentation?' },
+      anchors: {
+        es:['Muestra el producto que el cliente eligió sin presentar alternativas.','Menciona opciones adicionales solo si el cliente pregunta directamente.','Presenta consistentemente una opción en cada nivel G/B/B con diferenciación de valor.','Presenta G/B/B con beneficios específicos al cliente y maneja objeciones de precio.','Presenta G/B/B, conecta cada nivel a necesidades identificadas; cierra en Better o Best en la mayoría de los casos.'],
+        en:['Shows only the product the customer picked without presenting alternatives.','Mentions additional options only if the customer asks directly.','Consistently presents one option at each G/B/B level with value differentiation.','Presents G/B/B with customer-specific benefits and handles price objections.','Presents G/B/B, connects each level to identified needs; closes on Better or Best in most cases.']
+      }
     },
     {
       key: 'financiamiento',
-      dim: 'Presentación de Financiamiento',
-      text: '¿Cómo integra este vendedor la opción de financiamiento al proceso de venta?',
-      anchors: [
-        'Evita el tema de crédito o lo menciona solo si el cliente lo pregunta.',
-        'Informa de la opción de financiamiento pero no la integra al proceso de venta.',
-        'Presenta financiamiento como parte natural del proceso antes del cierre.',
-        'Utiliza el pre-screen como herramienta de cierre y maneja preguntas sobre términos con confianza.',
-        'Integra el pre-screen de forma fluida; explica términos con claridad y usa el resultado para estructurar o cerrar la venta.'
-      ]
+      dim: { es:'Presentación de Financiamiento', en:'Financing Presentation' },
+      text: { es:'¿Cómo integra este vendedor la opción de financiamiento al proceso de venta?', en:'How does this associate integrate the financing option into the sales process?' },
+      anchors: {
+        es:['Evita el tema de crédito o lo menciona solo si el cliente lo pregunta.','Informa de la opción de financiamiento pero no la integra al proceso de venta.','Presenta financiamiento como parte natural del proceso antes del cierre.','Utiliza el pre-screen como herramienta de cierre y maneja preguntas sobre términos con confianza.','Integra el pre-screen de forma fluida; explica términos con claridad y usa el resultado para estructurar o cerrar la venta.'],
+        en:['Avoids the credit topic or mentions it only if the customer asks.','Informs the customer of financing but does not integrate it into the sales process.','Presents financing as a natural part of the process before closing.','Uses the pre-screen as a closing tool and handles questions about terms confidently.','Integrates the pre-screen fluidly; explains terms clearly and uses the result to structure or close the sale.']
+      }
     },
     {
       key: 'ejecucion_politicas',
-      dim: 'Ejecución de Políticas',
-      text: '¿Con qué precisión aplica este vendedor las políticas de la empresa (Haul Away, Price Match, Garantías, Devoluciones)?',
-      anchors: [
-        'Desconoce o aplica incorrectamente al menos una política clave.',
-        'Conoce las políticas pero las consulta con frecuencia o las aplica con inconsistencia.',
-        'Aplica las políticas correctamente en situaciones estándar.',
-        'Aplica políticas con precisión en situaciones estándar y atípicas sin necesitar consulta.',
-        'Domina todas las políticas; las usa como herramienta de cierre y orienta a compañeros cuando es necesario.'
-      ]
+      dim: { es:'Ejecución de Políticas', en:'Policy Execution' },
+      text: { es:'¿Con qué precisión aplica este vendedor las políticas de la empresa (Haul Away, Price Match, Garantías, Devoluciones)?', en:'How accurately does this associate apply company policies (Haul Away, Price Match, Warranties, Returns)?' },
+      anchors: {
+        es:['Desconoce o aplica incorrectamente al menos una política clave.','Conoce las políticas pero las consulta con frecuencia o las aplica con inconsistencia.','Aplica las políticas correctamente en situaciones estándar.','Aplica políticas con precisión en situaciones estándar y atípicas sin necesitar consulta.','Domina todas las políticas; las usa como herramienta de cierre y orienta a compañeros cuando es necesario.'],
+        en:["Does not know or incorrectly applies at least one key policy.","Knows the policies but frequently consults or applies them inconsistently.","Correctly applies policies in standard situations.","Applies policies accurately in both standard and atypical situations without needing to consult.","Masters all policies; uses them as closing tools and guides teammates when needed."]
+      }
     },
     {
       key: 'equipo_cultura',
-      dim: 'Trabajo en Equipo y Cultura de Piso',
-      text: '¿Cómo contribuye este vendedor a la dinámica general del piso y al equipo?',
-      anchors: [
-        'Trabaja de manera aislada; no contribuye fuera de sus propias ventas.',
-        'Apoya a compañeros ocasionalmente pero solo cuando se le solicita.',
-        'Participa en la dinámica del piso, cubre gaps cuando es necesario y mantiene actitud positiva.',
-        'Apoya proactivamente a compañeros, comparte técnicas y mantiene el piso organizado sin instrucción.',
-        'Es referente de cultura en el equipo; eleva el desempeño de otros y actúa como punto de apoyo para empleados nuevos.'
-      ]
+      dim: { es:'Trabajo en Equipo y Cultura de Piso', en:'Teamwork & Floor Culture' },
+      text: { es:'¿Cómo contribuye este vendedor a la dinámica general del piso y al equipo?', en:'How does this associate contribute to the overall floor dynamic and team?' },
+      anchors: {
+        es:['Trabaja de manera aislada; no contribuye fuera de sus propias ventas.','Apoya a compañeros ocasionalmente pero solo cuando se le solicita.','Participa en la dinámica del piso, cubre gaps cuando es necesario y mantiene actitud positiva.','Apoya proactivamente a compañeros, comparte técnicas y mantiene el piso organizado sin instrucción.','Es referente de cultura en el equipo; eleva el desempeño de otros y actúa como punto de apoyo para empleados nuevos.'],
+        en:['Works in isolation; does not contribute beyond their own sales.','Supports teammates occasionally but only when asked.','Participates in floor dynamics, covers gaps when needed, and maintains a positive attitude.','Proactively supports teammates, shares techniques, and keeps the floor organized without instruction.','Is a culture reference on the team; elevates performance of others and acts as a support point for new employees.']
+      }
     }
-  ];
+    ];
 
-  // FORCED-CHOICE for self-eval — B is the higher-performance option
+  // FORCED-CHOICE — bilingual, B = higher performance
   const FC_QUESTIONS = [
     {
       key: 'fc_cliente_dificil',
-      dim: 'Manejo de Clientes',
-      text: 'Selecciona la opción que mejor describe tu forma de actuar habitual:',
-      optA: 'Cuando un cliente está difícil o frustrado, prefiero darle espacio y dejar que se calme antes de continuar la conversación.',
-      optB: 'Cuando un cliente está difícil o frustrado, busco identificar la causa raíz de su frustración y la atiendo directamente en el momento.'
+      dim: { es:'Manejo de Clientes', en:'Customer Handling' },
+      text: { es:'Selecciona la opción que mejor describe tu forma de actuar habitual:', en:'Select the option that best describes your usual behavior:' },
+      optA: { es:'Cuando un cliente está difícil o frustrado, prefiero darle espacio y dejar que se calme antes de continuar la conversación.', en:'When a customer is difficult or frustrated, I prefer to give them space and let them calm down before continuing the conversation.' },
+      optB: { es:'Cuando un cliente está difícil o frustrado, busco identificar la causa raíz de su frustración y la atiendo directamente en el momento.', en:'When a customer is difficult or frustrated, I seek to identify the root cause of their frustration and address it directly in the moment.' }
     },
     {
       key: 'fc_conocimiento',
-      dim: 'Conocimiento de Producto',
-      text: 'Selecciona la opción que mejor describe tu nivel de conocimiento:',
-      optA: 'Conozco bien los productos que vendo con más frecuencia y puedo responder preguntas sobre ellos con confianza.',
-      optB: 'Conozco los productos que vendo frecuentemente y también los que vendo poco; me mantengo actualizado en los cambios de catálogo.'
+      dim: { es:'Conocimiento de Producto', en:'Product Knowledge' },
+      text: { es:'Selecciona la opción que mejor describe tu nivel de conocimiento:', en:'Select the option that best describes your level of knowledge:' },
+      optA: { es:'Conozco bien los productos que vendo con más frecuencia y puedo responder preguntas sobre ellos con confianza.', en:'I know well the products I sell most frequently and can answer questions about them with confidence.' },
+      optB: { es:'Conozco los productos que vendo frecuentemente y también los que vendo poco; me mantengo actualizado en los cambios de catálogo.', en:'I know both the products I sell frequently and those I rarely sell; I stay current on catalog changes.' }
     },
     {
       key: 'fc_financiamiento',
-      dim: 'Presentación de Financiamiento',
-      text: 'Selecciona la opción que mejor describe tu práctica con el crédito:',
-      optA: 'Presento la opción de financiamiento a los clientes que parecen interesados o que me preguntan por ella.',
-      optB: 'Presento la opción de financiamiento como parte de mi proceso con todos los clientes, sin importar cómo califico a primera vista su situación.'
+      dim: { es:'Presentación de Financiamiento', en:'Financing Presentation' },
+      text: { es:'Selecciona la opción que mejor describe tu práctica con el crédito:', en:'Select the option that best describes your practice with credit:' },
+      optA: { es:'Presento la opción de financiamiento a los clientes que parecen interesados o que me preguntan por ella.', en:'I present the financing option to customers who seem interested or who ask about it.' },
+      optB: { es:'Presento la opción de financiamiento como parte de mi proceso con todos los clientes, sin importar cómo califico a primera vista su situación.', en:'I present the financing option as part of my process with every customer, regardless of how I initially assess their situation.' }
     },
     {
       key: 'fc_metas',
-      dim: 'Respuesta ante la Meta',
-      text: 'Selecciona la opción que mejor refleja tu comportamiento cuando vas abajo de meta:',
-      optA: 'Cuando no voy en camino a mi meta mensual, me concentro en cerrar las ventas que ya tengo en proceso.',
-      optB: 'Cuando no voy en camino a mi meta mensual, analizo qué estoy haciendo diferente y ajusto mi approach antes de que termine el mes.'
+      dim: { es:'Respuesta ante la Meta', en:'Response to Quota' },
+      text: { es:'Selecciona la opción que mejor refleja tu comportamiento cuando vas abajo de meta:', en:'Select the option that best reflects your behavior when you are below quota:' },
+      optA: { es:'Cuando no voy en camino a mi meta mensual, me concentro en cerrar las ventas que ya tengo en proceso.', en:'When I am not on track for my monthly quota, I focus on closing the sales I already have in progress.' },
+      optB: { es:'Cuando no voy en camino a mi meta mensual, analizo qué estoy haciendo diferente y ajusto mi approach antes de que termine el mes.', en:'When I am not on track for my monthly quota, I analyze what I am doing differently and adjust my approach before the month ends.' }
     },
     {
       key: 'fc_desarrollo',
-      dim: 'Desarrollo e Iniciativa',
-      text: 'Selecciona la opción que mejor describe tu relación con el entrenamiento:',
-      optA: 'He completado las certificaciones requeridas y las reviso cuando necesito recordar algo específico.',
-      optB: 'He completado las certificaciones requeridas y además aplico activamente lo aprendido en mi trabajo diario, sin esperar que me lo recuerden.'
+      dim: { es:'Desarrollo e Iniciativa', en:'Development & Initiative' },
+      text: { es:'Selecciona la opción que mejor describe tu relación con el entrenamiento:', en:'Select the option that best describes your relationship with training:' },
+      optA: { es:'He completado las certificaciones requeridas y las reviso cuando necesito recordar algo específico.', en:'I have completed the required certifications and review them when I need to recall something specific.' },
+      optB: { es:'He completado las certificaciones requeridas y además aplico activamente lo aprendido en mi trabajo diario, sin esperar que me lo recuerden.', en:'I have completed the required certifications and actively apply what I learned in my daily work, without waiting to be reminded.' }
     }
-  ];
+    ];
 
   /* ═══════════════════════════════════════════════
      STATE
   ═══════════════════════════════════════════════ */
   let MODE       = '';    // 'supervisor' | 'self'
   let ADMIN_PREVIEW = false;
+  let LANG       = 'es';  // 'es' | 'en'
+
+  // UI string translations
+  const UI = {
+    es: {
+      title: 'Evaluación de Desempeño — Ventas',
+      back: '← Hub',
+      step1_quota: t('quota_title'),
+      step1_self: t('mode_self'),
+      step2: 'Evaluación Conductual',
+      step3: 'Revisión y Envío',
+      loading: '' + t('loading') + '',
+      no_cycle: '' + t('no_cycle') + '',
+      admin_banner: '' + t('admin_banner') + '',
+      mode_supervisor: t('mode_supervisor'),
+      mode_self: t('mode_self'),
+      quota_title: t('quota_title'),
+      quota_sub: 'Ciclo activo',
+      quota_notice: 'El desempeño en cuota representa el <strong>40%</strong> del score final.',
+      lbl_meta: 'Períodos con meta cumplida',
+      lbl_total: 'Total de períodos evaluados',
+      lbl_pct: '% promedio de cuota',
+      lbl_quota_pre: 'Score de cuota (pre-cálculo)',
+      lbl_quota_sub: '50% tasa de cumplimiento + 50% % promedio (cap 100)',
+      self_title: 'Tu Autoevaluación',
+      self_notice: 'A continuación verás <strong>5 situaciones</strong>. Para cada una, selecciona la opción que describe mejor lo que <em>realmente haces</em> en tu día a día — no lo que crees que deberías hacer.<br><br>No hay respuestas correctas o incorrectas. La honestidad en esta sección es lo que hace útil tu autoevaluación.',
+      btn_continue: t('btn_continue'),
+      btn_back: t('btn_back'),
+      btn_submit: t('btn_submit'),
+      btn_submitting: t('btn_submitting'),
+      cond_title: 'Evaluación Conductual',
+      cond_sub: 'Para cada dimensión, selecciona el número que mejor describe el comportamiento observado en el período.',
+      sit_title: 'Situaciones de Trabajo',
+      sit_sub: 'En cada situación, selecciona la opción que describe más fielmente tu comportamiento habitual.',
+      review_title: 'Revisión Final',
+      review_sub: 'Verifica el resumen antes de enviar. Esta acción no se puede deshacer.',
+      score_breakdown: t('score_breakdown'),
+      feedback_notice: 'El feedback narrativo es <strong>obligatorio</strong> para enviar.',
+      feedback_label: 'Feedback del supervisor',
+      feedback_ph: 'Describe de manera específica las áreas de oportunidad y fortalezas observadas.',
+      ack_notice: 'Al enviar confirmas que estas respuestas reflejan tu desempeño real durante el período evaluado.',
+      success_title: t('success_title'),
+      success_msg_sup: t('success_msg_sup'),
+      success_msg_self: t('success_msg_self'),
+      admin_success: t('admin_success'),
+      back_hub: t('back_hub'),
+      cat_exceeds: 'EXCEEDS EXPECTATIONS',
+      cat_meets: 'MEETS EXPECTATIONS',
+      cat_develop: 'NEEDS DEVELOPMENT',
+      cat_pip: 'BELOW STANDARD',
+      sub_exceeds: 'Base documentada para conversación de beneficio o compensación.',
+      sub_meets: 'Desempeño sólido. Sin acción correctiva requerida.',
+      sub_develop: 'Plan de mejora informal (30 días, hasta 3 compromisos).',
+      sub_pip: 'Performance Improvement Plan requerido (60 días).',
+    },
+    en: {
+      title: 'Performance Evaluation — Sales',
+      back: '← Hub',
+      step1_quota: 'Quota Performance',
+      step1_self: 'Self-Assessment',
+      step2: 'Behavioral Evaluation',
+      step3: 'Review & Submit',
+      loading: 'Loading active cycle…',
+      no_cycle: '⚠ No active evaluation cycle. The form loads in view mode — submission will be disabled until a cycle is activated from the Cockpit.',
+      admin_banner: '🔍 Admin Preview — no data saved to Supabase · You can enter and exit freely',
+      mode_supervisor: 'Evaluating as Supervisor',
+      mode_self: 'Self-Assessment',
+      quota_title: 'Quota Performance',
+      quota_sub: 'Active cycle',
+      quota_notice: 'Quota performance represents <strong>40%</strong> of the final score.',
+      lbl_meta: 'Periods where quota was met',
+      lbl_total: 'Total periods evaluated',
+      lbl_pct: 'Average quota %',
+      lbl_quota_pre: 'Quota score (pre-calculation)',
+      lbl_quota_sub: '50% hit rate + 50% average % (capped at 100)',
+      self_title: 'Your Self-Assessment',
+      self_notice: 'You will see <strong>5 situations</strong>. For each one, select the option that best describes what you <em>actually do</em> day-to-day — not what you think you should do.<br><br>There are no right or wrong answers. Honesty in this section is what makes your self-assessment useful.',
+      btn_continue: 'Continue →',
+      btn_back: '← Back',
+      btn_submit: 'Submit Evaluation',
+      btn_submitting: 'Saving…',
+      cond_title: 'Behavioral Evaluation',
+      cond_sub: 'For each dimension, select the number that best describes the behavior observed during the period.',
+      sit_title: 'Work Situations',
+      sit_sub: 'For each situation, select the option that most accurately describes your usual behavior.',
+      review_title: 'Final Review',
+      review_sub: 'Verify the summary before submitting. This action cannot be undone.',
+      score_breakdown: 'Score Breakdown',
+      feedback_notice: 'Narrative feedback is <strong>required</strong> to submit.',
+      feedback_label: 'Supervisor feedback',
+      feedback_ph: 'Describe specific areas of opportunity and strengths observed.',
+      ack_notice: 'By submitting you confirm that these responses reflect your actual performance during the evaluated period.',
+      success_title: 'Evaluation submitted',
+      success_msg_sup: 'The evaluation has been recorded. The employee will receive a notification to review and sign their results.',
+      success_msg_self: 'Your self-assessment has been recorded. Your supervisor will see your response alongside theirs to generate the combined score.',
+      admin_success: 'Admin Preview — simulated evaluation. Nothing was saved to Supabase.',
+      back_hub: 'Return to Hub',
+      cat_exceeds: 'EXCEEDS EXPECTATIONS',
+      cat_meets: 'MEETS EXPECTATIONS',
+      cat_develop: 'NEEDS DEVELOPMENT',
+      cat_pip: 'BELOW STANDARD',
+      sub_exceeds: 'Documented basis for compensation or benefit conversation.',
+      sub_meets: 'Solid performance. No corrective action required.',
+      sub_develop: 'Informal improvement plan (30 days, up to 3 commitments).',
+      sub_pip: 'Formal Performance Improvement Plan required (60 days).',
+    }
+  };
+
+  function t(key) { return UI[LANG][key] || UI['es'][key] || key; }
+
+  function toggleLang() {
+    LANG = LANG === 'es' ? 'en' : 'es';
+    const btn = document.getElementById('lang-toggle');
+    btn.innerHTML = LANG === 'es' ? 'EN | <span style="color:#22c55e">ES</span>' : '<span style="color:#22c55e">EN</span> | ES';
+    document.getElementById('hdr-sub').textContent = t('title');
+    document.getElementById('back-btn-txt').textContent = t('back');
+    document.getElementById('loading-screen').textContent = t('loading');
+    // Re-render current step if page already loaded
+    const s1 = document.getElementById('step1-panel');
+    const s2 = document.getElementById('step2-panel');
+    const s3 = document.getElementById('step3-panel');
+    if (s1 && !s1.classList.contains('hidden')) { s1.classList.add('hidden'); renderStep1(); }
+    else if (s2 && !s2.classList.contains('hidden')) { s2.classList.add('hidden'); renderStep2(); }
+    else if (s3 && !s3.classList.contains('hidden')) { s3.classList.add('hidden'); renderStep3(); }
+  }
   let EMP        = null;  // current logged-in employee from sessionStorage
   let EVALUADO   = null;  // employee being evaluated (supervisor mode)
   let CICLO      = null;  // active cycle from Supabase
@@ -490,10 +607,10 @@
   }
 
   function scoreCategory(s) {
-    if (s >= 90) return { label: 'EXCEEDS EXPECTATIONS', cls: 'cat-exceeds', sub: 'Base para conversación de beneficio o compensación.' };
-    if (s >= 75) return { label: 'MEETS EXPECTATIONS',   cls: 'cat-meets',   sub: 'Desempeño sólido. Sin acción correctiva requerida.' };
-    if (s >= 60) return { label: 'NEEDS DEVELOPMENT',    cls: 'cat-develop',  sub: 'Plan de mejora informal (30 días, hasta 3 compromisos).' };
-    return               { label: 'BELOW STANDARD',      cls: 'cat-pip',      sub: 'Performance Improvement Plan requerido (60 días).' };
+    if (s >= 90) return { label: t('cat_exceeds'), cls: 'cat-exceeds', sub: t('sub_exceeds') };
+    if (s >= 75) return { label: t('cat_meets'),   cls: 'cat-meets',   sub: t('sub_meets') };
+    if (s >= 60) return { label: t('cat_develop'), cls: 'cat-develop',  sub: t('sub_develop') };
+    return               { label: t('cat_pip'),    cls: 'cat-pip',      sub: t('sub_pip') };
   }
 
   function scoreColor(s) {
@@ -505,68 +622,407 @@
   /* ═══════════════════════════════════════════════
      INIT
   ═══════════════════════════════════════════════ */
-  // ═══ INIT — exact Tier 1 pattern ══════════════════════════
   async function init() {
+    // ── Exact same pattern as Tier 1 loadEmployeeFromURL ──
     const params = new URLSearchParams(window.location.search);
     const empId  = params.get('emp');
 
-    // Load employee — same as loadEmployeeFromURL in Tier 1, NO redirects
     if (empId) {
       try {
-        const rows = await sbFetch(`empleados?id=eq.${empId}&select=id,nombre_completo,employee_id,tienda,nivel_admin`);
+        const rows = await sbFetch(`empleados?id=eq.${empId}&select=id,nombre_completo,employee_id,tienda`);
         if (rows && rows.length > 0) {
           EMP = rows[0];
-          EMP.nombre = EMP.nombre_completo || 'Empleado';
-          if (EMP.nivel_admin) {
-            ADMIN_PREVIEW = true;
-            document.getElementById('app-screen').insertAdjacentHTML('afterbegin',
-              `<div style="background:#14532d;color:#86efac;padding:10px 24px;font-size:12px;font-weight:700;letter-spacing:.3px;">
-                🔍 Admin Preview — sin registro en Supabase · Puedes entrar y salir libremente
-              </div>`);
-          }
+          EMP.nombre = EMP.nombre_completo || empId;
+          // Check admin status separately — same as cockpit pattern
+          try {
+            const lvl = await sbFetch(`empleados?id=eq.${empId}&select=nivel_admin`);
+            const nivelAdmin = lvl && lvl[0] && lvl[0].nivel_admin;
+            if (nivelAdmin) {
+              ADMIN_PREVIEW = true;
+              document.getElementById('hdr-sub').insertAdjacentHTML('afterend',
+                `<div style="background:#1a2e1a;border-left:3px solid #22c55e;color:#86efac;padding:8px 14px;font-size:12px;font-weight:700;margin:8px 16px;border-radius:6px;">
+                  🔍 Admin Preview — sin registro en Supabase. Puedes entrar y salir libremente.
+                </div>`);
+            }
+          } catch(e) { /* nivel_admin check is optional */ }
         }
-      } catch(e) {
-        console.warn('Employee load failed:', e.message);
+      } catch(err) {
+        console.error('Could not load employee context:', err);
         // Don't redirect — show form anyway, same as Tier 1
       }
+    }
+
+    MODE = params.get('mode') || 'self';
+
+    if (MODE === 'supervisor') {
+      const evalId = params.get('evaluado');
+      if (evalId) {
+        const rows = await sbFetch(`empleados?id=eq.${evalId}&select=id,nombre_completo,puesto,tienda`);
+        if (rows && rows[0]) {
+          EVALUADO = rows[0];
+          EVALUADO.nombre = EVALUADO.nombre_completo || EVALUADO.nombre || 'Empleado';
+        }
+      }
+      if (!EVALUADO) EVALUADO = { nombre: 'Empleado', puesto: 'Vendedor', tienda: '' };
+      document.getElementById('st1-label').textContent = t('quota_title');
+    } else {
+      EVALUADO = EMP || { nombre: 'Empleado', puesto: '', tienda: '', id: null };
+      document.getElementById('st1-label').textContent = t('mode_self');
     }
 
     // Load active cycle — graceful if table doesn't exist yet
     try {
       const cycles = await sbFetch(`evaluacion_ciclos?activo=eq.true&limit=1`);
-      CICLO = (cycles && cycles[0]) || null;
+      CICLO = cycles[0] || null;
     } catch(e) {
-      CICLO = null;
-    }
-
-    MODE = params.get('mode') || 'self';
-
-    // Update step label for self mode
-    if (MODE === 'self') {
-      document.getElementById('st1-label').textContent = 'Autoevaluación';
-    }
-
-    // Load evaluado for supervisor mode
-    if (MODE === 'supervisor') {
-      const evalId = params.get('evaluado');
-      if (evalId) {
-        try {
-          const rows = await sbFetch(`empleados?id=eq.${evalId}&select=id,nombre_completo,employee_id,tienda`);
-          if (rows && rows.length > 0) {
-            EVALUADO = rows[0];
-            EVALUADO.nombre = EVALUADO.nombre_completo || 'Empleado';
-          }
-        } catch(e) { /* optional */ }
-      }
-      if (!EVALUADO) EVALUADO = { nombre: 'Empleado', puesto: 'Vendedor', tienda: '' };
-    } else {
-      EVALUADO = EMP || { nombre: 'Empleado', puesto: '', tienda: '' };
+      CICLO = null; // table not yet created — renderStep1 handles this gracefully
     }
 
     document.getElementById('loading-screen').classList.add('hidden');
     renderStep1();
   }
 
+  /* ═══════════════════════════════════════════════
+     RENDER
+  ═══════════════════════════════════════════════ */
+  function renderEmpCard() {
+    if (!EVALUADO) EVALUADO = { nombre: 'Empleado', puesto: '', tienda: '' };
+    const initials = (EVALUADO.nombre || '?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const modeLabel = MODE === 'supervisor' ? t('mode_supervisor') : t('mode_self');
+    const modeCls   = MODE === 'supervisor' ? 'supervisor' : 'self';
+    return `
+      <div class="emp-card">
+        <div class="emp-avatar">${initials}</div>
+        <div>
+          <div class="emp-name">${EVALUADO.nombre || 'Empleado'}</div>
+          <div class="emp-role">${EVALUADO.puesto || ''} ${EVALUADO.tienda ? '— ' + EVALUADO.tienda : ''}</div>
+        </div>
+        <div class="mode-badge ${modeCls}">${modeLabel}</div>
+      </div>
+    `;
+  }
+
+  function renderStep1() {
+    document.getElementById('step1-panel').classList.remove('hidden');
+    document.getElementById('emp-card-wrap').innerHTML = renderEmpCard();
+
+    // Show warning if no active cycle, but don't block rendering
+    if (!CICLO) {
+      document.getElementById('step1-panel').insertAdjacentHTML('beforeend',
+        `<div class="notice warn" style="margin-bottom:16px;">' + t('no_cycle') + '</div>`);
+    }
+
+    setStep(1);
+
+    if (MODE === 'supervisor') {
+      document.getElementById('quota-panel').classList.remove('hidden');
+      document.getElementById('ciclo-label').textContent = CICLO ? CICLO.nombre : t('no_cycle_short') || 'N/A';
+
+      const inpMeta  = document.getElementById('inp-meta');
+      const inpTotal = document.getElementById('inp-total');
+      const inpPct   = document.getElementById('inp-pct');
+      inpTotal.value = 6; // default for formal cycle
+
+      function updateQuota() {
+        const m = parseInt(inpMeta.value);
+        const t = parseInt(inpTotal.value);
+        const p = parseFloat(inpPct.value);
+        if (!isNaN(m) && !isNaN(t) && !isNaN(p) && t > 0 && m <= t) {
+          state.quotaMeta  = m;
+          state.quotaTotal = t;
+          state.quotaPct   = p;
+          const s = calcQuotaScore(m, t, p);
+          state.quotaScore = s;
+          const el = document.getElementById('quota-score-display');
+          el.textContent = s;
+          el.className   = 'qr-value ' + scoreColor(s);
+          document.getElementById('btn-step1-next').disabled = false;
+        } else {
+          document.getElementById('btn-step1-next').disabled = true;
+          document.getElementById('quota-score-display').textContent = '—';
+        }
+      }
+      inpMeta.addEventListener('input', updateQuota);
+      inpTotal.addEventListener('input', updateQuota);
+      inpPct.addEventListener('input', updateQuota);
+
+    } else {
+      document.getElementById('self-intro-panel').classList.remove('hidden');
+      document.getElementById('ciclo-label-self').textContent = CICLO ? CICLO.nombre : t('no_cycle_short') || 'N/A';
+      document.getElementById('btn-step1-next').disabled = false;
+    }
+
+    // Disable next if no cycle active
+    if (!CICLO) {
+      document.getElementById('btn-step1-next').disabled = true;
+      document.getElementById('btn-step1-next').title = 'Activa un ciclo de evaluación primero';
+    }
+
+    document.getElementById('btn-step1-next').addEventListener('click', () => {
+      document.getElementById('step1-panel').classList.add('hidden');
+      renderStep2();
+    });
+  }
+
+  function renderStep2() {
+    document.getElementById('step2-panel').classList.remove('hidden');
+    setStep(2);
+    const container = document.getElementById('questions-container');
+    container.innerHTML = '';
+
+    if (MODE === 'supervisor') {
+      // BARS questions
+      container.innerHTML = `<div class="section-title">${t('cond_title')}</div><div class="section-sub">${t('cond_sub')}</div>`;
+      BARS_QUESTIONS.forEach(q => {
+        const div = document.createElement('div');
+        div.className = 'bars-q';
+        div.innerHTML = `
+          <div class="bars-dim">${q.dim[LANG]||q.dim.es}</div>
+          <div class="bars-text">${q.text[LANG]||q.text.es}</div>
+          <div class="bars-scale" id="scale-${q.key}">
+            ${[1,2,3,4,5].map(n => `
+              <button class="bars-btn" data-key="${q.key}" data-val="${n}">
+                ${n}
+                <span class="bars-anchor">${(q.anchors[LANG]||q.anchors.es)[n-1]}</span>
+              </button>`).join('')}
+          </div>`;
+        container.appendChild(div);
+      });
+
+      container.querySelectorAll('.bars-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const key = btn.dataset.key;
+          const val = parseInt(btn.dataset.val);
+          state.barsScores[key] = val;
+          document.querySelectorAll(`.bars-btn[data-key="${key}"]`).forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+          checkStep2Complete();
+        });
+      });
+
+    } else {
+      // Forced-choice
+      container.innerHTML = `<div class="section-title">Situaciones de Trabajo</div>
+        <div class="section-sub">En cada situación, selecciona la opción que describe más fielmente tu comportamiento habitual.</div>`;
+      FC_QUESTIONS.forEach(q => {
+        const div = document.createElement('div');
+        div.className = 'fc-q';
+        div.innerHTML = `
+          <div class="fc-dim">${q.dim[LANG]||q.dim.es}</div>
+          <div class="fc-text">${q.text[LANG]||q.text.es}</div>
+          <div class="fc-options">
+            <div class="fc-opt" data-key="${q.key}" data-choice="A">
+              <span class="fc-letter">A</span>${(q.optA[LANG]||q.optA.es)}
+            </div>
+            <div class="fc-opt" data-key="${q.key}" data-choice="B">
+              <span class="fc-letter">B</span>${(q.optB[LANG]||q.optB.es)}
+            </div>
+          </div>`;
+        container.appendChild(div);
+      });
+
+      container.querySelectorAll('.fc-opt').forEach(opt => {
+        opt.addEventListener('click', () => {
+          const key    = opt.dataset.key;
+          const choice = opt.dataset.choice;
+          state.fcAnswers[key] = choice;
+          document.querySelectorAll(`.fc-opt[data-key="${key}"]`).forEach(o => o.classList.remove('selected'));
+          opt.classList.add('selected');
+          checkStep2Complete();
+        });
+      });
+    }
+
+    document.getElementById('btn-step2-back').addEventListener('click', () => {
+      document.getElementById('step2-panel').classList.add('hidden');
+      document.getElementById('step1-panel').classList.remove('hidden');
+      setStep(1);
+    });
+
+    document.getElementById('btn-step2-next').addEventListener('click', () => {
+      document.getElementById('step2-panel').classList.add('hidden');
+      renderStep3();
+    });
+  }
+
+  function checkStep2Complete() {
+    let done = false;
+    if (MODE === 'supervisor') {
+      done = Object.keys(state.barsScores).length === BARS_QUESTIONS.length;
+      if (done) {
+        state.conductualScore = calcBarsScore();
+      }
+    } else {
+      done = Object.keys(state.fcAnswers).length === FC_QUESTIONS.length;
+      if (done) {
+        state.selfScore = calcFcScore();
+      }
+    }
+    document.getElementById('btn-step2-next').disabled = !done;
+  }
+
+  function renderStep3() {
+    document.getElementById('step3-panel').classList.remove('hidden');
+    setStep(3);
+
+    state.finalScore = calcFinal();
+    const cat = scoreCategory(state.finalScore || 0);
+
+    // Score breakdown
+    let bHtml = '';
+    if (MODE === 'supervisor') {
+      bHtml = `
+        <div class="score-row">
+          <div><div class="score-row-label">Cuota (${state.quotaMeta}/${state.quotaTotal} períodos, ${state.quotaPct}% prom.)</div><div class="score-row-weight">Peso: 40%</div></div>
+          <div class="score-row-val" style="color:${state.quotaScore>=75?'var(--green)':state.quotaScore>=60?'var(--amber)':'var(--red)'}">${state.quotaScore}</div>
+        </div>
+        <div class="score-row">
+          <div><div class="score-row-label">Evaluación Conductual (BARS)</div><div class="score-row-weight">Peso: 40%</div></div>
+          <div class="score-row-val" style="color:${state.conductualScore>=75?'var(--green)':state.conductualScore>=60?'var(--amber)':'var(--red)'}">${state.conductualScore}</div>
+        </div>
+        <div class="score-row">
+          <div><div class="score-row-label">Autoevaluación del empleado</div><div class="score-row-weight">Peso: 20% · Pendiente</div></div>
+          <div class="score-row-val" style="color:var(--dim)">—</div>
+        </div>`;
+      document.getElementById('feedback-section').classList.remove('hidden');
+    } else {
+      bHtml = `
+        <div class="score-row">
+          <div><div class="score-row-label">Autoevaluación (5 situaciones)</div><div class="score-row-weight">Peso: 20% del score final</div></div>
+          <div class="score-row-val" style="color:var(--green)">${state.selfScore}</div>
+        </div>`;
+      document.getElementById('ack-section').classList.remove('hidden');
+    }
+
+    document.getElementById('score-breakdown').innerHTML = bHtml;
+    document.getElementById('final-score-num').textContent = state.finalScore ?? '—';
+    document.getElementById('final-score-num').className = `final-score-num ${cat.cls}`;
+    document.getElementById('final-score-cat').textContent = cat.label;
+    document.getElementById('final-score-cat').className = `final-score-cat ${cat.cls}`;
+    document.getElementById('final-score-sub').textContent = cat.sub;
+
+    // Feedback validation
+    if (MODE === 'supervisor') {
+      const feedbackTxt = document.getElementById('feedback-txt');
+      const btnSubmit   = document.getElementById('btn-submit');
+      btnSubmit.disabled = true;
+      feedbackTxt.addEventListener('input', () => {
+        btnSubmit.disabled = feedbackTxt.value.trim().length < 60;
+      });
+    }
+
+    document.getElementById('btn-step3-back').addEventListener('click', () => {
+      document.getElementById('step3-panel').classList.add('hidden');
+      document.getElementById('step2-panel').classList.remove('hidden');
+      setStep(2);
+    });
+
+    document.getElementById('btn-submit').addEventListener('click', submitEval);
+  }
+
+  /* ═══════════════════════════════════════════════
+     SUBMIT
+  ═══════════════════════════════════════════════ */
+  async function submitEval() {
+    const btn = document.getElementById('btn-submit');
+    btn.disabled = true;
+    btn.textContent = t('btn_submitting');
+
+    if (ADMIN_PREVIEW) {
+      document.getElementById('step3-panel').classList.add('hidden');
+      document.getElementById('success-screen').classList.remove('hidden');
+      document.getElementById('success-msg').textContent = t('admin_success');
+      return;
+    }
+
+    try {
+      // 1. Create evaluacion record
+      const evalBody = {
+        ciclo_id:          CICLO.id,
+        evaluado_id:       EVALUADO.id || null,
+        evaluador_id:      EMP.id || null,
+        tipo_evaluador:    MODE === 'supervisor' ? 'supervisor' : 'self',
+        track:             'sales',
+        estado:            'completada',
+        periodos_meta:     state.quotaMeta,
+        periodos_total:    state.quotaTotal,
+        pct_promedio_cuota: state.quotaPct,
+        score_cuota:       state.quotaScore,
+        score_conductual:  state.conductualScore ?? state.selfScore,
+        score_final:       state.finalScore,
+        peso_aplicado:     MODE === 'supervisor' ? 0.4 : 0.2,
+        feedback_narrativo: MODE === 'supervisor'
+          ? document.getElementById('feedback-txt').value.trim()
+          : null,
+        completada_at: new Date().toISOString()
+      };
+
+      const evalResult = await sbPost('evaluaciones', evalBody);
+      EVAL_ID = evalResult[0]?.id;
+
+      // 2. Save individual responses
+      const respRows = [];
+      if (MODE === 'supervisor') {
+        BARS_QUESTIONS.forEach(q => {
+          respRows.push({
+            evaluacion_id:  EVAL_ID,
+            dimension:      q.key,
+            pregunta_key:   q.key,
+            pregunta_texto: q.text,
+            respuesta_score: state.barsScores[q.key]
+          });
+        });
+      } else {
+        FC_QUESTIONS.forEach(q => {
+          respRows.push({
+            evaluacion_id:  EVAL_ID,
+            dimension:      q.key,
+            pregunta_key:   q.key,
+            pregunta_texto: q.text,
+            respuesta_texto: state.fcAnswers[q.key]
+          });
+        });
+      }
+      if (respRows.length && EVAL_ID) {
+        await sbPost('evaluacion_respuestas', respRows);
+      }
+
+      // 3. Show success
+      document.getElementById('step3-panel').classList.add('hidden');
+      const successScreen = document.getElementById('success-screen');
+      successScreen.classList.remove('hidden');
+      if (MODE === 'self') {
+        document.getElementById('success-msg').textContent =
+          'Tu autoevaluación ha sido registrada. Tu supervisor verá tu respuesta junto con su evaluación para generar el score combinado del ciclo.';
+      }
+
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = t('btn_submit');
+      alert('Error al guardar: ' + err.message + '\n\nRevisa la conexión e intenta de nuevo.');
+    }
+  }
+
+  /* ═══════════════════════════════════════════════
+     STEP UI
+  ═══════════════════════════════════════════════ */
+  function setStep(n) {
+    [1,2,3].forEach(i => {
+      const s = document.getElementById('st'+i);
+      s.classList.remove('active','done');
+      if (i < n) s.classList.add('done');
+      else if (i === n) s.classList.add('active');
+    });
+    [1,2].forEach(i => {
+      const l = document.getElementById('sl'+i);
+      if (l) l.classList.toggle('done', i < n);
+    });
+  }
+
+  /* ═══════════════════════════════════════════════
+     START — emp ID passed via ?emp= query param
+     (same pattern as goToExam in index.html)
+  ═══════════════════════════════════════════════ */
   init();
 </script>
 </body>
