@@ -321,6 +321,16 @@
           <h3>How They Found Us</h3>
           <p>Quick 10-second check-in — helps us understand where customers come from.</p>
         </div>
+        <div class="home-card" onclick="navigateToTool('evaluacion')">
+          <div class="home-card-icon">📋</div>
+          <h3>Mi Evaluación</h3>
+          <p>Completa tu autoevaluación de desempeño del ciclo actual o revisa tus evaluaciones pasadas.</p>
+        </div>
+        <div class="home-card" onclick="navigateToTool('organigrama')">
+          <div class="home-card-icon">🏢</div>
+          <h3>Organigrama</h3>
+          <p>Consulta la estructura organizacional de Daniels Home Center.</p>
+        </div>
       </div>
     </div>
 
@@ -899,8 +909,10 @@ function renderDashboardData() {
    not iframe — GitHub Pages blocks framing between its own sites)
    ════════════════════════════════════════════════════════════ */
 const TOOL_URLS = {
-  prescreen: 'https://rodrigomora-daniels.github.io/daniels-credit-simulator/',
-  leadsource: 'Daniels_Lead_Source_Form.html'
+  prescreen:   'https://rodrigomora-daniels.github.io/daniels-credit-simulator/',
+  leadsource:  'Daniels_Lead_Source_Form.html',
+  evaluacion:  'Daniels_Evaluacion_Ventas.html',
+  organigrama: 'Daniels_Organigrama.html'
 };
 
 function switchTab(tabName) {
@@ -919,7 +931,10 @@ function switchTab(tabName) {
 }
 
 function navigateToTool(toolName) {
-  window.location.href = TOOL_URLS[toolName];
+  const url  = TOOL_URLS[toolName];
+  const empId = session && session.empleado ? session.empleado.id : '';
+  const sep  = url.includes('?') ? '&' : '?';
+  window.location.href = empId ? `${url}${sep}emp=${empId}` : url;
 }
 
 function goToExam(tier) {

@@ -157,6 +157,9 @@
 </head>
 <body>
 
+<!-- APP SCREEN -->
+<div id="app-screen">
+
 <!-- HEADER -->
 <header class="hdr">
   <div class="hdr-logo">D</div>
@@ -291,6 +294,7 @@
   </div>
 
 </div><!-- /main -->
+</div><!-- /app-screen -->
 
 <script>
   /* ═══════════════════════════════════════════════
@@ -499,21 +503,35 @@
      INIT
   ═══════════════════════════════════════════════ */
   async function init() {
-    // Auth
-    const raw = sessionStorage.getItem('empleado_data');
-    if (!raw) { window.location.href = 'index.html'; return; }
-    EMP = JSON.parse(raw);
-
-    // Parse URL params
+    // Load employee from ?emp= query param (same pattern as Tier1/Tier2 exams)
     const params = new URLSearchParams(window.location.search);
+    const empId  = params.get('emp');
+    if (!empId) { window.location.href = 'index.html'; return; }
+
+    try {
+      const r = await fetch(
+        `${SUPABASE_URL}/rest/v1/empleados?id=eq.${empId}&select=id,nombre_completo,username,puesto,tienda,es_admin`,
+        { headers: hdrs }
+      );
+      const rows = await r.json();
+      if (!rows || rows.length === 0) { window.location.href = 'index.html'; return; }
+      EMP = rows[0];
+      EMP.nombre = EMP.nombre_completo || EMP.username;
+    } catch(e) {
+      window.location.href = 'index.html'; return;
+    }
+
+    // Parse URL params (empId already read above)
     MODE = params.get('mode') || 'self';
 
     if (MODE === 'supervisor') {
       const evalId = params.get('evaluado');
-      // Load employee being evaluated (by empleado_id or username)
       if (evalId) {
-        const rows = await sbGet('empleados', `?id=eq.${evalId}&select=id,nombre,puesto,tienda`);
-        EVALUADO = rows[0] || null;
+        const rows = await sbGet('empleados', `?id=eq.${evalId}&select=id,nombre_completo,puesto,tienda`);
+        if (rows && rows[0]) {
+          EVALUADO = rows[0];
+          EVALUADO.nombre = EVALUADO.nombre_completo || EVALUADO.nombre || 'Empleado';
+        }
       }
       if (!EVALUADO) EVALUADO = { nombre: 'Empleado', puesto: 'Vendedor', tienda: '' };
       document.getElementById('st1-label').textContent = 'Desempeño en Cuota';
@@ -855,7 +873,8 @@
   }
 
   /* ═══════════════════════════════════════════════
-     START
+     START — emp ID passed via ?emp= query param
+     (same pattern as goToExam in index.html)
   ═══════════════════════════════════════════════ */
   init();
 </script>

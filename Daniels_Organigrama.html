@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Organigrama — My Daniels Workspace</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      background: #1e293b;
+      border-bottom: 1px solid #334155;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-logo {
+      width: 34px; height: 34px;
+      background: #22c55e;
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; color: #0f172a; font-size: 16px;
+    }
+    .header-text h1 { font-size: 15px; font-weight: 700; color: #f1f5f9; }
+    .header-text p  { font-size: 11px; color: #64748b; }
+    .back-btn {
+      margin-left: auto;
+      display: flex; align-items: center; gap: 5px;
+      color: #94a3b8; font-size: 13px;
+      text-decoration: none;
+      transition: color .2s;
+    }
+    .back-btn:hover { color: #22c55e; }
+
+    /* ── PAGE TITLE ── */
+    .page-header {
+      padding: 28px 32px 0;
+    }
+    .page-header h2 { font-size: 22px; font-weight: 700; color: #f1f5f9; }
+    .page-header p  { font-size: 13px; color: #64748b; margin-top: 4px; }
+
+    /* ── CHART AREA ── */
+    .chart-scroll {
+      overflow-x: auto;
+      padding: 28px 32px 40px;
+    }
+    #chart-container {
+      position: relative;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 1100px;
+    }
+
+    /* ── SVG CONNECTORS ── */
+    #svg-lines {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      overflow: visible;
+    }
+
+    /* ── NODES ── */
+    .node {
+      border-radius: 9px;
+      padding: 10px 14px;
+      min-width: 148px;
+      max-width: 185px;
+      text-align: center;
+      border: 1.5px solid transparent;
+      cursor: default;
+      position: relative;
+      transition: transform .15s, box-shadow .15s;
+      user-select: none;
+    }
+    .node.has-children { cursor: pointer; }
+    .node.has-children:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,.4);
+    }
+    .node-name  { font-size: 12.5px; font-weight: 700; color: #f1f5f9; line-height: 1.3; }
+    .node-title { font-size: 10.5px; color: #94a3b8; margin-top: 3px; line-height: 1.3; }
+    .node-badge { font-size: 9.5px; font-weight: 600; margin-top: 5px; padding: 2px 7px; border-radius: 20px; display: inline-block; }
+    .node-count { font-size: 9px; color: #64748b; margin-top: 2px; }
+    .node-toggle { font-size: 9px; color: #64748b; margin-top: 3px; }
+    .node-note  { font-size: 9px; color: #94a3b8; margin-top: 3px; font-style: italic; }
+
+    /* Colour themes */
+    .t-board     { background:#1e293b; border-color:#475569; }
+    .t-board     .node-badge { background:#334155; color:#94a3b8; }
+    .t-gm        { background:#0d2018; border-color:#22c55e; }
+    .t-gm        .node-badge { background:#14532d; color:#4ade80; }
+    .t-sales     { background:#0a1f0f; border-color:#16a34a; }
+    .t-sales     .node-badge { background:#14532d; color:#86efac; }
+    .t-ops       { background:#0f0b1f; border-color:#6366f1; }
+    .t-ops       .node-badge { background:#1e1b4b; color:#a5b4fc; }
+    .t-warehouse { background:#1f0e04; border-color:#f59e0b; }
+    .t-warehouse .node-badge { background:#451a03; color:#fcd34d; }
+    .t-ecom      { background:#05111f; border-color:#3b82f6; }
+    .t-ecom      .node-badge { background:#0c2340; color:#93c5fd; }
+
+    /* ── ROW LAYOUT ── */
+    .row {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: nowrap;
+    }
+    .col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+
+    /* ── LEGEND ── */
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      justify-content: center;
+      padding: 20px 32px;
+      border-top: 1px solid #1e293b;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+    .legend-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+    }
+
+    .footer-note {
+      text-align: center;
+      font-size: 11px;
+      color: #334155;
+      padding: 0 0 24px;
+      letter-spacing: .3px;
+    }
+
+    /* tooltip */
+    #tooltip {
+      position: fixed;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 7px;
+      padding: 8px 12px;
+      font-size: 11px;
+      color: #e2e8f0;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .15s;
+      z-index: 999;
+      max-width: 220px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+<div id="tooltip"></div>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-logo">D</div>
+  <div class="header-text">
+    <h1>My Daniels Workspace</h1>
+    <p>Organigrama Corporativo</p>
+  </div>
+  <a href="index.html" class="back-btn">← Volver al Hub</a>
+</header>
+
+<!-- PAGE TITLE -->
+<div class="page-header">
+  <h2>Estructura Organizacional</h2>
+  <p>Vigente: 1 de septiembre de 2026 &nbsp;·&nbsp; Haz clic en cualquier nodo para expandir / contraer</p>
+</div>
+
+<!-- CHART -->
+<div class="chart-scroll">
+  <div id="chart-container">
+    <svg id="svg-lines"></svg>
+    <!-- JS renders chart here -->
+  </div>
+</div>
+
+<!-- LEGEND -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div>Dirección General</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#16a34a"></div>Ventas &amp; Mercancía</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#6366f1"></div>Operaciones &amp; Crédito</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div>Almacén &amp; Distribución</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div>E-Commerce &amp; Compras</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#475569"></div>Consejo Directivo</div>
+</div>
+
+<div class="footer-note">DANROS, LLC — Daniels Home Center &nbsp;·&nbsp; Documento Interno Confidencial</div>
+
+<script>
+  /* ── AUTH ── */
+  (function(){
+    const params = new URLSearchParams(window.location.search);
+    const empId  = params.get('emp');
+    if (!empId) { window.location.href = 'index.html'; }
+  })();
+
+  /* ── ORG DATA ── */
+  const ORG = {
+    id:'rodrigo', name:'Rodrigo Mora', title:'General Manager', type:'gm', dept:'Dirección General',
+    children:[
+      {
+        id:'hector', name:'Héctor Estrada',
+        title:'Sales & Merch. Manager\nFurniture Buyer',
+        type:'sales', dept:'Ventas',
+        children:[
+          {
+            id:'lourdes-jaime', name:'Lourdes / Jaime', title:'Store Managers — Euclid',
+            type:'sales', dept:'Ventas',
+            children:[
+              { id:'vend-euclid', name:'Vendedores Euclid', title:'Sales Associates', type:'sales', dept:'Ventas', leaf:true }
+            ]
+          },
+          {
+            id:'marco', name:'Marco', title:'Store Manager — Chino',
+            type:'sales', dept:'Ventas',
+            children:[
+              { id:'vend-chino', name:'Vendedores Chino', title:'Sales Associates', type:'sales', dept:'Ventas', leaf:true }
+            ]
+          },
+          {
+            id:'guadalupe', name:'Guadalupe', title:'Supervisor — Cerritos',
+            type:'sales', dept:'Ventas',
+            children:[
+              { id:'vend-cerritos', name:'Vendedores Cerritos', title:'Sales Associates', type:'sales', dept:'Ventas', leaf:true }
+            ]
+          },
+          { id:'rosie', name:'Rosie', title:'Merch. Replenisher\n(Furniture)', type:'sales', dept:'Ventas', leaf:true }
+        ]
+      },
+      {
+        id:'maricela', name:'Maricela Chávez',
+        title:'Operations &\nCredit Manager',
+        type:'ops', dept:'Operaciones',
+        children:[
+          { id:'anahid',    name:'Anahid',               title:'Collections Specialist', type:'ops', dept:'Operaciones', leaf:true },
+          { id:'cust-ops',  name:'Customer Ops (×2)',    title:'Customer Operations\nAssociates', type:'ops', dept:'Operaciones', leaf:true },
+          { id:'ana',       name:'Ana',                  title:'Credit Approver', type:'ops', dept:'Operaciones', leaf:true },
+          { id:'leticia',   name:'Leticia',              title:'Credit Approver', type:'ops', dept:'Operaciones', leaf:true },
+          { id:'floor-ops', name:'Floor Assoc. (×3)',    title:'Floor Associates', type:'ops', dept:'Operaciones', leaf:true }
+        ]
+      },
+      {
+        id:'polo', name:'Polo Torres',
+        title:'Warehouse Manager\n(Sala Ahumada)',
+        type:'warehouse', dept:'Almacén',
+        children:[
+          { id:'wh-team', name:'Warehouse Team (~16)', title:'Distribution Associates', type:'warehouse', dept:'Almacén', leaf:true }
+        ]
+      },
+      {
+        id:'angel', name:'Ángel Delgado',
+        title:'E&A Buyer /\nEcommerce Oversight',
+        type:'ecom', dept:'E-Commerce',
+        children:[
+          { id:'victoria', name:'Victoria Sagaste', title:'Digital Commerce\nCoordinator', type:'ecom', dept:'E-Commerce', leaf:true },
+          { id:'jose', name:'Jose', title:'Merch. Replenisher', type:'ecom', dept:'E-Commerce', note:'Línea punteada → Héctor', leaf:true }
+        ]
+      }
+    ]
+  };
+
+  /* Board is shown separately above Rodrigo */
+  const BOARD = [
+    { id:'dani',    name:'Dani Rosenberg',    title:'Fundadora' },
+    { id:'rebecca', name:'Rebecca Rosenberg', title:'Co-Fundadora' },
+    { id:'ted',     name:'Ted Rosenberg',     title:'CEO' },
+    { id:'karen',   name:'Karen Rosenberg',   title:'CMO' },
+  ];
+
+  /* ── STATE: which nodes are expanded ── */
+  const expanded = {};
+  function initExpanded(node, depth) {
+    expanded[node.id] = depth < 2; // top 2 levels open by default
+    if (node.children) node.children.forEach(c => initExpanded(c, depth+1));
+  }
+  initExpanded(ORG, 0);
+
+  /* ── BUILD DOM NODES ── */
+  const container = document.getElementById('chart-container');
+  const svgEl     = document.getElementById('svg-lines');
+  const nodeEls   = {}; // id → DOM element
+
+  function buildNode(data) {
+    const el = document.createElement('div');
+    el.className = 'node t-' + data.type;
+    el.id = 'node-' + data.id;
+    el.dataset.id = data.id;
+
+    const hasKids = data.children && data.children.length > 0;
+    if (hasKids) el.classList.add('has-children');
+
+    el.innerHTML = `
+      <div class="node-name">${data.name}</div>
+      <div class="node-title">${(data.title||'').replace(/\n/g,'<br>')}</div>
+      <div class="node-badge">${data.dept}</div>
+      ${data.note ? `<div class="node-note">${data.note}</div>` : ''}
+      ${hasKids ? `<div class="node-toggle" id="tog-${data.id}">▼</div>` : ''}
+    `;
+
+    if (hasKids) {
+      el.addEventListener('click', () => {
+        expanded[data.id] = !expanded[data.id];
+        renderChart();
+      });
+    }
+
+    if (data.note) {
+      el.addEventListener('mouseenter', (e) => showTip(e, data.note));
+      el.addEventListener('mouseleave', hideTip);
+    }
+
+    nodeEls[data.id] = el;
+    return el;
+  }
+
+  /* ── TOOLTIP ── */
+  const tip = document.getElementById('tooltip');
+  function showTip(e, text) {
+    tip.textContent = text;
+    tip.style.opacity = '1';
+    tip.style.left = (e.clientX + 10) + 'px';
+    tip.style.top  = (e.clientY - 30) + 'px';
+  }
+  function hideTip() { tip.style.opacity = '0'; }
+
+  /* ── RENDER ── */
+  function renderChart() {
+    /* clear previous chart content (keep SVG) */
+    Array.from(container.children).forEach(c => {
+      if (c !== svgEl) c.remove();
+    });
+
+    /* BOARD ROW */
+    const boardRow = document.createElement('div');
+    boardRow.className = 'row';
+    boardRow.id = 'board-row';
+    BOARD.forEach(b => {
+      const el = document.createElement('div');
+      el.className = 'node t-board';
+      el.id = 'node-' + b.id;
+      el.innerHTML = `<div class="node-name">${b.name}</div><div class="node-title">${b.title}</div><div class="node-badge">Board</div>`;
+      nodeEls[b.id] = el;
+      boardRow.appendChild(el);
+    });
+    container.appendChild(boardRow);
+
+    /* spacer */
+    addSpacer(28);
+
+    /* RODRIGO */
+    const rodCol = document.createElement('div');
+    rodCol.className = 'col';
+    rodCol.id = 'col-rodrigo';
+    rodCol.appendChild(buildNode(ORG));
+    container.appendChild(rodCol);
+
+    if (expanded[ORG.id] && ORG.children) {
+      addSpacer(28);
+      /* L2 row */
+      const l2row = document.createElement('div');
+      l2row.className = 'row';
+      l2row.id = 'l2-row';
+
+      ORG.children.forEach(area => {
+        const col = document.createElement('div');
+        col.className = 'col';
+        col.id = 'col-' + area.id;
+        col.appendChild(buildNode(area));
+
+        if (expanded[area.id] && area.children) {
+          addSpacer(22, col);
+          const l3row = document.createElement('div');
+          l3row.className = 'row';
+          l3row.style.cssText = 'gap:10px;';
+
+          area.children.forEach(sub => {
+            const subcol = document.createElement('div');
+            subcol.className = 'col';
+            subcol.id = 'col-' + sub.id;
+            subcol.appendChild(buildNode(sub));
+
+            if (!sub.leaf && expanded[sub.id] && sub.children) {
+              addSpacer(20, subcol);
+              const l4row = document.createElement('div');
+              l4row.className = 'row';
+              l4row.style.cssText = 'gap:8px;';
+              sub.children.forEach(leaf => {
+                const lc = document.createElement('div');
+                lc.className = 'col';
+                lc.appendChild(buildNode(leaf));
+                l4row.appendChild(lc);
+              });
+              subcol.appendChild(l4row);
+            }
+            l3row.appendChild(subcol);
+          });
+          col.appendChild(l3row);
+        }
+        l2row.appendChild(col);
+      });
+      container.appendChild(l2row);
+    }
+
+    /* Draw lines after DOM settles */
+    requestAnimationFrame(() => requestAnimationFrame(drawLines));
+  }
+
+  function addSpacer(h, parent) {
+    const sp = document.createElement('div');
+    sp.style.cssText = `height:${h}px;width:2px;background:#1e293b;`;
+    (parent || container).appendChild(sp);
+  }
+
+  /* ── DRAW SVG LINES ── */
+  function drawLines() {
+    svgEl.innerHTML = '';
+    const cr = container.getBoundingClientRect();
+
+    function line(x1,y1,x2,y2,dash) {
+      const l = document.createElementNS('http://www.w3.org/2000/svg','line');
+      l.setAttribute('x1',x1); l.setAttribute('y1',y1);
+      l.setAttribute('x2',x2); l.setAttribute('y2',y2);
+      l.setAttribute('stroke','#334155');
+      l.setAttribute('stroke-width','1.5');
+      if (dash) l.setAttribute('stroke-dasharray','5,4');
+      svgEl.appendChild(l);
+    }
+
+    function path(d) {
+      const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+      p.setAttribute('d',d);
+      p.setAttribute('stroke','#334155');
+      p.setAttribute('stroke-width','1.5');
+      p.setAttribute('fill','none');
+      svgEl.appendChild(p);
+    }
+
+    function rel(el) {
+      const r = el.getBoundingClientRect();
+      return {
+        cx: r.left + r.width/2  - cr.left,
+        top: r.top              - cr.top,
+        bot: r.bottom           - cr.top
+      };
+    }
+
+    /* Board → Rodrigo (many-to-one: draw from center of board group) */
+    const boardNodes = BOARD.map(b => nodeEls[b.id]).filter(Boolean);
+    const rodEl = nodeEls['rodrigo'];
+    if (boardNodes.length && rodEl) {
+      const bRects  = boardNodes.map(rel);
+      const bLeft   = Math.min(...bRects.map(r=>r.cx));
+      const bRight  = Math.max(...bRects.map(r=>r.cx));
+      const bBot    = Math.max(...bRects.map(r=>r.bot));
+      const bMidX   = (bLeft+bRight)/2;
+      const rRel    = rel(rodEl);
+      const midY    = bBot + (rRel.top - bBot)/2;
+
+      /* horizontal line above board group */
+      line(bLeft, bBot+1, bRight, bBot+1);
+      /* vertical down from center of board */
+      line(bMidX, bBot+1, bMidX, midY);
+      /* horizontal to rodrigo center */
+      line(bMidX, midY, rRel.cx, midY);
+      /* vertical down to rodrigo */
+      line(rRel.cx, midY, rRel.cx, rRel.top);
+    }
+
+    if (!expanded['rodrigo']) return;
+
+    /* Rodrigo → L2 children */
+    const l2children = ORG.children.map(c => nodeEls[c.id]).filter(Boolean);
+    if (rodEl && l2children.length) {
+      const rRel  = rel(rodEl);
+      const cRels = l2children.map(rel);
+      const midY  = rRel.bot + (cRels[0].top - rRel.bot)/2;
+
+      line(rRel.cx, rRel.bot, rRel.cx, midY);
+      const cxMin = Math.min(...cRels.map(r=>r.cx));
+      const cxMax = Math.max(...cRels.map(r=>r.cx));
+      line(cxMin, midY, cxMax, midY);
+      cRels.forEach(cr2 => {
+        line(cr2.cx, midY, cr2.cx, cr2.top);
+      });
+    }
+
+    /* Each L2 → its L3 children */
+    ORG.children.forEach(area => {
+      if (!expanded[area.id] || !area.children) return;
+      const parentEl = nodeEls[area.id];
+      if (!parentEl) return;
+      const pRel = rel(parentEl);
+      const kids = area.children.map(c => nodeEls[c.id]).filter(Boolean);
+      if (!kids.length) return;
+      const kRels = kids.map(rel);
+      const midY  = pRel.bot + (kRels[0].top - pRel.bot)/2;
+
+      line(pRel.cx, pRel.bot, pRel.cx, midY);
+      if (kids.length > 1) {
+        const cxMin = Math.min(...kRels.map(r=>r.cx));
+        const cxMax = Math.max(...kRels.map(r=>r.cx));
+        line(cxMin, midY, cxMax, midY);
+      }
+      kRels.forEach(kr => line(kr.cx, midY, kr.cx, kr.top));
+
+      /* Jose dotted line to Hector */
+      if (area.id === 'angel') {
+        const joseEl   = nodeEls['jose'];
+        const hectorEl = nodeEls['hector'];
+        if (joseEl && hectorEl) {
+          const jR = rel(joseEl);
+          const hR = rel(hectorEl);
+          path(`M ${jR.cx} ${jR.top} C ${jR.cx} ${jR.top-40} ${hR.cx} ${hR.bot+40} ${hR.cx} ${hR.bot}`);
+          /* override with dashed path */
+          svgEl.lastChild.setAttribute('stroke-dasharray','5,4');
+          svgEl.lastChild.setAttribute('stroke','#475569');
+        }
+      }
+
+      /* L3 → L4 */
+      area.children.forEach(sub => {
+        if (!sub.children || !expanded[sub.id]) return;
+        const sEl = nodeEls[sub.id];
+        if (!sEl) return;
+        const sRel = rel(sEl);
+        const leaves = sub.children.map(l => nodeEls[l.id]).filter(Boolean);
+        if (!leaves.length) return;
+        const lRels = leaves.map(rel);
+        const lMidY = sRel.bot + (lRels[0].top - sRel.bot)/2;
+        line(sRel.cx, sRel.bot, sRel.cx, lMidY);
+        if (leaves.length > 1) {
+          line(Math.min(...lRels.map(r=>r.cx)), lMidY, Math.max(...lRels.map(r=>r.cx)), lMidY);
+        }
+        lRels.forEach(lr => line(lr.cx, lMidY, lr.cx, lr.top));
+      });
+    });
+  }
+
+  /* ── INIT ── */
+  renderChart();
+  window.addEventListener('resize', () => requestAnimationFrame(drawLines));
+</script>
+</body>
+</html>
