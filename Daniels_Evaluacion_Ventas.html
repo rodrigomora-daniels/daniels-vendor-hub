@@ -505,401 +505,68 @@
   /* ═══════════════════════════════════════════════
      INIT
   ═══════════════════════════════════════════════ */
+  // ═══ INIT — exact Tier 1 pattern ══════════════════════════
   async function init() {
-    // ── Exact same pattern as Tier 1 loadEmployeeFromURL ──
     const params = new URLSearchParams(window.location.search);
     const empId  = params.get('emp');
 
+    // Load employee — same as loadEmployeeFromURL in Tier 1, NO redirects
     if (empId) {
       try {
-        const rows = await sbFetch(`empleados?id=eq.${empId}&select=id,nombre_completo,employee_id,tienda`);
+        const rows = await sbFetch(`empleados?id=eq.${empId}&select=id,nombre_completo,employee_id,tienda,nivel_admin`);
         if (rows && rows.length > 0) {
           EMP = rows[0];
-          EMP.nombre = EMP.nombre_completo || empId;
-          // Check admin status separately — same as cockpit pattern
-          try {
-            const lvl = await sbFetch(`empleados?id=eq.${empId}&select=nivel_admin`);
-            const nivelAdmin = lvl && lvl[0] && lvl[0].nivel_admin;
-            if (nivelAdmin) {
-              ADMIN_PREVIEW = true;
-              document.getElementById('hdr-sub').insertAdjacentHTML('afterend',
-                `<div style="background:#1a2e1a;border-left:3px solid #22c55e;color:#86efac;padding:8px 14px;font-size:12px;font-weight:700;margin:8px 16px;border-radius:6px;">
-                  🔍 Admin Preview — sin registro en Supabase. Puedes entrar y salir libremente.
-                </div>`);
-            }
-          } catch(e) { /* nivel_admin check is optional */ }
+          EMP.nombre = EMP.nombre_completo || 'Empleado';
+          if (EMP.nivel_admin) {
+            ADMIN_PREVIEW = true;
+            document.getElementById('app-screen').insertAdjacentHTML('afterbegin',
+              `<div style="background:#14532d;color:#86efac;padding:10px 24px;font-size:12px;font-weight:700;letter-spacing:.3px;">
+                🔍 Admin Preview — sin registro en Supabase · Puedes entrar y salir libremente
+              </div>`);
+          }
         }
-      } catch(err) {
-        console.error('Could not load employee context:', err);
+      } catch(e) {
+        console.warn('Employee load failed:', e.message);
         // Don't redirect — show form anyway, same as Tier 1
       }
-    }
-
-    MODE = params.get('mode') || 'self';
-
-    if (MODE === 'supervisor') {
-      const evalId = params.get('evaluado');
-      if (evalId) {
-        const rows = await sbFetch(`empleados?id=eq.${evalId}&select=id,nombre_completo,puesto,tienda`);
-        if (rows && rows[0]) {
-          EVALUADO = rows[0];
-          EVALUADO.nombre = EVALUADO.nombre_completo || EVALUADO.nombre || 'Empleado';
-        }
-      }
-      if (!EVALUADO) EVALUADO = { nombre: 'Empleado', puesto: 'Vendedor', tienda: '' };
-      document.getElementById('st1-label').textContent = 'Desempeño en Cuota';
-    } else {
-      EVALUADO = EMP;
-      document.getElementById('st1-label').textContent = 'Autoevaluación';
     }
 
     // Load active cycle — graceful if table doesn't exist yet
     try {
       const cycles = await sbFetch(`evaluacion_ciclos?activo=eq.true&limit=1`);
-      CICLO = cycles[0] || null;
+      CICLO = (cycles && cycles[0]) || null;
     } catch(e) {
-      CICLO = null; // table not yet created — renderStep1 handles this gracefully
+      CICLO = null;
+    }
+
+    MODE = params.get('mode') || 'self';
+
+    // Update step label for self mode
+    if (MODE === 'self') {
+      document.getElementById('st1-label').textContent = 'Autoevaluación';
+    }
+
+    // Load evaluado for supervisor mode
+    if (MODE === 'supervisor') {
+      const evalId = params.get('evaluado');
+      if (evalId) {
+        try {
+          const rows = await sbFetch(`empleados?id=eq.${evalId}&select=id,nombre_completo,employee_id,tienda`);
+          if (rows && rows.length > 0) {
+            EVALUADO = rows[0];
+            EVALUADO.nombre = EVALUADO.nombre_completo || 'Empleado';
+          }
+        } catch(e) { /* optional */ }
+      }
+      if (!EVALUADO) EVALUADO = { nombre: 'Empleado', puesto: 'Vendedor', tienda: '' };
+    } else {
+      EVALUADO = EMP || { nombre: 'Empleado', puesto: '', tienda: '' };
     }
 
     document.getElementById('loading-screen').classList.add('hidden');
     renderStep1();
   }
 
-  /* ═══════════════════════════════════════════════
-     RENDER
-  ═══════════════════════════════════════════════ */
-  function renderEmpCard() {
-    const initials = (EVALUADO.nombre || '?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-    const modeLabel = MODE === 'supervisor' ? 'Evaluando como Supervisor' : 'Autoevaluación';
-    const modeCls   = MODE === 'supervisor' ? 'supervisor' : 'self';
-    return `
-      <div class="emp-card">
-        <div class="emp-avatar">${initials}</div>
-        <div>
-          <div class="emp-name">${EVALUADO.nombre || 'Empleado'}</div>
-          <div class="emp-role">${EVALUADO.puesto || ''} ${EVALUADO.tienda ? '— ' + EVALUADO.tienda : ''}</div>
-        </div>
-        <div class="mode-badge ${modeCls}">${modeLabel}</div>
-      </div>
-    `;
-  }
-
-  function renderStep1() {
-    document.getElementById('step1-panel').classList.remove('hidden');
-    document.getElementById('emp-card-wrap').innerHTML = renderEmpCard();
-
-    if (!CICLO) {
-      document.getElementById('step1-panel').innerHTML += `
-        <div class="notice warn">⚠ No hay ningún ciclo de evaluación activo en este momento. Contacta a Recursos Humanos para activar un ciclo antes de continuar.</div>`;
-      return;
-    }
-
-    setStep(1);
-
-    if (MODE === 'supervisor') {
-      document.getElementById('quota-panel').classList.remove('hidden');
-      document.getElementById('ciclo-label').textContent = CICLO.nombre;
-
-      const inpMeta  = document.getElementById('inp-meta');
-      const inpTotal = document.getElementById('inp-total');
-      const inpPct   = document.getElementById('inp-pct');
-      inpTotal.value = 6; // default for formal cycle
-
-      function updateQuota() {
-        const m = parseInt(inpMeta.value);
-        const t = parseInt(inpTotal.value);
-        const p = parseFloat(inpPct.value);
-        if (!isNaN(m) && !isNaN(t) && !isNaN(p) && t > 0 && m <= t) {
-          state.quotaMeta  = m;
-          state.quotaTotal = t;
-          state.quotaPct   = p;
-          const s = calcQuotaScore(m, t, p);
-          state.quotaScore = s;
-          const el = document.getElementById('quota-score-display');
-          el.textContent = s;
-          el.className   = 'qr-value ' + scoreColor(s);
-          document.getElementById('btn-step1-next').disabled = false;
-        } else {
-          document.getElementById('btn-step1-next').disabled = true;
-          document.getElementById('quota-score-display').textContent = '—';
-        }
-      }
-      inpMeta.addEventListener('input', updateQuota);
-      inpTotal.addEventListener('input', updateQuota);
-      inpPct.addEventListener('input', updateQuota);
-
-    } else {
-      document.getElementById('self-intro-panel').classList.remove('hidden');
-      document.getElementById('ciclo-label-self').textContent = CICLO.nombre;
-      document.getElementById('btn-step1-next').disabled = false;
-    }
-
-    document.getElementById('btn-step1-next').addEventListener('click', () => {
-      document.getElementById('step1-panel').classList.add('hidden');
-      renderStep2();
-    });
-  }
-
-  function renderStep2() {
-    document.getElementById('step2-panel').classList.remove('hidden');
-    setStep(2);
-    const container = document.getElementById('questions-container');
-    container.innerHTML = '';
-
-    if (MODE === 'supervisor') {
-      // BARS questions
-      container.innerHTML = `<div class="section-title">Evaluación Conductual</div>
-        <div class="section-sub">Para cada dimensión, selecciona el número que mejor describe el comportamiento observado en el período.</div>`;
-      BARS_QUESTIONS.forEach(q => {
-        const div = document.createElement('div');
-        div.className = 'bars-q';
-        div.innerHTML = `
-          <div class="bars-dim">${q.dim}</div>
-          <div class="bars-text">${q.text}</div>
-          <div class="bars-scale" id="scale-${q.key}">
-            ${[1,2,3,4,5].map(n => `
-              <button class="bars-btn" data-key="${q.key}" data-val="${n}">
-                ${n}
-                <span class="bars-anchor">${q.anchors[n-1]}</span>
-              </button>`).join('')}
-          </div>`;
-        container.appendChild(div);
-      });
-
-      container.querySelectorAll('.bars-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const key = btn.dataset.key;
-          const val = parseInt(btn.dataset.val);
-          state.barsScores[key] = val;
-          document.querySelectorAll(`.bars-btn[data-key="${key}"]`).forEach(b => b.classList.remove('selected'));
-          btn.classList.add('selected');
-          checkStep2Complete();
-        });
-      });
-
-    } else {
-      // Forced-choice
-      container.innerHTML = `<div class="section-title">Situaciones de Trabajo</div>
-        <div class="section-sub">En cada situación, selecciona la opción que describe más fielmente tu comportamiento habitual.</div>`;
-      FC_QUESTIONS.forEach(q => {
-        const div = document.createElement('div');
-        div.className = 'fc-q';
-        div.innerHTML = `
-          <div class="fc-dim">${q.dim}</div>
-          <div class="fc-text">${q.text}</div>
-          <div class="fc-options">
-            <div class="fc-opt" data-key="${q.key}" data-choice="A">
-              <span class="fc-letter">A</span>${q.optA}
-            </div>
-            <div class="fc-opt" data-key="${q.key}" data-choice="B">
-              <span class="fc-letter">B</span>${q.optB}
-            </div>
-          </div>`;
-        container.appendChild(div);
-      });
-
-      container.querySelectorAll('.fc-opt').forEach(opt => {
-        opt.addEventListener('click', () => {
-          const key    = opt.dataset.key;
-          const choice = opt.dataset.choice;
-          state.fcAnswers[key] = choice;
-          document.querySelectorAll(`.fc-opt[data-key="${key}"]`).forEach(o => o.classList.remove('selected'));
-          opt.classList.add('selected');
-          checkStep2Complete();
-        });
-      });
-    }
-
-    document.getElementById('btn-step2-back').addEventListener('click', () => {
-      document.getElementById('step2-panel').classList.add('hidden');
-      document.getElementById('step1-panel').classList.remove('hidden');
-      setStep(1);
-    });
-
-    document.getElementById('btn-step2-next').addEventListener('click', () => {
-      document.getElementById('step2-panel').classList.add('hidden');
-      renderStep3();
-    });
-  }
-
-  function checkStep2Complete() {
-    let done = false;
-    if (MODE === 'supervisor') {
-      done = Object.keys(state.barsScores).length === BARS_QUESTIONS.length;
-      if (done) {
-        state.conductualScore = calcBarsScore();
-      }
-    } else {
-      done = Object.keys(state.fcAnswers).length === FC_QUESTIONS.length;
-      if (done) {
-        state.selfScore = calcFcScore();
-      }
-    }
-    document.getElementById('btn-step2-next').disabled = !done;
-  }
-
-  function renderStep3() {
-    document.getElementById('step3-panel').classList.remove('hidden');
-    setStep(3);
-
-    state.finalScore = calcFinal();
-    const cat = scoreCategory(state.finalScore || 0);
-
-    // Score breakdown
-    let bHtml = '';
-    if (MODE === 'supervisor') {
-      bHtml = `
-        <div class="score-row">
-          <div><div class="score-row-label">Cuota (${state.quotaMeta}/${state.quotaTotal} períodos, ${state.quotaPct}% prom.)</div><div class="score-row-weight">Peso: 40%</div></div>
-          <div class="score-row-val" style="color:${state.quotaScore>=75?'var(--green)':state.quotaScore>=60?'var(--amber)':'var(--red)'}">${state.quotaScore}</div>
-        </div>
-        <div class="score-row">
-          <div><div class="score-row-label">Evaluación Conductual (BARS)</div><div class="score-row-weight">Peso: 40%</div></div>
-          <div class="score-row-val" style="color:${state.conductualScore>=75?'var(--green)':state.conductualScore>=60?'var(--amber)':'var(--red)'}">${state.conductualScore}</div>
-        </div>
-        <div class="score-row">
-          <div><div class="score-row-label">Autoevaluación del empleado</div><div class="score-row-weight">Peso: 20% · Pendiente</div></div>
-          <div class="score-row-val" style="color:var(--dim)">—</div>
-        </div>`;
-      document.getElementById('feedback-section').classList.remove('hidden');
-    } else {
-      bHtml = `
-        <div class="score-row">
-          <div><div class="score-row-label">Autoevaluación (5 situaciones)</div><div class="score-row-weight">Peso: 20% del score final</div></div>
-          <div class="score-row-val" style="color:var(--green)">${state.selfScore}</div>
-        </div>`;
-      document.getElementById('ack-section').classList.remove('hidden');
-    }
-
-    document.getElementById('score-breakdown').innerHTML = bHtml;
-    document.getElementById('final-score-num').textContent = state.finalScore ?? '—';
-    document.getElementById('final-score-num').className = `final-score-num ${cat.cls}`;
-    document.getElementById('final-score-cat').textContent = cat.label;
-    document.getElementById('final-score-cat').className = `final-score-cat ${cat.cls}`;
-    document.getElementById('final-score-sub').textContent = cat.sub;
-
-    // Feedback validation
-    if (MODE === 'supervisor') {
-      const feedbackTxt = document.getElementById('feedback-txt');
-      const btnSubmit   = document.getElementById('btn-submit');
-      btnSubmit.disabled = true;
-      feedbackTxt.addEventListener('input', () => {
-        btnSubmit.disabled = feedbackTxt.value.trim().length < 60;
-      });
-    }
-
-    document.getElementById('btn-step3-back').addEventListener('click', () => {
-      document.getElementById('step3-panel').classList.add('hidden');
-      document.getElementById('step2-panel').classList.remove('hidden');
-      setStep(2);
-    });
-
-    document.getElementById('btn-submit').addEventListener('click', submitEval);
-  }
-
-  /* ═══════════════════════════════════════════════
-     SUBMIT
-  ═══════════════════════════════════════════════ */
-  async function submitEval() {
-    const btn = document.getElementById('btn-submit');
-    btn.disabled = true;
-    btn.textContent = 'Guardando…';
-
-    if (ADMIN_PREVIEW) {
-      document.getElementById('step3-panel').classList.add('hidden');
-      document.getElementById('success-screen').classList.remove('hidden');
-      document.getElementById('success-msg').textContent = 'Admin Preview — evaluación simulada. No se guardó nada en Supabase.';
-      return;
-    }
-
-    try {
-      // 1. Create evaluacion record
-      const evalBody = {
-        ciclo_id:          CICLO.id,
-        evaluado_id:       EVALUADO.id || null,
-        evaluador_id:      EMP.id || null,
-        tipo_evaluador:    MODE === 'supervisor' ? 'supervisor' : 'self',
-        track:             'sales',
-        estado:            'completada',
-        periodos_meta:     state.quotaMeta,
-        periodos_total:    state.quotaTotal,
-        pct_promedio_cuota: state.quotaPct,
-        score_cuota:       state.quotaScore,
-        score_conductual:  state.conductualScore ?? state.selfScore,
-        score_final:       state.finalScore,
-        peso_aplicado:     MODE === 'supervisor' ? 0.4 : 0.2,
-        feedback_narrativo: MODE === 'supervisor'
-          ? document.getElementById('feedback-txt').value.trim()
-          : null,
-        completada_at: new Date().toISOString()
-      };
-
-      const evalResult = await sbPost('evaluaciones', evalBody);
-      EVAL_ID = evalResult[0]?.id;
-
-      // 2. Save individual responses
-      const respRows = [];
-      if (MODE === 'supervisor') {
-        BARS_QUESTIONS.forEach(q => {
-          respRows.push({
-            evaluacion_id:  EVAL_ID,
-            dimension:      q.key,
-            pregunta_key:   q.key,
-            pregunta_texto: q.text,
-            respuesta_score: state.barsScores[q.key]
-          });
-        });
-      } else {
-        FC_QUESTIONS.forEach(q => {
-          respRows.push({
-            evaluacion_id:  EVAL_ID,
-            dimension:      q.key,
-            pregunta_key:   q.key,
-            pregunta_texto: q.text,
-            respuesta_texto: state.fcAnswers[q.key]
-          });
-        });
-      }
-      if (respRows.length && EVAL_ID) {
-        await sbPost('evaluacion_respuestas', respRows);
-      }
-
-      // 3. Show success
-      document.getElementById('step3-panel').classList.add('hidden');
-      const successScreen = document.getElementById('success-screen');
-      successScreen.classList.remove('hidden');
-      if (MODE === 'self') {
-        document.getElementById('success-msg').textContent =
-          'Tu autoevaluación ha sido registrada. Tu supervisor verá tu respuesta junto con su evaluación para generar el score combinado del ciclo.';
-      }
-
-    } catch (err) {
-      btn.disabled = false;
-      btn.textContent = 'Enviar Evaluación';
-      alert('Error al guardar: ' + err.message + '\n\nRevisa la conexión e intenta de nuevo.');
-    }
-  }
-
-  /* ═══════════════════════════════════════════════
-     STEP UI
-  ═══════════════════════════════════════════════ */
-  function setStep(n) {
-    [1,2,3].forEach(i => {
-      const s = document.getElementById('st'+i);
-      s.classList.remove('active','done');
-      if (i < n) s.classList.add('done');
-      else if (i === n) s.classList.add('active');
-    });
-    [1,2].forEach(i => {
-      const l = document.getElementById('sl'+i);
-      if (l) l.classList.toggle('done', i < n);
-    });
-  }
-
-  /* ═══════════════════════════════════════════════
-     START — emp ID passed via ?emp= query param
-     (same pattern as goToExam in index.html)
-  ═══════════════════════════════════════════════ */
   init();
 </script>
 </body>
