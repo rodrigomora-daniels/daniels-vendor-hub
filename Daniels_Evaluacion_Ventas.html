@@ -506,27 +506,33 @@
      INIT
   ═══════════════════════════════════════════════ */
   async function init() {
-    // ── Load employee from ?emp= param — identical to Tier 1 pattern ──
+    // ── Exact same pattern as Tier 1 loadEmployeeFromURL ──
     const params = new URLSearchParams(window.location.search);
     const empId  = params.get('emp');
-    if (!empId) { window.location.href = 'index.html'; return; }
 
-    try {
-      const rows = await sbFetch(`empleados?id=eq.${empId}&select=id,nombre_completo,employee_id,tienda,es_admin`);
-      if (!rows || rows.length === 0) { window.location.href = 'index.html'; return; }
-      EMP = rows[0];
-      EMP.nombre = EMP.nombre_completo || empId;
-    } catch(e) {
-      window.location.href = 'index.html'; return;
-    }
-
-    // ── Admin immunity — same as Tier 1 ──
-    if (EMP.es_admin) {
-      ADMIN_PREVIEW = true;
-      document.getElementById('hdr-sub').insertAdjacentHTML('afterend',
-        `<div style="background:#1a2e1a;border-left:3px solid #22c55e;color:#86efac;padding:8px 14px;font-size:12px;font-weight:700;margin:8px 16px;border-radius:6px;">
-          🔍 Admin Preview — sin registro en Supabase. Puedes entrar y salir libremente.
-        </div>`);
+    if (empId) {
+      try {
+        const rows = await sbFetch(`empleados?id=eq.${empId}&select=id,nombre_completo,employee_id,tienda`);
+        if (rows && rows.length > 0) {
+          EMP = rows[0];
+          EMP.nombre = EMP.nombre_completo || empId;
+          // Check admin status separately — same as cockpit pattern
+          try {
+            const lvl = await sbFetch(`empleados?id=eq.${empId}&select=nivel_admin`);
+            const nivelAdmin = lvl && lvl[0] && lvl[0].nivel_admin;
+            if (nivelAdmin) {
+              ADMIN_PREVIEW = true;
+              document.getElementById('hdr-sub').insertAdjacentHTML('afterend',
+                `<div style="background:#1a2e1a;border-left:3px solid #22c55e;color:#86efac;padding:8px 14px;font-size:12px;font-weight:700;margin:8px 16px;border-radius:6px;">
+                  🔍 Admin Preview — sin registro en Supabase. Puedes entrar y salir libremente.
+                </div>`);
+            }
+          } catch(e) { /* nivel_admin check is optional */ }
+        }
+      } catch(err) {
+        console.error('Could not load employee context:', err);
+        // Don't redirect — show form anyway, same as Tier 1
+      }
     }
 
     MODE = params.get('mode') || 'self';
