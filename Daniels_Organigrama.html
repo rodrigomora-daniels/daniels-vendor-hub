@@ -223,57 +223,78 @@
 
   /* ── ORG DATA ── */
   const ORG = {
-    id:'rodrigo', name:'Rodrigo Mora', title:'General Manager', type:'gm', dept:'Dirección General',
+    id:'rodrigo', name:'Rodrigo Mora', title:'Director of Operations', type:'gm', dept:'Dirección General',
     children:[
+
+      /* ── VENTAS ── */
       {
         id:'hector', name:'Héctor Estrada',
         title:'Sales & Merch. Manager\nFurniture Buyer',
         type:'sales', dept:'Ventas',
         children:[
+          { id:'rosie', name:'Rosie', title:'Merch. Replenisher\n(Furniture)', type:'sales', dept:'Ventas', leaf:true },
           {
             id:'lourdes-jaime', name:'Lourdes / Jaime', title:'Store Managers — Euclid',
             type:'sales', dept:'Ventas',
             children:[
-              { id:'vend-euclid', name:'Vendedores Euclid', title:'Sales Associates', type:'sales', dept:'Ventas', leaf:true }
+              { id:'vend-euclid',    name:'Sales Floor (12)', title:'Vendedores', type:'sales', dept:'Ventas', leaf:true },
+              { id:'support-euclid', name:'Store Support (3)', title:'Handlers / Clerks', type:'sales', dept:'Ventas', leaf:true }
             ]
           },
           {
             id:'marco', name:'Marco', title:'Store Manager — Chino',
             type:'sales', dept:'Ventas',
             children:[
-              { id:'vend-chino', name:'Vendedores Chino', title:'Sales Associates', type:'sales', dept:'Ventas', leaf:true }
+              { id:'vend-chino',    name:'Sales Floor (3)', title:'Vendedores', type:'sales', dept:'Ventas', leaf:true },
+              { id:'support-chino', name:'Store Support (1)', title:'Handler', type:'sales', dept:'Ventas', leaf:true }
             ]
           },
           {
-            id:'guadalupe', name:'Guadalupe', title:'Supervisor — Cerritos',
+            id:'guadalupe', name:'Guadalupe', title:'Sales Supervisor — Cerritos',
             type:'sales', dept:'Ventas',
             children:[
-              { id:'vend-cerritos', name:'Vendedores Cerritos', title:'Sales Associates', type:'sales', dept:'Ventas', leaf:true }
+              { id:'vend-cerritos', name:'Sales Floor', title:'Vendedores', type:'sales', dept:'Ventas', leaf:true }
             ]
-          },
-          { id:'rosie', name:'Rosie', title:'Merch. Replenisher\n(Furniture)', type:'sales', dept:'Ventas', leaf:true }
+          }
         ]
       },
+
+      /* ── OPERACIONES ── */
       {
         id:'maricela', name:'Maricela Chávez',
-        title:'Operations &\nCredit Manager',
+        title:'Operations Manager',
         type:'ops', dept:'Operaciones',
+        note:'Credit approvals: gap coverage only',
         children:[
-          { id:'anahid',    name:'Anahid',               title:'Collections Specialist', type:'ops', dept:'Operaciones', leaf:true },
-          { id:'cust-ops',  name:'Customer Ops (×2)',    title:'Customer Operations\nAssociates', type:'ops', dept:'Operaciones', leaf:true },
-          { id:'ana',       name:'Ana',                  title:'Credit Approver', type:'ops', dept:'Operaciones', leaf:true },
-          { id:'leticia',   name:'Leticia',              title:'Credit Approver', type:'ops', dept:'Operaciones', leaf:true },
-          { id:'floor-ops', name:'Floor Assoc. (×3)',    title:'Floor Associates', type:'ops', dept:'Operaciones', leaf:true }
+          { id:'ops-collections', name:'Collections',          title:'Function', type:'ops', dept:'Operaciones', leaf:true },
+          { id:'ops-cs',          name:'Customer Service',     title:'Function', type:'ops', dept:'Operaciones', leaf:true },
+          { id:'ops-approvals',   name:'Approvals Support',    title:'2nd Line — Gap Coverage', type:'ops', dept:'Operaciones', leaf:true },
+          { id:'ops-storeops',    name:'Store Ops Support',    title:'Function', type:'ops', dept:'Operaciones', leaf:true }
         ]
       },
+
+      /* ── CREDIT APPROVALS (reportan a Rodrigo) ── */
+      {
+        id:'credit-approvals', name:'Credit Approvals',
+        title:'Ana / Leticia',
+        type:'ops', dept:'Crédito',
+        leaf:true,
+        note:'Reporte directo a GM'
+      },
+
+      /* ── ALMACÉN ── */
       {
         id:'polo', name:'Polo Torres',
         title:'Warehouse Manager\n(Sala Ahumada)',
         type:'warehouse', dept:'Almacén',
         children:[
-          { id:'wh-team', name:'Warehouse Team (~16)', title:'Distribution Associates', type:'warehouse', dept:'Almacén', leaf:true }
+          { id:'wh-dispatch',  name:'Dispatch (1)',           title:'Dispatch', type:'warehouse', dept:'Almacén', leaf:true },
+          { id:'wh-inventory', name:'Inventory Control (2)',  title:'Inventory Control', type:'warehouse', dept:'Almacén', leaf:true },
+          { id:'wh-ops',       name:'WH Operations (12)',     title:'Forklift · Delivery · Receiving\nStockers · Pickers · Drivers', type:'warehouse', dept:'Almacén', leaf:true }
         ]
       },
+
+      /* ── E-COMMERCE ── */
       {
         id:'angel', name:'Ángel Delgado',
         title:'E&A Buyer /\nEcommerce Oversight',
