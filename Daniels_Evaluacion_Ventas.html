@@ -553,9 +553,13 @@
       document.getElementById('st1-label').textContent = 'Autoevaluación';
     }
 
-    // Load active cycle
-    const cycles = await sbFetch(`evaluacion_ciclos?activo=eq.true&limit=1`);
-    CICLO = cycles[0] || null;
+    // Load active cycle — graceful if table doesn't exist yet
+    try {
+      const cycles = await sbFetch(`evaluacion_ciclos?activo=eq.true&limit=1`);
+      CICLO = cycles[0] || null;
+    } catch(e) {
+      CICLO = null; // table not yet created — renderStep1 handles this gracefully
+    }
 
     document.getElementById('loading-screen').classList.add('hidden');
     renderStep1();
