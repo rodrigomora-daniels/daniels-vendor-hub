@@ -253,26 +253,41 @@ Built: June 2026 | Public-facing
   #dhc-prescreen-root .dhc-result-msg.tone-neutral { color: var(--dhc-sub); }
   #dhc-prescreen-root .dhc-metrics {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
     margin-bottom: 18px;
   }
   #dhc-prescreen-root .dhc-metric {
     background: var(--dhc-off);
     border-radius: 8px;
-    padding: 12px;
+    padding: 10px 8px;
+    text-align: center;
+    border: 1px solid transparent;
+  }
+  #dhc-prescreen-root .dhc-metric.dhc-metric-adjusted {
+    border-color: var(--dhc-gold);
+    background: #FDF6E9;
   }
   #dhc-prescreen-root .dhc-metric-label {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--dhc-sub);
     margin: 0 0 2px;
   }
   #dhc-prescreen-root .dhc-metric-value {
-    font-size: 22px;
+    font-size: 18px;
     font-weight: 600;
     margin: 0;
+    white-space: nowrap;
   }
   #dhc-prescreen-root .dhc-slider-row { margin-bottom: 14px; }
+  #dhc-prescreen-root .dhc-explore-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--dhc-sub);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin: 4px 0 12px;
+  }
   #dhc-prescreen-root .dhc-adjust-note {
     font-size: 12px;
     color: var(--dhc-navy-dk);
@@ -457,6 +472,10 @@ Built: June 2026 | Public-facing
     <p class="dhc-result-msg" id="dhc-result-msg"></p>
 
     <div class="dhc-metrics" id="dhc-metrics">
+      <div class="dhc-metric" id="dhc-metric-dp-card">
+        <p class="dhc-metric-label">Down payment</p>
+        <p class="dhc-metric-value" id="dhc-metric-dp">—</p>
+      </div>
       <div class="dhc-metric">
         <p class="dhc-metric-label">Monthly payment</p>
         <p class="dhc-metric-value" id="dhc-metric-pmt">—</p>
@@ -471,9 +490,11 @@ Built: June 2026 | Public-facing
       <p id="dhc-note-text"></p>
     </div>
 
+    <p class="dhc-explore-label">Try a different scenario</p>
+
     <div class="dhc-slider-row">
       <div class="dhc-slider-head">
-        <span>Your down payment</span>
+        <span>Down payment</span>
         <span id="dhc-dp-readout">$0</span>
       </div>
       <input type="range" id="dhc-dp-slider" min="0" max="1800" step="25" value="0">
@@ -482,7 +503,7 @@ Built: June 2026 | Public-facing
 
     <div class="dhc-slider-row">
       <div class="dhc-slider-head">
-        <span>Desired term</span>
+        <span>Term</span>
         <span id="dhc-term-readout">18 months</span>
       </div>
       <input type="range" id="dhc-term-slider" min="3" max="24" step="3" value="18">
@@ -594,6 +615,8 @@ Built: June 2026 | Public-facing
   var inputCard    = $("dhc-input-card");
   var resultCard   = $("dhc-result-card");
   var resultMsg    = $("dhc-result-msg");
+  var metricDpCard = $("dhc-metric-dp-card");
+  var metricDp    = $("dhc-metric-dp");
   var metricPmt    = $("dhc-metric-pmt");
   var metricTerm   = $("dhc-metric-term");
   var noteBox      = $("dhc-note-box");
@@ -685,6 +708,7 @@ Built: June 2026 | Public-facing
       noteBox.classList.add("dhc-hidden");
     }
 
+    metricDp.textContent = result.dp != null ? fmtMoney(result.dp) : fmtMoney(state.dpInput);
     metricPmt.textContent = result.pmt > 0 ? fmtMoney(result.pmt) + "/mo" : "—";
     metricTerm.textContent = result.term ? result.term + " mo" : "—";
 
@@ -713,8 +737,10 @@ Built: June 2026 | Public-facing
       dpReadout.textContent = fmtMoney(adjustedDp);
       dpAdjustNote.textContent = "Adjusted to " + fmtMoney(adjustedDp) + " based on your profile's minimum down payment.";
       dpAdjustNote.classList.remove("dhc-hidden");
+      metricDpCard.classList.add("dhc-metric-adjusted");
     } else {
       dpAdjustNote.classList.add("dhc-hidden");
+      metricDpCard.classList.remove("dhc-metric-adjusted");
     }
 
     renderCtas(copy);
@@ -724,6 +750,8 @@ Built: June 2026 | Public-facing
   function renderError() {
     errorSlot.innerHTML = "<div class=\"dhc-error\">We couldn't load your estimate right now. Please try again in a moment, or visit us in store.</div>";
     resultMsg.textContent = "";
+    metricDpCard.classList.remove("dhc-metric-adjusted");
+    metricDp.textContent = "—";
     metricPmt.textContent = "—";
     metricTerm.textContent = "—";
     noteBox.classList.add("dhc-hidden");
@@ -753,7 +781,6 @@ Built: June 2026 | Public-facing
 
   function runEstimate(isInitial) {
     var payload = buildPayload();
-    console.log("[DHC debug] runEstimate called, isInitial =", isInitial, "payload =", payload);
 
     if (isInitial) {
       submitBtn.disabled = true;
@@ -770,22 +797,18 @@ Built: June 2026 | Public-facing
       body: JSON.stringify(payload)
     })
       .then(function (resp) {
-        console.log("[DHC debug] fetch resolved, status =", resp.status);
         if (!resp.ok) throw new Error("Server returned " + resp.status);
         return resp.json();
       })
       .then(function (result) {
-        console.log("[DHC debug] result received =", result);
         if (result.error) throw new Error(result.error);
         renderResult(result);
-        console.log("[DHC debug] renderResult called, pmt =", result.pmt, "term =", result.term);
         if (isInitial) {
           logRun(payload, result);
           inputCard.classList.add("dhc-hidden");
         }
       })
       .catch(function (err) {
-        console.log("[DHC debug] runEstimate CATCH fired:", err && err.message);
         renderError();
       })
       .finally(function () {
@@ -896,10 +919,8 @@ Built: June 2026 | Public-facing
   dpSlider.addEventListener("input", function () {
     state.dpInput = parseInt(dpSlider.value, 10) || 0;
     dpReadout.textContent = fmtMoney(state.dpInput);
-    console.log("[DHC debug] dp slider input fired, dpInput =", state.dpInput);
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(function () {
-      console.log("[DHC debug] debounce fired, calling runEstimate(false)");
       runEstimate(false);
     }, 400);
   });
@@ -907,10 +928,8 @@ Built: June 2026 | Public-facing
   termSlider.addEventListener("input", function () {
     state.termReq = parseInt(termSlider.value, 10) || 18;
     termReadout.textContent = state.termReq + " months";
-    console.log("[DHC debug] term slider input fired, termReq =", state.termReq);
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(function () {
-      console.log("[DHC debug] debounce fired, calling runEstimate(false)");
       runEstimate(false);
     }, 400);
   });
