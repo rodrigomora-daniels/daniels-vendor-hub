@@ -1,1029 +1,689 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Evaluación de Desempeño — Ventas</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg:      #0f172a;
-      --surface: #1e293b;
-      --border:  #334155;
-      --text:    #e2e8f0;
-      --muted:   #94a3b8;
-      --dim:     #64748b;
-      --green:   #22c55e;
-      --green-d: #16a34a;
-      --red:     #ef4444;
-      --amber:   #f59e0b;
-      --blue:    #3b82f6;
-    }
-
-    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
-
-    /* ── HEADER ── */
-    .hdr { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 50; }
-    .hdr-logo { width: 34px; height: 34px; background: var(--green); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #0f172a; font-size: 16px; }
-    .hdr h1 { font-size: 15px; font-weight: 700; }
-    .hdr p  { font-size: 11px; color: var(--dim); }
-    .back-btn { margin-left: auto; color: var(--muted); font-size: 13px; text-decoration: none; transition: color .2s; }
-    .back-btn:hover { color: var(--green); }
-
-    /* ── STEP BAR ── */
-    .step-bar { display: flex; align-items: center; gap: 0; padding: 20px 32px; }
-    .step { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--dim); }
-    .step-num { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; transition: all .3s; }
-    .step.active .step-num  { border-color: var(--green); background: var(--green); color: #0f172a; }
-    .step.done .step-num    { border-color: var(--green-d); background: var(--green-d); color: #0f172a; }
-    .step.active            { color: var(--text); font-weight: 600; }
-    .step-line { flex: 1; height: 2px; background: var(--border); margin: 0 8px; min-width: 20px; transition: background .3s; }
-    .step-line.done { background: var(--green-d); }
-
-    /* ── MAIN ── */
-    .main { max-width: 760px; margin: 0 auto; padding: 0 24px 60px; }
-
-    .section-title { font-size: 19px; font-weight: 700; margin-bottom: 4px; }
-    .section-sub   { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
-
-    /* ── EMPLOYEE CARD ── */
-    .emp-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; margin-bottom: 28px; display: flex; align-items: center; gap: 14px; }
-    .emp-avatar { width: 42px; height: 42px; border-radius: 50%; background: var(--green-d); display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 800; color: #fff; }
-    .emp-name   { font-size: 15px; font-weight: 700; }
-    .emp-role   { font-size: 12px; color: var(--muted); }
-    .mode-badge { margin-left: auto; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px; }
-    .mode-badge.supervisor { background: #1e3a5f; color: #93c5fd; }
-    .mode-badge.self       { background: #14532d; color: #86efac; }
-
-    /* ── QUOTA SECTION ── */
-    .quota-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
-    .q-input-wrap label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
-    .q-input-wrap input { width: 100%; background: var(--bg); border: 1.5px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 20px; font-weight: 700; color: var(--text); text-align: center; outline: none; transition: border-color .2s; }
-    .q-input-wrap input:focus { border-color: var(--green); }
-
-    .quota-result { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
-    .qr-label  { font-size: 12px; color: var(--muted); }
-    .qr-value  { font-size: 22px; font-weight: 800; }
-    .qr-value.high   { color: var(--green); }
-    .qr-value.mid    { color: var(--amber); }
-    .qr-value.low    { color: var(--red); }
-
-    /* ── BARS QUESTION ── */
-    .bars-q { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px 24px; margin-bottom: 20px; }
-    .bars-dim { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; color: var(--green); margin-bottom: 6px; }
-    .bars-text { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 18px; line-height: 1.5; }
-    .bars-scale { display: flex; gap: 8px; }
-    .bars-btn {
-      flex: 1; padding: 12px 6px; border-radius: 8px; border: 1.5px solid var(--border);
-      background: var(--bg); color: var(--muted); cursor: pointer;
-      text-align: center; font-size: 18px; font-weight: 800; transition: all .2s;
-      position: relative;
-    }
-    .bars-btn:hover { border-color: var(--green); color: var(--text); }
-    .bars-btn.selected { border-color: var(--green); background: #0a2010; color: var(--green); }
-    .bars-anchor { font-size: 9px; font-weight: 500; line-height: 1.3; margin-top: 4px; color: inherit; display: block; }
-
-    /* ── FORCED CHOICE ── */
-    .fc-q { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px 24px; margin-bottom: 20px; }
-    .fc-dim  { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; color: var(--blue); margin-bottom: 6px; }
-    .fc-text { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
-    .fc-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .fc-opt {
-      border: 1.5px solid var(--border); border-radius: 9px; padding: 14px 16px;
-      cursor: pointer; font-size: 13px; line-height: 1.5; color: var(--muted);
-      transition: all .2s; background: var(--bg);
-    }
-    .fc-opt:hover { border-color: var(--blue); color: var(--text); }
-    .fc-opt.selected { border-color: var(--blue); background: #05111f; color: var(--text); }
-    .fc-letter { font-size: 11px; font-weight: 800; color: var(--dim); margin-bottom: 6px; display: block; }
-    .fc-opt.selected .fc-letter { color: var(--blue); }
-
-    /* ── SCORE PREVIEW ── */
-    .score-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: 14px; padding: 28px; margin-bottom: 24px; }
-    .score-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 20px; }
-    .score-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
-    .score-row:last-of-type { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
-    .score-row-label { font-size: 13px; color: var(--muted); }
-    .score-row-weight { font-size: 11px; color: var(--dim); }
-    .score-row-val { font-size: 20px; font-weight: 800; }
-
-    .final-score-wrap { text-align: center; margin: 24px 0; }
-    .final-score-num { font-size: 64px; font-weight: 900; line-height: 1; }
-    .final-score-cat { font-size: 14px; font-weight: 700; margin-top: 6px; letter-spacing: .5px; }
-    .final-score-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
-
-    .cat-exceeds  { color: var(--green); }
-    .cat-meets    { color: #4ade80; }
-    .cat-develop  { color: var(--amber); }
-    .cat-pip      { color: var(--red); }
-
-    /* ── FEEDBACK ── */
-    .feedback-wrap label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
-    .feedback-wrap textarea { width: 100%; background: var(--bg); border: 1.5px solid var(--border); border-radius: 9px; padding: 14px; font-size: 13px; color: var(--text); outline: none; resize: vertical; min-height: 100px; line-height: 1.6; transition: border-color .2s; font-family: inherit; }
-    .feedback-wrap textarea:focus { border-color: var(--green); }
-    .feedback-wrap { margin-bottom: 20px; }
-
-    /* ── BUTTONS ── */
-    .btn-row { display: flex; gap: 12px; margin-top: 28px; }
-    .btn-primary { flex: 1; padding: 14px; background: var(--green); color: #0f172a; font-size: 14px; font-weight: 800; border: none; border-radius: 9px; cursor: pointer; transition: background .2s, transform .1s; }
-    .btn-primary:hover { background: var(--green-d); }
-    .btn-primary:active { transform: scale(.98); }
-    .btn-primary:disabled { background: var(--border); color: var(--dim); cursor: not-allowed; }
-    .btn-secondary { padding: 14px 20px; background: transparent; color: var(--muted); font-size: 14px; border: 1.5px solid var(--border); border-radius: 9px; cursor: pointer; transition: all .2s; }
-    .btn-secondary:hover { border-color: var(--muted); color: var(--text); }
-
-    /* ── PROGRESS BAR ── */
-    .prog-bar-wrap { height: 3px; background: var(--border); border-radius: 2px; margin-bottom: 28px; }
-    .prog-bar { height: 100%; background: var(--green); border-radius: 2px; transition: width .4s; }
-
-    /* ── NOTICE ── */
-    .notice { border-radius: 9px; padding: 14px 16px; font-size: 13px; line-height: 1.5; margin-bottom: 20px; }
-    .notice.info  { background: #0c2340; border: 1px solid #1e3a5f; color: #93c5fd; }
-    .notice.warn  { background: #2d1a00; border: 1px solid #78350f; color: #fcd34d; }
-    .notice.ok    { background: #0a2010; border: 1px solid #14532d; color: #86efac; }
-
-    /* ── SUCCESS STATE ── */
-    .success-screen { text-align: center; padding: 60px 20px; }
-    .success-icon { font-size: 56px; margin-bottom: 16px; }
-    .success-screen h2 { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
-    .success-screen p  { font-size: 14px; color: var(--muted); max-width: 380px; margin: 0 auto; line-height: 1.6; }
-
-    /* ── LOADING ── */
-    .loading { text-align: center; padding: 80px 20px; color: var(--muted); font-size: 14px; }
-
-    .hidden { display: none !important; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Daniels Workspace — Mi Evaluación / My Evaluation</title>
+<style>
+  :root {
+    --navy:#1B3A6B; --gold:#C8922A; --ltblue:#D6E4F7; --cream:#FFF8EC;
+    --green:#27AE60; --red:#C0392B; --gray:#F4F4F4; --dkgray:#3C3C3C;
+    --mgray:#6B6B6B; --white:#FFFFFF;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:Arial,sans-serif;background:#f0f2f5;min-height:100vh;}
+  .top-bar{background:var(--navy);border-bottom:4px solid var(--gold);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;}
+  .top-bar h1{color:var(--white);font-size:18px;}
+  .top-bar .sub{color:var(--ltblue);font-size:12px;margin-top:2px;}
+  .btn-back{background:transparent;border:1px solid var(--ltblue);color:var(--ltblue);padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;}
+  .content{max-width:760px;margin:0 auto;padding:24px 20px 60px;}
+  .card{background:var(--white);border-radius:14px;padding:26px 24px;box-shadow:0 2px 12px rgba(0,0,0,.07);margin-bottom:20px;}
+  .card h2{color:var(--navy);font-size:18px;margin-bottom:6px;}
+  .card .desc{color:var(--mgray);font-size:13px;line-height:1.5;margin-bottom:16px;}
+  .badge-admin{background:#fdf3e3;border-left:4px solid var(--gold);color:var(--navy);padding:14px 16px;border-radius:6px;font-size:13px;margin-bottom:18px;font-weight:700;}
+  .no-cycle{background:#fdecea;border-left:4px solid var(--red);color:var(--red);padding:16px;border-radius:6px;font-size:14px;text-align:center;}
+  .dim-block{border-top:1px solid #eee;padding-top:20px;margin-top:20px;}
+  .dim-block:first-of-type{border-top:none;padding-top:0;margin-top:0;}
+  .dim-title{color:var(--navy);font-size:15px;font-weight:700;margin-bottom:4px;}
+  .dim-num{display:inline-block;background:var(--navy);color:var(--white);width:22px;height:22px;border-radius:50%;text-align:center;line-height:22px;font-size:11px;margin-right:8px;}
+  .dim-q{color:var(--dkgray);font-size:14px;font-style:italic;margin-bottom:14px;line-height:1.5;}
+  .bars-option{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border:2px solid #e8e4dc;border-radius:10px;margin-bottom:8px;cursor:pointer;transition:all .15s;}
+  .bars-option:hover{border-color:var(--gold);background:var(--cream);}
+  .bars-option.selected{border-color:var(--navy);background:var(--ltblue);}
+  .bars-option input{margin-top:3px;flex-shrink:0;}
+  .bars-option .num{font-weight:700;color:var(--navy);flex-shrink:0;width:20px;}
+  .bars-option .txt{font-size:13px;color:var(--dkgray);line-height:1.5;}
+  .btn{display:block;width:100%;padding:15px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;border:none;text-align:center;transition:opacity .2s;}
+  .btn:disabled{background:#ccc;color:#888;cursor:not-allowed;}
+  .btn-primary{background:var(--navy);color:var(--white);}
+  .btn-primary:active:not(:disabled){opacity:.85;}
+  .progress-track{background:#e8e4dc;border-radius:6px;height:8px;overflow:hidden;margin-bottom:6px;}
+  .progress-fill{background:var(--gold);height:100%;transition:width .3s;}
+  .progress-label{font-size:12px;color:var(--mgray);text-align:right;margin-bottom:20px;}
+  .error-msg{background:#fdecea;border-left:4px solid var(--red);color:var(--red);padding:10px 14px;border-radius:6px;font-size:13px;margin-bottom:16px;display:none;}
+  .error-msg.show{display:block;}
+  .success-screen{text-align:center;padding:40px 20px;}
+  .success-screen .icon{font-size:56px;margin-bottom:16px;}
+  .success-screen h2{color:var(--navy);margin-bottom:10px;}
+  .success-screen p{color:var(--mgray);font-size:14px;line-height:1.6;max-width:440px;margin:0 auto;}
+  .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+</style>
 </head>
 <body>
 
-<!-- APP SCREEN -->
-<div id="app-screen">
-
-<!-- HEADER -->
-<header class="hdr">
-  <div class="hdr-logo">D</div>
+<div class="top-bar">
   <div>
-    <h1>My Daniels Workspace</h1>
-    <p id="hdr-sub">Evaluación de Desempeño — Ventas</p>
+    <h1>📋 Mi Evaluación / My Evaluation</h1>
+    <div class="sub" id="cycle-label">—</div>
   </div>
-  <div style="margin-left:auto;display:flex;align-items:center;gap:12px;">
-    <div id="lang-toggle" onclick="toggleLang()"
-      style="cursor:pointer;background:#1e293b;border:1.5px solid #334155;border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;color:#94a3b8;transition:all .2s;user-select:none;"
-      title="Switch language / Cambiar idioma">
-      EN | <span style="color:#22c55e">ES</span>
-    </div>
-    <a href="index.html" class="back-btn" id="back-btn-txt">← Hub</a>
-  </div>
-</header>
-
-<!-- STEP BAR -->
-<div class="step-bar" id="step-bar">
-  <div class="step active" id="st1"><div class="step-num">1</div><span id="st1-label">Desempeño en Cuota</span></div>
-  <div class="step-line" id="sl1"></div>
-  <div class="step" id="st2"><div class="step-num">2</div><span>Evaluación Conductual</span></div>
-  <div class="step-line" id="sl2"></div>
-  <div class="step" id="st3"><div class="step-num">3</div><span>Revisión y Envío</span></div>
+  <button class="btn-back" onclick="window.location.href='index.html'">← Back / Regresar</button>
 </div>
 
-<!-- MAIN -->
-<div class="main">
-
-  <!-- Loading -->
-  <div id="loading-screen" class="loading">' + t('loading') + '</div>
-
-  <!-- STEP 1: QUOTA (supervisor) or INTRO (self) -->
-  <div id="step1-panel" class="hidden">
-    <div class="prog-bar-wrap"><div class="prog-bar" id="prog" style="width:33%"></div></div>
-    <div id="emp-card-wrap"></div>
-
-    <!-- Supervisor quota entry -->
-    <div id="quota-panel" class="hidden">
-      <div class="section-title">Desempeño en Cuota</div>
-      <div class="section-sub" id="ciclo-label">Ciclo activo</div>
-
-      <div class="notice info">El desempeño en cuota representa el <strong>40%</strong> del score final. Ingresa los datos del período de evaluación.</div>
-
-      <div class="quota-grid">
-        <div class="q-input-wrap">
-          <label>Períodos con meta cumplida</label>
-          <input type="number" id="inp-meta" min="0" max="12" placeholder="0">
-        </div>
-        <div class="q-input-wrap">
-          <label>Total de períodos evaluados</label>
-          <input type="number" id="inp-total" min="1" max="12" placeholder="6">
-        </div>
-        <div class="q-input-wrap">
-          <label>% promedio de cuota</label>
-          <input type="number" id="inp-pct" min="0" max="300" placeholder="100">
-        </div>
-      </div>
-
-      <div class="quota-result">
-        <div>
-          <div class="qr-label">Score de cuota (pre-cálculo)</div>
-          <div style="font-size:11px;color:var(--dim);margin-top:3px;">50% tasa de cumplimiento + 50% % promedio (cap 100)</div>
-        </div>
-        <div class="qr-value" id="quota-score-display">—</div>
-      </div>
-    </div>
-
-    <!-- Self-eval intro -->
-    <div id="self-intro-panel" class="hidden">
-      <div class="section-title">Tu Autoevaluación</div>
-      <div class="section-sub">Ciclo: <span id="ciclo-label-self"></span></div>
-      <div class="notice info">
-        A continuación verás <strong>5 situaciones</strong>. Para cada una, selecciona la opción que describe mejor lo que <em>realmente haces</em> en tu día a día — no lo que crees que deberías hacer.<br><br>
-        No hay respuestas correctas o incorrectas. La honestidad en esta sección es lo que hace útil tu autoevaluación para tu supervisor y para ti.
-      </div>
-    </div>
-
-    <div class="btn-row">
-      <button class="btn-primary" id="btn-step1-next" disabled>Continuar →</button>
-    </div>
+<div class="content" id="app-content">
+  <div class="card">
+    <p style="text-align:center;color:var(--mgray);padding:30px 0;">Loading... / Cargando...</p>
   </div>
-
-  <!-- STEP 2: BARS (supervisor) or FORCED CHOICE (self) -->
-  <div id="step2-panel" class="hidden">
-    <div class="prog-bar-wrap"><div class="prog-bar" style="width:66%"></div></div>
-    <div id="questions-container"></div>
-    <div class="btn-row">
-      <button class="btn-secondary" id="btn-step2-back">← Atrás</button>
-      <button class="btn-primary" id="btn-step2-next" disabled>Continuar →</button>
-    </div>
-  </div>
-
-  <!-- STEP 3: REVIEW + FEEDBACK + SUBMIT -->
-  <div id="step3-panel" class="hidden">
-    <div class="prog-bar-wrap"><div class="prog-bar" style="width:100%"></div></div>
-
-    <div class="section-title">Revisión Final</div>
-    <div class="section-sub">Verifica el resumen antes de enviar. Esta acción no se puede deshacer.</div>
-
-    <div class="score-card">
-      <h3>Desglose del Score</h3>
-      <div id="score-breakdown"></div>
-      <div class="final-score-wrap">
-        <div class="final-score-num" id="final-score-num">—</div>
-        <div class="final-score-cat" id="final-score-cat"></div>
-        <div class="final-score-sub" id="final-score-sub"></div>
-      </div>
-    </div>
-
-    <!-- Feedback (supervisor only) -->
-    <div id="feedback-section" class="hidden">
-      <div class="notice warn">El feedback narrativo es <strong>obligatorio</strong> para enviar. Describe de manera específica las áreas de oportunidad y fortalezas observadas.</div>
-      <div class="feedback-wrap" style="margin-top:16px;">
-        <label>Feedback del supervisor</label>
-        <textarea id="feedback-txt" placeholder="Ejemplo: Juan muestra un dominio sólido de Good/Better/Best, logrando cerrar en Better o Best en aproximadamente 6 de cada 10 tickets. Su área de mayor oportunidad es la presentación de financiamiento — en las últimas semanas evitó el tema en 3 interacciones observadas. Se recomienda reforzar el uso del pre-screen como herramienta de cierre antes del siguiente ciclo."></textarea>
-      </div>
-    </div>
-
-    <!-- Acknowledge notice (self) -->
-    <div id="ack-section" class="hidden">
-      <div class="notice ok">Al enviar confirmas que estas respuestas reflejan tu desempeño real durante el período evaluado. Tu supervisor verá tu autoevaluación junto con la suya para generar el score combinado.</div>
-    </div>
-
-    <div class="btn-row">
-      <button class="btn-secondary" id="btn-step3-back">← Atrás</button>
-      <button class="btn-primary" id="btn-submit">Enviar Evaluación</button>
-    </div>
-  </div>
-
-  <!-- SUCCESS -->
-  <div id="success-screen" class="hidden success-screen">
-    <div class="success-icon">✅</div>
-    <h2>Evaluación enviada</h2>
-    <p id="success-msg">La evaluación ha sido registrada. El empleado recibirá una notificación para revisar y firmar sus resultados.</p>
-    <div style="margin-top:28px;">
-      <a href="index.html" class="btn-primary" style="display:inline-block;padding:12px 28px;text-decoration:none;">Volver al Hub</a>
-    </div>
-  </div>
-
-</div><!-- /main -->
-</div><!-- /app-screen -->
+</div>
 
 <script>
-  /* ═══════════════════════════════════════════════
-     CONFIG
-  ═══════════════════════════════════════════════ */
-  const SUPABASE_URL = 'https://ecfxeebhtgkbsdeuiueb.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_oRxEOMLizp1kjlsRjWWaxg_muaaMHFt';
+/* ════════════════════════════════════════════════════════════
+   SUPABASE CONFIG — identical to Tier1/Tier2/Cockpit
+   ════════════════════════════════════════════════════════════ */
+const SUPABASE_URL = 'https://ecfxeebhtgkbsdeuiueb.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_oRxEOMLizp1kjlsRjWWaxg_muaaMHFt';
 
-  /* ═══════════════════════════════════════════════
-     QUESTION BANK
-  ═══════════════════════════════════════════════ */
-
-  // BARS questions — bilingual
-  const BARS_QUESTIONS = [
-    {
-      key: 'apertura_cliente',
-      dim: { es:'Manejo del Piso y Apertura', en:'Floor Management & Customer Opening' },
-      text: { es:'¿Con qué consistencia este vendedor ejecuta una apertura estructurada con el cliente?', en:'How consistently does this associate execute a structured opening with the customer?' },
-      anchors: {
-        es:['Espera a que el cliente se acerque o solicite ayuda antes de iniciar contacto.','Saluda al cliente pero no siempre realiza una apertura estructurada.','Saluda, hace preguntas de descubrimiento y establece rapport antes de mostrar producto.','Ejecuta apertura consistente: identifica necesidad y presupuesto antes de dirigir al cliente al piso.','Ejecuta apertura completa, identifica necesidad, presupuesto y motivador emocional; adapta toda la presentación en consecuencia.'],
-        en:['Waits for the customer to approach or ask for help before initiating contact.','Greets the customer but does not always execute a structured opening.','Greets, asks discovery questions, and builds rapport before showing product.','Executes consistent opening: identifies need and budget before directing customer to the floor.','Executes full opening, identifies need, budget, and emotional motivator; adapts entire presentation accordingly.']
-      }
-    },
-    {
-      key: 'good_better_best',
-      dim: { es:'Presentación Good / Better / Best', en:'Good / Better / Best Presentation' },
-      text: { es:'¿Cómo ejecuta este vendedor la presentación de los tres niveles de producto?', en:'How does this associate execute the three-tier product presentation?' },
-      anchors: {
-        es:['Muestra el producto que el cliente eligió sin presentar alternativas.','Menciona opciones adicionales solo si el cliente pregunta directamente.','Presenta consistentemente una opción en cada nivel G/B/B con diferenciación de valor.','Presenta G/B/B con beneficios específicos al cliente y maneja objeciones de precio.','Presenta G/B/B, conecta cada nivel a necesidades identificadas; cierra en Better o Best en la mayoría de los casos.'],
-        en:['Shows only the product the customer picked without presenting alternatives.','Mentions additional options only if the customer asks directly.','Consistently presents one option at each G/B/B level with value differentiation.','Presents G/B/B with customer-specific benefits and handles price objections.','Presents G/B/B, connects each level to identified needs; closes on Better or Best in most cases.']
-      }
-    },
-    {
-      key: 'financiamiento',
-      dim: { es:'Presentación de Financiamiento', en:'Financing Presentation' },
-      text: { es:'¿Cómo integra este vendedor la opción de financiamiento al proceso de venta?', en:'How does this associate integrate the financing option into the sales process?' },
-      anchors: {
-        es:['Evita el tema de crédito o lo menciona solo si el cliente lo pregunta.','Informa de la opción de financiamiento pero no la integra al proceso de venta.','Presenta financiamiento como parte natural del proceso antes del cierre.','Utiliza el pre-screen como herramienta de cierre y maneja preguntas sobre términos con confianza.','Integra el pre-screen de forma fluida; explica términos con claridad y usa el resultado para estructurar o cerrar la venta.'],
-        en:['Avoids the credit topic or mentions it only if the customer asks.','Informs the customer of financing but does not integrate it into the sales process.','Presents financing as a natural part of the process before closing.','Uses the pre-screen as a closing tool and handles questions about terms confidently.','Integrates the pre-screen fluidly; explains terms clearly and uses the result to structure or close the sale.']
-      }
-    },
-    {
-      key: 'ejecucion_politicas',
-      dim: { es:'Ejecución de Políticas', en:'Policy Execution' },
-      text: { es:'¿Con qué precisión aplica este vendedor las políticas de la empresa (Haul Away, Price Match, Garantías, Devoluciones)?', en:'How accurately does this associate apply company policies (Haul Away, Price Match, Warranties, Returns)?' },
-      anchors: {
-        es:['Desconoce o aplica incorrectamente al menos una política clave.','Conoce las políticas pero las consulta con frecuencia o las aplica con inconsistencia.','Aplica las políticas correctamente en situaciones estándar.','Aplica políticas con precisión en situaciones estándar y atípicas sin necesitar consulta.','Domina todas las políticas; las usa como herramienta de cierre y orienta a compañeros cuando es necesario.'],
-        en:["Does not know or incorrectly applies at least one key policy.","Knows the policies but frequently consults or applies them inconsistently.","Correctly applies policies in standard situations.","Applies policies accurately in both standard and atypical situations without needing to consult.","Masters all policies; uses them as closing tools and guides teammates when needed."]
-      }
-    },
-    {
-      key: 'equipo_cultura',
-      dim: { es:'Trabajo en Equipo y Cultura de Piso', en:'Teamwork & Floor Culture' },
-      text: { es:'¿Cómo contribuye este vendedor a la dinámica general del piso y al equipo?', en:'How does this associate contribute to the overall floor dynamic and team?' },
-      anchors: {
-        es:['Trabaja de manera aislada; no contribuye fuera de sus propias ventas.','Apoya a compañeros ocasionalmente pero solo cuando se le solicita.','Participa en la dinámica del piso, cubre gaps cuando es necesario y mantiene actitud positiva.','Apoya proactivamente a compañeros, comparte técnicas y mantiene el piso organizado sin instrucción.','Es referente de cultura en el equipo; eleva el desempeño de otros y actúa como punto de apoyo para empleados nuevos.'],
-        en:['Works in isolation; does not contribute beyond their own sales.','Supports teammates occasionally but only when asked.','Participates in floor dynamics, covers gaps when needed, and maintains a positive attitude.','Proactively supports teammates, shares techniques, and keeps the floor organized without instruction.','Is a culture reference on the team; elevates performance of others and acts as a support point for new employees.']
-      }
+async function sbFetch(path, options = {}) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Prefer': options.method === 'POST' ? 'return=representation' : undefined,
+      ...(options.headers || {})
     }
-    ];
-
-  // FORCED-CHOICE — bilingual, B = higher performance
-  const FC_QUESTIONS = [
-    {
-      key: 'fc_cliente_dificil',
-      dim: { es:'Manejo de Clientes', en:'Customer Handling' },
-      text: { es:'Selecciona la opción que mejor describe tu forma de actuar habitual:', en:'Select the option that best describes your usual behavior:' },
-      optA: { es:'Cuando un cliente está difícil o frustrado, prefiero darle espacio y dejar que se calme antes de continuar la conversación.', en:'When a customer is difficult or frustrated, I prefer to give them space and let them calm down before continuing the conversation.' },
-      optB: { es:'Cuando un cliente está difícil o frustrado, busco identificar la causa raíz de su frustración y la atiendo directamente en el momento.', en:'When a customer is difficult or frustrated, I seek to identify the root cause of their frustration and address it directly in the moment.' }
-    },
-    {
-      key: 'fc_conocimiento',
-      dim: { es:'Conocimiento de Producto', en:'Product Knowledge' },
-      text: { es:'Selecciona la opción que mejor describe tu nivel de conocimiento:', en:'Select the option that best describes your level of knowledge:' },
-      optA: { es:'Conozco bien los productos que vendo con más frecuencia y puedo responder preguntas sobre ellos con confianza.', en:'I know well the products I sell most frequently and can answer questions about them with confidence.' },
-      optB: { es:'Conozco los productos que vendo frecuentemente y también los que vendo poco; me mantengo actualizado en los cambios de catálogo.', en:'I know both the products I sell frequently and those I rarely sell; I stay current on catalog changes.' }
-    },
-    {
-      key: 'fc_financiamiento',
-      dim: { es:'Presentación de Financiamiento', en:'Financing Presentation' },
-      text: { es:'Selecciona la opción que mejor describe tu práctica con el crédito:', en:'Select the option that best describes your practice with credit:' },
-      optA: { es:'Presento la opción de financiamiento a los clientes que parecen interesados o que me preguntan por ella.', en:'I present the financing option to customers who seem interested or who ask about it.' },
-      optB: { es:'Presento la opción de financiamiento como parte de mi proceso con todos los clientes, sin importar cómo califico a primera vista su situación.', en:'I present the financing option as part of my process with every customer, regardless of how I initially assess their situation.' }
-    },
-    {
-      key: 'fc_metas',
-      dim: { es:'Respuesta ante la Meta', en:'Response to Quota' },
-      text: { es:'Selecciona la opción que mejor refleja tu comportamiento cuando vas abajo de meta:', en:'Select the option that best reflects your behavior when you are below quota:' },
-      optA: { es:'Cuando no voy en camino a mi meta mensual, me concentro en cerrar las ventas que ya tengo en proceso.', en:'When I am not on track for my monthly quota, I focus on closing the sales I already have in progress.' },
-      optB: { es:'Cuando no voy en camino a mi meta mensual, analizo qué estoy haciendo diferente y ajusto mi approach antes de que termine el mes.', en:'When I am not on track for my monthly quota, I analyze what I am doing differently and adjust my approach before the month ends.' }
-    },
-    {
-      key: 'fc_desarrollo',
-      dim: { es:'Desarrollo e Iniciativa', en:'Development & Initiative' },
-      text: { es:'Selecciona la opción que mejor describe tu relación con el entrenamiento:', en:'Select the option that best describes your relationship with training:' },
-      optA: { es:'He completado las certificaciones requeridas y las reviso cuando necesito recordar algo específico.', en:'I have completed the required certifications and review them when I need to recall something specific.' },
-      optB: { es:'He completado las certificaciones requeridas y además aplico activamente lo aprendido en mi trabajo diario, sin esperar que me lo recuerden.', en:'I have completed the required certifications and actively apply what I learned in my daily work, without waiting to be reminded.' }
-    }
-    ];
-
-  /* ═══════════════════════════════════════════════
-     STATE
-  ═══════════════════════════════════════════════ */
-  let MODE       = '';    // 'supervisor' | 'self'
-  let ADMIN_PREVIEW = false;
-  let LANG       = 'es';  // 'es' | 'en'
-
-  // UI string translations
-  const UI = {
-    es: {
-      title: 'Evaluación de Desempeño — Ventas',
-      back: '← Hub',
-      step1_quota: t('quota_title'),
-      step1_self: t('mode_self'),
-      step2: 'Evaluación Conductual',
-      step3: 'Revisión y Envío',
-      loading: '' + t('loading') + '',
-      no_cycle: '' + t('no_cycle') + '',
-      admin_banner: '' + t('admin_banner') + '',
-      mode_supervisor: t('mode_supervisor'),
-      mode_self: t('mode_self'),
-      quota_title: t('quota_title'),
-      quota_sub: 'Ciclo activo',
-      quota_notice: 'El desempeño en cuota representa el <strong>40%</strong> del score final.',
-      lbl_meta: 'Períodos con meta cumplida',
-      lbl_total: 'Total de períodos evaluados',
-      lbl_pct: '% promedio de cuota',
-      lbl_quota_pre: 'Score de cuota (pre-cálculo)',
-      lbl_quota_sub: '50% tasa de cumplimiento + 50% % promedio (cap 100)',
-      self_title: 'Tu Autoevaluación',
-      self_notice: 'A continuación verás <strong>5 situaciones</strong>. Para cada una, selecciona la opción que describe mejor lo que <em>realmente haces</em> en tu día a día — no lo que crees que deberías hacer.<br><br>No hay respuestas correctas o incorrectas. La honestidad en esta sección es lo que hace útil tu autoevaluación.',
-      btn_continue: t('btn_continue'),
-      btn_back: t('btn_back'),
-      btn_submit: t('btn_submit'),
-      btn_submitting: t('btn_submitting'),
-      cond_title: 'Evaluación Conductual',
-      cond_sub: 'Para cada dimensión, selecciona el número que mejor describe el comportamiento observado en el período.',
-      sit_title: 'Situaciones de Trabajo',
-      sit_sub: 'En cada situación, selecciona la opción que describe más fielmente tu comportamiento habitual.',
-      review_title: 'Revisión Final',
-      review_sub: 'Verifica el resumen antes de enviar. Esta acción no se puede deshacer.',
-      score_breakdown: t('score_breakdown'),
-      feedback_notice: 'El feedback narrativo es <strong>obligatorio</strong> para enviar.',
-      feedback_label: 'Feedback del supervisor',
-      feedback_ph: 'Describe de manera específica las áreas de oportunidad y fortalezas observadas.',
-      ack_notice: 'Al enviar confirmas que estas respuestas reflejan tu desempeño real durante el período evaluado.',
-      success_title: t('success_title'),
-      success_msg_sup: t('success_msg_sup'),
-      success_msg_self: t('success_msg_self'),
-      admin_success: t('admin_success'),
-      back_hub: t('back_hub'),
-      cat_exceeds: 'EXCEEDS EXPECTATIONS',
-      cat_meets: 'MEETS EXPECTATIONS',
-      cat_develop: 'NEEDS DEVELOPMENT',
-      cat_pip: 'BELOW STANDARD',
-      sub_exceeds: 'Base documentada para conversación de beneficio o compensación.',
-      sub_meets: 'Desempeño sólido. Sin acción correctiva requerida.',
-      sub_develop: 'Plan de mejora informal (30 días, hasta 3 compromisos).',
-      sub_pip: 'Performance Improvement Plan requerido (60 días).',
-    },
-    en: {
-      title: 'Performance Evaluation — Sales',
-      back: '← Hub',
-      step1_quota: 'Quota Performance',
-      step1_self: 'Self-Assessment',
-      step2: 'Behavioral Evaluation',
-      step3: 'Review & Submit',
-      loading: 'Loading active cycle…',
-      no_cycle: '⚠ No active evaluation cycle. The form loads in view mode — submission will be disabled until a cycle is activated from the Cockpit.',
-      admin_banner: '🔍 Admin Preview — no data saved to Supabase · You can enter and exit freely',
-      mode_supervisor: 'Evaluating as Supervisor',
-      mode_self: 'Self-Assessment',
-      quota_title: 'Quota Performance',
-      quota_sub: 'Active cycle',
-      quota_notice: 'Quota performance represents <strong>40%</strong> of the final score.',
-      lbl_meta: 'Periods where quota was met',
-      lbl_total: 'Total periods evaluated',
-      lbl_pct: 'Average quota %',
-      lbl_quota_pre: 'Quota score (pre-calculation)',
-      lbl_quota_sub: '50% hit rate + 50% average % (capped at 100)',
-      self_title: 'Your Self-Assessment',
-      self_notice: 'You will see <strong>5 situations</strong>. For each one, select the option that best describes what you <em>actually do</em> day-to-day — not what you think you should do.<br><br>There are no right or wrong answers. Honesty in this section is what makes your self-assessment useful.',
-      btn_continue: 'Continue →',
-      btn_back: '← Back',
-      btn_submit: 'Submit Evaluation',
-      btn_submitting: 'Saving…',
-      cond_title: 'Behavioral Evaluation',
-      cond_sub: 'For each dimension, select the number that best describes the behavior observed during the period.',
-      sit_title: 'Work Situations',
-      sit_sub: 'For each situation, select the option that most accurately describes your usual behavior.',
-      review_title: 'Final Review',
-      review_sub: 'Verify the summary before submitting. This action cannot be undone.',
-      score_breakdown: 'Score Breakdown',
-      feedback_notice: 'Narrative feedback is <strong>required</strong> to submit.',
-      feedback_label: 'Supervisor feedback',
-      feedback_ph: 'Describe specific areas of opportunity and strengths observed.',
-      ack_notice: 'By submitting you confirm that these responses reflect your actual performance during the evaluated period.',
-      success_title: 'Evaluation submitted',
-      success_msg_sup: 'The evaluation has been recorded. The employee will receive a notification to review and sign their results.',
-      success_msg_self: 'Your self-assessment has been recorded. Your supervisor will see your response alongside theirs to generate the combined score.',
-      admin_success: 'Admin Preview — simulated evaluation. Nothing was saved to Supabase.',
-      back_hub: 'Return to Hub',
-      cat_exceeds: 'EXCEEDS EXPECTATIONS',
-      cat_meets: 'MEETS EXPECTATIONS',
-      cat_develop: 'NEEDS DEVELOPMENT',
-      cat_pip: 'BELOW STANDARD',
-      sub_exceeds: 'Documented basis for compensation or benefit conversation.',
-      sub_meets: 'Solid performance. No corrective action required.',
-      sub_develop: 'Informal improvement plan (30 days, up to 3 commitments).',
-      sub_pip: 'Formal Performance Improvement Plan required (60 days).',
-    }
-  };
-
-  function t(key) { return UI[LANG][key] || UI['es'][key] || key; }
-
-  function toggleLang() {
-    LANG = LANG === 'es' ? 'en' : 'es';
-    const btn = document.getElementById('lang-toggle');
-    btn.innerHTML = LANG === 'es' ? 'EN | <span style="color:#22c55e">ES</span>' : '<span style="color:#22c55e">EN</span> | ES';
-    document.getElementById('hdr-sub').textContent = t('title');
-    document.getElementById('back-btn-txt').textContent = t('back');
-    document.getElementById('loading-screen').textContent = t('loading');
-    // Re-render current step if page already loaded
-    const s1 = document.getElementById('step1-panel');
-    const s2 = document.getElementById('step2-panel');
-    const s3 = document.getElementById('step3-panel');
-    if (s1 && !s1.classList.contains('hidden')) { s1.classList.add('hidden'); renderStep1(); }
-    else if (s2 && !s2.classList.contains('hidden')) { s2.classList.add('hidden'); renderStep2(); }
-    else if (s3 && !s3.classList.contains('hidden')) { s3.classList.add('hidden'); renderStep3(); }
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Supabase error ${res.status}: ${errText}`);
   }
-  let EMP        = null;  // current logged-in employee from sessionStorage
-  let EVALUADO   = null;  // employee being evaluated (supervisor mode)
-  let CICLO      = null;  // active cycle from Supabase
-  let EVAL_ID    = null;  // evaluacion record id (created on submit)
+  return res.status === 204 ? null : res.json();
+}
 
-  const state = {
-    quotaMeta:  null,
-    quotaTotal: null,
-    quotaPct:   null,
-    quotaScore: null,
+let loggedInEmployee = null;
+let activeCycle = null;
+let isAdminPreview = false;
 
-    barsScores: {},   // key → 1-5
-    fcAnswers:  {},   // key → 'A' | 'B'
-
-    conductualScore: null,
-    selfScore: null,
-    finalScore: null,
-  };
-
-  /* ═══════════════════════════════════════════════
-     SUPABASE HELPERS
-  ═══════════════════════════════════════════════ */
-  async function sbFetch(path, options = {}) {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-        'Prefer': options.method === 'POST' ? 'return=representation' : undefined,
-        ...(options.headers || {})
-      }
-    });
-    if (!res.ok) { const t = await res.text(); throw new Error(`Supabase ${res.status}: ${t}`); }
-    return res.status === 204 ? null : res.json();
+/* ════════════════════════════════════════════════════════════
+   THE 7 SALES DIMENSIONS — self-assessment (forced-choice BARS)
+   Bilingual throughout: every string has EN / ES on one line,
+   same pattern as Tier1/Tier2 exam questions.
+   ════════════════════════════════════════════════════════════ */
+const DIMENSIONS = [
+  {
+    key: 'desempeno_ventas',
+    title: 'Sales Performance / Desempeño en Ventas',
+    q: "When a customer has already picked a base product, what do you typically do? / Cuando un cliente ya eligió un producto base, ¿qué haces habitualmente?",
+    opts: [
+      "I process the sale as-is — the customer already chose. / Proceso la venta tal cual — el cliente ya eligió.",
+      "I mention higher options only if the customer asks directly. / Menciono opciones superiores solo si el cliente pregunta directamente.",
+      "I actively present a Good, a Better, and a Best option, explaining the value difference. / Presento activamente una opción Good, una Better y una Best, explicando la diferencia de valor.",
+      "I present Good/Better/Best with benefits specific to the customer and confirm their decision before moving on. / Presento Good/Better/Best con beneficios específicos al cliente y confirmo su decisión antes de continuar.",
+      "I present Good/Better/Best, connect the upgrade to the customer's specific needs, and document the outcome on the ticket regardless of their decision. / Presento Good/Better/Best, conecto el upgrade a las necesidades específicas del cliente, y documento el resultado en el ticket sin importar su decisión."
+    ]
+  },
+  {
+    key: 'conocimiento_producto',
+    title: 'Product Knowledge & Certification / Conocimiento de Producto y Certificación',
+    q: "When a customer asks a specific product question you're not 100% sure about, what do you do? / Cuando un cliente hace una pregunta específica de producto que no sabes con certeza, ¿qué haces?",
+    opts: [
+      "I give my best guess so I don't seem unprepared. / Doy mi mejor suposición para no parecer no preparado.",
+      "I say I'm not sure and move on to a different topic. / Digo que no estoy seguro y cambio de tema.",
+      "I admit I don't know and offer to check later. / Admito que no sé y ofrezco revisar después.",
+      "I admit I don't know, check the website or a colleague on the spot, and come back with the real answer. / Admito que no sé, reviso el sitio web o a un colega en el momento, y regreso con la respuesta real.",
+      "I do this consistently, and I also proactively keep my product knowledge current through ongoing training and recertification. / Hago esto consistentemente, y además mantengo mi conocimiento de producto actualizado proactivamente con capacitación y recertificación continua."
+    ]
+  },
+  {
+    key: 'experiencia_cliente',
+    title: 'Customer Experience / Experiencia del Cliente',
+    q: "When a customer raises an objection ('I need to think about it', price concerns, etc.), what do you typically do? / Cuando un cliente plantea una objeción ('necesito pensarlo', preocupaciones de precio, etc.), ¿qué haces habitualmente?",
+    opts: [
+      "I accept it and let them leave without further conversation. / Lo acepto y los dejo ir sin más conversación.",
+      "I repeat the same information I already gave them. / Repito la misma información que ya les di.",
+      "I acknowledge the concern and try to address it directly. / Reconozco la preocupación e intento abordarla directamente.",
+      "I use a structured approach (acknowledge, clarify the real concern, respond, confirm) to genuinely understand and address what's behind the objection. / Uso un enfoque estructurado (reconocer, aclarar la preocupación real, responder, confirmar) para entender y abordar genuinamente lo que hay detrás de la objeción.",
+      "I do this consistently, and I follow up afterward regardless of whether they bought that day. / Hago esto consistentemente, y doy seguimiento después sin importar si compraron ese día."
+    ]
+  },
+  {
+    key: 'trabajo_equipo',
+    title: 'Teamwork & Culture / Trabajo en Equipo y Cultura',
+    q: "When a coworker is overwhelmed with customers on a busy day, what do you typically do? / Cuando un compañero está saturado de clientes en un día ocupado, ¿qué haces habitualmente?",
+    opts: [
+      "I focus only on my own customers. / Me enfoco solo en mis propios clientes.",
+      "I help only if directly asked by a manager. / Ayudo solo si un gerente me lo pide directamente.",
+      "I offer to help when I notice it, if I have a free moment. / Ofrezco ayudar cuando lo noto, si tengo un momento libre.",
+      "I proactively step in to help without being asked, as long as it doesn't hurt my own customers. / Intervengo proactivamente para ayudar sin que me lo pidan, siempre que no afecte a mis propios clientes.",
+      "I do this consistently, and I also actively contribute to a positive team environment day to day. / Hago esto consistentemente, y además contribuyo activamente a un ambiente de equipo positivo día a día."
+    ]
+  },
+  {
+    key: 'ejecucion_politicas',
+    title: 'Policy Execution / Ejecución de Políticas',
+    q: "When a policy situation comes up (Haul Away, Price Match, Return/Exchange), how do you typically handle it? / Cuando surge una situación de política (Haul Away, Price Match, Devolución/Cambio), ¿cómo la manejas habitualmente?",
+    opts: [
+      "I'm not always sure of the exact rule, so I guess or wing it. / No siempre estoy seguro de la regla exacta, así que adivino o improviso.",
+      "I know the general idea but not the specific details (windows, thresholds, exceptions). / Conozco la idea general pero no los detalles específicos (plazos, umbrales, excepciones).",
+      "I know the specific policy details for most common situations. / Conozco los detalles específicos de la política para las situaciones más comunes.",
+      "I know the specific policy details confidently and apply them consistently, even in less common situations. / Conozco los detalles específicos con confianza y los aplico consistentemente, incluso en situaciones menos comunes.",
+      "I do this consistently, and I also help coworkers who are unsure of a policy detail. / Hago esto consistentemente, y además ayudo a compañeros que no están seguros de un detalle de política."
+    ]
+  },
+  {
+    key: 'financiamiento',
+    title: 'Financing Presentation / Presentación de Financiamiento',
+    q: "When a customer's total comes up in a conversation, how do you typically handle financing? / Cuando sale el total en la conversación con un cliente, ¿cómo manejas habitualmente el financiamiento?",
+    opts: [
+      "I avoid bringing it up unless the customer asks directly. / Evito mencionarlo a menos que el cliente pregunte directamente.",
+      "I mention it briefly but don't walk through specific numbers. / Lo menciono brevemente pero no reviso números específicos.",
+      "I present the monthly reframe when price hesitation comes up. / Presento el replanteo mensual cuando surge duda de precio.",
+      "I present it clearly and comfortably as a standard part of the conversation, with accurate numbers. / Lo presento clara y cómodamente como parte estándar de la conversación, con números precisos.",
+      "I do this consistently, and I'm also comfortable using the Pre-Screen Tool proactively to give the customer a realistic early read. / Hago esto consistentemente, y además me siento cómodo usando la Herramienta de Pre-Screen proactivamente para dar al cliente una lectura temprana realista."
+    ]
+  },
+  {
+    key: 'desarrollo_iniciativa',
+    title: 'Development & Initiative / Desarrollo e Iniciativa',
+    q: "How would you describe your approach to ongoing training and certification? / ¿Cómo describirías tu enfoque hacia la capacitación y certificación continua?",
+    opts: [
+      "I complete training only when required and don't think about it otherwise. / Completo la capacitación solo cuando se requiere y no pienso en ello de otra forma.",
+      "I complete required training on time but don't go beyond that. / Completo la capacitación requerida a tiempo pero no voy más allá.",
+      "I stay current on required certifications and occasionally review material on my own. / Me mantengo al corriente en certificaciones requeridas y ocasionalmente reviso material por mi cuenta.",
+      "I proactively keep my certifications current and regularly look for ways to improve my skills. / Mantengo mis certificaciones al corriente proactivamente y busco regularmente formas de mejorar mis habilidades.",
+      "I do this consistently, and I actively seek feedback from my manager to identify my next area of growth. / Hago esto consistentemente, y busco activamente retroalimentación de mi gerente para identificar mi siguiente área de crecimiento."
+    ]
   }
-  const sbGet  = (path) => sbFetch(path);
-  const sbPost = (path, body) => sbFetch(path, { method:'POST', body: JSON.stringify(body) });
+];
 
-  /* ═══════════════════════════════════════════════
-     SCORE CALCULATIONS
-  ═══════════════════════════════════════════════ */
-  function calcQuotaScore(meta, total, pct) {
-    if (!total || total === 0) return null;
-    const hitRate = (meta / total) * 100;
-    const avgPct  = Math.min(pct, 100);
-    return Math.round((hitRate * 0.5) + (avgPct * 0.5));
+let currentDimIdx = 0;
+let responses = {};
+let evalMode = null;        // 'self' | 'supervisor'
+let selectedEvaluado = null; // employee being evaluated, in supervisor mode
+let quotaData = { periodos_meta: null, periodos_total: null };
+
+/* ════════════════════════════════════════════════════════════
+   SUPERVISOR DIMENSIONS — same 7 dimensions, 3rd-person BARS,
+   observable-behavior framing. Bilingual throughout.
+   ════════════════════════════════════════════════════════════ */
+const SUPERVISOR_DIMENSIONS = [
+  {
+    key: 'desempeno_ventas',
+    title: 'Sales Performance / Desempeño en Ventas',
+    q: "When this person has a customer who already picked a base product, what do you typically observe? / Cuando esta persona tiene un cliente que ya eligió un producto base, ¿qué observas habitualmente?",
+    opts: [
+      "They process the sale as-is — rarely expand the conversation. / Procesan la venta tal cual — rara vez amplían la conversación.",
+      "They mention higher options only if the customer asks directly. / Mencionan opciones superiores solo si el cliente pregunta directamente.",
+      "They actively present a Good, a Better, and a Best option, explaining the value difference. / Presentan activamente una opción Good, una Better y una Best, explicando la diferencia de valor.",
+      "They present Good/Better/Best with benefits specific to the customer and get their confirmation before moving on. / Presentan Good/Better/Best con beneficios específicos al cliente y obtienen su confirmación antes de continuar.",
+      "They do this consistently, connect upgrades to specific customer needs, and document the outcome regardless of the decision. / Hacen esto consistentemente, conectan los upgrades a necesidades específicas del cliente, y documentan el resultado sin importar la decisión."
+    ]
+  },
+  {
+    key: 'conocimiento_producto',
+    title: 'Product Knowledge & Certification / Conocimiento de Producto y Certificación',
+    q: "When this person gets a specific product question they're not sure about, what do you typically observe? / Cuando esta persona recibe una pregunta específica de producto que no sabe con certeza, ¿qué observas habitualmente?",
+    opts: [
+      "They guess rather than admit uncertainty. / Adivinan en vez de admitir incertidumbre.",
+      "They say they're not sure and move on without following up. / Dicen que no están seguros y siguen sin dar seguimiento.",
+      "They admit they don't know and offer to check later. / Admiten que no saben y ofrecen revisar después.",
+      "They admit they don't know, check on the spot, and come back with the real answer. / Admiten que no saben, revisan en el momento, y regresan con la respuesta real.",
+      "They do this consistently, and also proactively keep their product knowledge current through training and recertification. / Hacen esto consistentemente, y además mantienen su conocimiento actualizado proactivamente con capacitación y recertificación."
+    ]
+  },
+  {
+    key: 'experiencia_cliente',
+    title: 'Customer Experience / Experiencia del Cliente',
+    q: "When a customer raises an objection with this person, what do you typically observe? / Cuando un cliente plantea una objeción con esta persona, ¿qué observas habitualmente?",
+    opts: [
+      "They accept it and let the customer leave without further conversation. / Lo aceptan y dejan ir al cliente sin más conversación.",
+      "They repeat the same information already given. / Repiten la misma información ya dada.",
+      "They acknowledge the concern and try to address it directly. / Reconocen la preocupación e intentan abordarla directamente.",
+      "They use a structured approach to genuinely understand and address what's behind the objection. / Usan un enfoque estructurado para entender y abordar genuinamente lo que hay detrás de la objeción.",
+      "They do this consistently, and follow up afterward regardless of whether the customer bought that day. / Hacen esto consistentemente, y dan seguimiento después sin importar si el cliente compró ese día."
+    ]
+  },
+  {
+    key: 'trabajo_equipo',
+    title: 'Teamwork & Culture / Trabajo en Equipo y Cultura',
+    q: "When a coworker is overwhelmed with customers, what do you typically observe from this person? / Cuando un compañero está saturado de clientes, ¿qué observas habitualmente de esta persona?",
+    opts: [
+      "They focus only on their own customers. / Se enfocan solo en sus propios clientes.",
+      "They help only if directly asked by a manager. / Ayudan solo si un gerente se lo pide directamente.",
+      "They offer to help when they notice it, if they have a free moment. / Ofrecen ayudar cuando lo notan, si tienen un momento libre.",
+      "They proactively step in without being asked, as long as it doesn't hurt their own customers. / Intervienen proactivamente sin que se les pida, siempre que no afecte a sus propios clientes.",
+      "They do this consistently, and also actively contribute to a positive team environment day to day. / Hacen esto consistentemente, y además contribuyen activamente a un ambiente de equipo positivo día a día."
+    ]
+  },
+  {
+    key: 'ejecucion_politicas',
+    title: 'Policy Execution / Ejecución de Políticas',
+    q: "When a policy situation comes up (Haul Away, Price Match, Return/Exchange), what do you typically observe? / Cuando surge una situación de política, ¿qué observas habitualmente?",
+    opts: [
+      "They're not always sure of the exact rule — guess or wing it. / No siempre están seguros de la regla exacta — adivinan o improvisan.",
+      "They know the general idea but not the specific details. / Conocen la idea general pero no los detalles específicos.",
+      "They know the specific policy details for most common situations. / Conocen los detalles específicos para las situaciones más comunes.",
+      "They know the details confidently and apply them consistently, even in less common situations. / Conocen los detalles con confianza y los aplican consistentemente, incluso en situaciones menos comunes.",
+      "They do this consistently, and also help coworkers who are unsure of a policy detail. / Hacen esto consistentemente, y además ayudan a compañeros que no están seguros de un detalle."
+    ]
+  },
+  {
+    key: 'financiamiento',
+    title: 'Financing Presentation / Presentación de Financiamiento',
+    q: "When a customer's total comes up in conversation, what do you typically observe about how this person handles financing? / Cuando sale el total en la conversación, ¿qué observas sobre cómo esta persona maneja el financiamiento?",
+    opts: [
+      "They avoid bringing it up unless asked directly. / Evitan mencionarlo a menos que se les pregunte directamente.",
+      "They mention it briefly but don't walk through specific numbers. / Lo mencionan brevemente pero no revisan números específicos.",
+      "They present the monthly reframe when price hesitation comes up. / Presentan el replanteo mensual cuando surge duda de precio.",
+      "They present it clearly and comfortably as a standard part of the conversation, with accurate numbers. / Lo presentan clara y cómodamente como parte estándar de la conversación, con números precisos.",
+      "They do this consistently, and are also comfortable proactively using the Pre-Screen Tool. / Hacen esto consistentemente, y además se sienten cómodos usando la Herramienta de Pre-Screen proactivamente."
+    ]
+  },
+  {
+    key: 'desarrollo_iniciativa',
+    title: 'Development & Initiative / Desarrollo e Iniciativa',
+    q: "How would you describe this person's approach to ongoing training and certification? / ¿Cómo describirías el enfoque de esta persona hacia la capacitación y certificación continua?",
+    opts: [
+      "Completes training only when required, nothing beyond that. / Completa la capacitación solo cuando se requiere, nada más.",
+      "Completes required training on time but doesn't go beyond that. / Completa la capacitación a tiempo pero no va más allá.",
+      "Stays current on required certifications and occasionally reviews material independently. / Se mantiene al corriente y ocasionalmente revisa material por su cuenta.",
+      "Proactively keeps certifications current and regularly looks for ways to improve. / Mantiene sus certificaciones al corriente proactivamente y busca mejorar regularmente.",
+      "Does this consistently, and actively seeks feedback to identify their next area of growth. / Hace esto consistentemente, y busca activamente retroalimentación para identificar su siguiente área de crecimiento."
+    ]
+  }
+];
+
+/* ════════════════════════════════════════════════════════════
+   INIT — same real pattern as Tier1: ?emp= param, es_admin check
+   ════════════════════════════════════════════════════════════ */
+async function init() {
+  const params = new URLSearchParams(window.location.search);
+  const empId = params.get('emp');
+  const content = document.getElementById('app-content');
+
+  if (!empId) {
+    content.innerHTML = `<div class="card"><div class="no-cycle">No employee context found. Please return to the hub and try again. / No se encontró contexto de empleado. Regresa al hub e intenta de nuevo.</div></div>`;
+    return;
   }
 
-  function calcBarsScore() {
-    const scores = Object.values(state.barsScores);
-    if (scores.length < BARS_QUESTIONS.length) return null;
-    const sum = scores.reduce((a,b) => a+b, 0);
-    // scale: 5–25 → 0–100
-    return Math.round(((sum - 5) / 20) * 100);
-  }
-
-  function calcFcScore() {
-    const answers = Object.values(state.fcAnswers);
-    if (answers.length < FC_QUESTIONS.length) return null;
-    const bCount = answers.filter(a => a === 'B').length;
-    return Math.round((bCount / FC_QUESTIONS.length) * 100);
-  }
-
-  function calcFinal() {
-    if (MODE === 'supervisor') {
-      if (state.quotaScore === null || state.conductualScore === null) return null;
-      return Math.round(state.quotaScore * 0.40 + state.conductualScore * 0.40);
-    } else {
-      if (state.selfScore === null) return null;
-      return state.selfScore;
-    }
-  }
-
-  function scoreCategory(s) {
-    if (s >= 90) return { label: t('cat_exceeds'), cls: 'cat-exceeds', sub: t('sub_exceeds') };
-    if (s >= 75) return { label: t('cat_meets'),   cls: 'cat-meets',   sub: t('sub_meets') };
-    if (s >= 60) return { label: t('cat_develop'), cls: 'cat-develop',  sub: t('sub_develop') };
-    return               { label: t('cat_pip'),    cls: 'cat-pip',      sub: t('sub_pip') };
-  }
-
-  function scoreColor(s) {
-    if (s >= 90) return 'high';
-    if (s >= 60) return 'mid';
-    return 'low';
-  }
-
-  /* ═══════════════════════════════════════════════
-     INIT
-  ═══════════════════════════════════════════════ */
-  async function init() {
-    // ── Exact same pattern as Tier 1 loadEmployeeFromURL ──
-    const params = new URLSearchParams(window.location.search);
-    const empId  = params.get('emp');
-
-    if (empId) {
-      try {
-        const rows = await sbFetch(`empleados?id=eq.${empId}&select=id,nombre_completo,employee_id,tienda`);
-        if (rows && rows.length > 0) {
-          EMP = rows[0];
-          EMP.nombre = EMP.nombre_completo || empId;
-          // Check admin status separately — same as cockpit pattern
-          try {
-            const lvl = await sbFetch(`empleados?id=eq.${empId}&select=nivel_admin`);
-            const nivelAdmin = lvl && lvl[0] && lvl[0].nivel_admin;
-            if (nivelAdmin) {
-              ADMIN_PREVIEW = true;
-              document.getElementById('hdr-sub').insertAdjacentHTML('afterend',
-                `<div style="background:#1a2e1a;border-left:3px solid #22c55e;color:#86efac;padding:8px 14px;font-size:12px;font-weight:700;margin:8px 16px;border-radius:6px;">
-                  🔍 Admin Preview — sin registro en Supabase. Puedes entrar y salir libremente.
-                </div>`);
-            }
-          } catch(e) { /* nivel_admin check is optional */ }
-        }
-      } catch(err) {
-        console.error('Could not load employee context:', err);
-        // Don't redirect — show form anyway, same as Tier 1
-      }
-    }
-
-    MODE = params.get('mode') || 'self';
-
-    if (MODE === 'supervisor') {
-      const evalId = params.get('evaluado');
-      if (evalId) {
-        const rows = await sbFetch(`empleados?id=eq.${evalId}&select=id,nombre_completo,puesto,tienda`);
-        if (rows && rows[0]) {
-          EVALUADO = rows[0];
-          EVALUADO.nombre = EVALUADO.nombre_completo || EVALUADO.nombre || 'Empleado';
-        }
-      }
-      if (!EVALUADO) EVALUADO = { nombre: 'Empleado', puesto: 'Vendedor', tienda: '' };
-      document.getElementById('st1-label').textContent = t('quota_title');
-    } else {
-      EVALUADO = EMP || { nombre: 'Empleado', puesto: '', tienda: '', id: null };
-      document.getElementById('st1-label').textContent = t('mode_self');
-    }
-
-    // Load active cycle — graceful if table doesn't exist yet
-    try {
-      const cycles = await sbFetch(`evaluacion_ciclos?activo=eq.true&limit=1`);
-      CICLO = cycles[0] || null;
-    } catch(e) {
-      CICLO = null; // table not yet created — renderStep1 handles this gracefully
-    }
-
-    document.getElementById('loading-screen').classList.add('hidden');
-    renderStep1();
-  }
-
-  /* ═══════════════════════════════════════════════
-     RENDER
-  ═══════════════════════════════════════════════ */
-  function renderEmpCard() {
-    if (!EVALUADO) EVALUADO = { nombre: 'Empleado', puesto: '', tienda: '' };
-    const initials = (EVALUADO.nombre || '?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-    const modeLabel = MODE === 'supervisor' ? t('mode_supervisor') : t('mode_self');
-    const modeCls   = MODE === 'supervisor' ? 'supervisor' : 'self';
-    return `
-      <div class="emp-card">
-        <div class="emp-avatar">${initials}</div>
-        <div>
-          <div class="emp-name">${EVALUADO.nombre || 'Empleado'}</div>
-          <div class="emp-role">${EVALUADO.puesto || ''} ${EVALUADO.tienda ? '— ' + EVALUADO.tienda : ''}</div>
-        </div>
-        <div class="mode-badge ${modeCls}">${modeLabel}</div>
-      </div>
-    `;
-  }
-
-  function renderStep1() {
-    document.getElementById('step1-panel').classList.remove('hidden');
-    document.getElementById('emp-card-wrap').innerHTML = renderEmpCard();
-
-    // Show warning if no active cycle, but don't block rendering
-    if (!CICLO) {
-      document.getElementById('step1-panel').insertAdjacentHTML('beforeend',
-        `<div class="notice warn" style="margin-bottom:16px;">' + t('no_cycle') + '</div>`);
-    }
-
-    setStep(1);
-
-    if (MODE === 'supervisor') {
-      document.getElementById('quota-panel').classList.remove('hidden');
-      document.getElementById('ciclo-label').textContent = CICLO ? CICLO.nombre : t('no_cycle_short') || 'N/A';
-
-      const inpMeta  = document.getElementById('inp-meta');
-      const inpTotal = document.getElementById('inp-total');
-      const inpPct   = document.getElementById('inp-pct');
-      inpTotal.value = 6; // default for formal cycle
-
-      function updateQuota() {
-        const m = parseInt(inpMeta.value);
-        const t = parseInt(inpTotal.value);
-        const p = parseFloat(inpPct.value);
-        if (!isNaN(m) && !isNaN(t) && !isNaN(p) && t > 0 && m <= t) {
-          state.quotaMeta  = m;
-          state.quotaTotal = t;
-          state.quotaPct   = p;
-          const s = calcQuotaScore(m, t, p);
-          state.quotaScore = s;
-          const el = document.getElementById('quota-score-display');
-          el.textContent = s;
-          el.className   = 'qr-value ' + scoreColor(s);
-          document.getElementById('btn-step1-next').disabled = false;
-        } else {
-          document.getElementById('btn-step1-next').disabled = true;
-          document.getElementById('quota-score-display').textContent = '—';
-        }
-      }
-      inpMeta.addEventListener('input', updateQuota);
-      inpTotal.addEventListener('input', updateQuota);
-      inpPct.addEventListener('input', updateQuota);
-
-    } else {
-      document.getElementById('self-intro-panel').classList.remove('hidden');
-      document.getElementById('ciclo-label-self').textContent = CICLO ? CICLO.nombre : t('no_cycle_short') || 'N/A';
-      document.getElementById('btn-step1-next').disabled = false;
-    }
-
-    // Disable next if no cycle active
-    if (!CICLO) {
-      document.getElementById('btn-step1-next').disabled = true;
-      document.getElementById('btn-step1-next').title = 'Activa un ciclo de evaluación primero';
-    }
-
-    document.getElementById('btn-step1-next').addEventListener('click', () => {
-      document.getElementById('step1-panel').classList.add('hidden');
-      renderStep2();
-    });
-  }
-
-  function renderStep2() {
-    document.getElementById('step2-panel').classList.remove('hidden');
-    setStep(2);
-    const container = document.getElementById('questions-container');
-    container.innerHTML = '';
-
-    if (MODE === 'supervisor') {
-      // BARS questions
-      container.innerHTML = `<div class="section-title">${t('cond_title')}</div><div class="section-sub">${t('cond_sub')}</div>`;
-      BARS_QUESTIONS.forEach(q => {
-        const div = document.createElement('div');
-        div.className = 'bars-q';
-        div.innerHTML = `
-          <div class="bars-dim">${q.dim[LANG]||q.dim.es}</div>
-          <div class="bars-text">${q.text[LANG]||q.text.es}</div>
-          <div class="bars-scale" id="scale-${q.key}">
-            ${[1,2,3,4,5].map(n => `
-              <button class="bars-btn" data-key="${q.key}" data-val="${n}">
-                ${n}
-                <span class="bars-anchor">${(q.anchors[LANG]||q.anchors.es)[n-1]}</span>
-              </button>`).join('')}
-          </div>`;
-        container.appendChild(div);
-      });
-
-      container.querySelectorAll('.bars-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const key = btn.dataset.key;
-          const val = parseInt(btn.dataset.val);
-          state.barsScores[key] = val;
-          document.querySelectorAll(`.bars-btn[data-key="${key}"]`).forEach(b => b.classList.remove('selected'));
-          btn.classList.add('selected');
-          checkStep2Complete();
-        });
-      });
-
-    } else {
-      // Forced-choice
-      container.innerHTML = `<div class="section-title">Situaciones de Trabajo</div>
-        <div class="section-sub">En cada situación, selecciona la opción que describe más fielmente tu comportamiento habitual.</div>`;
-      FC_QUESTIONS.forEach(q => {
-        const div = document.createElement('div');
-        div.className = 'fc-q';
-        div.innerHTML = `
-          <div class="fc-dim">${q.dim[LANG]||q.dim.es}</div>
-          <div class="fc-text">${q.text[LANG]||q.text.es}</div>
-          <div class="fc-options">
-            <div class="fc-opt" data-key="${q.key}" data-choice="A">
-              <span class="fc-letter">A</span>${(q.optA[LANG]||q.optA.es)}
-            </div>
-            <div class="fc-opt" data-key="${q.key}" data-choice="B">
-              <span class="fc-letter">B</span>${(q.optB[LANG]||q.optB.es)}
-            </div>
-          </div>`;
-        container.appendChild(div);
-      });
-
-      container.querySelectorAll('.fc-opt').forEach(opt => {
-        opt.addEventListener('click', () => {
-          const key    = opt.dataset.key;
-          const choice = opt.dataset.choice;
-          state.fcAnswers[key] = choice;
-          document.querySelectorAll(`.fc-opt[data-key="${key}"]`).forEach(o => o.classList.remove('selected'));
-          opt.classList.add('selected');
-          checkStep2Complete();
-        });
-      });
-    }
-
-    document.getElementById('btn-step2-back').addEventListener('click', () => {
-      document.getElementById('step2-panel').classList.add('hidden');
-      document.getElementById('step1-panel').classList.remove('hidden');
-      setStep(1);
-    });
-
-    document.getElementById('btn-step2-next').addEventListener('click', () => {
-      document.getElementById('step2-panel').classList.add('hidden');
-      renderStep3();
-    });
-  }
-
-  function checkStep2Complete() {
-    let done = false;
-    if (MODE === 'supervisor') {
-      done = Object.keys(state.barsScores).length === BARS_QUESTIONS.length;
-      if (done) {
-        state.conductualScore = calcBarsScore();
-      }
-    } else {
-      done = Object.keys(state.fcAnswers).length === FC_QUESTIONS.length;
-      if (done) {
-        state.selfScore = calcFcScore();
-      }
-    }
-    document.getElementById('btn-step2-next').disabled = !done;
-  }
-
-  function renderStep3() {
-    document.getElementById('step3-panel').classList.remove('hidden');
-    setStep(3);
-
-    state.finalScore = calcFinal();
-    const cat = scoreCategory(state.finalScore || 0);
-
-    // Score breakdown
-    let bHtml = '';
-    if (MODE === 'supervisor') {
-      bHtml = `
-        <div class="score-row">
-          <div><div class="score-row-label">Cuota (${state.quotaMeta}/${state.quotaTotal} períodos, ${state.quotaPct}% prom.)</div><div class="score-row-weight">Peso: 40%</div></div>
-          <div class="score-row-val" style="color:${state.quotaScore>=75?'var(--green)':state.quotaScore>=60?'var(--amber)':'var(--red)'}">${state.quotaScore}</div>
-        </div>
-        <div class="score-row">
-          <div><div class="score-row-label">Evaluación Conductual (BARS)</div><div class="score-row-weight">Peso: 40%</div></div>
-          <div class="score-row-val" style="color:${state.conductualScore>=75?'var(--green)':state.conductualScore>=60?'var(--amber)':'var(--red)'}">${state.conductualScore}</div>
-        </div>
-        <div class="score-row">
-          <div><div class="score-row-label">Autoevaluación del empleado</div><div class="score-row-weight">Peso: 20% · Pendiente</div></div>
-          <div class="score-row-val" style="color:var(--dim)">—</div>
-        </div>`;
-      document.getElementById('feedback-section').classList.remove('hidden');
-    } else {
-      bHtml = `
-        <div class="score-row">
-          <div><div class="score-row-label">Autoevaluación (5 situaciones)</div><div class="score-row-weight">Peso: 20% del score final</div></div>
-          <div class="score-row-val" style="color:var(--green)">${state.selfScore}</div>
-        </div>`;
-      document.getElementById('ack-section').classList.remove('hidden');
-    }
-
-    document.getElementById('score-breakdown').innerHTML = bHtml;
-    document.getElementById('final-score-num').textContent = state.finalScore ?? '—';
-    document.getElementById('final-score-num').className = `final-score-num ${cat.cls}`;
-    document.getElementById('final-score-cat').textContent = cat.label;
-    document.getElementById('final-score-cat').className = `final-score-cat ${cat.cls}`;
-    document.getElementById('final-score-sub').textContent = cat.sub;
-
-    // Feedback validation
-    if (MODE === 'supervisor') {
-      const feedbackTxt = document.getElementById('feedback-txt');
-      const btnSubmit   = document.getElementById('btn-submit');
-      btnSubmit.disabled = true;
-      feedbackTxt.addEventListener('input', () => {
-        btnSubmit.disabled = feedbackTxt.value.trim().length < 60;
-      });
-    }
-
-    document.getElementById('btn-step3-back').addEventListener('click', () => {
-      document.getElementById('step3-panel').classList.add('hidden');
-      document.getElementById('step2-panel').classList.remove('hidden');
-      setStep(2);
-    });
-
-    document.getElementById('btn-submit').addEventListener('click', submitEval);
-  }
-
-  /* ═══════════════════════════════════════════════
-     SUBMIT
-  ═══════════════════════════════════════════════ */
-  async function submitEval() {
-    const btn = document.getElementById('btn-submit');
-    btn.disabled = true;
-    btn.textContent = t('btn_submitting');
-
-    if (ADMIN_PREVIEW) {
-      document.getElementById('step3-panel').classList.add('hidden');
-      document.getElementById('success-screen').classList.remove('hidden');
-      document.getElementById('success-msg').textContent = t('admin_success');
+  try {
+    const rows = await sbFetch(`empleados?id=eq.${empId}&select=id,nombre_completo,employee_id,tienda,es_admin`);
+    if (!rows || rows.length === 0) {
+      content.innerHTML = `<div class="card"><div class="no-cycle">Employee not found. / Empleado no encontrado.</div></div>`;
       return;
     }
+    loggedInEmployee = rows[0];
+    isAdminPreview = !!loggedInEmployee.es_admin;
+  } catch (err) {
+    console.error('Could not load employee:', err);
+    content.innerHTML = `<div class="card"><div class="no-cycle">Connection error loading your profile. / Error de conexión al cargar tu perfil.</div></div>`;
+    return;
+  }
 
+  try {
+    const cycles = await sbFetch(`evaluacion_ciclos?activo=eq.true&select=id,nombre,tipo,fecha_inicio,fecha_cierre&order=fecha_inicio.desc&limit=1`);
+    activeCycle = (cycles && cycles.length) ? cycles[0] : null;
+  } catch (err) {
+    console.warn('Could not load evaluation cycle (table may not exist yet):', err);
+    activeCycle = null;
+  }
+
+  if (!activeCycle) {
+    content.innerHTML = `
+      <div class="card">
+        <div class="no-cycle">
+          There is no active evaluation cycle right now. Check back when your manager opens the next cycle. / No hay un ciclo de evaluación activo en este momento. Vuelve a revisar cuando tu gerente abra el siguiente ciclo.
+        </div>
+      </div>`;
+    document.getElementById('cycle-label').textContent = 'No active cycle / Sin ciclo activo';
+    return;
+  }
+
+  document.getElementById('cycle-label').textContent = `${activeCycle.nombre} — ${loggedInEmployee.nombre_completo}`;
+
+  renderModePicker();
+}
+
+/* ════════════════════════════════════════════════════════════
+   MODE PICKER — "My Self-Assessment" always shown; "Evaluate a
+   Team Member" only shown to es_admin (managers/leads). Selecting
+   self-assessment checks for an existing submission first; selecting
+   supervisor mode goes straight to the employee search.
+   ════════════════════════════════════════════════════════════ */
+async function renderModePicker() {
+  const content = document.getElementById('app-content');
+  const canSupervise = !!loggedInEmployee.es_admin;
+
+  content.innerHTML = `
+    <div class="card">
+      <h2>What would you like to do? / ¿Qué te gustaría hacer?</h2>
+      <div class="desc">${activeCycle.nombre}</div>
+      <div class="bars-option" onclick="startSelfAssessment()" style="margin-top:8px;">
+        <div class="num">📝</div>
+        <div class="txt"><strong>My Self-Assessment / Mi Autoevaluación</strong><br>Complete your own self-assessment for this cycle. / Completa tu propia autoevaluación de este ciclo.</div>
+      </div>
+      ${canSupervise ? `
+      <div class="bars-option" onclick="startSupervisorSearch()">
+        <div class="num">👥</div>
+        <div class="txt"><strong>Evaluate a Team Member / Evaluar a un Miembro del Equipo</strong><br>Search for and evaluate someone on your team. / Busca y evalúa a alguien de tu equipo.</div>
+      </div>` : ''}
+    </div>`;
+}
+
+async function startSelfAssessment() {
+  evalMode = 'self';
+  currentDimIdx = 0;
+  responses = {};
+  const content = document.getElementById('app-content');
+
+  let existing = [];
+  try {
+    existing = await sbFetch(`evaluaciones?ciclo_id=eq.${activeCycle.id}&evaluado_id=eq.${loggedInEmployee.id}&evaluador_id=eq.${loggedInEmployee.id}&tipo_evaluador=eq.self&select=id,estado`);
+  } catch (err) {
+    console.warn('Could not check existing evaluation:', err);
+  }
+
+  if (existing && existing.length && existing[0].estado !== 'pendiente' && !isAdminPreview) {
+    content.innerHTML = `
+      <div class="card">
+        <div class="success-screen">
+          <div class="icon">✅</div>
+          <h2>Self-Assessment Already Submitted / Autoevaluación Ya Enviada</h2>
+          <p>You've already completed your self-assessment for ${activeCycle.nombre}. / Ya completaste tu autoevaluación para ${activeCycle.nombre}.</p>
+        </div>
+      </div>`;
+    return;
+  }
+  renderQuestionScreen();
+}
+
+/* ════════════════════════════════════════════════════════════
+   SUPERVISOR MODE — search real registered employees by name
+   (same empleados table that drives certifications/badges), pick
+   one, enter their quota result, then BARS in third person.
+   Always saves for real — no preview/skip-save behavior here,
+   this is real management work product.
+   ════════════════════════════════════════════════════════════ */
+let allEmployeesForSearch = null;
+
+async function startSupervisorSearch() {
+  evalMode = 'supervisor';
+  selectedEvaluado = null;
+  currentDimIdx = 0;
+  responses = {};
+  quotaData = { periodos_meta: null, periodos_total: null };
+
+  const content = document.getElementById('app-content');
+  content.innerHTML = `<div class="card"><p style="text-align:center;color:var(--mgray);padding:20px 0;">Loading team roster... / Cargando lista de empleados...</p></div>`;
+
+  if (!allEmployeesForSearch) {
     try {
-      // 1. Create evaluacion record
-      const evalBody = {
-        ciclo_id:          CICLO.id,
-        evaluado_id:       EVALUADO.id || null,
-        evaluador_id:      EMP.id || null,
-        tipo_evaluador:    MODE === 'supervisor' ? 'supervisor' : 'self',
-        track:             'sales',
-        estado:            'completada',
-        periodos_meta:     state.quotaMeta,
-        periodos_total:    state.quotaTotal,
-        pct_promedio_cuota: state.quotaPct,
-        score_cuota:       state.quotaScore,
-        score_conductual:  state.conductualScore ?? state.selfScore,
-        score_final:       state.finalScore,
-        peso_aplicado:     MODE === 'supervisor' ? 0.4 : 0.2,
-        feedback_narrativo: MODE === 'supervisor'
-          ? document.getElementById('feedback-txt').value.trim()
-          : null,
-        completada_at: new Date().toISOString()
-      };
-
-      const evalResult = await sbPost('evaluaciones', evalBody);
-      EVAL_ID = evalResult[0]?.id;
-
-      // 2. Save individual responses
-      const respRows = [];
-      if (MODE === 'supervisor') {
-        BARS_QUESTIONS.forEach(q => {
-          respRows.push({
-            evaluacion_id:  EVAL_ID,
-            dimension:      q.key,
-            pregunta_key:   q.key,
-            pregunta_texto: q.text,
-            respuesta_score: state.barsScores[q.key]
-          });
-        });
-      } else {
-        FC_QUESTIONS.forEach(q => {
-          respRows.push({
-            evaluacion_id:  EVAL_ID,
-            dimension:      q.key,
-            pregunta_key:   q.key,
-            pregunta_texto: q.text,
-            respuesta_texto: state.fcAnswers[q.key]
-          });
-        });
-      }
-      if (respRows.length && EVAL_ID) {
-        await sbPost('evaluacion_respuestas', respRows);
-      }
-
-      // 3. Show success
-      document.getElementById('step3-panel').classList.add('hidden');
-      const successScreen = document.getElementById('success-screen');
-      successScreen.classList.remove('hidden');
-      if (MODE === 'self') {
-        document.getElementById('success-msg').textContent =
-          'Tu autoevaluación ha sido registrada. Tu supervisor verá tu respuesta junto con su evaluación para generar el score combinado del ciclo.';
-      }
-
+      allEmployeesForSearch = await sbFetch(`empleados?select=id,nombre_completo,employee_id,tienda&order=nombre_completo.asc`);
     } catch (err) {
-      btn.disabled = false;
-      btn.textContent = t('btn_submit');
-      alert('Error al guardar: ' + err.message + '\n\nRevisa la conexión e intenta de nuevo.');
+      content.innerHTML = `<div class="card"><div class="no-cycle">Could not load the employee roster. / No se pudo cargar la lista de empleados.</div></div>`;
+      return;
     }
   }
+  renderSupervisorSearchScreen('');
+}
 
-  /* ═══════════════════════════════════════════════
-     STEP UI
-  ═══════════════════════════════════════════════ */
-  function setStep(n) {
-    [1,2,3].forEach(i => {
-      const s = document.getElementById('st'+i);
-      s.classList.remove('active','done');
-      if (i < n) s.classList.add('done');
-      else if (i === n) s.classList.add('active');
-    });
-    [1,2].forEach(i => {
-      const l = document.getElementById('sl'+i);
-      if (l) l.classList.toggle('done', i < n);
-    });
+function renderSupervisorSearchScreen(query) {
+  const content = document.getElementById('app-content');
+  const q = (query || '').trim().toLowerCase();
+  const results = (allEmployeesForSearch || [])
+    .filter(e => e.id !== loggedInEmployee.id) // can't evaluate yourself
+    .filter(e => !q || (e.nombre_completo || '').toLowerCase().includes(q))
+    .slice(0, 12);
+
+  const resultsHtml = results.length
+    ? results.map(e => `
+        <div class="bars-option" onclick="selectEvaluado('${e.id}')">
+          <div class="num">👤</div>
+          <div class="txt"><strong>${e.nombre_completo}</strong>${e.tienda ? ` <span style="color:var(--mgray);font-weight:400;">— ${e.tienda}</span>` : ''}</div>
+        </div>`).join('')
+    : `<p style="color:var(--mgray);font-size:13px;padding:10px 0;">${q ? 'No matches found. / No se encontraron coincidencias.' : 'Start typing a name above. / Empieza a escribir un nombre arriba.'}</p>`;
+
+  content.innerHTML = `
+    <div class="card">
+      <h2>Who are you evaluating? / ¿A quién vas a evaluar?</h2>
+      <div class="desc">Search by name — this connects to their real employee record, same as certifications and badges. / Busca por nombre — esto conecta con su registro real de empleado, igual que certificaciones y badges.</div>
+      <input type="text" class="field-input" placeholder="Type a name... / Escribe un nombre..." value="${query || ''}" oninput="renderSupervisorSearchScreen(this.value)" style="width:100%;padding:12px 14px;border:2px solid #e8e4dc;border-radius:10px;font-size:14px;margin-bottom:14px;" autofocus>
+      ${resultsHtml}
+      <button class="btn" style="margin-top:14px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="renderModePicker()">← Back / Regresar</button>
+    </div>`;
+}
+
+async function selectEvaluado(empId) {
+  selectedEvaluado = (allEmployeesForSearch || []).find(e => e.id === empId);
+  if (!selectedEvaluado) return;
+
+  // Check for an existing supervisor evaluation of this person, this cycle, by this evaluator
+  let existing = [];
+  try {
+    existing = await sbFetch(`evaluaciones?ciclo_id=eq.${activeCycle.id}&evaluado_id=eq.${empId}&evaluador_id=eq.${loggedInEmployee.id}&tipo_evaluador=eq.supervisor&select=id,estado`);
+  } catch (err) {
+    console.warn('Could not check existing evaluation:', err);
+  }
+  if (existing && existing.length && existing[0].estado !== 'pendiente') {
+    document.getElementById('app-content').innerHTML = `
+      <div class="card">
+        <div class="success-screen">
+          <div class="icon">✅</div>
+          <h2>Already Evaluated / Ya Evaluado</h2>
+          <p>You've already submitted an evaluation for ${selectedEvaluado.nombre_completo} this cycle. / Ya enviaste una evaluación de ${selectedEvaluado.nombre_completo} este ciclo.</p>
+        </div>
+      </div>`;
+    return;
   }
 
-  /* ═══════════════════════════════════════════════
-     START — emp ID passed via ?emp= query param
-     (same pattern as goToExam in index.html)
-  ═══════════════════════════════════════════════ */
-  init();
+  renderQuotaScreen();
+}
+
+function renderQuotaScreen() {
+  const content = document.getElementById('app-content');
+  content.innerHTML = `
+    <div class="card">
+      <h2>Quota Performance / Desempeño de Cuota</h2>
+      <div class="desc">Evaluating: <strong>${selectedEvaluado.nombre_completo}</strong> — ${activeCycle.nombre}<br>How many periods (months) in this cycle did they meet their sales quota? / ¿En cuántos periodos (meses) de este ciclo cumplieron su cuota de ventas?</div>
+      <label class="field-label" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--navy);">Periods quota was MET / Periodos con cuota CUMPLIDA</label>
+      <input type="number" min="0" class="field-input" id="quota-met" placeholder="e.g. 4 / ej. 4" style="width:100%;padding:12px 14px;border:2px solid #e8e4dc;border-radius:10px;font-size:14px;margin-bottom:14px;">
+      <label class="field-label" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--navy);">Total periods in this cycle / Total de periodos en este ciclo</label>
+      <input type="number" min="1" class="field-input" id="quota-total" placeholder="e.g. 6 / ej. 6" style="width:100%;padding:12px 14px;border:2px solid #e8e4dc;border-radius:10px;font-size:14px;margin-bottom:14px;">
+      <div class="error-msg" id="quota-error">Please fill in both fields. / Por favor llena ambos campos.</div>
+      <button class="btn btn-primary" onclick="confirmQuota()">Continue / Continuar</button>
+      <button class="btn" style="margin-top:10px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="renderSupervisorSearchScreen('')">← Back / Regresar</button>
+    </div>`;
+}
+
+function confirmQuota() {
+  const met = parseInt(document.getElementById('quota-met').value, 10);
+  const total = parseInt(document.getElementById('quota-total').value, 10);
+  if (isNaN(met) || isNaN(total) || total < 1 || met < 0 || met > total) {
+    document.getElementById('quota-error').classList.add('show');
+    return;
+  }
+  quotaData = { periodos_meta: met, periodos_total: total };
+  currentDimIdx = 0;
+  responses = {};
+  renderQuestionScreen();
+}
+
+/* ════════════════════════════════════════════════════════════
+   RENDER — one dimension at a time, forced-choice BARS.
+   Uses DIMENSIONS (1st person) for self, SUPERVISOR_DIMENSIONS
+   (3rd person) for supervisor mode.
+   ════════════════════════════════════════════════════════════ */
+function currentDimSet() {
+  return evalMode === 'supervisor' ? SUPERVISOR_DIMENSIONS : DIMENSIONS;
+}
+
+function renderQuestionScreen() {
+  const content = document.getElementById('app-content');
+  const dims = currentDimSet();
+  const dim = dims[currentDimIdx];
+  const pct = Math.round((currentDimIdx / dims.length) * 100);
+
+  // Preview banner only applies to self-assessment — supervisor evaluations
+  // of a real team member always save, there's no "preview" version of that.
+  const adminBanner = (isAdminPreview && evalMode === 'self')
+    ? `<div class="badge-admin">🔍 Admin Preview Mode — this run will NOT be saved to any employee's record. / Modo Vista Admin — esta sesión NO se guardará en el registro de ningún empleado.</div>`
+    : '';
+
+  const evaluandoBanner = evalMode === 'supervisor'
+    ? `<div class="badge-admin" style="background:var(--ltblue);border-left-color:var(--navy);">Evaluating / Evaluando: <strong>${selectedEvaluado.nombre_completo}</strong></div>`
+    : '';
+
+  const optsHtml = dim.opts.map((opt, i) => {
+    const selected = responses[dim.key] === (i + 1) ? 'selected' : '';
+    return `
+      <div class="bars-option ${selected}" onclick="selectOption('${dim.key}', ${i + 1})">
+        <div class="num">${i + 1}</div>
+        <div class="txt">${opt}</div>
+      </div>`;
+  }).join('');
+
+  content.innerHTML = `
+    ${adminBanner}
+    ${evaluandoBanner}
+    <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+    <div class="progress-label">Dimension ${currentDimIdx + 1} of ${dims.length} / Dimensión ${currentDimIdx + 1} de ${dims.length}</div>
+    <div class="card">
+      <div class="dim-title"><span class="dim-num">${currentDimIdx + 1}</span>${dim.title}</div>
+      <div class="dim-q">${dim.q}</div>
+      ${optsHtml}
+      <div class="error-msg" id="dim-error">Please select an option before continuing. / Por favor selecciona una opción antes de continuar.</div>
+      <button class="btn btn-primary" id="btn-next" style="margin-top:18px" onclick="nextDimension()">
+        ${currentDimIdx === dims.length - 1 ? 'Review & Submit / Revisar y Enviar' : 'Next / Siguiente →'}
+      </button>
+    </div>`;
+}
+
+function selectOption(key, value) {
+  responses[key] = value;
+  renderQuestionScreen();
+}
+
+function nextDimension() {
+  const dims = currentDimSet();
+  const dim = dims[currentDimIdx];
+  if (!responses[dim.key]) {
+    document.getElementById('dim-error').classList.add('show');
+    return;
+  }
+  if (currentDimIdx < dims.length - 1) {
+    currentDimIdx++;
+    renderQuestionScreen();
+  } else {
+    renderReviewScreen();
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   REVIEW & SUBMIT
+   ════════════════════════════════════════════════════════════ */
+function renderReviewScreen() {
+  const content = document.getElementById('app-content');
+  const dims = currentDimSet();
+  const rows = dims.map(dim => `
+    <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0ece2;font-size:13px;">
+      <span style="color:var(--dkgray)">${dim.title}</span>
+      <strong style="color:var(--navy)">${responses[dim.key]}/5</strong>
+    </div>`).join('');
+
+  const quotaRow = evalMode === 'supervisor'
+    ? `<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0ece2;font-size:13px;">
+        <span style="color:var(--dkgray)">Quota Performance / Desempeño de Cuota</span>
+        <strong style="color:var(--navy)">${quotaData.periodos_meta}/${quotaData.periodos_total} periods met</strong>
+      </div>`
+    : '';
+
+  const evaluandoLine = evalMode === 'supervisor'
+    ? `<div class="desc">Evaluating: <strong>${selectedEvaluado.nombre_completo}</strong></div>`
+    : '';
+
+  const submitLabel = evalMode === 'supervisor' ? 'Submit Evaluation / Enviar Evaluación' : 'Submit Self-Assessment / Enviar Autoevaluación';
+
+  content.innerHTML = `
+    <div class="card">
+      <h2>Review Your Answers / Revisa Tus Respuestas</h2>
+      ${evaluandoLine}
+      <div class="desc">Once submitted, you won't be able to change these answers. / Una vez enviado, no podrás cambiar estas respuestas.</div>
+      ${quotaRow}
+      ${rows}
+      <div class="error-msg" id="submit-error"></div>
+      <button class="btn btn-primary" id="btn-submit" style="margin-top:20px" onclick="submitEvaluation()">${submitLabel}</button>
+      <button class="btn" style="margin-top:10px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="currentDimIdx=currentDimSet().length-1;renderQuestionScreen();">← Back to edit / Regresar a editar</button>
+    </div>`;
+}
+
+async function submitEvaluation() {
+  const btn = document.getElementById('btn-submit');
+  const errEl = document.getElementById('submit-error');
+  errEl.classList.remove('show');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Submitting... / Enviando...';
+
+  // Preview-mode skip-save applies ONLY to self-assessment. Supervisor
+  // evaluations of a real team member always persist for real.
+  if (isAdminPreview && evalMode === 'self') {
+    setTimeout(() => {
+      document.getElementById('app-content').innerHTML = `
+        <div class="card">
+          <div class="success-screen">
+            <div class="icon">🔍</div>
+            <h2>Admin Preview Complete / Vista Admin Completada</h2>
+            <p>Nothing was saved — this was a preview run only. / Nada se guardó — esta fue solo una corrida de vista previa.</p>
+          </div>
+        </div>`;
+    }, 500);
+    return;
+  }
+
+  const dims = currentDimSet();
+  const isSupervisor = evalMode === 'supervisor';
+
+  try {
+    const evalPayload = {
+      ciclo_id: activeCycle.id,
+      evaluado_id: isSupervisor ? selectedEvaluado.id : loggedInEmployee.id,
+      evaluador_id: loggedInEmployee.id,
+      tipo_evaluador: isSupervisor ? 'supervisor' : 'self',
+      track: 'sales',
+      estado: 'completada',
+      completada_at: new Date().toISOString()
+    };
+    if (isSupervisor) {
+      evalPayload.periodos_meta = quotaData.periodos_meta;
+      evalPayload.periodos_total = quotaData.periodos_total;
+      evalPayload.pct_promedio_cuota = Math.round((quotaData.periodos_meta / quotaData.periodos_total) * 100);
+    }
+
+    const evalRows = await sbFetch('evaluaciones', { method: 'POST', body: JSON.stringify(evalPayload) });
+    const evaluacionId = evalRows[0].id;
+
+    const respuestaRows = dims.map(dim => ({
+      evaluacion_id: evaluacionId,
+      dimension: dim.key,
+      pregunta_key: dim.key,
+      pregunta_texto: dim.q,
+      respuesta_score: responses[dim.key]
+    }));
+    await sbFetch('evaluacion_respuestas', { method: 'POST', body: JSON.stringify(respuestaRows) });
+
+    const successMsg = isSupervisor
+      ? `<h2>Evaluation Submitted! / ¡Evaluación Enviada!</h2><p>Your evaluation of ${selectedEvaluado.nombre_completo} for ${activeCycle.nombre} has been saved. / Tu evaluación de ${selectedEvaluado.nombre_completo} para ${activeCycle.nombre} se guardó.</p>`
+      : `<h2>Self-Assessment Submitted! / ¡Autoevaluación Enviada!</h2><p>Thank you, ${loggedInEmployee.nombre_completo}. Your supervisor will review your evaluation and follow up with feedback during ${activeCycle.nombre}. / Gracias, ${loggedInEmployee.nombre_completo}. Tu supervisor revisará tu evaluación durante ${activeCycle.nombre}.</p>`;
+
+    document.getElementById('app-content').innerHTML = `
+      <div class="card">
+        <div class="success-screen">
+          <div class="icon">✅</div>
+          ${successMsg}
+          ${isSupervisor ? `<button class="btn btn-primary" style="margin-top:20px;max-width:280px;" onclick="startSupervisorSearch()">Evaluate Someone Else / Evaluar a Alguien Más</button>` : ''}
+        </div>
+      </div>`;
+
+  } catch (err) {
+    console.error('Submit failed:', err);
+    errEl.textContent = 'Something went wrong submitting your evaluation. Please try again. / Algo salió mal al enviar tu evaluación. Intenta de nuevo.';
+    errEl.classList.add('show');
+    btn.disabled = false;
+    btn.textContent = isSupervisor ? 'Submit Evaluation / Enviar Evaluación' : 'Submit Self-Assessment / Enviar Autoevaluación';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
 </html>
