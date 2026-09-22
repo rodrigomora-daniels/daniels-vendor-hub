@@ -162,6 +162,30 @@
       </div>
     </div>
 
+    <!-- ORGANIGRAMA — reporting structure that drives evaluation routing -->
+    <div class="section" id="section-organigrama">
+      <div class="section-hdr">
+        <h2>🏢 Organigrama (Reporting Structure)</h2>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-gold" onclick="exportCSV('organigrama')">⬇ Export Current</button>
+          <button class="btn btn-primary" id="btn-org-upload-open" onclick="openOrgUploadModal()">⬆ Upload CSV</button>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--mgray);margin-bottom:14px;">This table is what the evaluation module reads to know who evaluates whom — not just a visual chart. Upload a CSV to replace it entirely.</p>
+      <div style="overflow-x:auto">
+        <table id="tbl-organigrama">
+          <thead>
+            <tr>
+              <th>Employee</th><th>Reports To</th><th>Track</th><th>Level</th><th>Title</th>
+            </tr>
+          </thead>
+          <tbody id="tbl-organigrama-body">
+            <tr><td colspan="5" class="empty-state">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- INVITATION CODES -->
     <div class="section" id="section-codes">
       <div class="section-hdr">
@@ -305,6 +329,31 @@
 </div>
 
 <!-- ══════════ MODAL: UNLOCK EXTRA ATTEMPTS (Super Admin + Admin Secundario) ══════════ -->
+<!-- ══════════ MODAL: ORGANIGRAMA CSV UPLOAD (Super Admin only) ══════════ -->
+<div class="modal-overlay" id="modal-org-upload">
+  <div class="modal-box" style="max-width:640px">
+    <h3>🏢 Upload Organigrama CSV</h3>
+    <p style="font-size:13px;color:var(--mgray);margin-bottom:14px;line-height:1.5">
+      Columns required (in this order): <strong>empleado_username, supervisor_username, track, nivel, titulo_display</strong>.
+      <code>supervisor_username</code> can be blank for the top of the org. <code>titulo_display</code> is optional.
+    </p>
+    <input type="file" accept=".csv" id="org-csv-file" class="field-input" onchange="handleOrgCSVSelect(event)">
+    <div id="org-upload-status" style="font-size:13px;margin:10px 0;"></div>
+    <div id="org-preview-wrap" style="display:none;max-height:320px;overflow:auto;border:1px solid #e8e4dc;border-radius:8px;margin-bottom:14px;">
+      <table style="width:100%;font-size:12px;">
+        <thead style="background:var(--navy);color:#fff;position:sticky;top:0;">
+          <tr><th style="padding:8px;text-align:left;">Employee</th><th style="padding:8px;text-align:left;">Reports To</th><th style="padding:8px;text-align:left;">Track</th><th style="padding:8px;text-align:left;">Level</th><th style="padding:8px;text-align:left;">Status</th></tr>
+        </thead>
+        <tbody id="org-preview-body"></tbody>
+      </table>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-org-upload')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" id="btn-org-confirm" onclick="submitOrgUpload()" disabled>Replace Organigrama</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-unlock-attempts">
   <div class="modal-box">
     <h3>🔓 Unlock Extra Attempts</h3>
@@ -409,7 +458,7 @@ let admin = null;
 const isSuperAdmin = () => !!(admin && admin.nivel_admin === 'super_admin');
 const isViewOnly = () => !!(admin && admin.nivel_admin === 'manager_visor');
 let roleChangeTarget = null;
-let cachedData = { employees: [], codes: [], leadsource: [], auditlog: [], certAttempts: [], certResets: [] };
+let cachedData = { employees: [], codes: [], leadsource: [], auditlog: [], certAttempts: [], certResets: [], organigrama: [] };
 let certResetTarget = null;
 const examFileByTier = { tier1: 'Daniels_Certification_Tier1.html', tier2: 'Daniels_Certification_Tier2.html' };
 let questionBankCache = {};
@@ -473,7 +522,7 @@ async function handleAdminLogin() {
 /* ════════ LOAD DATA ════════ */
 async function loadAllData() {
   await loadCertAttempts();
-  await Promise.all([loadEmployees(), loadCodes(), loadLeadSource(), loadAuditLog()]);
+  await Promise.all([loadEmployees(), loadCodes(), loadLeadSource(), loadAuditLog(), loadOrganigrama()]);
   renderCertAttemptsTable(cachedData.certAttempts); // re-render now that employee names are cached
   const plantBtn = document.getElementById('btn-plant-cert-floating');
   if (plantBtn) plantBtn.style.display = isViewOnly() ? 'none' : 'block';
@@ -483,7 +532,7 @@ async function loadAllData() {
 function applyViewOnlyRestrictions() {
   if (!isViewOnly()) return;
   // Store Management sees KPIs, the Employees roster, and Certification Attempts (read-only) — nothing else.
-  ['section-codes', 'section-leadsource', 'section-auditlog'].forEach(id => {
+  ['section-codes', 'section-leadsource', 'section-auditlog', 'section-organigrama'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
@@ -511,6 +560,189 @@ async function loadEmployees() {
   } catch (err) {
     console.error('Failed to load employees:', err);
     document.getElementById('tbl-employees-body').innerHTML = `<tr><td colspan="8" class="empty-state">Error loading employees.</td></tr>`;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   ORGANIGRAMA — the real reporting-structure table that drives
+   who-evaluates-whom in the evaluation module. Not a static chart.
+   ════════════════════════════════════════════════════════════ */
+async function loadOrganigrama() {
+  try {
+    const rows = await sbFetch('organigrama?activo=eq.true&select=empleado_id,supervisor_id,track,nivel,titulo_display');
+    cachedData.organigrama = rows || [];
+    renderOrganigramaTable(cachedData.organigrama);
+  } catch (err) {
+    console.warn('organigrama table not available yet:', err);
+    cachedData.organigrama = [];
+    document.getElementById('tbl-organigrama-body').innerHTML = `<tr><td colspan="5" class="empty-state">Table not set up yet — run the migration SQL first.</td></tr>`;
+  }
+  if (!isSuperAdmin()) {
+    const btn = document.getElementById('btn-org-upload-open');
+    if (btn) btn.style.display = 'none';
+  }
+}
+
+function renderOrganigramaTable(rows) {
+  const tbody = document.getElementById('tbl-organigrama-body');
+  if (!rows || rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" class="empty-state">No reporting structure uploaded yet.</td></tr>`;
+    return;
+  }
+  const byId = {};
+  (cachedData.employees || []).forEach(e => { byId[e.id] = e; });
+  tbody.innerHTML = rows.map(r => {
+    const emp = byId[r.empleado_id];
+    const sup = r.supervisor_id ? byId[r.supervisor_id] : null;
+    return `<tr>
+      <td>${emp ? emp.nombre_completo : '(unknown)'}</td>
+      <td>${sup ? sup.nombre_completo : '— top of org —'}</td>
+      <td>${r.track}</td>
+      <td>${r.nivel}</td>
+      <td>${r.titulo_display || (emp ? emp.rol : '')}</td>
+    </tr>`;
+  }).join('');
+}
+
+let orgUploadRows = null; // parsed + validated rows waiting for confirmation
+
+function openOrgUploadModal() {
+  if (!isSuperAdmin()) { alert('Only a Super Admin can upload the organigrama.'); return; }
+  orgUploadRows = null;
+  document.getElementById('org-csv-file').value = '';
+  document.getElementById('org-upload-status').textContent = '';
+  document.getElementById('org-preview-wrap').style.display = 'none';
+  document.getElementById('btn-org-confirm').disabled = true;
+  document.getElementById('modal-org-upload').classList.add('show');
+}
+
+function parseOrgCSV(text) {
+  // Simple CSV parser — handles the plain comma-separated format described in the modal.
+  // Not a full RFC4180 parser (no quoted-field commas), which is fine for this use case.
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+  if (!lines.length) return [];
+  const header = lines[0].split(',').map(h => h.trim().toLowerCase());
+  const idx = {
+    empleado_username: header.indexOf('empleado_username'),
+    supervisor_username: header.indexOf('supervisor_username'),
+    track: header.indexOf('track'),
+    nivel: header.indexOf('nivel'),
+    titulo_display: header.indexOf('titulo_display')
+  };
+  if (idx.empleado_username === -1 || idx.track === -1 || idx.nivel === -1) {
+    throw new Error('Missing required columns. Expected: empleado_username, supervisor_username, track, nivel, titulo_display');
+  }
+  return lines.slice(1).map(line => {
+    const cols = line.split(',').map(c => c.trim());
+    return {
+      empleado_username: cols[idx.empleado_username] || '',
+      supervisor_username: idx.supervisor_username > -1 ? (cols[idx.supervisor_username] || '') : '',
+      track: cols[idx.track] || 'sales',
+      nivel: parseInt(cols[idx.nivel], 10) || 5,
+      titulo_display: idx.titulo_display > -1 ? (cols[idx.titulo_display] || '') : ''
+    };
+  });
+}
+
+function handleOrgCSVSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('org-upload-status');
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    let parsed;
+    try {
+      parsed = parseOrgCSV(e.target.result);
+    } catch (err) {
+      statusEl.innerHTML = `<span style="color:var(--red)">❌ ${err.message}</span>`;
+      document.getElementById('org-preview-wrap').style.display = 'none';
+      document.getElementById('btn-org-confirm').disabled = true;
+      return;
+    }
+
+    // Validate every username against the real employee roster loaded from Supabase —
+    // this is the step that prevents silently linking the wrong person or a typo'd
+    // username from corrupting who-reports-to-whom.
+    const byUsername = {};
+    (cachedData.employees || []).forEach(e => { byUsername[(e.username || '').toLowerCase()] = e; });
+
+    let validCount = 0, errorCount = 0;
+    const rowsWithStatus = parsed.map(row => {
+      const emp = byUsername[row.empleado_username.toLowerCase()];
+      const sup = row.supervisor_username ? byUsername[row.supervisor_username.toLowerCase()] : null;
+      let status, ok;
+      if (!emp) { status = '❌ Unknown username'; ok = false; }
+      else if (row.supervisor_username && !sup) { status = '❌ Unknown supervisor'; ok = false; }
+      else { status = '✓ OK'; ok = true; }
+      if (ok) validCount++; else errorCount++;
+      return { ...row, emp, sup, ok, status };
+    });
+
+    orgUploadRows = rowsWithStatus;
+    statusEl.innerHTML = errorCount > 0
+      ? `<span style="color:var(--red)">${validCount} valid, ${errorCount} with errors — fix the CSV and re-upload, or the errored rows will be skipped.</span>`
+      : `<span style="color:var(--green)">✓ All ${validCount} rows valid and ready.</span>`;
+
+    document.getElementById('org-preview-body').innerHTML = rowsWithStatus.map(r => `
+      <tr style="border-bottom:1px solid #f0ece2;">
+        <td style="padding:6px 8px;">${r.emp ? r.emp.nombre_completo : r.empleado_username}</td>
+        <td style="padding:6px 8px;">${r.sup ? r.sup.nombre_completo : (row_supervisor_display(r))}</td>
+        <td style="padding:6px 8px;">${r.track}</td>
+        <td style="padding:6px 8px;">${r.nivel}</td>
+        <td style="padding:6px 8px;${r.ok ? 'color:var(--green)' : 'color:var(--red)'}">${r.status}</td>
+      </tr>`).join('');
+    document.getElementById('org-preview-wrap').style.display = 'block';
+    document.getElementById('btn-org-confirm').disabled = validCount === 0;
+  };
+  reader.readAsText(file);
+}
+
+function row_supervisor_display(r) {
+  if (!r.supervisor_username) return '— top of org —';
+  return r.supervisor_username;
+}
+
+async function submitOrgUpload() {
+  if (!orgUploadRows) return;
+  const validRows = orgUploadRows.filter(r => r.ok);
+  const btn = document.getElementById('btn-org-confirm');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Uploading...';
+
+  try {
+    // Replace mode: deactivate everything currently active, then insert the new set.
+    // We deactivate rather than hard-delete so history isn't lost if something needs auditing later.
+    const existing = await sbFetch('organigrama?activo=eq.true&select=id');
+    if (existing && existing.length) {
+      await sbFetch(`organigrama?id=in.(${existing.map(e => e.id).join(',')})`, {
+        method: 'PATCH',
+        body: JSON.stringify({ activo: false })
+      });
+    }
+
+    const insertRows = validRows.map(r => ({
+      empleado_id: r.emp.id,
+      supervisor_id: r.sup ? r.sup.id : null,
+      track: r.track,
+      nivel: r.nivel,
+      titulo_display: r.titulo_display || null,
+      activo: true
+    }));
+    await sbFetch('organigrama', { method: 'POST', body: JSON.stringify(insertRows) });
+
+    await sbFetch('admin_audit_log', {
+      method: 'POST',
+      body: JSON.stringify({ admin_id: admin.id, accion: 'upload_organigrama', detalle: `${insertRows.length} reporting relationships uploaded` })
+    }).catch(() => {}); // best-effort log, don't block on it
+
+    closeModal('modal-org-upload');
+    await loadOrganigrama();
+    alert(`Organigrama updated — ${insertRows.length} reporting relationships now active.`);
+
+  } catch (err) {
+    alert('Error uploading organigrama: ' + err.message);
+    btn.disabled = false;
+    btn.textContent = 'Replace Organigrama';
   }
 }
 
@@ -1312,6 +1544,18 @@ function exportCSV(type) {
       { label: 'Date', get: r => r.created_at },
     ]);
     downloadCSV(csv, `daniels_admin_audit_log_${dateStamp}.csv`);
+  }
+  if (type === 'organigrama') {
+    const byId = {};
+    cachedData.employees.forEach(e => { byId[e.id] = e; });
+    const csv = toCSV(cachedData.organigrama, [
+      { label: 'empleado_username', get: r => byId[r.empleado_id] ? byId[r.empleado_id].username : '' },
+      { label: 'supervisor_username', get: r => r.supervisor_id && byId[r.supervisor_id] ? byId[r.supervisor_id].username : '' },
+      { label: 'track', get: r => r.track },
+      { label: 'nivel', get: r => r.nivel },
+      { label: 'titulo_display', get: r => r.titulo_display || '' },
+    ]);
+    downloadCSV(csv, `daniels_organigrama_${dateStamp}.csv`);
   }
   if (type === 'certattempts') {
     const employeesById = {};
