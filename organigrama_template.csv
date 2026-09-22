@@ -1,0 +1,15 @@
+empleado_username,supervisor_username,track,nivel,titulo_display
+hector,rodrigo.mora,sales,3,Sales & Merch. Manager
+maricela,rodrigo.mora,operations,3,Customer Service Manager
+polo,rodrigo.mora,warehouse,3,Warehouse Manager
+angel.delgado,rodrigo.mora,ecommerce,3,E-Commerce Lead
+ana,rodrigo.mora,leadership,3,Credit Approver
+leticia,rodrigo.mora,leadership,3,Credit Approver
+rey.quiroz,rodrigo.mora,leadership,3,HR
+marco6228,hector,sales,4,Store Management
+jlopez,hector,sales,4,Store Management
+kaspertiger,hector,sales,4,Store Management
+jaimeg,hector,sales,4,Store Management
+EJEMPLO_vendedor1_username,marco6228,sales,5,Sales Associate
+EJEMPLO_vendedor2_username,marco6228,sales,5,Sales Associate
+EJEMPLO_vendedor3_username,jlopez,sales,5,Sales Associate

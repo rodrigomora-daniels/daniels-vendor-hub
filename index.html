@@ -194,6 +194,19 @@
       <input type="text" class="field-input" id="signup-empid" placeholder="e.g. DHC-002" autocomplete="off">
       <label class="field-label">Choose a Username *</label>
       <input type="text" class="field-input" id="signup-username" placeholder="e.g. mgarcia" autocomplete="off">
+      <label class="field-label">Department / Área *</label>
+      <select class="field-input" id="signup-departamento">
+        <option value="">— Select your department / Selecciona tu área —</option>
+        <option value="sales">Sales / Ventas</option>
+        <option value="operations">Operations / Operaciones</option>
+        <option value="merchandising">Merchandising</option>
+        <option value="customer_service">Customer Service / Servicio al Cliente</option>
+        <option value="warehouse">Warehouse / Almacén</option>
+        <option value="ecommerce">E-Commerce</option>
+        <option value="management">Management / Gerencia</option>
+        <option value="hr">HR / Recursos Humanos</option>
+        <option value="credit">Credit / Crédito</option>
+      </select>
       <label class="field-label">Choose a Password *</label>
       <input type="password" class="field-input" id="signup-password" placeholder="Minimum 8 characters">
       <label class="field-label">Confirm Password *</label>
@@ -306,7 +319,7 @@
 
       <div class="section-title">What do you need today?</div>
       <div class="home-cards-grid">
-        <div class="home-card" onclick="switchTab('certifications')">
+        <div class="home-card" id="card-certifications" onclick="switchTab('certifications')">
           <div class="home-card-icon">🎓</div>
           <h3>Certifications</h3>
           <p>Take your Sales Tier 1 &amp; Tier 2 exams, track your progress, and download your certificates.</p>
@@ -321,22 +334,12 @@
           <h3>How They Found Us</h3>
           <p>Quick 10-second check-in — helps us understand where customers come from.</p>
         </div>
-        <div class="home-card" onclick="navigateToTool('evaluacion')">
-          <div class="home-card-icon">📋</div>
-          <h3>Mi Evaluación</h3>
-          <p>Completa tu autoevaluación de desempeño del ciclo actual o revisa tus evaluaciones pasadas.</p>
-        </div>
-        <div class="home-card" onclick="navigateToTool('organigrama')">
-          <div class="home-card-icon">🏢</div>
-          <h3>Organigrama</h3>
-          <p>Consulta la estructura organizacional de Daniels Home Center.</p>
-        </div>
       </div>
     </div>
 
     <div class="tab-bar" id="tab-bar-nav" style="display:none">
       <button class="tab-btn" onclick="switchTab('home')">← Home</button>
-      <button class="tab-btn active" data-tab="certifications" onclick="switchTab('certifications')">🎓 Certifications</button>
+      <button class="tab-btn active" id="navtab-certifications" data-tab="certifications" onclick="switchTab('certifications')">🎓 Certifications</button>
     </div>
 
     <!-- TAB: CERTIFICATIONS -->
@@ -478,6 +481,18 @@ async function handleLogin() {
     }
 
     session.empleado = rows[0];
+
+    // verificar_login is a server-side RPC we didn't write and can't see the
+    // internals of — rather than assume it returns "departamento" (added after
+    // that RPC existed), fetch it directly so gating logic downstream always
+    // has an accurate value, regardless of what the RPC's own return shape is.
+    try {
+      const deptRows = await sbFetch(`empleados?id=eq.${session.empleado.id}&select=departamento`);
+      if (deptRows && deptRows[0]) session.empleado.departamento = deptRows[0].departamento;
+    } catch (err) {
+      console.warn('Could not fetch department:', err);
+    }
+
     await loadDashboard();
 
   } catch (err) {
@@ -545,6 +560,7 @@ async function handleSignup() {
   const name = document.getElementById('signup-name').value.trim();
   const empId = document.getElementById('signup-empid').value.trim();
   const username = document.getElementById('signup-username').value.trim();
+  const departamento = document.getElementById('signup-departamento').value;
   const pw1 = document.getElementById('signup-password').value;
   const pw2 = document.getElementById('signup-password2').value;
   const errEl = document.getElementById('signup-error');
@@ -552,8 +568,8 @@ async function handleSignup() {
 
   errEl.classList.remove('show');
 
-  if (!code || !name || !empId || !username || !pw1 || !pw2) {
-    errEl.textContent = 'Please fill in all required fields.';
+  if (!code || !name || !empId || !username || !departamento || !pw1 || !pw2) {
+    errEl.textContent = 'Please fill in all required fields, including your department.';
     errEl.classList.add('show');
     return;
   }
@@ -597,6 +613,30 @@ async function handleSignup() {
         const empRows = await sbFetch(`empleados?id=eq.${result.empleado_id}&select=username`);
         if (empRows && empRows[0]) actualUsername = empRows[0].username;
       } catch (err) { /* fall back to whatever they typed */ }
+    }
+
+    // Store the department separately from the registration RPC (which we don't
+    // control/didn't write) — a direct patch on the new record, same pattern used
+    // everywhere else in the hub. Only for brand-new accounts, not password resets
+    // (someone resetting their password already has a department on file).
+    if (!isReset) {
+      try {
+        let targetId = result.empleado_id;
+        if (!targetId) {
+          // RPC didn't hand back the new id directly — look it up by the
+          // username they just chose, which is guaranteed unique.
+          const lookup = await sbFetch(`empleados?username=eq.${encodeURIComponent(username)}&select=id`);
+          if (lookup && lookup[0]) targetId = lookup[0].id;
+        }
+        if (targetId) {
+          await sbFetch(`empleados?id=eq.${targetId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ departamento })
+          });
+        }
+      } catch (err) {
+        console.warn('Could not save department (account was still created successfully):', err);
+      }
     }
 
     alert(isReset
@@ -711,6 +751,15 @@ async function loadDashboard() {
   if (emp.es_admin) {
     document.getElementById('btn-admin-console').style.display = 'inline-block';
   }
+
+  // Certifications (Tier 1/Tier 2) are sales-specific exams — only show the
+  // card/tab to people registered under the Sales department. Admins always
+  // see it too, since they may need to preview or plant certifications.
+  const showCerts = emp.departamento === 'sales' || emp.es_admin;
+  const certCard = document.getElementById('card-certifications');
+  const certNavTab = document.getElementById('navtab-certifications');
+  if (certCard) certCard.style.display = showCerts ? '' : 'none';
+  if (certNavTab) certNavTab.style.display = showCerts ? '' : 'none';
 
   try {
     const history = await sbFetch(
@@ -909,10 +958,8 @@ function renderDashboardData() {
    not iframe — GitHub Pages blocks framing between its own sites)
    ════════════════════════════════════════════════════════════ */
 const TOOL_URLS = {
-  prescreen:   'https://rodrigomora-daniels.github.io/daniels-credit-simulator/',
-  leadsource:  'Daniels_Lead_Source_Form.html',
-  evaluacion:  'Daniels_Evaluacion_Ventas.html',
-  organigrama: 'Daniels_Organigrama.html'
+  prescreen: 'https://rodrigomora-daniels.github.io/daniels-credit-simulator/',
+  leadsource: 'Daniels_Lead_Source_Form.html'
 };
 
 function switchTab(tabName) {
@@ -931,10 +978,7 @@ function switchTab(tabName) {
 }
 
 function navigateToTool(toolName) {
-  const url  = TOOL_URLS[toolName];
-  const empId = session && session.empleado ? session.empleado.id : '';
-  const sep  = url.includes('?') ? '&' : '?';
-  window.location.href = empId ? `${url}${sep}emp=${empId}` : url;
+  window.location.href = TOOL_URLS[toolName];
 }
 
 function goToExam(tier) {
