@@ -12,11 +12,8 @@
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:Arial,sans-serif;background:#f0f2f5;color:var(--dkgray);min-height:100vh;}
-
   .screen{display:none;}
   .screen.active{display:block;}
-
-  /* LOGIN GATE (re-uses same login flow, admin-only) */
   .login-wrap{max-width:420px;margin:60px auto;}
   .login-card{background:var(--white);border-radius:16px;padding:36px 32px;box-shadow:0 8px 30px rgba(0,0,0,.15);}
   .login-card h1{color:var(--navy);font-size:22px;margin-bottom:6px;text-align:center;}
@@ -26,7 +23,6 @@
   .field-input:focus{border-color:var(--navy);}
   .error-msg{background:#fdecea;border-left:4px solid var(--red);color:var(--red);padding:10px 14px;border-radius:6px;font-size:13px;margin-bottom:14px;display:none;}
   .error-msg.show{display:block;}
-
   .btn{display:inline-block;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:opacity .15s;}
   .btn:hover{opacity:.85;}
   .btn-primary{background:var(--navy);color:var(--white);}
@@ -35,29 +31,24 @@
   .btn-ghost{background:transparent;border:1px solid #ccc;color:var(--dkgray);}
   .btn-block{width:100%;display:block;text-align:center;padding:13px;font-size:15px;}
   .btn:disabled{opacity:.5;cursor:not-allowed;}
-
-  /* COCKPIT HEADER */
+  /* spinner — used in loading states */
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
   .cockpit-header{background:var(--navy);border-bottom:4px solid var(--gold);padding:18px 28px;display:flex;align-items:center;justify-content:space-between;}
   .cockpit-header .btn-ghost{background:transparent;border:1px solid var(--ltblue);color:var(--ltblue);}
   .cockpit-header .btn-ghost:hover{background:rgba(255,255,255,.1);}
   .cockpit-header h1{color:var(--white);font-size:19px;}
   .cockpit-header .sub{color:var(--gold);font-size:12px;}
-
   .cockpit-content{padding:28px 24px;max-width:1200px;margin:0 auto;}
-
-  /* KPI CARDS */
   .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
   @media (max-width:900px){ .kpi-grid{grid-template-columns:repeat(2,1fr);} }
   .kpi-card{background:var(--white);border-radius:12px;padding:18px 20px;box-shadow:0 2px 10px rgba(0,0,0,.06);}
   .kpi-card .lbl{font-size:11px;color:var(--mgray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
   .kpi-card .val{font-size:28px;font-weight:700;color:var(--navy);}
   .kpi-card .sub{font-size:12px;color:var(--mgray);margin-top:4px;}
-
-  /* SECTION */
   .section{background:var(--white);border-radius:14px;padding:22px;box-shadow:0 2px 10px rgba(0,0,0,.06);margin-bottom:24px;}
   .section-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
   .section-hdr h2{color:var(--navy);font-size:16px;}
-
   table{width:100%;border-collapse:collapse;font-size:13px;}
   th{text-align:left;background:var(--gray);padding:9px 12px;color:var(--navy);font-weight:700;border-bottom:2px solid #e0ddd6;}
   td{padding:9px 12px;border-bottom:1px solid #f0ece2;vertical-align:middle;}
@@ -67,19 +58,14 @@
   .pill-red{background:#fdecea;color:var(--red);}
   .pill-gray{background:#eee;color:var(--mgray);}
   .pill-gold{background:#fdf3e3;color:var(--gold);}
-
   .row-actions{display:flex;gap:6px;}
   .row-actions .btn{padding:5px 10px;font-size:11px;}
-
   .empty-state{text-align:center;padding:30px;color:var(--mgray);font-size:13px;}
-
-  /* MODAL */
   .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:center;justify-content:center;}
   .modal-overlay.show{display:flex;}
   .modal-box{background:var(--white);border-radius:14px;padding:26px;max-width:420px;width:90%;}
   .modal-box h3{color:var(--navy);margin-bottom:14px;font-size:17px;}
   .modal-box .field-label{margin-top:10px;}
-
   ::-webkit-scrollbar{height:6px;}
 </style>
 </head>
@@ -162,7 +148,7 @@
       </div>
     </div>
 
-    <!-- ORGANIGRAMA — reporting structure that drives evaluation routing -->
+    <!-- ORGANIGRAMA -->
     <div class="section" id="section-organigrama">
       <div class="section-hdr">
         <h2>🏢 Organigrama (Reporting Structure)</h2>
@@ -171,7 +157,7 @@
           <button class="btn btn-primary" id="btn-org-upload-open" onclick="openAddOrgRowModal()">+ Add Reporting Relationship</button>
         </div>
       </div>
-      <p style="font-size:12px;color:var(--mgray);margin-bottom:14px;">This table is what the evaluation module reads to know who evaluates whom — not just a visual chart. Upload a CSV to replace it entirely.</p>
+      <p style="font-size:12px;color:var(--mgray);margin-bottom:14px;">This table is what the evaluation module reads to know who evaluates whom — not just a visual chart.</p>
       <div style="overflow-x:auto">
         <table id="tbl-organigrama">
           <thead>
@@ -241,10 +227,7 @@
       </div>
     </div>
 
-  </div>
-</div>
-
-    <!-- CERTIFICATION ATTEMPTS -->
+    <!-- CERTIFICATION ATTEMPTS — was incorrectly outside screen-cockpit, fixed here -->
     <div class="section" id="section-certattempts">
       <div class="section-hdr">
         <h2>🎓 Certification Attempts</h2>
@@ -265,7 +248,11 @@
       </div>
     </div>
 
-<!-- ══════════ MODAL: PLANT CERTIFICATION ══════════ -->
+  </div><!-- /cockpit-content -->
+</div><!-- /screen-cockpit -->
+
+<!-- ══════════ MODALS ══════════ -->
+
 <div class="modal-overlay" id="modal-plant">
   <div class="modal-box">
     <h3>🌱 Plant Certification</h3>
@@ -290,7 +277,6 @@
   </div>
 </div>
 
-<!-- ══════════ MODAL: RESET PASSWORD (self-service code) ══════════ -->
 <div class="modal-overlay" id="modal-reset">
   <div class="modal-box">
     <h3>🔑 Reset Password</h3>
@@ -298,14 +284,13 @@
     <div id="reset-pw-result" style="display:none;background:var(--gray);border-radius:8px;padding:14px;margin-bottom:14px;">
       <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px;">Reset code — share with the employee:</div>
       <div id="reset-pw-value" style="font-family:monospace;font-size:20px;font-weight:700;color:var(--navy);"></div>
-      <div style="font-size:11px;color:var(--mgray);margin-top:8px;line-height:1.5;">Tell them exactly this: <em>"Go to the Sign In screen, tap 'New employee? Sign Up', and enter this code. Do NOT try to sign in with your old password — it's been locked."</em> The app will recognize the code, show your name, and let you pick a new password. Your username, badges, and certification history won't change.</div>
+      <div style="font-size:11px;color:var(--mgray);margin-top:8px;line-height:1.5;">Tell them: <em>"Go to Sign In, tap 'New employee? Sign Up', and enter this code."</em></div>
     </div>
     <button class="btn btn-primary btn-block" id="btn-reset-pw-generate" onclick="submitResetPassword()">Lock Account &amp; Generate Reset Code</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal('modal-reset')">Close</button>
   </div>
 </div>
 
-<!-- ══════════ MODAL: ANSWER DETAIL ══════════ -->
 <div class="modal-overlay" id="modal-answers">
   <div class="modal-box" style="max-width:640px;max-height:80vh;overflow-y:auto">
     <h3 id="answers-modal-title">Answer Detail</h3>
@@ -314,7 +299,6 @@
   </div>
 </div>
 
-<!-- ══════════ MODAL: RESET CERTIFICATION ══════════ -->
 <div class="modal-overlay" id="modal-cert-reset">
   <div class="modal-box">
     <h3>🔓 Reset Certification</h3>
@@ -328,8 +312,6 @@
   </div>
 </div>
 
-<!-- ══════════ MODAL: UNLOCK EXTRA ATTEMPTS (Super Admin + Admin Secundario) ══════════ -->
-<!-- ══════════ MODAL: ORGANIGRAMA CSV UPLOAD (Super Admin only) ══════════ -->
 <div class="modal-overlay" id="modal-reclassify">
   <div class="modal-box" style="max-width:420px">
     <h3>🏷️ Reclassify Department</h3>
@@ -356,16 +338,13 @@
 <div class="modal-overlay" id="modal-add-org-row">
   <div class="modal-box" style="max-width:520px">
     <h3>🏢 Add Reporting Relationship</h3>
-    <p style="font-size:12px;color:var(--mgray);margin-bottom:14px;">Pick two people from the roster you already have — no file, nothing to format.</p>
-
+    <p style="font-size:12px;color:var(--mgray);margin-bottom:14px;">Pick two people from the roster — no file needed.</p>
     <label class="field-label">Employee / Empleado</label>
     <select class="field-input" id="org-row-employee"></select>
-
     <label class="field-label" style="margin-top:10px">Reports To / Reporta A</label>
     <select class="field-input" id="org-row-supervisor">
       <option value="">— Top of org (no supervisor) —</option>
     </select>
-
     <label class="field-label" style="margin-top:10px">Track</label>
     <select class="field-input" id="org-row-track">
       <option value="sales">Sales</option>
@@ -374,17 +353,13 @@
       <option value="ecommerce">E-Commerce</option>
       <option value="leadership">Leadership</option>
     </select>
-
     <label class="field-label" style="margin-top:10px">Level (1=top … 5=associate)</label>
     <input type="number" min="1" max="5" class="field-input" id="org-row-nivel" value="3">
-
     <label class="field-label" style="margin-top:10px">Title to display (optional)</label>
     <input type="text" class="field-input" id="org-row-titulo" placeholder="e.g. Customer Service Manager">
-
     <label class="field-label" style="margin-top:10px">Weight % of this supervisor's evaluation</label>
     <input type="number" min="1" max="100" class="field-input" id="org-row-peso" value="100">
-    <p style="font-size:11px;color:var(--mgray);margin-top:4px;">For co-evaluation (e.g. two managers each own part of the score), add this person twice — once per supervisor — with weights that add up to 100.</p>
-
+    <p style="font-size:11px;color:var(--mgray);margin-top:4px;">For co-evaluation (two managers each own part of the score), add this person twice — once per supervisor — with weights that add up to 100.</p>
     <div id="org-row-error" class="error-msg"></div>
     <div style="display:flex;gap:8px;margin-top:14px;">
       <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-add-org-row')">Cancel</button>
@@ -401,7 +376,7 @@
     <input type="number" class="field-input" id="unlock-attempts-qty" value="1" min="1" max="10">
     <label class="field-label" style="margin-top:10px">Reason / Notes (optional)</label>
     <input type="text" class="field-input" id="unlock-attempts-notes" placeholder="e.g. approved by Ted, retrained">
-    <p style="font-size:11px;color:var(--mgray);margin-top:8px;line-height:1.5">This does not delete or reset anything — every past attempt stays in their history exactly as it happened. It simply raises how many total attempts they're allowed before locking again.</p>
+    <p style="font-size:11px;color:var(--mgray);margin-top:8px;line-height:1.5">This does not delete or reset anything — every past attempt stays in their history. It simply raises how many total attempts they're allowed.</p>
     <div style="display:flex;gap:8px;margin-top:10px">
       <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-unlock-attempts')">Cancel</button>
       <button class="btn btn-primary" style="flex:1" onclick="submitUnlockAttempts()">Unlock Attempts</button>
@@ -409,7 +384,6 @@
   </div>
 </div>
 
-<!-- ══════════ MODAL: CHANGE ROLE (Super Admin only) ══════════ -->
 <div class="modal-overlay" id="modal-change-role">
   <div class="modal-box">
     <h3>👤 Change Role</h3>
@@ -418,8 +392,8 @@
     <select class="field-input" id="role-select">
       <option value="vendedor|none">Vendedor</option>
       <option value="manager|none">Manager</option>
-      <option value="manager|manager_visor">Store Management — View Only (Employees roster, KPI summary, certification attempts/scores, export CSV — no changes allowed)</option>
-      <option value="admin|admin_secundario">Admin — Secondary (view, export, manage vendors/managers, reset attempts — cannot delete attempts, cannot manage admin accounts)</option>
+      <option value="manager|manager_visor">Store Management — View Only</option>
+      <option value="admin|admin_secundario">Admin — Secondary</option>
       <option value="admin|super_admin">Super Admin (full control)</option>
     </select>
     <div style="display:flex;gap:8px;margin-top:14px">
@@ -429,7 +403,6 @@
   </div>
 </div>
 
-<!-- ══════════ MODAL: GENERATE INVITATION CODE(S) ══════════ -->
 <div class="modal-overlay" id="modal-generate-code">
   <div class="modal-box">
     <h3>🎫 Generate Invitation Code(s)</h3>
@@ -447,13 +420,12 @@
       <button class="btn btn-primary" style="flex:1" onclick="submitGenerateCode()">Generate</button>
     </div>
     <div id="gencode-result" style="display:none;margin-top:16px;background:var(--gray);border-radius:8px;padding:14px;">
-      <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px;">New code(s) — copy and share with the employee:</div>
+      <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px;">New code(s) — copy and share:</div>
       <div id="gencode-result-list" style="font-family:monospace;font-size:14px;line-height:1.8;"></div>
     </div>
   </div>
 </div>
 
-<!-- ══════════ MODAL: FULL LIST (generic — Codes / Lead Source / Audit Log) ══════════ -->
 <div class="modal-overlay" id="modal-full-list">
   <div class="modal-box" style="max-width:900px;max-height:85vh;overflow-y:auto;">
     <h3 id="full-list-title">Full List</h3>
@@ -509,52 +481,33 @@ async function handleAdminLogin() {
   const errEl = document.getElementById('login-error');
   const btn = document.getElementById('btn-login');
   errEl.classList.remove('show');
-
-  if (!username || !password) {
-    errEl.textContent = 'Please enter both fields.';
-    errEl.classList.add('show');
-    return;
-  }
-
-  btn.disabled = true;
-  btn.textContent = 'Signing in...';
-
+  if (!username || !password) { errEl.textContent = 'Please enter both fields.'; errEl.classList.add('show'); return; }
+  btn.disabled = true; btn.textContent = 'Signing in...';
   try {
-    const rows = await sbFetch('rpc/verificar_login', {
-      method: 'POST',
-      body: JSON.stringify({ p_username: username, p_password: password })
-    });
-
+    const rows = await sbFetch('rpc/verificar_login', { method: 'POST', body: JSON.stringify({ p_username: username, p_password: password }) });
     if (!rows || rows.length === 0) throw new Error('Invalid credentials.');
     const emp = rows[0];
-
-    if (!emp.es_admin) {
-      throw new Error('This account does not have admin access.');
-    }
-
+    if (!emp.es_admin) throw new Error('This account does not have admin access.');
     admin = emp;
     try {
       const lvl = await sbFetch(`empleados?id=eq.${admin.id}&select=nivel_admin`);
       admin.nivel_admin = (lvl && lvl[0] && lvl[0].nivel_admin) || null;
     } catch (err) {
-      console.warn('Could not load admin tier (nivel_admin column may not exist yet):', err);
-      admin.nivel_admin = 'super_admin'; // fail-open to super_admin so existing admins aren't locked out before the SQL migration runs
+      console.warn('Could not load admin tier:', err);
+      admin.nivel_admin = 'super_admin';
     }
     document.getElementById('screen-admin-login').classList.remove('active');
     document.getElementById('screen-cockpit').classList.add('active');
     let tierLabel = 'Admin';
     if (isSuperAdmin()) tierLabel = 'Super Admin';
     else if (isViewOnly()) tierLabel = 'Store Management — View Only';
-    document.getElementById('admin-greeting').textContent =
-      `Signed in as ${emp.nombre_completo} (${tierLabel})`;
+    document.getElementById('admin-greeting').textContent = `Signed in as ${emp.nombre_completo} (${tierLabel})`;
     loadAllData();
-
   } catch (err) {
     errEl.textContent = err.message.includes('admin access') ? err.message : 'Incorrect username or password.';
     errEl.classList.add('show');
   } finally {
-    btn.disabled = false;
-    btn.textContent = 'Sign In';
+    btn.disabled = false; btn.textContent = 'Sign In';
   }
 }
 
@@ -562,7 +515,7 @@ async function handleAdminLogin() {
 async function loadAllData() {
   await loadCertAttempts();
   await Promise.all([loadEmployees(), loadCodes(), loadLeadSource(), loadAuditLog(), loadOrganigrama()]);
-  renderCertAttemptsTable(cachedData.certAttempts); // re-render now that employee names are cached
+  renderCertAttemptsTable(cachedData.certAttempts);
   const plantBtn = document.getElementById('btn-plant-cert-floating');
   if (plantBtn) plantBtn.style.display = isViewOnly() ? 'none' : 'block';
   applyViewOnlyRestrictions();
@@ -570,7 +523,6 @@ async function loadAllData() {
 
 function applyViewOnlyRestrictions() {
   if (!isViewOnly()) return;
-  // Store Management sees KPIs, the Employees roster, and Certification Attempts (read-only) — nothing else.
   ['section-codes', 'section-leadsource', 'section-auditlog', 'section-organigrama'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
@@ -583,7 +535,6 @@ async function loadEmployees() {
   try {
     const employees = await sbFetch('empleados?select=id,nombre_completo,username,employee_id,tienda,rol,es_admin,nivel_admin,departamento');
     const progress = await sbFetch('certificaciones_progreso?select=empleado_id,certificacion,porcentaje,score,aprobado&order=fecha_completado.desc');
-
     const merged = employees.map(emp => {
       const empProgress = progress.filter(p => p.empleado_id === emp.id);
       const tier1 = empProgress.find(p => p.certificacion === 'tier1' && p.aprobado);
@@ -591,7 +542,6 @@ async function loadEmployees() {
       const totalPoints = empProgress.filter(p => p.aprobado).reduce((s, p) => s + (p.score || 0), 0);
       return { ...emp, tier1, tier2, totalPoints };
     });
-
     cachedData.employees = merged;
     renderEmployeesTable(merged);
     renderKPIs(merged);
@@ -602,10 +552,7 @@ async function loadEmployees() {
   }
 }
 
-/* ════════════════════════════════════════════════════════════
-   ORGANIGRAMA — the real reporting-structure table that drives
-   who-evaluates-whom in the evaluation module. Not a static chart.
-   ════════════════════════════════════════════════════════════ */
+/* ════════ ORGANIGRAMA ════════ */
 async function loadOrganigrama() {
   try {
     const rows = await sbFetch('organigrama?activo=eq.true&select=id,empleado_id,supervisor_id,track,nivel,titulo_display,peso');
@@ -651,13 +598,14 @@ function openAddOrgRowModal() {
   const empSelect = document.getElementById('org-row-employee');
   const supSelect = document.getElementById('org-row-supervisor');
   empSelect.innerHTML = employees.map(e => `<option value="${e.id}">${e.nombre_completo}</option>`).join('');
-  supSelect.innerHTML = '<option value="">— Top of org (no supervisor) —</option>' +
-    employees.map(e => `<option value="${e.id}">${e.nombre_completo}</option>`).join('');
+  supSelect.innerHTML = '<option value="">— Top of org (no supervisor) —</option>' + employees.map(e => `<option value="${e.id}">${e.nombre_completo}</option>`).join('');
   document.getElementById('org-row-track').value = 'sales';
   document.getElementById('org-row-nivel').value = '3';
   document.getElementById('org-row-titulo').value = '';
   document.getElementById('org-row-peso').value = '100';
   document.getElementById('org-row-error').classList.remove('show');
+  const saveBtn = document.getElementById('btn-org-row-save');
+  saveBtn.disabled = false; saveBtn.textContent = 'Save';
   document.getElementById('modal-add-org-row').classList.add('show');
 }
 
@@ -670,92 +618,49 @@ async function submitAddOrgRow() {
   const peso = parseFloat(document.getElementById('org-row-peso').value) || 100;
   const errEl = document.getElementById('org-row-error');
   errEl.classList.remove('show');
-
-  if (empId === supId && supId) {
-    errEl.textContent = 'A person cannot report to themselves.';
-    errEl.classList.add('show');
-    return;
-  }
-
+  if (empId === supId && supId) { errEl.textContent = 'A person cannot report to themselves.'; errEl.classList.add('show'); return; }
   const btn = document.getElementById('btn-org-row-save');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Saving...';
-
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Saving...';
   try {
-    // A person can now have more than one active supervisor (co-evaluation, e.g.
-    // Rodrigo 50% + Ted 50%) — so we no longer deactivate their existing row(s).
-    // We DO replace an existing row for this exact empleado+supervisor pair, so
-    // re-adding the same pair updates the weight/track/title instead of duplicating it.
-    const existingSamePair = await sbFetch(
-      `organigrama?empleado_id=eq.${empId}&activo=eq.true&${supId ? `supervisor_id=eq.${supId}` : 'supervisor_id=is.null'}&select=id`
-    );
+    const existingSamePair = await sbFetch(`organigrama?empleado_id=eq.${empId}&activo=eq.true&${supId ? `supervisor_id=eq.${supId}` : 'supervisor_id=is.null'}&select=id`);
     if (existingSamePair && existingSamePair.length) {
-      await sbFetch(`organigrama?id=in.(${existingSamePair.map(e => e.id).join(',')})`, {
-        method: 'PATCH', body: JSON.stringify({ activo: false })
-      });
+      await sbFetch(`organigrama?id=in.(${existingSamePair.map(e => e.id).join(',')})`, { method: 'PATCH', body: JSON.stringify({ activo: false }) });
     }
-
-    // Warn (don't block) if this person's total active weight would exceed 100 —
-    // easy to do by accident when adding a second supervisor.
     const otherActive = await sbFetch(`organigrama?empleado_id=eq.${empId}&activo=eq.true&select=peso`);
     const currentTotal = (otherActive || []).reduce((s, r) => s + (r.peso || 0), 0);
     if (currentTotal + peso > 100) {
       if (!confirm(`This person's total supervisor weight would be ${currentTotal + peso}%, over 100%. Save anyway?`)) {
-        btn.disabled = false;
-        btn.textContent = 'Save';
-        return;
+        btn.disabled = false; btn.textContent = 'Save'; return;
       }
     }
-
-    await sbFetch('organigrama', {
-      method: 'POST',
-      body: JSON.stringify([{
-        empleado_id: empId,
-        supervisor_id: supId || null,
-        track, nivel, peso,
-        titulo_display: titulo || null,
-        activo: true
-      }])
-    });
-
+    await sbFetch('organigrama', { method: 'POST', body: JSON.stringify([{ empleado_id: empId, supervisor_id: supId || null, track, nivel, peso, titulo_display: titulo || null, activo: true }]) });
+    btn.disabled = false; btn.textContent = 'Save';
     closeModal('modal-add-org-row');
     await loadOrganigrama();
   } catch (err) {
     errEl.textContent = 'Error saving: ' + err.message;
     errEl.classList.add('show');
-    btn.disabled = false;
-    btn.textContent = 'Save';
+    btn.disabled = false; btn.textContent = 'Save';
   }
 }
 
 async function deleteOrgRow(rowId) {
   if (!confirm('Remove this reporting relationship?')) return;
   try {
-    await sbFetch(`organigrama?id=eq.${rowId}`, {
-      method: 'PATCH', body: JSON.stringify({ activo: false })
-    });
+    await sbFetch(`organigrama?id=eq.${rowId}`, { method: 'PATCH', body: JSON.stringify({ activo: false }) });
     await loadOrganigrama();
-  } catch (err) {
-    alert('Error removing: ' + err.message);
-  }
+  } catch (err) { alert('Error removing: ' + err.message); }
 }
+
+/* ════════ EMPLOYEES TABLE ════════ */
 function renderEmployeesTable(employees) {
   const tbody = document.getElementById('tbl-employees-body');
   const searchEl = document.getElementById('employee-search');
   const q = (searchEl && searchEl.value || '').trim().toLowerCase();
-  const filtered = q
-    ? employees.filter(e => (e.nombre_completo || '').toLowerCase().includes(q) || (e.username || '').toLowerCase().includes(q))
-    : employees;
-  if (employees.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" class="empty-state">No employees yet.</td></tr>`;
-    return;
-  }
-  if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" class="empty-state">No employees match "${q}".</td></tr>`;
-    return;
-  }
-  employees = filtered;
-  tbody.innerHTML = employees.map(e => {
+  const filtered = q ? employees.filter(e => (e.nombre_completo || '').toLowerCase().includes(q) || (e.username || '').toLowerCase().includes(q)) : employees;
+  if (employees.length === 0) { tbody.innerHTML = `<tr><td colspan="9" class="empty-state">No employees yet.</td></tr>`; return; }
+  if (filtered.length === 0) { tbody.innerHTML = `<tr><td colspan="9" class="empty-state">No employees match "${q}".</td></tr>`; return; }
+  tbody.innerHTML = filtered.map(e => {
     const t1Lock = !e.es_admin ? certLockStatus(e.id, 'tier1') : null;
     const t2Lock = !e.es_admin ? certLockStatus(e.id, 'tier2') : null;
     const escName = (e.nombre_completo || '').replace(/'/g, "\\'");
@@ -766,21 +671,12 @@ function renderEmployeesTable(employees) {
     let adminBadgeLabel = 'ADMIN';
     if (e.nivel_admin === 'super_admin') adminBadgeLabel = 'SUPER ADMIN';
     else if (e.nivel_admin === 'manager_visor') adminBadgeLabel = 'STORE MGMT';
-    const adminBadge = e.es_admin
-      ? ` <span class="pill pill-gold">${adminBadgeLabel}</span>`
-      : '';
+    const adminBadge = e.es_admin ? ` <span class="pill pill-gold">${adminBadgeLabel}</span>` : '';
     const isMe = admin && e.id === admin.id;
-    const changeRoleBtn = (isSuperAdmin() && !isMe)
-      ? `<button class="btn btn-ghost" onclick="openChangeRoleModal('${e.id}','${escName}','${e.rol}','${e.nivel_admin || ''}')">Change Role</button>`
-      : '';
-    const deptDisplay = e.departamento
-      ? e.departamento.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())
-      : '<span style="color:var(--red)">Unset</span>';
-    const reclassifyBtn = isSuperAdmin()
-      ? ` <button class="btn btn-ghost" style="padding:2px 8px;font-size:11px;" onclick="openReclassifyModal('${e.id}','${escName}','${e.departamento || ''}')">✎</button>`
-      : '';
-    return `
-    <tr>
+    const changeRoleBtn = (isSuperAdmin() && !isMe) ? `<button class="btn btn-ghost" onclick="openChangeRoleModal('${e.id}','${escName}','${e.rol}','${e.nivel_admin || ''}')">Change Role</button>` : '';
+    const deptDisplay = e.departamento ? e.departamento.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase()) : '<span style="color:var(--red)">Unset</span>';
+    const reclassifyBtn = isSuperAdmin() ? ` <button class="btn btn-ghost" style="padding:2px 8px;font-size:11px;" onclick="openReclassifyModal('${e.id}','${escName}','${e.departamento || ''}')">✎</button>` : '';
+    return `<tr>
       <td>${e.nombre_completo}${adminBadge}${isMe ? ' <span class="pill pill-gray">YOU</span>' : ''}</td>
       <td>${e.username}</td>
       <td>${e.employee_id || '—'}</td>
@@ -789,24 +685,27 @@ function renderEmployeesTable(employees) {
       <td>${e.tier1 ? `<span class="pill pill-green">${e.tier1.porcentaje}%</span>` : (t1Lock && t1Lock.locked ? '<span class="pill pill-red">Locked</span>' : '<span class="pill pill-gray">—</span>')}</td>
       <td>${e.tier2 ? `<span class="pill pill-green">${e.tier2.porcentaje}%</span>` : (t2Lock && t2Lock.locked ? '<span class="pill pill-red">Locked</span>' : '<span class="pill pill-gray">—</span>')}</td>
       <td>${e.totalPoints}</td>
-      <td class="row-actions">
-        ${isViewOnly() ? '' : `
+      <td class="row-actions">${isViewOnly() ? '' : `
         <button class="btn btn-ghost" onclick="openResetModal('${e.id}','${escName}')">Reset PW</button>
-        ${resetBtns}
-        ${changeRoleBtn}
+        ${resetBtns}${changeRoleBtn}
         ${!e.es_admin ? `<button class="btn btn-red" onclick="deleteEmployee('${e.id}','${e.nombre_completo}')">Delete</button>` : ''}
-        `}
-      </td>
+      `}</td>
     </tr>`;
   }).join('');
 }
 
+/* ════════ RECLASSIFY — BUG FIX: reset button state on success ════════ */
 let reclassifyTarget = null;
+
 function openReclassifyModal(empId, empName, currentDept) {
   if (!isSuperAdmin()) { alert('Only a Super Admin can reclassify departments.'); return; }
   reclassifyTarget = empId;
   document.getElementById('reclassify-desc').textContent = `${empName} — pick the correct department.`;
   document.getElementById('reclassify-departamento').value = currentDept || 'sales';
+  // Always reset button state when opening the modal
+  const btn = document.getElementById('btn-reclassify-save');
+  btn.disabled = false;
+  btn.textContent = 'Save';
   document.getElementById('modal-reclassify').classList.add('show');
 }
 
@@ -821,6 +720,10 @@ async function submitReclassify() {
       method: 'PATCH',
       body: JSON.stringify({ departamento: dept })
     });
+    // ✅ FIX: reset button and target BEFORE closing so next modal open is clean
+    btn.disabled = false;
+    btn.textContent = 'Save';
+    reclassifyTarget = null;
     closeModal('modal-reclassify');
     await loadEmployees();
   } catch (err) {
@@ -838,30 +741,24 @@ function renderKPIs(employees) {
   const vendorCount = employees.filter(e=>!e.es_admin).length;
   const storeManagerCount = employees.filter(e=>e.nivel_admin === 'manager_visor').length;
   const adminCount = employees.filter(e=>e.es_admin && e.nivel_admin !== 'manager_visor').length;
-  document.getElementById('kpi-total-emp-sub').textContent =
-    `${vendorCount} vendors, ${adminCount} admin${storeManagerCount ? `, ${storeManagerCount} store mgr` : ''}`;
+  document.getElementById('kpi-total-emp-sub').textContent = `${vendorCount} vendors, ${adminCount} admin${storeManagerCount ? `, ${storeManagerCount} store mgr` : ''}`;
   document.getElementById('kpi-tier1').textContent = `${tier1Count}/${total}`;
   document.getElementById('kpi-tier2').textContent = `${tier2Count}/${total}`;
 }
 
-/* ════════ CERTIFICATION ATTEMPTS: data + lock logic ════════ */
+/* ════════ CERT ATTEMPTS ════════ */
 function lastResetFor(empId, cert, resets) {
   const r = resets.filter(x => x.empleado_id === empId && x.certificacion === cert);
   if (!r.length) return null;
   return r.reduce((latest, x) => (!latest || new Date(x.reset_at) > new Date(latest)) ? x.reset_at : latest, null);
 }
-
 function attemptsSinceReset(empId, cert, rows, resets) {
   const lastReset = lastResetFor(empId, cert, resets);
-  return rows.filter(r => r.empleado_id === empId && r.certificacion === cert &&
-    (!lastReset || new Date(r.started_at || r.fecha_completado) > new Date(lastReset)));
+  return rows.filter(r => r.empleado_id === empId && r.certificacion === cert && (!lastReset || new Date(r.started_at || r.fecha_completado) > new Date(lastReset)));
 }
-
 function extraAttemptsFor(empId, cert, extras) {
-  return (extras || []).filter(x => x.empleado_id === empId && x.certificacion === cert)
-    .reduce((sum, x) => sum + (x.cantidad || 0), 0);
+  return (extras || []).filter(x => x.empleado_id === empId && x.certificacion === cert).reduce((sum, x) => sum + (x.cantidad || 0), 0);
 }
-
 function certLockStatus(empId, cert) {
   const rows = cachedData.certAttempts || [];
   const resets = cachedData.certResets || [];
@@ -877,17 +774,9 @@ async function loadCertAttempts() {
   try {
     const rows = await sbFetch('certificaciones_progreso?select=id,empleado_id,certificacion,score,total_puntos,porcentaje,aprobado,estado,tiempo_usado_segundos,fecha_completado,started_at,detalle_respuestas&order=fecha_completado.desc');
     let resets = [];
-    try {
-      resets = await sbFetch('certificacion_resets?select=empleado_id,certificacion,reset_at&order=reset_at.desc');
-    } catch (err) {
-      console.warn('certificacion_resets table not available yet:', err);
-    }
+    try { resets = await sbFetch('certificacion_resets?select=empleado_id,certificacion,reset_at&order=reset_at.desc'); } catch(e) { console.warn('certificacion_resets not available yet:', e); }
     let extras = [];
-    try {
-      extras = await sbFetch('certificacion_intentos_extra?select=empleado_id,certificacion,cantidad,created_at&order=created_at.desc');
-    } catch (err) {
-      console.warn('certificacion_intentos_extra table not available yet:', err);
-    }
+    try { extras = await sbFetch('certificacion_intentos_extra?select=empleado_id,certificacion,cantidad,created_at&order=created_at.desc'); } catch(e) { console.warn('certificacion_intentos_extra not available yet:', e); }
     cachedData.certAttempts = rows || [];
     cachedData.certResets = resets || [];
     cachedData.certExtraAttempts = extras || [];
@@ -900,9 +789,6 @@ async function loadCertAttempts() {
 }
 
 function renderCertKPIs(rows, resets) {
-  // NOTE: `aprobado` is the reliable signal for "this attempt was graded" — it's only ever
-  // set by finishExam/PATCH or the plant-certification RPC. `estado` can be stale/backfilled
-  // (e.g. legacy rows got DEFAULT 'in_progress' when that column was added), so aprobado wins.
   ['tier1','tier2'].forEach(cert => {
     const completed = rows.filter(r => r.certificacion === cert && r.aprobado != null);
     const passed = completed.filter(r => r.aprobado === true).length;
@@ -912,12 +798,8 @@ function renderCertKPIs(rows, resets) {
     document.getElementById(`kpi-${label}-passrate-sub`).textContent = `${passed} passed / ${completed.length} completed`;
   });
   document.getElementById('kpi-cert-inprogress').textContent = rows.filter(r => r.estado === 'in_progress' && r.aprobado == null).length;
-
   const byPair = {};
-  rows.forEach(r => {
-    const key = r.empleado_id + '|' + r.certificacion;
-    (byPair[key] = byPair[key] || []).push(r);
-  });
+  rows.forEach(r => { const key = r.empleado_id + '|' + r.certificacion; (byPair[key] = byPair[key] || []).push(r); });
   let lockedCount = 0;
   Object.keys(byPair).forEach(key => {
     const [empId, cert] = key.split('|');
@@ -933,25 +815,13 @@ function renderCertAttemptsTable(rows) {
   if (!rows.length) { tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No attempts yet.</td></tr>`; return; }
   const employeesById = {};
   cachedData.employees.forEach(e => employeesById[e.id] = e.nombre_completo);
-
   const grouped = {};
   const sorted = [...rows].sort((a,b) => new Date(a.started_at || a.fecha_completado) - new Date(b.started_at || b.fecha_completado));
-  sorted.forEach(r => {
-    const key = r.empleado_id + '|' + r.certificacion;
-    grouped[key] = (grouped[key] || 0) + 1;
-    r._attemptNum = grouped[key];
-  });
-
+  sorted.forEach(r => { const key = r.empleado_id + '|' + r.certificacion; grouped[key] = (grouped[key] || 0) + 1; r._attemptNum = grouped[key]; });
   const searchEl = document.getElementById('certattempts-search');
   const q = (searchEl && searchEl.value || '').trim().toLowerCase();
-  const visibleRows = q
-    ? rows.filter(r => (employeesById[r.empleado_id] || 'unknown').toLowerCase().includes(q))
-    : rows;
-  if (q && visibleRows.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No attempts match "${q}".</td></tr>`;
-    return;
-  }
-
+  const visibleRows = q ? rows.filter(r => (employeesById[r.empleado_id] || 'unknown').toLowerCase().includes(q)) : rows;
+  if (q && visibleRows.length === 0) { tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No attempts match "${q}".</td></tr>`; return; }
   tbody.innerHTML = visibleRows.map(r => {
     const name = employeesById[r.empleado_id] || 'Unknown';
     const certLabel = r.certificacion === 'tier1' ? 'Tier 1' : 'Tier 2';
@@ -965,19 +835,10 @@ function renderCertAttemptsTable(rows) {
     const timeTxt = r.tiempo_usado_segundos != null ? `${Math.floor(r.tiempo_usado_segundos/60)}:${String(r.tiempo_usado_segundos%60).padStart(2,'0')}` : '—';
     const dateTxt = r.fecha_completado ? new Date(r.fecha_completado).toLocaleString() : (r.started_at ? new Date(r.started_at).toLocaleString()+' (started)' : '—');
     const canView = r.detalle_respuestas && Array.isArray(r.detalle_respuestas) && r.detalle_respuestas.length > 0;
-    let statusText;
-    if (r.aprobado === true) statusText = 'Passed';
-    else if (r.aprobado === false) statusText = 'Failed';
-    else if (r.estado === 'abandoned') statusText = 'Abandoned';
-    else statusText = 'In Progress';
+    let statusText = r.aprobado === true ? 'Passed' : r.aprobado === false ? 'Failed' : r.estado === 'abandoned' ? 'Abandoned' : 'In Progress';
     return `<tr>
-      <td>${name}</td>
-      <td>${certLabel}</td>
-      <td>${r._attemptNum || '—'}</td>
-      <td>${statusPill}</td>
-      <td>${scoreTxt}</td>
-      <td>${timeTxt}</td>
-      <td>${dateTxt}</td>
+      <td>${name}</td><td>${certLabel}</td><td>${r._attemptNum || '—'}</td><td>${statusPill}</td>
+      <td>${scoreTxt}</td><td>${timeTxt}</td><td>${dateTxt}</td>
       <td class="row-actions">
         ${(canView && !isViewOnly()) ? `<button class="btn btn-ghost" onclick='openAnswerDetail(${JSON.stringify(r.id)}, ${JSON.stringify(r.certificacion)})'>View Answers</button>` : ''}
         ${isSuperAdmin() ? `<button class="btn btn-red" onclick='deleteAttempt(${JSON.stringify(r.id)}, ${JSON.stringify(name)}, ${JSON.stringify(certLabel)}, ${JSON.stringify(statusText)})'>Delete</button>` : ''}
@@ -986,11 +847,11 @@ function renderCertAttemptsTable(rows) {
   }).join('');
 }
 
-/* ════════ ANSWER DETAIL MODAL ════════ */
+/* ════════ ANSWER DETAIL ════════ */
 async function getQuestionBank(tier) {
   if (questionBankCache[tier]) return questionBankCache[tier];
   const res = await fetch(examFileByTier[tier]);
-  if (!res.ok) throw new Error(`Could not load ${examFileByTier[tier]} (${res.status})`);
+  if (!res.ok) throw new Error(`Could not load ${examFileByTier[tier]}`);
   const html = await res.text();
   const match = html.match(/const QUESTIONS\s*=\s*(\[[\s\S]*?\]);/);
   if (!match) throw new Error('Could not locate question bank in ' + examFileByTier[tier]);
@@ -1010,134 +871,90 @@ async function openAnswerDetail(recordId, cert) {
     const employeesById = {};
     cachedData.employees.forEach(e => employeesById[e.id] = e.nombre_completo);
     const name = employeesById[record.empleado_id] || 'Unknown';
-    document.getElementById('answers-modal-title').textContent =
-      `${name} — ${cert === 'tier1' ? 'Sales Tier 1' : 'Sales Tier 2'} (${record.porcentaje != null ? record.porcentaje + '%' : '—'})`;
-
+    document.getElementById('answers-modal-title').textContent = `${name} — ${cert === 'tier1' ? 'Sales Tier 1' : 'Sales Tier 2'} (${record.porcentaje != null ? record.porcentaje + '%' : '—'})`;
     const answers = record.detalle_respuestas || [];
     const letters = ['A','B','C','D'];
-    // For records created after the pool-sampling feature shipped, preguntas_seleccionadas
-    // tells us exactly which pool questions (and in what order) were actually presented.
-    // Legacy records (before this field existed) get the old behavior: assume the full
-    // pool as it existed at save time was presented, in original order.
-    const presentedIndices = (record.preguntas_seleccionadas && record.preguntas_seleccionadas.length)
-      ? record.preguntas_seleccionadas
-      : QUESTIONS.map((_, i) => i);
+    const presentedIndices = (record.preguntas_seleccionadas && record.preguntas_seleccionadas.length) ? record.preguntas_seleccionadas : QUESTIONS.map((_, i) => i);
     let html = '';
     presentedIndices.forEach((qi, i) => {
       const q = QUESTIONS[qi];
-      if (!q) return; // pool question no longer exists (e.g. removed later) — skip gracefully
+      if (!q) return;
       const given = answers[qi] !== undefined ? answers[qi] : answers[i];
       const isCorrect = given === q.correct;
       html += `<div style="border-left:4px solid ${isCorrect ? '#2e7d32' : '#c62828'};padding:8px 12px;margin-bottom:10px;background:${isCorrect ? '#f1f8f1' : '#fdf1f1'};border-radius:4px;">
         <div style="font-weight:700;font-size:12px;color:var(--mgray);margin-bottom:2px">${isCorrect ? '✅' : '❌'} Q${i+1} · ${q.section}</div>
         <div style="font-size:13px;margin-bottom:6px">${q.q}</div>
-        <div style="font-size:12px;color:#333">Answered: <strong>${given != null && given !== undefined ? letters[given] + ' — ' + q.opts[given] : '— (not answered)'}</strong></div>
+        <div style="font-size:12px;color:#333">Answered: <strong>${given != null ? letters[given] + ' — ' + q.opts[given] : '— (not answered)'}</strong></div>
         ${!isCorrect ? `<div style="font-size:12px;color:#333">Correct: <strong>${letters[q.correct]} — ${q.opts[q.correct]}</strong></div>` : ''}
       </div>`;
     });
     document.getElementById('answers-modal-body').innerHTML = html;
   } catch (err) {
-    document.getElementById('answers-modal-body').innerHTML = `<div class="empty-state">Error loading answer detail: ${err.message}</div>`;
+    document.getElementById('answers-modal-body').innerHTML = `<div class="empty-state">Error: ${err.message}</div>`;
   }
 }
 
-/* ════════ RESET CERTIFICATION ════════ */
+/* ════════ CERT RESET ════════ */
 function openCertResetModal(empId, empName, cert) {
   certResetTarget = { empId, empName, certificacion: cert };
-  document.getElementById('cert-reset-desc').textContent =
-    `${empName} has used all 3 attempts on ${cert === 'tier1' ? 'Sales Tier 1' : 'Sales Tier 2'} without passing. This will unlock 3 new attempts.`;
+  document.getElementById('cert-reset-desc').textContent = `${empName} has used all 3 attempts on ${cert === 'tier1' ? 'Sales Tier 1' : 'Sales Tier 2'} without passing.`;
   document.getElementById('cert-reset-notes').value = '';
   document.getElementById('modal-cert-reset').classList.add('show');
 }
-
 async function submitCertReset() {
   if (!certResetTarget) return;
   const notes = document.getElementById('cert-reset-notes').value.trim();
   try {
-    const rows = await sbFetch('rpc/admin_reset_certificacion', {
-      method: 'POST',
-      body: JSON.stringify({
-        p_admin_id: admin.id,
-        p_empleado_id: certResetTarget.empId,
-        p_certificacion: certResetTarget.certificacion,
-        p_notas: notes || null
-      })
-    });
+    const rows = await sbFetch('rpc/admin_reset_certificacion', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id, p_empleado_id: certResetTarget.empId, p_certificacion: certResetTarget.certificacion, p_notas: notes || null }) });
     if (!rows[0].success) { alert(rows[0].message); return; }
     closeModal('modal-cert-reset');
     loadAllData();
-  } catch (err) {
-    alert('Error resetting certification: ' + err.message);
-  }
+  } catch (err) { alert('Error resetting certification: ' + err.message); }
 }
 
+/* ════════ UNLOCK ATTEMPTS ════════ */
 let unlockAttemptsTarget = null;
 function openUnlockAttemptsModal(empId, empName, cert) {
   unlockAttemptsTarget = { empId, empName, certificacion: cert };
   const certLabel = cert === 'tier1' ? 'Sales Tier 1' : 'Sales Tier 2';
-  document.getElementById('unlock-attempts-desc').textContent =
-    `${empName} is locked on ${certLabel} after 3 failed attempts. Choose how many additional attempts to unlock — their full attempt history stays exactly as-is, nothing gets deleted or wiped.`;
+  document.getElementById('unlock-attempts-desc').textContent = `${empName} is locked on ${certLabel}. Choose how many additional attempts to unlock.`;
   document.getElementById('unlock-attempts-qty').value = '1';
   document.getElementById('unlock-attempts-notes').value = '';
   document.getElementById('modal-unlock-attempts').classList.add('show');
 }
-
 async function submitUnlockAttempts() {
   if (!unlockAttemptsTarget) return;
   const qty = parseInt(document.getElementById('unlock-attempts-qty').value, 10);
   const notes = document.getElementById('unlock-attempts-notes').value.trim();
   if (!qty || qty < 1) { alert('Enter a quantity of at least 1.'); return; }
   try {
-    const rows = await sbFetch('rpc/admin_otorgar_intentos_extra', {
-      method: 'POST',
-      body: JSON.stringify({
-        p_admin_id: admin.id,
-        p_empleado_id: unlockAttemptsTarget.empId,
-        p_certificacion: unlockAttemptsTarget.certificacion,
-        p_cantidad: qty,
-        p_notas: notes || null
-      })
-    });
+    const rows = await sbFetch('rpc/admin_otorgar_intentos_extra', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id, p_empleado_id: unlockAttemptsTarget.empId, p_certificacion: unlockAttemptsTarget.certificacion, p_cantidad: qty, p_notas: notes || null }) });
     if (!rows[0].success) { alert(rows[0].message); return; }
     closeModal('modal-unlock-attempts');
     loadAllData();
-  } catch (err) {
-    alert('Error unlocking attempts: ' + err.message);
-  }
+  } catch (err) { alert('Error unlocking attempts: ' + err.message); }
 }
 
-/* ════════ CHANGE ROLE (Super Admin only — gated server-side too) ════════ */
+/* ════════ CHANGE ROLE ════════ */
 function openChangeRoleModal(empId, empName, currentRol, currentNivel) {
   if (!isSuperAdmin()) { alert('Only a Super Admin can change roles.'); return; }
   roleChangeTarget = { empId, empName };
   document.getElementById('role-change-desc').textContent = `Change role for ${empName}.`;
-  const select = document.getElementById('role-select');
-  select.value = currentNivel ? `admin|${currentNivel}` : `${currentRol}|none`;
+  document.getElementById('role-select').value = currentNivel ? `admin|${currentNivel}` : `${currentRol}|none`;
   document.getElementById('modal-change-role').classList.add('show');
 }
-
 async function submitRoleChange() {
   if (!roleChangeTarget) return;
   const [rol, nivel] = document.getElementById('role-select').value.split('|');
   try {
-    const rows = await sbFetch('rpc/admin_cambiar_rol_empleado', {
-      method: 'POST',
-      body: JSON.stringify({
-        p_admin_id: admin.id,
-        p_empleado_id: roleChangeTarget.empId,
-        p_nuevo_rol: rol,
-        p_nuevo_nivel_admin: nivel === 'none' ? null : nivel
-      })
-    });
+    const rows = await sbFetch('rpc/admin_cambiar_rol_empleado', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id, p_empleado_id: roleChangeTarget.empId, p_nuevo_rol: rol, p_nuevo_nivel_admin: nivel === 'none' ? null : nivel }) });
     if (!rows[0].success) { alert(rows[0].message); return; }
     closeModal('modal-change-role');
     loadAllData();
-  } catch (err) {
-    alert('Error changing role: ' + err.message);
-  }
+  } catch (err) { alert('Error changing role: ' + err.message); }
 }
 
-/* ════════ GENERATE INVITATION CODE(S) ════════ */
+/* ════════ INVITATION CODES ════════ */
 function openGenerateCodeModal() {
   document.getElementById('gencode-qty').value = 1;
   document.getElementById('gencode-rol').value = 'vendedor';
@@ -1146,35 +963,21 @@ function openGenerateCodeModal() {
   document.getElementById('gencode-result-list').innerHTML = '';
   document.getElementById('modal-generate-code').classList.add('show');
 }
-
 async function submitGenerateCode() {
   const qty = Math.max(1, Math.min(25, parseInt(document.getElementById('gencode-qty').value, 10) || 1));
   const rol = document.getElementById('gencode-rol').value;
   const tienda = document.getElementById('gencode-tienda').value.trim();
   try {
-    const rows = await sbFetch('rpc/admin_generar_codigo', {
-      method: 'POST',
-      body: JSON.stringify({
-        p_admin_id: admin.id,
-        p_rol_asignado: rol,
-        p_tienda_asignada: tienda || null,
-        p_cantidad: qty
-      })
-    });
+    const rows = await sbFetch('rpc/admin_generar_codigo', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id, p_rol_asignado: rol, p_tienda_asignada: tienda || null, p_cantidad: qty }) });
     const codes = (rows || []).map(r => r.codigo);
-    const resultBox = document.getElementById('gencode-result');
-    const resultList = document.getElementById('gencode-result-list');
-    resultList.innerHTML = codes.map(cd => `<div>${cd}</div>`).join('');
-    resultBox.style.display = 'block';
+    document.getElementById('gencode-result-list').innerHTML = codes.map(cd => `<div>${cd}</div>`).join('');
+    document.getElementById('gencode-result').style.display = 'block';
     loadCodes();
-  } catch (err) {
-    alert('Error generating code: ' + err.message);
-  }
+  } catch (err) { alert('Error generating code: ' + err.message); }
 }
 
-/* ════════ GENERIC "FULL LIST" MODAL — used by Codes, Lead Source, Audit Log ════════ */
+/* ════════ FULL LIST MODAL ════════ */
 let fullListState = { data: [], filtered: [], dateField: null, rowFn: null, exportColumns: null, exportFilename: 'export' };
-
 function openFullListModal(opts) {
   fullListState = { filtered: opts.data, ...opts };
   document.getElementById('full-list-title').textContent = opts.title;
@@ -1186,16 +989,11 @@ function openFullListModal(opts) {
       <div><label class="field-label">From</label><input type="date" class="field-input" id="full-list-from" style="margin-bottom:0"></div>
       <div><label class="field-label">To</label><input type="date" class="field-input" id="full-list-to" style="margin-bottom:0"></div>
       <button class="btn btn-ghost" onclick="renderFullListRows()">Apply</button>
-      <button class="btn btn-ghost" onclick="document.getElementById('full-list-from').value='';document.getElementById('full-list-to').value='';renderFullListRows()">Clear</button>
-    `;
-  } else {
-    filtersEl.style.display = 'none';
-    filtersEl.innerHTML = '';
-  }
+      <button class="btn btn-ghost" onclick="document.getElementById('full-list-from').value='';document.getElementById('full-list-to').value='';renderFullListRows()">Clear</button>`;
+  } else { filtersEl.style.display = 'none'; filtersEl.innerHTML = ''; }
   renderFullListRows();
   document.getElementById('modal-full-list').classList.add('show');
 }
-
 function renderFullListRows() {
   let rows = fullListState.data;
   if (fullListState.dateField) {
@@ -1206,60 +1004,39 @@ function renderFullListRows() {
   }
   fullListState.filtered = rows;
   const colCount = (fullListState.headerHtml.match(/<th/g) || []).length || 4;
-  document.getElementById('full-list-tbody').innerHTML = rows.length
-    ? rows.map(fullListState.rowFn).join('')
-    : `<tr><td colspan="${colCount}" class="empty-state">No records in this range.</td></tr>`;
+  document.getElementById('full-list-tbody').innerHTML = rows.length ? rows.map(fullListState.rowFn).join('') : `<tr><td colspan="${colCount}" class="empty-state">No records in this range.</td></tr>`;
 }
-
 function exportFullListCSV() {
   const csv = toCSV(fullListState.filtered || fullListState.data, fullListState.exportColumns);
-  const dateStamp = new Date().toISOString().split('T')[0];
-  downloadCSV(csv, `${fullListState.exportFilename}_${dateStamp}.csv`);
+  downloadCSV(csv, `${fullListState.exportFilename}_${new Date().toISOString().split('T')[0]}.csv`);
 }
 
-/* ════════ DELETE A SINGLE ATTEMPT (corrupted / interrupted / stuck) ════════ */
+/* ════════ DELETE ATTEMPT ════════ */
 async function deleteAttempt(recordId, empName, certLabel, statusText) {
-  if (!confirm(`Delete this ${certLabel} attempt for ${empName} (${statusText})?\n\nThis permanently removes the record and frees up an attempt slot. This cannot be undone.`)) return;
+  if (!confirm(`Delete this ${certLabel} attempt for ${empName} (${statusText})?\n\nThis cannot be undone.`)) return;
   try {
-    const rows = await sbFetch('rpc/admin_eliminar_intento_certificacion', {
-      method: 'POST',
-      body: JSON.stringify({
-        p_admin_id: admin.id,
-        p_intento_id: recordId,
-        p_detalle: `${empName} — ${certLabel} — ${statusText}`
-      })
-    });
+    const rows = await sbFetch('rpc/admin_eliminar_intento_certificacion', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id, p_intento_id: recordId, p_detalle: `${empName} — ${certLabel} — ${statusText}` }) });
     if (!rows[0].success) { alert(rows[0].message); return; }
     loadAllData();
-  } catch (err) {
-    alert('Error deleting attempt: ' + err.message);
-  }
+  } catch (err) { alert('Error deleting attempt: ' + err.message); }
 }
 
+/* ════════ CODES ════════ */
 async function loadCodes() {
   try {
     const codes = await sbFetch('codigos_invitacion?select=codigo,usado,used_at,usado_por_empleado_id,created_at&order=created_at.desc');
     cachedData.codes = codes;
     const usedCount = codes.filter(c => c.usado).length;
-    const remaining = codes.length - usedCount;
     document.getElementById('kpi-codes').textContent = `${usedCount}/${codes.length}`;
     const summaryEl = document.getElementById('codes-summary-line');
-    if (summaryEl) summaryEl.textContent = `${usedCount} used · ${remaining} available · ${codes.length} total`;
-
+    if (summaryEl) summaryEl.textContent = `${usedCount} used · ${codes.length - usedCount} available · ${codes.length} total`;
     const employeesById = {};
     cachedData.employees.forEach(e => employeesById[e.id] = e.nombre_completo);
-
     const tbody = document.getElementById('tbl-codes-body');
-    if (codes.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="4" class="empty-state">No codes yet.</td></tr>`;
-      return;
-    }
+    if (codes.length === 0) { tbody.innerHTML = `<tr><td colspan="4" class="empty-state">No codes yet.</td></tr>`; return; }
     tbody.innerHTML = codes.slice(0, 10).map(c => codeRowHtml(c, employeesById)).join('');
-  } catch (err) {
-    console.error('Failed to load codes:', err);
-  }
+  } catch (err) { console.error('Failed to load codes:', err); }
 }
-
 function codeRowHtml(c, employeesById) {
   return `<tr>
     <td><code>${c.codigo}</code></td>
@@ -1268,196 +1045,90 @@ function codeRowHtml(c, employeesById) {
     <td>${new Date(c.created_at).toLocaleDateString()}</td>
   </tr>`;
 }
-
 function openCodesFullList() {
   const employeesById = {};
   cachedData.employees.forEach(e => employeesById[e.id] = e.nombre_completo);
-  openFullListModal({
-    title: 'All Invitation Codes',
-    data: cachedData.codes,
-    headerHtml: '<tr><th>Code</th><th>Status</th><th>Used By</th><th>Created</th></tr>',
-    rowFn: (c) => codeRowHtml(c, employeesById),
-    dateField: 'created_at',
-    exportColumns: [
-      { label: 'Code', get: r => r.codigo },
-      { label: 'Used', get: r => r.usado ? 'Yes' : 'No' },
-      { label: 'Used At', get: r => r.used_at },
-      { label: 'Created', get: r => r.created_at }
-    ],
-    exportFilename: 'daniels_invitation_codes'
-  });
+  openFullListModal({ title: 'All Invitation Codes', data: cachedData.codes, headerHtml: '<tr><th>Code</th><th>Status</th><th>Used By</th><th>Created</th></tr>', rowFn: (c) => codeRowHtml(c, employeesById), dateField: 'created_at', exportColumns: [{ label: 'Code', get: r => r.codigo }, { label: 'Used', get: r => r.usado ? 'Yes' : 'No' }, { label: 'Used At', get: r => r.used_at }, { label: 'Created', get: r => r.created_at }], exportFilename: 'daniels_invitation_codes' });
 }
 
+/* ════════ LEAD SOURCE ════════ */
 async function loadLeadSource() {
   try {
     const entries = await sbFetch('customer_source_log?select=*&order=submitted_at.desc');
     cachedData.leadsource = entries;
-
     document.getElementById('kpi-ls-total').textContent = entries.length;
-
-    const sourceCounts = {};
-    const empCounts = {};
+    const sourceCounts = {}, empCounts = {};
     const oneWeekAgo = new Date(Date.now() - 7*24*60*60*1000);
     let weekCount = 0;
-
-    entries.forEach(e => {
-      sourceCounts[e.source] = (sourceCounts[e.source]||0) + 1;
-      empCounts[e.employee_name] = (empCounts[e.employee_name]||0) + 1;
-      if (new Date(e.submitted_at) >= oneWeekAgo) weekCount++;
-    });
-
+    entries.forEach(e => { sourceCounts[e.source] = (sourceCounts[e.source]||0) + 1; empCounts[e.employee_name] = (empCounts[e.employee_name]||0) + 1; if (new Date(e.submitted_at) >= oneWeekAgo) weekCount++; });
     const topSource = Object.entries(sourceCounts).sort((a,b)=>b[1]-a[1])[0];
     const topEmp = Object.entries(empCounts).sort((a,b)=>b[1]-a[1])[0];
-
     document.getElementById('kpi-ls-top').textContent = topSource ? `${topSource[0]} (${topSource[1]})` : '—';
     document.getElementById('kpi-ls-emp').textContent = topEmp ? `${topEmp[0]} (${topEmp[1]})` : '—';
     document.getElementById('kpi-ls-week').textContent = weekCount;
-
     const tbody = document.getElementById('tbl-leadsource-body');
-    if (entries.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="4" class="empty-state">No entries yet.</td></tr>`;
-      return;
-    }
+    if (entries.length === 0) { tbody.innerHTML = `<tr><td colspan="4" class="empty-state">No entries yet.</td></tr>`; return; }
     tbody.innerHTML = entries.slice(0, 10).map(leadSourceRowHtml).join('');
-  } catch (err) {
-    console.error('Failed to load lead source:', err);
-  }
+  } catch (err) { console.error('Failed to load lead source:', err); }
 }
-
 function leadSourceRowHtml(e) {
-  return `<tr>
-    <td>${e.employee_name}</td>
-    <td>${e.source}</td>
-    <td>${e.other_note || '—'}</td>
-    <td>${new Date(e.submitted_at).toLocaleString()}</td>
-  </tr>`;
+  return `<tr><td>${e.employee_name}</td><td>${e.source}</td><td>${e.other_note || '—'}</td><td>${new Date(e.submitted_at).toLocaleString()}</td></tr>`;
 }
-
 function openLeadSourceFullList() {
-  openFullListModal({
-    title: 'All "How They Found Us" Entries',
-    data: cachedData.leadsource,
-    headerHtml: '<tr><th>Employee</th><th>Source</th><th>Note</th><th>Date</th></tr>',
-    rowFn: leadSourceRowHtml,
-    dateField: 'submitted_at',
-    exportColumns: [
-      { label: 'Employee', get: r => r.employee_name },
-      { label: 'Source', get: r => r.source },
-      { label: 'Note', get: r => r.other_note },
-      { label: 'Date', get: r => r.submitted_at }
-    ],
-    exportFilename: 'daniels_lead_source'
-  });
+  openFullListModal({ title: 'All "How They Found Us" Entries', data: cachedData.leadsource, headerHtml: '<tr><th>Employee</th><th>Source</th><th>Note</th><th>Date</th></tr>', rowFn: leadSourceRowHtml, dateField: 'submitted_at', exportColumns: [{ label: 'Employee', get: r => r.employee_name }, { label: 'Source', get: r => r.source }, { label: 'Note', get: r => r.other_note }, { label: 'Date', get: r => r.submitted_at }], exportFilename: 'daniels_lead_source' });
 }
 
+/* ════════ AUDIT LOG ════════ */
 async function loadAuditLog() {
   try {
     const logs = await sbFetch('admin_audit_log?select=*&order=created_at.desc&limit=500');
     cachedData.auditlog = logs;
     const tbody = document.getElementById('tbl-auditlog-body');
-    if (logs.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="4" class="empty-state">No admin actions recorded yet.</td></tr>`;
-      return;
-    }
+    if (logs.length === 0) { tbody.innerHTML = `<tr><td colspan="4" class="empty-state">No admin actions recorded yet.</td></tr>`; return; }
     tbody.innerHTML = logs.slice(0, 5).map(auditLogRowHtml).join('');
-  } catch (err) {
-    console.error('Failed to load audit log:', err);
-    document.getElementById('tbl-auditlog-body').innerHTML = `<tr><td colspan="4" class="empty-state">Error loading activity log.</td></tr>`;
-  }
+  } catch (err) { console.error('Failed to load audit log:', err); document.getElementById('tbl-auditlog-body').innerHTML = `<tr><td colspan="4" class="empty-state">Error loading activity log.</td></tr>`; }
 }
-
-const AUDIT_ACTION_LABELS = {
-  'reset_certificacion': 'Certification Reset',
-  'eliminar_intento_certificacion': 'Deleted Certification Attempt',
-  'sembrar_certificacion': 'Certification Planted',
-  'cambiar_rol_empleado': 'Changed Employee Role',
-  'generar_codigo': 'Generated Invitation Code(s)',
-  'reset_password': 'Password Reset',
-  'Deleted employee': 'Deleted Employee'
-};
-function auditActionLabel(accion) {
-  return AUDIT_ACTION_LABELS[accion] || accion;
-}
-function auditLogRowHtml(l) {
-  return `<tr>
-    <td>${l.admin_username}</td>
-    <td><span class="pill pill-gray">${auditActionLabel(l.accion)}</span></td>
-    <td>${l.detalle || '—'}</td>
-    <td>${new Date(l.created_at).toLocaleString()}</td>
-  </tr>`;
-}
-
+const AUDIT_ACTION_LABELS = { 'reset_certificacion': 'Certification Reset', 'eliminar_intento_certificacion': 'Deleted Certification Attempt', 'sembrar_certificacion': 'Certification Planted', 'cambiar_rol_empleado': 'Changed Employee Role', 'generar_codigo': 'Generated Invitation Code(s)', 'reset_password': 'Password Reset', 'Deleted employee': 'Deleted Employee' };
+function auditActionLabel(accion) { return AUDIT_ACTION_LABELS[accion] || accion; }
+function auditLogRowHtml(l) { return `<tr><td>${l.admin_username}</td><td><span class="pill pill-gray">${auditActionLabel(l.accion)}</span></td><td>${l.detalle || '—'}</td><td>${new Date(l.created_at).toLocaleString()}</td></tr>`; }
 function openAuditLogFullList() {
-  openFullListModal({
-    title: 'Full Admin Activity Log',
-    data: cachedData.auditlog,
-    headerHtml: '<tr><th>Admin</th><th>Action</th><th>Detail</th><th>Date</th></tr>',
-    rowFn: auditLogRowHtml,
-    dateField: 'created_at',
-    exportColumns: [
-      { label: 'Admin', get: r => r.admin_username },
-      { label: 'Action', get: r => auditActionLabel(r.accion) },
-      { label: 'Detail', get: r => r.detalle },
-      { label: 'Date', get: r => r.created_at }
-    ],
-    exportFilename: 'daniels_admin_audit_log'
-  });
+  openFullListModal({ title: 'Full Admin Activity Log', data: cachedData.auditlog, headerHtml: '<tr><th>Admin</th><th>Action</th><th>Detail</th><th>Date</th></tr>', rowFn: auditLogRowHtml, dateField: 'created_at', exportColumns: [{ label: 'Admin', get: r => r.admin_username }, { label: 'Action', get: r => auditActionLabel(r.accion) }, { label: 'Detail', get: r => r.detalle }, { label: 'Date', get: r => r.created_at }], exportFilename: 'daniels_admin_audit_log' });
 }
 
 /* ════════ DELETE EMPLOYEE ════════ */
 async function deleteEmployee(empId, name) {
-  if (!confirm(`Delete ${name}? This also deletes their certification history. This cannot be undone.`)) return;
+  if (!confirm(`Delete ${name}? This also deletes their certification history. Cannot be undone.`)) return;
   try {
-    const rows = await sbFetch('rpc/admin_eliminar_empleado', {
-      method: 'POST',
-      body: JSON.stringify({ p_admin_id: admin.id, p_empleado_id: empId })
-    });
-    if (!rows[0].success) {
-      alert(rows[0].message);
-      return;
-    }
+    const rows = await sbFetch('rpc/admin_eliminar_empleado', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id, p_empleado_id: empId }) });
+    if (!rows[0].success) { alert(rows[0].message); return; }
     loadEmployees(); loadAuditLog();
-  } catch (err) {
-    alert('Error deleting employee: ' + err.message);
-  }
+  } catch (err) { alert('Error deleting employee: ' + err.message); }
 }
 
-/* ════════ RESET PASSWORD MODAL (self-service code — admin never sets/sees the password) ════════ */
-let resetPwTarget = null; // { empId, empName }
-
+/* ════════ RESET PASSWORD ════════ */
+let resetPwTarget = null;
 function openResetModal(empId, empName) {
   resetPwTarget = { empId, empName };
-  document.getElementById('reset-pw-desc').textContent = `This locks ${empName}'s account and generates a one-time code so THEY can set their own new password. You will never see or set the password itself.`;
+  document.getElementById('reset-pw-desc').textContent = `This locks ${empName}'s account and generates a one-time code so THEY can set their own new password.`;
   document.getElementById('reset-pw-result').style.display = 'none';
   document.getElementById('btn-reset-pw-generate').style.display = 'block';
   document.getElementById('modal-reset').classList.add('show');
 }
-
 async function submitResetPassword() {
   if (!resetPwTarget) return;
   try {
-    const rows = await sbFetch('rpc/admin_iniciar_reset_password', {
-      method: 'POST',
-      body: JSON.stringify({
-        p_admin_id: admin.id,
-        p_empleado_id: resetPwTarget.empId
-      })
-    });
+    const rows = await sbFetch('rpc/admin_iniciar_reset_password', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id, p_empleado_id: resetPwTarget.empId }) });
     if (!rows[0].success) { alert(rows[0].message); return; }
     document.getElementById('reset-pw-value').textContent = rows[0].codigo;
     document.getElementById('reset-pw-result').style.display = 'block';
     document.getElementById('btn-reset-pw-generate').style.display = 'none';
     loadAllData();
-  } catch (err) {
-    alert('Error generating reset code: ' + err.message);
-  }
+  } catch (err) { alert('Error generating reset code: ' + err.message); }
 }
 
-/* ════════ PLANT CERTIFICATION MODAL ════════ */
+/* ════════ PLANT CERTIFICATION ════════ */
 function populatePlantDropdown(employees) {
   const sel = document.getElementById('plant-employee');
-  // Exclude true admins (Super Admin, Admin Secundario) — but Store Management (manager_visor)
-  // is a store-manager role, not a system-admin role, so they still need certifications planted.
   sel.innerHTML = employees.filter(e=>!e.es_admin || e.nivel_admin === 'manager_visor').map(e => `<option value="${e.id}">${e.nombre_completo} (${e.username})</option>`).join('');
 }
 function openPlantModal() {
@@ -1472,153 +1143,56 @@ async function submitPlantCert() {
   const score = parseInt(document.getElementById('plant-score').value);
   const total = parseInt(document.getElementById('plant-total').value);
   const date = document.getElementById('plant-date').value;
-
-  if (!empId || !score || !total || !date) {
-    errEl.textContent = 'Please fill in all fields.';
-    errEl.classList.add('show');
-    return;
-  }
-
+  if (!empId || !score || !total || !date) { errEl.textContent = 'Please fill in all fields.'; errEl.classList.add('show'); return; }
   try {
-    const rows = await sbFetch('rpc/admin_sembrar_certificacion', {
-      method: 'POST',
-      body: JSON.stringify({
-        p_admin_id: admin.id,
-        p_empleado_id: empId,
-        p_certificacion: cert,
-        p_score: score,
-        p_total_puntos: total,
-        p_fecha: new Date(date).toISOString()
-      })
-    });
-    if (!rows[0].success) {
-      errEl.textContent = rows[0].message;
-      errEl.classList.add('show');
-      return;
-    }
+    const rows = await sbFetch('rpc/admin_sembrar_certificacion', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id, p_empleado_id: empId, p_certificacion: cert, p_score: score, p_total_puntos: total, p_fecha: new Date(date).toISOString() }) });
+    if (!rows[0].success) { errEl.textContent = rows[0].message; errEl.classList.add('show'); return; }
     closeModal('modal-plant');
     loadAllData();
-  } catch (err) {
-    errEl.textContent = 'Error: ' + err.message;
-    errEl.classList.add('show');
-  }
+  } catch (err) { errEl.textContent = 'Error: ' + err.message; errEl.classList.add('show'); }
 }
 
+/* ════════ UTILS ════════ */
 function closeModal(id) {
   document.getElementById(id).classList.remove('show');
 }
 
-/* ════════ CSV EXPORT ════════ */
 function toCSV(rows, headers) {
-  const escape = (val) => {
-    if (val === null || val === undefined) return '';
-    const s = String(val).replace(/"/g, '""');
-    return /[",\n]/.test(s) ? `"${s}"` : s;
-  };
-  const headerRow = headers.map(h => escape(h.label)).join(',');
-  const dataRows = rows.map(row => headers.map(h => escape(h.get(row))).join(','));
-  return [headerRow, ...dataRows].join('\n');
+  const escape = (val) => { if (val === null || val === undefined) return ''; const s = String(val).replace(/"/g, '""'); return /[",\n]/.test(s) ? `"${s}"` : s; };
+  return [headers.map(h => escape(h.label)).join(','), ...rows.map(row => headers.map(h => escape(h.get(row))).join(','))].join('\n');
 }
-
 function downloadCSV(content, filename) {
   const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  const a = document.createElement('a'); a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
 }
 
 function exportCSV(type) {
   const dateStamp = new Date().toISOString().split('T')[0];
   if (type === 'employees') {
-    const csv = toCSV(cachedData.employees, [
-      { label: 'Name', get: r => r.nombre_completo },
-      { label: 'Username', get: r => r.username },
-      { label: 'Employee ID', get: r => r.employee_id },
-      { label: 'Store', get: r => r.tienda },
-      { label: 'Role', get: r => r.rol },
-      { label: 'Tier 1 %', get: r => r.tier1 ? r.tier1.porcentaje : '' },
-      { label: 'Tier 2 %', get: r => r.tier2 ? r.tier2.porcentaje : '' },
-      { label: 'Total Points', get: r => r.totalPoints },
-    ]);
-    downloadCSV(csv, `daniels_employees_${dateStamp}.csv`);
-  }
-  if (type === 'codes') {
-    const csv = toCSV(cachedData.codes, [
-      { label: 'Code', get: r => r.codigo },
-      { label: 'Used', get: r => r.usado ? 'Yes' : 'No' },
-      { label: 'Used At', get: r => r.used_at },
-      { label: 'Created At', get: r => r.created_at },
-    ]);
-    downloadCSV(csv, `daniels_invitation_codes_${dateStamp}.csv`);
-  }
-  if (type === 'leadsource') {
-    const csv = toCSV(cachedData.leadsource, [
-      { label: 'Employee', get: r => r.employee_name },
-      { label: 'Source', get: r => r.source },
-      { label: 'Note', get: r => r.other_note },
-      { label: 'Submitted At', get: r => r.submitted_at },
-    ]);
-    downloadCSV(csv, `daniels_lead_source_${dateStamp}.csv`);
-  }
-  if (type === 'auditlog') {
-    const csv = toCSV(cachedData.auditlog, [
-      { label: 'Admin', get: r => r.admin_username },
-      { label: 'Action', get: r => r.accion },
-      { label: 'Detail', get: r => r.detalle },
-      { label: 'Date', get: r => r.created_at },
-    ]);
-    downloadCSV(csv, `daniels_admin_audit_log_${dateStamp}.csv`);
+    downloadCSV(toCSV(cachedData.employees, [{ label: 'Name', get: r => r.nombre_completo }, { label: 'Username', get: r => r.username }, { label: 'Employee ID', get: r => r.employee_id }, { label: 'Store', get: r => r.tienda }, { label: 'Department', get: r => r.departamento }, { label: 'Role', get: r => r.rol }, { label: 'Tier 1 %', get: r => r.tier1 ? r.tier1.porcentaje : '' }, { label: 'Tier 2 %', get: r => r.tier2 ? r.tier2.porcentaje : '' }, { label: 'Total Points', get: r => r.totalPoints }]), `daniels_employees_${dateStamp}.csv`);
   }
   if (type === 'organigrama') {
     const byId = {};
     cachedData.employees.forEach(e => { byId[e.id] = e; });
-    const csv = toCSV(cachedData.organigrama, [
-      { label: 'empleado_username', get: r => byId[r.empleado_id] ? byId[r.empleado_id].username : '' },
-      { label: 'supervisor_username', get: r => r.supervisor_id && byId[r.supervisor_id] ? byId[r.supervisor_id].username : '' },
-      { label: 'track', get: r => r.track },
-      { label: 'nivel', get: r => r.nivel },
-      { label: 'titulo_display', get: r => r.titulo_display || '' },
-    ]);
-    downloadCSV(csv, `daniels_organigrama_${dateStamp}.csv`);
+    downloadCSV(toCSV(cachedData.organigrama, [{ label: 'empleado_username', get: r => byId[r.empleado_id] ? byId[r.empleado_id].username : '' }, { label: 'supervisor_username', get: r => r.supervisor_id && byId[r.supervisor_id] ? byId[r.supervisor_id].username : '' }, { label: 'track', get: r => r.track }, { label: 'nivel', get: r => r.nivel }, { label: 'titulo_display', get: r => r.titulo_display || '' }]), `daniels_organigrama_${dateStamp}.csv`);
   }
   if (type === 'certattempts') {
-    const employeesById = {};
-    cachedData.employees.forEach(e => employeesById[e.id] = e.nombre_completo);
-    const csv = toCSV(cachedData.certAttempts, [
-      { label: 'Employee', get: r => employeesById[r.empleado_id] || 'Unknown' },
-      { label: 'Certification', get: r => r.certificacion },
-      { label: 'Status', get: r => r.estado || (r.aprobado === true ? 'completed (passed)' : r.aprobado === false ? 'completed (failed)' : '') },
-      { label: 'Score %', get: r => r.porcentaje },
-      { label: 'Time Used (sec)', get: r => r.tiempo_usado_segundos },
-      { label: 'Started At', get: r => r.started_at },
-      { label: 'Completed At', get: r => r.fecha_completado },
-    ]);
-    downloadCSV(csv, `daniels_certification_attempts_${dateStamp}.csv`);
+    const byId = {}; cachedData.employees.forEach(e => byId[e.id] = e.nombre_completo);
+    downloadCSV(toCSV(cachedData.certAttempts, [{ label: 'Employee', get: r => byId[r.empleado_id] || 'Unknown' }, { label: 'Certification', get: r => r.certificacion }, { label: 'Status', get: r => r.estado || '' }, { label: 'Score %', get: r => r.porcentaje }, { label: 'Time Used (sec)', get: r => r.tiempo_usado_segundos }, { label: 'Started At', get: r => r.started_at }, { label: 'Completed At', get: r => r.fecha_completado }]), `daniels_certification_attempts_${dateStamp}.csv`);
   }
 }
 
-document.getElementById('login-password').addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') handleAdminLogin();
-});
+document.getElementById('login-password').addEventListener('keypress', (e) => { if (e.key === 'Enter') handleAdminLogin(); });
 
-// Add a floating "Plant Certification" button once cockpit loads
 document.addEventListener('DOMContentLoaded', () => {
   const btn = document.createElement('button');
   btn.className = 'btn btn-gold';
   btn.textContent = '🌱 Plant Certification';
-  btn.style.position = 'fixed';
-  btn.style.bottom = '24px';
-  btn.style.right = '24px';
-  btn.style.padding = '14px 22px';
-  btn.style.fontSize = '14px';
-  btn.style.boxShadow = '0 4px 14px rgba(0,0,0,.2)';
+  btn.style.cssText = 'position:fixed;bottom:24px;right:24px;padding:14px 22px;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.2);';
   btn.id = 'btn-plant-cert-floating';
-  btn.style.display = 'none'; // shown only for super admins once we know their tier (see loadAllData)
+  btn.style.display = 'none';
   btn.onclick = openPlantModal;
   document.getElementById('screen-cockpit').appendChild(btn);
 });
