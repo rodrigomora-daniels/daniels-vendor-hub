@@ -409,7 +409,7 @@ async function startSupervisorSearch() {
 
   if (!allEmployeesForSearch) {
     try {
-      allEmployeesForSearch = await sbFetch(`empleados?select=id,nombre_completo,employee_id,tienda&order=nombre_completo.asc`);
+      allEmployeesForSearch = await sbFetch(`empleados?select=id,nombre_completo,employee_id,tienda,departamento&order=nombre_completo.asc`);
     } catch (err) {
       content.innerHTML = `<div class="card"><div class="no-cycle">Could not load the employee roster. / No se pudo cargar la lista de empleados.</div></div>`;
       return;
@@ -421,23 +421,43 @@ async function startSupervisorSearch() {
 function renderSupervisorSearchScreen(query) {
   const content = document.getElementById('app-content');
   const q = (query || '').trim().toLowerCase();
-  const results = (allEmployeesForSearch || [])
-    .filter(e => e.id !== loggedInEmployee.id) // can't evaluate yourself
-    .filter(e => !q || (e.nombre_completo || '').toLowerCase().includes(q))
-    .slice(0, 12);
+  const myStore = loggedInEmployee.tienda;
 
-  const resultsHtml = results.length
-    ? results.map(e => `
-        <div class="bars-option" onclick="selectEvaluado('${e.id}')">
-          <div class="num">👤</div>
-          <div class="txt"><strong>${e.nombre_completo}</strong>${e.tienda ? ` <span style="color:var(--mgray);font-weight:400;">— ${e.tienda}</span>` : ''}</div>
-        </div>`).join('')
-    : `<p style="color:var(--mgray);font-size:13px;padding:10px 0;">${q ? 'No matches found. / No se encontraron coincidencias.' : 'Start typing a name above. / Empieza a escribir un nombre arriba.'}</p>`;
+  // Soft filter: same store first, then others — never blocks anyone
+  const pool = (allEmployeesForSearch || [])
+    .filter(e => e.id !== loggedInEmployee.id)
+    .filter(e => !q || (e.nombre_completo || '').toLowerCase().includes(q));
+
+  const sameStore = pool.filter(e => myStore && e.tienda === myStore);
+  const otherStore = pool.filter(e => !myStore || e.tienda !== myStore);
+
+  function empRow(e) {
+    const storeTag = e.tienda && e.tienda !== myStore
+      ? ` <span style="color:var(--mgray);font-size:11px;font-weight:400;">(${e.tienda})</span>` : '';
+    return `<div class="bars-option" onclick="selectEvaluado('${e.id}')">
+      <div class="num">👤</div>
+      <div class="txt"><strong>${e.nombre_completo}</strong>${storeTag}</div>
+    </div>`;
+  }
+
+  let resultsHtml = '';
+  if (!pool.length) {
+    resultsHtml = `<p style="color:var(--mgray);font-size:13px;padding:10px 0;">${q ? 'No matches found. / No se encontraron coincidencias.' : 'Start typing a name above. / Empieza a escribir un nombre arriba.'}</p>`;
+  } else {
+    if (sameStore.length) {
+      resultsHtml += myStore ? `<div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">📍 ${myStore}</div>` : '';
+      resultsHtml += sameStore.slice(0, 10).map(empRow).join('');
+    }
+    if (otherStore.length && (!sameStore.length || q)) {
+      resultsHtml += `<div style="font-size:11px;font-weight:700;color:var(--mgray);margin:10px 0 6px;text-transform:uppercase;letter-spacing:.5px;">🏢 Other Locations / Otras Tiendas</div>`;
+      resultsHtml += otherStore.slice(0, 8).map(empRow).join('');
+    }
+  }
 
   content.innerHTML = `
     <div class="card">
       <h2>Who are you evaluating? / ¿A quién vas a evaluar?</h2>
-      <div class="desc">Search by name — this connects to their real employee record, same as certifications and badges. / Busca por nombre — esto conecta con su registro real de empleado, igual que certificaciones y badges.</div>
+      <div class="desc">Your store's team appears first. Search by name to find anyone. / Tu equipo de tienda aparece primero. Busca por nombre para encontrar a cualquier persona.</div>
       <input type="text" class="field-input" placeholder="Type a name... / Escribe un nombre..." value="${query || ''}" oninput="renderSupervisorSearchScreen(this.value)" style="width:100%;padding:12px 14px;border:2px solid #e8e4dc;border-radius:10px;font-size:14px;margin-bottom:14px;" autofocus>
       ${resultsHtml}
       <button class="btn" style="margin-top:14px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="renderModePicker()">← Back / Regresar</button>
