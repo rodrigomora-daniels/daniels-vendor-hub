@@ -194,19 +194,8 @@
       <input type="text" class="field-input" id="signup-empid" placeholder="e.g. DHC-002" autocomplete="off">
       <label class="field-label">Choose a Username *</label>
       <input type="text" class="field-input" id="signup-username" placeholder="e.g. mgarcia" autocomplete="off">
-      <label class="field-label">Department / Área *</label>
-      <select class="field-input" id="signup-departamento">
-        <option value="">— Select your department / Selecciona tu área —</option>
-        <option value="sales">Sales / Ventas</option>
-        <option value="operations">Operations / Operaciones</option>
-        <option value="merchandising">Merchandising</option>
-        <option value="customer_service">Customer Service / Servicio al Cliente</option>
-        <option value="warehouse">Warehouse / Almacén</option>
-        <option value="ecommerce">E-Commerce</option>
-        <option value="management">Management / Gerencia</option>
-        <option value="hr">HR / Recursos Humanos</option>
-        <option value="credit">Credit / Crédito</option>
-      </select>
+      <!-- Department is assigned by Super Admin after registration — default: sales -->
+      <input type="hidden" id="signup-departamento" value="sales">
       <label class="field-label">Choose a Password *</label>
       <input type="password" class="field-input" id="signup-password" placeholder="Minimum 8 characters">
       <label class="field-label">Confirm Password *</label>
@@ -568,8 +557,8 @@ async function handleSignup() {
 
   errEl.classList.remove('show');
 
-  if (!code || !name || !empId || !username || !departamento || !pw1 || !pw2) {
-    errEl.textContent = 'Please fill in all required fields, including your department.';
+  if (!code || !name || !empId || !username || !pw1 || !pw2) {
+    errEl.textContent = 'Please fill in all required fields.';
     errEl.classList.add('show');
     return;
   }
