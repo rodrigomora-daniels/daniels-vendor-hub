@@ -196,6 +196,13 @@
       <input type="text" class="field-input" id="signup-username" placeholder="e.g. mgarcia" autocomplete="off">
       <!-- Department is assigned by Super Admin after registration — default: sales -->
       <input type="hidden" id="signup-departamento" value="sales">
+      <label class="field-label">Your Store / Tu Tienda *</label>
+      <select class="field-input" id="signup-tienda">
+        <option value="">— Select your store / Selecciona tu tienda —</option>
+        <option value="Euclid / Anaheim">Euclid / Anaheim</option>
+        <option value="Cerritos">Cerritos</option>
+        <option value="Chino">Chino</option>
+      </select>
       <label class="field-label">Choose a Password *</label>
       <input type="password" class="field-input" id="signup-password" placeholder="Minimum 8 characters">
       <label class="field-label">Confirm Password *</label>
@@ -322,6 +329,16 @@
           <div class="home-card-icon">📍</div>
           <h3>How They Found Us</h3>
           <p>Quick 10-second check-in — helps us understand where customers come from.</p>
+        </div>
+        <div class="home-card" onclick="navigateToEvaluacion()">
+          <div class="home-card-icon">📋</div>
+          <h3>Mi Evaluación / My Evaluation</h3>
+          <p>Complete your self-assessment or evaluate a team member. / Completa tu autoevaluación o evalúa a un compañero.</p>
+        </div>
+        <div class="home-card" onclick="navigateToTool('organigrama')">
+          <div class="home-card-icon">🏢</div>
+          <h3>Organigrama / Org Chart</h3>
+          <p>View the company reporting structure. / Consulta la estructura organizacional de la empresa.</p>
         </div>
       </div>
     </div>
@@ -550,6 +567,7 @@ async function handleSignup() {
   const empId = document.getElementById('signup-empid').value.trim();
   const username = document.getElementById('signup-username').value.trim();
   const departamento = document.getElementById('signup-departamento').value;
+  const tienda = document.getElementById('signup-tienda').value;
   const pw1 = document.getElementById('signup-password').value;
   const pw2 = document.getElementById('signup-password2').value;
   const errEl = document.getElementById('signup-error');
@@ -557,8 +575,8 @@ async function handleSignup() {
 
   errEl.classList.remove('show');
 
-  if (!code || !name || !empId || !username || !pw1 || !pw2) {
-    errEl.textContent = 'Please fill in all required fields.';
+  if (!code || !name || !empId || !username || !tienda || !pw1 || !pw2) {
+    errEl.textContent = 'Please fill in all required fields, including your store.';
     errEl.classList.add('show');
     return;
   }
@@ -620,7 +638,7 @@ async function handleSignup() {
         if (targetId) {
           await sbFetch(`empleados?id=eq.${targetId}`, {
             method: 'PATCH',
-            body: JSON.stringify({ departamento })
+            body: JSON.stringify({ departamento, tienda })
           });
         }
       } catch (err) {
@@ -948,8 +966,14 @@ function renderDashboardData() {
    ════════════════════════════════════════════════════════════ */
 const TOOL_URLS = {
   prescreen: 'https://rodrigomora-daniels.github.io/daniels-credit-simulator/',
-  leadsource: 'Daniels_Lead_Source_Form.html'
+  leadsource: 'Daniels_Lead_Source_Form.html',
+  organigrama: 'Daniels_Organigrama.html'
 };
+
+function navigateToEvaluacion() {
+  const empId = session && session.empleado ? session.empleado.id : '';
+  window.location.href = `Daniels_Evaluacion_Ventas.html?emp=${empId}`;
+}
 
 function switchTab(tabName) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
