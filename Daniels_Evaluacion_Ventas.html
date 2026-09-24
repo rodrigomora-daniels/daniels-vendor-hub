@@ -96,94 +96,49 @@ let activeCycle = null;
 let isAdminPreview = false;
 
 /* ════════════════════════════════════════════════════════════
-   THE 7 SALES DIMENSIONS — self-assessment (forced-choice BARS)
-   Bilingual throughout: every string has EN / ES on one line,
-   same pattern as Tier1/Tier2 exam questions.
+   SELF-ASSESSMENT — forced-choice A/B (NOT BARS). The employee
+   picks the option that best describes their habitual behavior.
+   Option B is always the higher-performance answer, but the
+   employee never sees which one "wins" — that's what prevents
+   inflation. Score = % of times they picked B.
+   Source: original benchmark design (industry BARS + forced-choice
+   methodology), bilingual EN/ES on one line per Tier1/2 pattern.
    ════════════════════════════════════════════════════════════ */
-const DIMENSIONS = [
+const FC_QUESTIONS = [
   {
-    key: 'desempeno_ventas',
-    title: 'Sales Performance / Desempeño en Ventas',
-    q: "When a customer has already picked a base product, what do you typically do? / Cuando un cliente ya eligió un producto base, ¿qué haces habitualmente?",
-    opts: [
-      "I process the sale as-is — the customer already chose. / Proceso la venta tal cual — el cliente ya eligió.",
-      "I mention higher options only if the customer asks directly. / Menciono opciones superiores solo si el cliente pregunta directamente.",
-      "I actively present a Good, a Better, and a Best option, explaining the value difference. / Presento activamente una opción Good, una Better y una Best, explicando la diferencia de valor.",
-      "I present Good/Better/Best with benefits specific to the customer and confirm their decision before moving on. / Presento Good/Better/Best con beneficios específicos al cliente y confirmo su decisión antes de continuar.",
-      "I present Good/Better/Best, connect the upgrade to the customer's specific needs, and document the outcome on the ticket regardless of their decision. / Presento Good/Better/Best, conecto el upgrade a las necesidades específicas del cliente, y documento el resultado en el ticket sin importar su decisión."
-    ]
+    key: 'fc_cliente_dificil',
+    title: 'Handling Customers / Manejo de Clientes',
+    q: "Select the option that best describes your usual way of handling this. / Selecciona la opción que mejor describe tu forma de actuar habitual.",
+    optA: "When a customer is upset or frustrated, I prefer to give them space and let them calm down before continuing the conversation. / Cuando un cliente está difícil o frustrado, prefiero darle espacio y dejar que se calme antes de continuar la conversación.",
+    optB: "When a customer is upset or frustrated, I try to identify the root cause of their frustration and address it directly in the moment. / Cuando un cliente está difícil o frustrado, busco identificar la causa raíz de su frustración y la atiendo directamente en el momento."
   },
   {
-    key: 'conocimiento_producto',
-    title: 'Product Knowledge & Certification / Conocimiento de Producto y Certificación',
-    q: "When a customer asks a specific product question you're not 100% sure about, what do you do? / Cuando un cliente hace una pregunta específica de producto que no sabes con certeza, ¿qué haces?",
-    opts: [
-      "I give my best guess so I don't seem unprepared. / Doy mi mejor suposición para no parecer no preparado.",
-      "I say I'm not sure and move on to a different topic. / Digo que no estoy seguro y cambio de tema.",
-      "I admit I don't know and offer to check later. / Admito que no sé y ofrezco revisar después.",
-      "I admit I don't know, check the website or a colleague on the spot, and come back with the real answer. / Admito que no sé, reviso el sitio web o a un colega en el momento, y regreso con la respuesta real.",
-      "I do this consistently, and I also proactively keep my product knowledge current through ongoing training and recertification. / Hago esto consistentemente, y además mantengo mi conocimiento de producto actualizado proactivamente con capacitación y recertificación continua."
-    ]
+    key: 'fc_conocimiento',
+    title: 'Product Knowledge / Conocimiento de Producto',
+    q: "Select the option that best describes your level of product knowledge. / Selecciona la opción que mejor describe tu nivel de conocimiento.",
+    optA: "I know the products I sell most often well and can answer questions about them confidently. / Conozco bien los productos que vendo con más frecuencia y puedo responder preguntas sobre ellos con confianza.",
+    optB: "I know the products I sell often, and also the ones I sell rarely — I stay current on catalog changes. / Conozco los productos que vendo frecuentemente y también los que vendo poco; me mantengo actualizado en los cambios de catálogo."
   },
   {
-    key: 'experiencia_cliente',
-    title: 'Customer Experience / Experiencia del Cliente',
-    q: "When a customer raises an objection ('I need to think about it', price concerns, etc.), what do you typically do? / Cuando un cliente plantea una objeción ('necesito pensarlo', preocupaciones de precio, etc.), ¿qué haces habitualmente?",
-    opts: [
-      "I accept it and let them leave without further conversation. / Lo acepto y los dejo ir sin más conversación.",
-      "I repeat the same information I already gave them. / Repito la misma información que ya les di.",
-      "I acknowledge the concern and try to address it directly. / Reconozco la preocupación e intento abordarla directamente.",
-      "I use a structured approach (acknowledge, clarify the real concern, respond, confirm) to genuinely understand and address what's behind the objection. / Uso un enfoque estructurado (reconocer, aclarar la preocupación real, responder, confirmar) para entender y abordar genuinamente lo que hay detrás de la objeción.",
-      "I do this consistently, and I follow up afterward regardless of whether they bought that day. / Hago esto consistentemente, y doy seguimiento después sin importar si compraron ese día."
-    ]
-  },
-  {
-    key: 'trabajo_equipo',
-    title: 'Teamwork & Culture / Trabajo en Equipo y Cultura',
-    q: "When a coworker is overwhelmed with customers on a busy day, what do you typically do? / Cuando un compañero está saturado de clientes en un día ocupado, ¿qué haces habitualmente?",
-    opts: [
-      "I focus only on my own customers. / Me enfoco solo en mis propios clientes.",
-      "I help only if directly asked by a manager. / Ayudo solo si un gerente me lo pide directamente.",
-      "I offer to help when I notice it, if I have a free moment. / Ofrezco ayudar cuando lo noto, si tengo un momento libre.",
-      "I proactively step in to help without being asked, as long as it doesn't hurt my own customers. / Intervengo proactivamente para ayudar sin que me lo pidan, siempre que no afecte a mis propios clientes.",
-      "I do this consistently, and I also actively contribute to a positive team environment day to day. / Hago esto consistentemente, y además contribuyo activamente a un ambiente de equipo positivo día a día."
-    ]
-  },
-  {
-    key: 'ejecucion_politicas',
-    title: 'Policy Execution / Ejecución de Políticas',
-    q: "When a policy situation comes up (Haul Away, Price Match, Return/Exchange), how do you typically handle it? / Cuando surge una situación de política (Haul Away, Price Match, Devolución/Cambio), ¿cómo la manejas habitualmente?",
-    opts: [
-      "I'm not always sure of the exact rule, so I guess or wing it. / No siempre estoy seguro de la regla exacta, así que adivino o improviso.",
-      "I know the general idea but not the specific details (windows, thresholds, exceptions). / Conozco la idea general pero no los detalles específicos (plazos, umbrales, excepciones).",
-      "I know the specific policy details for most common situations. / Conozco los detalles específicos de la política para las situaciones más comunes.",
-      "I know the specific policy details confidently and apply them consistently, even in less common situations. / Conozco los detalles específicos con confianza y los aplico consistentemente, incluso en situaciones menos comunes.",
-      "I do this consistently, and I also help coworkers who are unsure of a policy detail. / Hago esto consistentemente, y además ayudo a compañeros que no están seguros de un detalle de política."
-    ]
-  },
-  {
-    key: 'financiamiento',
+    key: 'fc_financiamiento',
     title: 'Financing Presentation / Presentación de Financiamiento',
-    q: "When a customer's total comes up in a conversation, how do you typically handle financing? / Cuando sale el total en la conversación con un cliente, ¿cómo manejas habitualmente el financiamiento?",
-    opts: [
-      "I avoid bringing it up unless the customer asks directly. / Evito mencionarlo a menos que el cliente pregunte directamente.",
-      "I mention it briefly but don't walk through specific numbers. / Lo menciono brevemente pero no reviso números específicos.",
-      "I present the monthly reframe when price hesitation comes up. / Presento el replanteo mensual cuando surge duda de precio.",
-      "I present it clearly and comfortably as a standard part of the conversation, with accurate numbers. / Lo presento clara y cómodamente como parte estándar de la conversación, con números precisos.",
-      "I do this consistently, and I'm also comfortable using the Pre-Screen Tool proactively to give the customer a realistic early read. / Hago esto consistentemente, y además me siento cómodo usando la Herramienta de Pre-Screen proactivamente para dar al cliente una lectura temprana realista."
-    ]
+    q: "Select the option that best describes your practice with financing. / Selecciona la opción que mejor describe tu práctica con el crédito.",
+    optA: "I present the financing option to customers who seem interested or who ask me about it. / Presento la opción de financiamiento a los clientes que parecen interesados o que me preguntan por ella.",
+    optB: "I present financing as part of my process with every customer, regardless of how I size up their situation at first glance. / Presento la opción de financiamiento como parte de mi proceso con todos los clientes, sin importar cómo califico a primera vista su situación."
   },
   {
-    key: 'desarrollo_iniciativa',
-    title: 'Development & Initiative / Desarrollo e Iniciativa',
-    q: "How would you describe your approach to ongoing training and certification? / ¿Cómo describirías tu enfoque hacia la capacitación y certificación continua?",
-    opts: [
-      "I complete training only when required and don't think about it otherwise. / Completo la capacitación solo cuando se requiere y no pienso en ello de otra forma.",
-      "I complete required training on time but don't go beyond that. / Completo la capacitación requerida a tiempo pero no voy más allá.",
-      "I stay current on required certifications and occasionally review material on my own. / Me mantengo al corriente en certificaciones requeridas y ocasionalmente reviso material por mi cuenta.",
-      "I proactively keep my certifications current and regularly look for ways to improve my skills. / Mantengo mis certificaciones al corriente proactivamente y busco regularmente formas de mejorar mis habilidades.",
-      "I do this consistently, and I actively seek feedback from my manager to identify my next area of growth. / Hago esto consistentemente, y busco activamente retroalimentación de mi gerente para identificar mi siguiente área de crecimiento."
-    ]
+    key: 'fc_metas',
+    title: 'Response to Falling Behind Quota / Respuesta ante la Meta',
+    q: "Select the option that best reflects your behavior when you're behind on your monthly goal. / Selecciona la opción que mejor refleja tu comportamiento cuando vas abajo de meta.",
+    optA: "When I'm not on track for my monthly quota, I focus on closing the sales I already have in progress. / Cuando no voy en camino a mi meta mensual, me concentro en cerrar las ventas que ya tengo en proceso.",
+    optB: "When I'm not on track for my monthly quota, I analyze what I'm doing differently and adjust my approach before the month ends. / Cuando no voy en camino a mi meta mensual, analizo qué estoy haciendo diferente y ajusto mi approach antes de que termine el mes."
+  },
+  {
+    key: 'fc_desarrollo',
+    title: 'Development & Training / Desarrollo e Iniciativa',
+    q: "Select the option that best describes your relationship with training. / Selecciona la opción que mejor describe tu relación con el entrenamiento.",
+    optA: "I've completed the required certifications and review them when I need to recall something specific. / He completado las certificaciones requeridas y las reviso cuando necesito recordar algo específico.",
+    optB: "I've completed the required certifications and I also actively apply what I learned in my daily work, without waiting to be reminded. / He completado las certificaciones requeridas y además aplico activamente lo aprendido en mi trabajo diario, sin esperar que me lo recuerden."
   }
 ];
 
@@ -525,7 +480,7 @@ function confirmQuota() {
    (3rd person) for supervisor mode.
    ════════════════════════════════════════════════════════════ */
 function currentDimSet() {
-  return evalMode === 'supervisor' ? SUPERVISOR_DIMENSIONS : DIMENSIONS;
+  return evalMode === 'supervisor' ? SUPERVISOR_DIMENSIONS : FC_QUESTIONS;
 }
 
 function renderQuestionScreen() {
@@ -534,9 +489,10 @@ function renderQuestionScreen() {
   const dim = dims[currentDimIdx];
   const pct = Math.round((currentDimIdx / dims.length) * 100);
 
-  // Preview banner only applies to self-assessment — supervisor evaluations
-  // of a real team member always save, there's no "preview" version of that.
-  const adminBanner = (isAdminPreview && evalMode === 'self')
+  // Preview mode applies to BOTH self and supervisor flows for admins —
+  // lets a Super Admin walk the entire module (including "evaluating"
+  // a real person) without ever writing to that person's real record.
+  const adminBanner = isAdminPreview
     ? `<div class="badge-admin">🔍 Admin Preview Mode — this run will NOT be saved to any employee's record. / Modo Vista Admin — esta sesión NO se guardará en el registro de ningún empleado.</div>`
     : '';
 
@@ -544,20 +500,30 @@ function renderQuestionScreen() {
     ? `<div class="badge-admin" style="background:var(--ltblue);border-left-color:var(--navy);">Evaluating / Evaluando: <strong>${selectedEvaluado.nombre_completo}</strong></div>`
     : '';
 
-  const optsHtml = dim.opts.map((opt, i) => {
-    const selected = responses[dim.key] === (i + 1) ? 'selected' : '';
-    return `
-      <div class="bars-option ${selected}" onclick="selectOption('${dim.key}', ${i + 1})">
-        <div class="num">${i + 1}</div>
-        <div class="txt">${opt}</div>
-      </div>`;
-  }).join('');
+  const optsHtml = evalMode === 'supervisor'
+    ? dim.opts.map((opt, i) => {
+        const selected = responses[dim.key] === (i + 1) ? 'selected' : '';
+        return `
+          <div class="bars-option ${selected}" onclick="selectOption('${dim.key}', ${i + 1})">
+            <div class="num">${i + 1}</div>
+            <div class="txt">${opt}</div>
+          </div>`;
+      }).join('')
+    : ['A', 'B'].map(letter => {
+        const optText = letter === 'A' ? dim.optA : dim.optB;
+        const selected = responses[dim.key] === letter ? 'selected' : '';
+        return `
+          <div class="bars-option ${selected}" onclick="selectFcOption('${dim.key}', '${letter}')">
+            <div class="num">${letter}</div>
+            <div class="txt">${optText}</div>
+          </div>`;
+      }).join('');
 
   content.innerHTML = `
     ${adminBanner}
     ${evaluandoBanner}
     <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
-    <div class="progress-label">Dimension ${currentDimIdx + 1} of ${dims.length} / Dimensión ${currentDimIdx + 1} de ${dims.length}</div>
+    <div class="progress-label">Question ${currentDimIdx + 1} of ${dims.length} / Pregunta ${currentDimIdx + 1} de ${dims.length}</div>
     <div class="card">
       <div class="dim-title"><span class="dim-num">${currentDimIdx + 1}</span>${dim.title}</div>
       <div class="dim-q">${dim.q}</div>
@@ -571,6 +537,11 @@ function renderQuestionScreen() {
 
 function selectOption(key, value) {
   responses[key] = value;
+  renderQuestionScreen();
+}
+
+function selectFcOption(key, letter) {
+  responses[key] = letter;
   renderQuestionScreen();
 }
 
@@ -598,7 +569,7 @@ function renderReviewScreen() {
   const rows = dims.map(dim => `
     <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0ece2;font-size:13px;">
       <span style="color:var(--dkgray)">${dim.title}</span>
-      <strong style="color:var(--navy)">${responses[dim.key]}/5</strong>
+      <strong style="color:var(--navy)">${evalMode === 'supervisor' ? responses[dim.key] + '/5' : responses[dim.key]}</strong>
     </div>`).join('');
 
   const quotaRow = evalMode === 'supervisor'
@@ -634,9 +605,10 @@ async function submitEvaluation() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Submitting... / Enviando...';
 
-  // Preview-mode skip-save applies ONLY to self-assessment. Supervisor
-  // evaluations of a real team member always persist for real.
-  if (isAdminPreview && evalMode === 'self') {
+  // Preview-mode skip-save now applies to BOTH self and supervisor flows —
+  // a Super Admin can fully test evaluating a real person without it
+  // ever hitting that person's actual record.
+  if (isAdminPreview) {
     setTimeout(() => {
       document.getElementById('app-content').innerHTML = `
         <div class="card">
@@ -667,6 +639,11 @@ async function submitEvaluation() {
       evalPayload.periodos_meta = quotaData.periodos_meta;
       evalPayload.periodos_total = quotaData.periodos_total;
       evalPayload.pct_promedio_cuota = Math.round((quotaData.periodos_meta / quotaData.periodos_total) * 100);
+    } else {
+      // Self score = % of forced-choice questions answered with the
+      // higher-performance option (B). Same formula as the original design.
+      const bCount = Object.values(responses).filter(v => v === 'B').length;
+      evalPayload.puntaje_final = Math.round((bCount / dims.length) * 100);
     }
 
     const evalRows = await sbFetch('evaluaciones', { method: 'POST', body: JSON.stringify(evalPayload) });
@@ -677,7 +654,10 @@ async function submitEvaluation() {
       dimension: dim.key,
       pregunta_key: dim.key,
       pregunta_texto: dim.q,
-      respuesta_score: responses[dim.key]
+      // Supervisor mode: 1-5 BARS score as-is. Self mode: forced-choice A/B
+      // stored as 0/1 (B=1, higher-performance) so it fits the same numeric
+      // column and the self score can be computed as %B chosen × 100.
+      respuesta_score: evalMode === 'supervisor' ? responses[dim.key] : (responses[dim.key] === 'B' ? 1 : 0)
     }));
     await sbFetch('evaluacion_respuestas', { method: 'POST', body: JSON.stringify(respuestaRows) });
 

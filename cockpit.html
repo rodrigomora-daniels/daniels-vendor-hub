@@ -137,12 +137,12 @@
         <table id="tbl-employees">
           <thead>
             <tr>
-              <th>Name</th><th>Username</th><th>Employee ID</th><th>Store</th><th>Department</th>
+              <th>Name</th><th>Username</th><th>Employee ID</th><th>Store</th><th>Department</th><th>Location</th>
               <th>Tier 1</th><th>Tier 2</th><th>Points</th><th id="th-employees-actions">Actions</th>
             </tr>
           </thead>
           <tbody id="tbl-employees-body">
-            <tr><td colspan="9" class="empty-state">Loading...</td></tr>
+            <tr><td colspan="10" class="empty-state">Loading...</td></tr>
           </tbody>
         </table>
       </div>
@@ -172,7 +172,22 @@
       </div>
     </div>
 
-    <!-- INVITATION CODES -->
+    <!-- EVALUATION CYCLES — Super Admin controls when evaluation season is open -->
+    <div class="section" id="section-eval-cycles">
+      <div class="section-hdr">
+        <h2>📋 Evaluation Cycles</h2>
+        <button class="btn btn-primary" id="btn-cycle-new-open" onclick="openNewCycleModal()">+ Open New Cycle</button>
+      </div>
+      <p style="font-size:12px;color:var(--mgray);margin-bottom:14px;">Only one cycle should be active at a time — the evaluation module reads whichever cycle has "activo = true". Close a cycle before opening a new one.</p>
+      <div style="overflow-x:auto">
+        <table id="tbl-eval-cycles">
+          <thead><tr><th>Name</th><th>Type</th><th>Start</th><th>End</th><th>Status</th><th></th></tr></thead>
+          <tbody id="tbl-eval-cycles-body"><tr><td colspan="6" class="empty-state">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+
     <div class="section" id="section-codes">
       <div class="section-hdr">
         <h2>🎫 Invitation Codes</h2>
@@ -333,6 +348,46 @@
     <div style="display:flex;gap:8px;margin-top:14px;">
       <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-reclassify')">Cancel</button>
       <button class="btn btn-primary" style="flex:1" id="btn-reclassify-save" onclick="submitReclassify()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-new-cycle">
+  <div class="modal-box" style="max-width:440px">
+    <h3>📋 Open New Evaluation Cycle</h3>
+    <p style="font-size:12px;color:var(--mgray);margin-bottom:14px;">This closes any currently active cycle and opens this one — the evaluation module will immediately start using it.</p>
+    <label class="field-label">Cycle Name</label>
+    <input type="text" class="field-input" id="cycle-nombre" placeholder="e.g. Ciclo 2 — Feb/Mar 2027">
+    <label class="field-label">Type</label>
+    <select class="field-input" id="cycle-tipo">
+      <option value="formal">Formal (semestral)</option>
+      <option value="pulso">Pulso (quarterly check-in)</option>
+    </select>
+    <label class="field-label">Start Date</label>
+    <input type="date" class="field-input" id="cycle-inicio">
+    <label class="field-label">End Date</label>
+    <input type="date" class="field-input" id="cycle-cierre">
+    <div id="cycle-error" class="error-msg"></div>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-new-cycle')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" id="btn-cycle-save" onclick="submitNewCycle()">Open Cycle</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-reclassify-store">
+  <div class="modal-box" style="max-width:420px">
+    <h3>📍 Reassign Store / Tienda</h3>
+    <p style="font-size:13px;color:var(--mgray);margin-bottom:14px;" id="reclassify-store-desc"></p>
+    <label class="field-label">Store / Tienda</label>
+    <select class="field-input" id="reclassify-tienda">
+      <option value="Euclid / Anaheim">Euclid / Anaheim</option>
+      <option value="Cerritos">Cerritos</option>
+      <option value="Chino">Chino</option>
+    </select>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-reclassify-store')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" id="btn-reclassify-store-save" onclick="submitReclassifyStore()">Save</button>
     </div>
   </div>
 </div>
@@ -516,7 +571,7 @@ async function handleAdminLogin() {
 /* ════════ LOAD DATA ════════ */
 async function loadAllData() {
   await loadCertAttempts();
-  await Promise.all([loadEmployees(), loadCodes(), loadLeadSource(), loadAuditLog(), loadOrganigrama()]);
+  await Promise.all([loadEmployees(), loadCodes(), loadLeadSource(), loadAuditLog(), loadOrganigrama(), loadEvalCycles()]);
   renderCertAttemptsTable(cachedData.certAttempts);
   const plantBtn = document.getElementById('btn-plant-cert-floating');
   if (plantBtn) plantBtn.style.display = isViewOnly() ? 'none' : 'block';
@@ -550,7 +605,7 @@ async function loadEmployees() {
     populatePlantDropdown(merged);
   } catch (err) {
     console.error('Failed to load employees:', err);
-    document.getElementById('tbl-employees-body').innerHTML = `<tr><td colspan="9" class="empty-state">Error loading employees.</td></tr>`;
+    document.getElementById('tbl-employees-body').innerHTML = `<tr><td colspan="10" class="empty-state">Error loading employees.</td></tr>`;
   }
 }
 
@@ -655,13 +710,132 @@ async function deleteOrgRow(rowId) {
 }
 
 /* ════════ EMPLOYEES TABLE ════════ */
+/* ════════════════════════════════════════════════════════════
+   EVALUATION CYCLES — Super Admin opens/closes cycles. The
+   evaluation module reads whichever row has activo=true.
+   ════════════════════════════════════════════════════════════ */
+async function loadEvalCycles() {
+  try {
+    const rows = await sbFetch('evaluacion_ciclos?select=id,nombre,tipo,fecha_inicio,fecha_cierre,activo&order=fecha_inicio.desc');
+    cachedData.evalCycles = rows || [];
+    renderEvalCyclesTable(cachedData.evalCycles);
+  } catch (err) {
+    console.warn('evaluacion_ciclos table not available yet:', err);
+    cachedData.evalCycles = [];
+    document.getElementById('tbl-eval-cycles-body').innerHTML = `<tr><td colspan="6" class="empty-state">Table not set up yet.</td></tr>`;
+  }
+  if (!isSuperAdmin()) {
+    const btn = document.getElementById('btn-cycle-new-open');
+    if (btn) btn.style.display = 'none';
+  }
+}
+
+function renderEvalCyclesTable(rows) {
+  const tbody = document.getElementById('tbl-eval-cycles-body');
+  if (!rows || rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty-state">No cycles yet.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(c => {
+    const statusPill = c.activo ? '<span class="pill pill-green">ACTIVE</span>' : '<span class="pill pill-gray">Closed</span>';
+    const toggleBtn = isSuperAdmin()
+      ? (c.activo
+          ? `<button class="btn btn-red" style="padding:4px 10px;font-size:11px;" onclick="closeEvalCycle('${c.id}')">Close</button>`
+          : `<button class="btn btn-primary" style="padding:4px 10px;font-size:11px;" onclick="reopenEvalCycle('${c.id}')">Reopen</button>`)
+      : '';
+    return `<tr>
+      <td>${c.nombre}</td>
+      <td>${c.tipo}</td>
+      <td>${c.fecha_inicio}</td>
+      <td>${c.fecha_cierre}</td>
+      <td>${statusPill}</td>
+      <td>${toggleBtn}</td>
+    </tr>`;
+  }).join('');
+}
+
+function openNewCycleModal() {
+  if (!isSuperAdmin()) { alert('Only a Super Admin can open evaluation cycles.'); return; }
+  document.getElementById('cycle-nombre').value = '';
+  document.getElementById('cycle-tipo').value = 'formal';
+  document.getElementById('cycle-inicio').value = new Date().toISOString().split('T')[0];
+  document.getElementById('cycle-cierre').value = '';
+  document.getElementById('cycle-error').classList.remove('show');
+  const btn = document.getElementById('btn-cycle-save');
+  btn.disabled = false; btn.textContent = 'Open Cycle';
+  document.getElementById('modal-new-cycle').classList.add('show');
+}
+
+async function submitNewCycle() {
+  const nombre = document.getElementById('cycle-nombre').value.trim();
+  const tipo = document.getElementById('cycle-tipo').value;
+  const inicio = document.getElementById('cycle-inicio').value;
+  const cierre = document.getElementById('cycle-cierre').value;
+  const errEl = document.getElementById('cycle-error');
+  errEl.classList.remove('show');
+
+  if (!nombre || !inicio || !cierre) {
+    errEl.textContent = 'Please fill in all fields.';
+    errEl.classList.add('show');
+    return;
+  }
+
+  const btn = document.getElementById('btn-cycle-save');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Opening...';
+
+  try {
+    // Close any currently active cycle first — only one active at a time
+    const active = (cachedData.evalCycles || []).filter(c => c.activo);
+    if (active.length) {
+      await sbFetch(`evaluacion_ciclos?id=in.(${active.map(c => c.id).join(',')})`, {
+        method: 'PATCH', body: JSON.stringify({ activo: false })
+      });
+    }
+    await sbFetch('evaluacion_ciclos', {
+      method: 'POST',
+      body: JSON.stringify([{ nombre, tipo, fecha_inicio: inicio, fecha_cierre: cierre, activo: true }])
+    });
+    btn.disabled = false; btn.textContent = 'Open Cycle';
+    closeModal('modal-new-cycle');
+    await loadEvalCycles();
+  } catch (err) {
+    errEl.textContent = 'Error opening cycle: ' + err.message;
+    errEl.classList.add('show');
+    btn.disabled = false;
+    btn.textContent = 'Open Cycle';
+  }
+}
+
+async function closeEvalCycle(cycleId) {
+  if (!confirm('Close this evaluation cycle? Employees will no longer be able to submit evaluations until a new cycle opens.')) return;
+  try {
+    await sbFetch(`evaluacion_ciclos?id=eq.${cycleId}`, { method: 'PATCH', body: JSON.stringify({ activo: false }) });
+    await loadEvalCycles();
+  } catch (err) { alert('Error closing cycle: ' + err.message); }
+}
+
+async function reopenEvalCycle(cycleId) {
+  if (!confirm('Reopen this cycle? Any other active cycle will be closed automatically.')) return;
+  try {
+    const active = (cachedData.evalCycles || []).filter(c => c.activo);
+    if (active.length) {
+      await sbFetch(`evaluacion_ciclos?id=in.(${active.map(c => c.id).join(',')})`, {
+        method: 'PATCH', body: JSON.stringify({ activo: false })
+      });
+    }
+    await sbFetch(`evaluacion_ciclos?id=eq.${cycleId}`, { method: 'PATCH', body: JSON.stringify({ activo: true }) });
+    await loadEvalCycles();
+  } catch (err) { alert('Error reopening cycle: ' + err.message); }
+}
+
 function renderEmployeesTable(employees) {
   const tbody = document.getElementById('tbl-employees-body');
   const searchEl = document.getElementById('employee-search');
   const q = (searchEl && searchEl.value || '').trim().toLowerCase();
   const filtered = q ? employees.filter(e => (e.nombre_completo || '').toLowerCase().includes(q) || (e.username || '').toLowerCase().includes(q)) : employees;
-  if (employees.length === 0) { tbody.innerHTML = `<tr><td colspan="9" class="empty-state">No employees yet.</td></tr>`; return; }
-  if (filtered.length === 0) { tbody.innerHTML = `<tr><td colspan="9" class="empty-state">No employees match "${q}".</td></tr>`; return; }
+  if (employees.length === 0) { tbody.innerHTML = `<tr><td colspan="10" class="empty-state">No employees yet.</td></tr>`; return; }
+  if (filtered.length === 0) { tbody.innerHTML = `<tr><td colspan="10" class="empty-state">No employees match "${q}".</td></tr>`; return; }
   tbody.innerHTML = filtered.map(e => {
     const t1Lock = !e.es_admin ? certLockStatus(e.id, 'tier1') : null;
     const t2Lock = !e.es_admin ? certLockStatus(e.id, 'tier2') : null;
@@ -678,12 +852,16 @@ function renderEmployeesTable(employees) {
     const changeRoleBtn = (isSuperAdmin() && !isMe) ? `<button class="btn btn-ghost" onclick="openChangeRoleModal('${e.id}','${escName}','${e.rol}','${e.nivel_admin || ''}')">Change Role</button>` : '';
     const deptDisplay = e.departamento ? e.departamento.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase()) : '<span style="color:var(--red)">Unset</span>';
     const reclassifyBtn = isSuperAdmin() ? ` <button class="btn btn-ghost" style="padding:2px 8px;font-size:11px;" onclick="openReclassifyModal('${e.id}','${escName}','${e.departamento || ''}')">✎</button>` : '';
+    const canEditStore = isSuperAdmin() || (admin && admin.nivel_admin === 'admin_secundario');
+    const storeDisplay = e.tienda || '<span style="color:var(--red)">Unset</span>';
+    const storeBtn = canEditStore ? ` <button class="btn btn-ghost" style="padding:2px 8px;font-size:11px;" onclick="openReclassifyStoreModal('${e.id}','${escName}','${e.tienda || ''}')">✎</button>` : '';
     return `<tr>
       <td>${e.nombre_completo}${adminBadge}${isMe ? ' <span class="pill pill-gray">YOU</span>' : ''}</td>
       <td>${e.username}</td>
       <td>${e.employee_id || '—'}</td>
       <td>${e.tienda || '—'}</td>
       <td>${deptDisplay}${reclassifyBtn}</td>
+      <td>${storeDisplay}${storeBtn}</td>
       <td>${e.tier1 ? `<span class="pill pill-green">${e.tier1.porcentaje}%</span>` : (t1Lock && t1Lock.locked ? '<span class="pill pill-red">Locked</span>' : '<span class="pill pill-gray">—</span>')}</td>
       <td>${e.tier2 ? `<span class="pill pill-green">${e.tier2.porcentaje}%</span>` : (t2Lock && t2Lock.locked ? '<span class="pill pill-red">Locked</span>' : '<span class="pill pill-gray">—</span>')}</td>
       <td>${e.totalPoints}</td>
@@ -732,6 +910,40 @@ async function submitReclassify() {
     alert('Error saving: ' + err.message);
     btn.disabled = false;
     btn.textContent = 'Save';
+  }
+}
+
+/* ════════ RECLASSIFY STORE (Super Admin + Admin Secundario) ════════ */
+let reclassifyStoreTarget = null;
+
+function openReclassifyStoreModal(empId, empName, currentStore) {
+  const canEdit = isSuperAdmin() || (admin && admin.nivel_admin === 'admin_secundario');
+  if (!canEdit) { alert('Only an Admin or Super Admin can reassign stores.'); return; }
+  reclassifyStoreTarget = empId;
+  document.getElementById('reclassify-store-desc').textContent = `${empName} — pick the correct store.`;
+  document.getElementById('reclassify-tienda').value = currentStore || 'Euclid / Anaheim';
+  const btn = document.getElementById('btn-reclassify-store-save');
+  btn.disabled = false; btn.textContent = 'Save';
+  document.getElementById('modal-reclassify-store').classList.add('show');
+}
+
+async function submitReclassifyStore() {
+  if (!reclassifyStoreTarget) return;
+  const tienda = document.getElementById('reclassify-tienda').value;
+  const btn = document.getElementById('btn-reclassify-store-save');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Saving...';
+  try {
+    await sbFetch(`empleados?id=eq.${reclassifyStoreTarget}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ tienda })
+    });
+    btn.disabled = false; btn.textContent = 'Save';
+    reclassifyStoreTarget = null;
+    closeModal('modal-reclassify-store');
+    await loadEmployees();
+  } catch (err) {
+    alert('Error saving: ' + err.message);
+    btn.disabled = false; btn.textContent = 'Save';
   }
 }
 
