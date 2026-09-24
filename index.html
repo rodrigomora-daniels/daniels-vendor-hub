@@ -188,8 +188,11 @@
       </div>
       <label class="field-label">Invitation Code *</label>
       <input type="text" class="field-input" id="signup-code" placeholder="e.g. DANIELS2026-A7X3" autocomplete="off" oninput="onSignupCodeInput()">
-      <label class="field-label">Full Name *</label>
-      <input type="text" class="field-input" id="signup-name" placeholder="Your full name" autocomplete="off">
+      <label class="field-label">First Name *</label>
+      <input type="text" class="field-input" id="signup-firstname" placeholder="e.g. Juan" autocomplete="off">
+      <label class="field-label">Last Name *</label>
+      <input type="text" class="field-input" id="signup-lastname" placeholder="e.g. Hernández" autocomplete="off">
+      <input type="hidden" id="signup-name">
       <label class="field-label">Employee ID *</label>
       <input type="text" class="field-input" id="signup-empid" placeholder="e.g. DHC-002" autocomplete="off">
       <label class="field-label">Choose a Username *</label>
@@ -544,10 +547,13 @@ function showResetBanner(emp) {
   document.getElementById('signup-reset-banner').style.display = 'block';
   document.getElementById('signup-reset-banner-text').innerHTML =
     `👋 Welcome back, <strong>${emp.nombre_completo}</strong>! This code resets the password for your existing account (username: <strong>${emp.username}</strong>). Just choose a new password below — your badges and certification history stay exactly as they are.`;
-  document.getElementById('signup-name').value = emp.nombre_completo;
+  const parts = (emp.nombre_completo || '').trim().split(/\s+/);
+  document.getElementById('signup-firstname').value = parts[0] || '';
+  document.getElementById('signup-lastname').value = parts.slice(1).join(' ') || '';
   document.getElementById('signup-empid').value = emp.employee_id || '';
   document.getElementById('signup-username').value = emp.username;
-  document.getElementById('signup-name').disabled = true;
+  document.getElementById('signup-firstname').disabled = true;
+  document.getElementById('signup-lastname').disabled = true;
   document.getElementById('signup-empid').disabled = true;
   document.getElementById('signup-username').disabled = true;
   document.getElementById('btn-signup').textContent = 'Reset My Password';
@@ -555,15 +561,22 @@ function showResetBanner(emp) {
 
 function hideResetBanner() {
   document.getElementById('signup-reset-banner').style.display = 'none';
-  document.getElementById('signup-name').disabled = false;
+  document.getElementById('signup-firstname').disabled = false;
+  document.getElementById('signup-lastname').disabled = false;
   document.getElementById('signup-empid').disabled = false;
   document.getElementById('signup-username').disabled = false;
   document.getElementById('btn-signup').textContent = 'Create Account';
 }
 
+function titleCase(str) {
+  return str.replace(/\S+/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+}
+
 async function handleSignup() {
   const code = document.getElementById('signup-code').value.trim();
-  const name = document.getElementById('signup-name').value.trim();
+  const firstName = document.getElementById('signup-firstname').value.trim();
+  const lastName = document.getElementById('signup-lastname').value.trim();
+  const name = titleCase(`${firstName} ${lastName}`.trim());
   const empId = document.getElementById('signup-empid').value.trim();
   const username = document.getElementById('signup-username').value.trim();
   const departamento = document.getElementById('signup-departamento').value;
@@ -575,7 +588,12 @@ async function handleSignup() {
 
   errEl.classList.remove('show');
 
-  if (!code || !name || !empId || !username || !tienda || !pw1 || !pw2) {
+  if (!firstName || !lastName) {
+    errEl.textContent = 'Please enter both your first AND last name. / Por favor escribe tu nombre Y tu apellido.';
+    errEl.classList.add('show');
+    return;
+  }
+  if (!code || !empId || !username || !tienda || !pw1 || !pw2) {
     errEl.textContent = 'Please fill in all required fields, including your store.';
     errEl.classList.add('show');
     return;
