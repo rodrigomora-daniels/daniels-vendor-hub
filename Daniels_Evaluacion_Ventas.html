@@ -104,43 +104,83 @@ let isAdminPreview = false;
    Source: original benchmark design (industry BARS + forced-choice
    methodology), bilingual EN/ES on one line per Tier1/2 pattern.
    ════════════════════════════════════════════════════════════ */
-const FC_QUESTIONS = [
+/* ════════════════════════════════════════════════════════════
+   SELF-ASSESSMENT — values-based reflection over the full cycle
+   (last ~6 months), NOT moment-in-time sales scenarios. Multiple
+   choice with frequency/quantity anchors, first person. This is
+   about how the employee showed up as a colleague and teammate,
+   not about sales technique — that's covered separately by the
+   quota numbers the supervisor enters.
+   ════════════════════════════════════════════════════════════ */
+const VALUES_QUESTIONS = [
   {
-    key: 'fc_cliente_dificil',
-    title: 'Handling Customers / Manejo de Clientes',
-    q: "Select the option that best describes your usual way of handling this. / Selecciona la opción que mejor describe tu forma de actuar habitual.",
-    optA: "When a customer is upset or frustrated, I prefer to give them space and let them calm down before continuing the conversation. / Cuando un cliente está difícil o frustrado, prefiero darle espacio y dejar que se calme antes de continuar la conversación.",
-    optB: "When a customer is upset or frustrated, I try to identify the root cause of their frustration and address it directly in the moment. / Cuando un cliente está difícil o frustrado, busco identificar la causa raíz de su frustración y la atiendo directamente en el momento."
+    key: 'trabajo_equipo',
+    title: 'Teamwork / Trabajo en Equipo',
+    q: "Thinking about the last 6 months, how often did you help a coworker out — covering a customer, answering a question, jumping in on a busy day? / Pensando en los últimos 6 meses, ¿con qué frecuencia ayudaste a un compañero — cubriendo un cliente, respondiendo una pregunta, apoyando en un día ocupado?",
+    opts: [
+      "Rarely — I mostly stayed focused on my own work. / Rara vez — me enfoqué principalmente en mi propio trabajo.",
+      "A few times when someone asked directly. / Algunas veces cuando alguien me lo pidió directamente.",
+      "Regularly — it's become a normal part of how I work. / Regularmente — se ha vuelto parte normal de cómo trabajo.",
+      "Very often — coworkers know they can count on me. / Muy seguido — mis compañeros saben que pueden contar conmigo."
+    ]
   },
   {
-    key: 'fc_conocimiento',
-    title: 'Product Knowledge / Conocimiento de Producto',
-    q: "Select the option that best describes your level of product knowledge. / Selecciona la opción que mejor describe tu nivel de conocimiento.",
-    optA: "I know the products I sell most often well and can answer questions about them confidently. / Conozco bien los productos que vendo con más frecuencia y puedo responder preguntas sobre ellos con confianza.",
-    optB: "I know the products I sell often, and also the ones I sell rarely — I stay current on catalog changes. / Conozco los productos que vendo frecuentemente y también los que vendo poco; me mantengo actualizado en los cambios de catálogo."
+    key: 'comunicacion_respeto',
+    title: 'Communication & Respect / Comunicación y Respeto',
+    q: "How would you describe how you communicate with coworkers and managers when there's a disagreement or a mistake? / ¿Cómo describirías tu forma de comunicarte con compañeros y gerentes cuando hay un desacuerdo o un error?",
+    opts: [
+      "I tend to avoid the conversation or let it go unresolved. / Tiendo a evitar la conversación o dejarla sin resolver.",
+      "I bring it up eventually, sometimes after some frustration builds. / Lo menciono eventualmente, a veces después de que se acumula algo de frustración.",
+      "I address it directly and respectfully, close to when it happens. / Lo abordo directa y respetuosamente, cerca de cuando ocurre.",
+      "I address it directly, and I also make space for the other person's side before reacting. / Lo abordo directamente, y además doy espacio a la perspectiva de la otra persona antes de reaccionar."
+    ]
   },
   {
-    key: 'fc_financiamiento',
-    title: 'Financing Presentation / Presentación de Financiamiento',
-    q: "Select the option that best describes your practice with financing. / Selecciona la opción que mejor describe tu práctica con el crédito.",
-    optA: "I present the financing option to customers who seem interested or who ask me about it. / Presento la opción de financiamiento a los clientes que parecen interesados o que me preguntan por ella.",
-    optB: "I present financing as part of my process with every customer, regardless of how I size up their situation at first glance. / Presento la opción de financiamiento como parte de mi proceso con todos los clientes, sin importar cómo califico a primera vista su situación."
+    key: 'integridad_politicas',
+    title: 'Integrity / Integridad',
+    q: "Over the last 6 months, how would you describe your approach to store policies and honesty with customers and coworkers? / En los últimos 6 meses, ¿cómo describirías tu enfoque hacia las políticas de la tienda y la honestidad con clientes y compañeros?",
+    opts: [
+      "I sometimes bend a rule if it makes things easier in the moment. / A veces flexibilizo una regla si hace las cosas más fáciles en el momento.",
+      "I generally follow policy, but I don't always double-check the details. / Generalmente sigo la política, pero no siempre verifico los detalles.",
+      "I follow policy consistently, even when it's inconvenient. / Sigo la política consistentemente, incluso cuando es inconveniente.",
+      "I follow policy consistently, and I speak up if I see something that isn't right. / Sigo la política consistentemente, y hablo si veo algo que no está bien."
+    ]
   },
   {
-    key: 'fc_metas',
-    title: 'Response to Falling Behind Quota / Respuesta ante la Meta',
-    q: "Select the option that best reflects your behavior when you're behind on your monthly goal. / Selecciona la opción que mejor refleja tu comportamiento cuando vas abajo de meta.",
-    optA: "When I'm not on track for my monthly quota, I focus on closing the sales I already have in progress. / Cuando no voy en camino a mi meta mensual, me concentro en cerrar las ventas que ya tengo en proceso.",
-    optB: "When I'm not on track for my monthly quota, I analyze what I'm doing differently and adjust my approach before the month ends. / Cuando no voy en camino a mi meta mensual, analizo qué estoy haciendo diferente y ajusto mi approach antes de que termine el mes."
+    key: 'confiabilidad',
+    title: 'Reliability / Confiabilidad',
+    q: "How would you describe your attendance and punctuality over the last 6 months? / ¿Cómo describirías tu asistencia y puntualidad en los últimos 6 meses?",
+    opts: [
+      "I've had a few unplanned absences or late arrivals. / He tenido algunas ausencias imprevistas o llegadas tarde.",
+      "Mostly reliable, with an occasional issue. / Mayormente confiable, con algún problema ocasional.",
+      "Reliable — I show up on time and communicate ahead if something comes up. / Confiable — llego a tiempo y comunico con anticipación si surge algo.",
+      "Fully reliable, and I've covered shifts or helped when the team was short-staffed. / Totalmente confiable, y he cubierto turnos o ayudado cuando el equipo estuvo corto de personal."
+    ]
   },
   {
-    key: 'fc_desarrollo',
-    title: 'Development & Training / Desarrollo e Iniciativa',
-    q: "Select the option that best describes your relationship with training. / Selecciona la opción que mejor describe tu relación con el entrenamiento.",
-    optA: "I've completed the required certifications and review them when I need to recall something specific. / He completado las certificaciones requeridas y las reviso cuando necesito recordar algo específico.",
-    optB: "I've completed the required certifications and I also actively apply what I learned in my daily work, without waiting to be reminded. / He completado las certificaciones requeridas y además aplico activamente lo aprendido en mi trabajo diario, sin esperar que me lo recuerden."
+    key: 'iniciativa_crecimiento',
+    title: 'Initiative & Growth / Iniciativa y Crecimiento',
+    q: "In the last 6 months, how many times did you take initiative on something beyond your basic job description — a suggestion, a process improvement, learning something new? / En los últimos 6 meses, ¿cuántas veces tomaste iniciativa en algo más allá de tu descripción básica de trabajo — una sugerencia, una mejora de proceso, aprender algo nuevo?",
+    opts: [
+      "None that I can think of. / Ninguna que recuerde.",
+      "Once or twice. / Una o dos veces.",
+      "A handful of times — it's something I try to do. / Varias veces — es algo que trato de hacer.",
+      "Regularly — I actively look for ways to contribute beyond my role. / Regularmente — busco activamente formas de contribuir más allá de mi rol."
+    ]
+  },
+  {
+    key: 'cultura_dhc',
+    title: 'Company Culture / Cultura de la Empresa',
+    q: "Overall, how connected do you feel to the DHC team and how it operates day to day? / En general, ¿qué tan conectado te sientes con el equipo de DHC y cómo opera día a día?",
+    opts: [
+      "Mostly just here to do my job and go home. / Principalmente aquí para hacer mi trabajo e irme a casa.",
+      "I feel part of the team, though I don't think about it much beyond my shift. / Me siento parte del equipo, aunque no pienso mucho en ello más allá de mi turno.",
+      "I feel genuinely connected and want to see the team do well. / Me siento genuinamente conectado y quiero que al equipo le vaya bien.",
+      "I feel connected and I actively try to make DHC a better place to work for others too. / Me siento conectado y trato activamente de hacer de DHC un mejor lugar para trabajar para los demás también."
+    ]
   }
 ];
+
 
 let currentDimIdx = 0;
 let responses = {};
@@ -480,7 +520,7 @@ function confirmQuota() {
    (3rd person) for supervisor mode.
    ════════════════════════════════════════════════════════════ */
 function currentDimSet() {
-  return evalMode === 'supervisor' ? SUPERVISOR_DIMENSIONS : FC_QUESTIONS;
+  return evalMode === 'supervisor' ? SUPERVISOR_DIMENSIONS : VALUES_QUESTIONS;
 }
 
 function renderQuestionScreen() {
@@ -509,13 +549,12 @@ function renderQuestionScreen() {
             <div class="txt">${opt}</div>
           </div>`;
       }).join('')
-    : ['A', 'B'].map(letter => {
-        const optText = letter === 'A' ? dim.optA : dim.optB;
-        const selected = responses[dim.key] === letter ? 'selected' : '';
+    : dim.opts.map((opt, i) => {
+        const selected = responses[dim.key] === i ? 'selected' : '';
         return `
-          <div class="bars-option ${selected}" onclick="selectFcOption('${dim.key}', '${letter}')">
-            <div class="num">${letter}</div>
-            <div class="txt">${optText}</div>
+          <div class="bars-option ${selected}" onclick="selectOption('${dim.key}', ${i})">
+            <div class="num">${String.fromCharCode(65 + i)}</div>
+            <div class="txt">${opt}</div>
           </div>`;
       }).join('');
 
@@ -540,15 +579,10 @@ function selectOption(key, value) {
   renderQuestionScreen();
 }
 
-function selectFcOption(key, letter) {
-  responses[key] = letter;
-  renderQuestionScreen();
-}
-
 function nextDimension() {
   const dims = currentDimSet();
   const dim = dims[currentDimIdx];
-  if (!responses[dim.key]) {
+  if (responses[dim.key] === undefined) {
     document.getElementById('dim-error').classList.add('show');
     return;
   }
@@ -566,11 +600,15 @@ function nextDimension() {
 function renderReviewScreen() {
   const content = document.getElementById('app-content');
   const dims = currentDimSet();
-  const rows = dims.map(dim => `
+  const rows = dims.map(dim => {
+    const raw = responses[dim.key];
+    const display = evalMode === 'supervisor' ? raw + '/5' : String.fromCharCode(65 + raw);
+    return `
     <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0ece2;font-size:13px;">
       <span style="color:var(--dkgray)">${dim.title}</span>
-      <strong style="color:var(--navy)">${evalMode === 'supervisor' ? responses[dim.key] + '/5' : responses[dim.key]}</strong>
-    </div>`).join('');
+      <strong style="color:var(--navy)">${display}</strong>
+    </div>`;
+  }).join('');
 
   const quotaRow = evalMode === 'supervisor'
     ? `<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0ece2;font-size:13px;">
@@ -642,8 +680,12 @@ async function submitEvaluation() {
     } else {
       // Self score = % of forced-choice questions answered with the
       // higher-performance option (B). Same formula as the original design.
-      const bCount = Object.values(responses).filter(v => v === 'B').length;
-      evalPayload.puntaje_final = Math.round((bCount / dims.length) * 100);
+      // Self score = average of chosen option index / (options - 1), scaled to 100.
+      // e.g. picking the top option (index 3 of 4) on everything = 100.
+      const dimsList = currentDimSet();
+      const maxIdx = dimsList[0].opts.length - 1;
+      const sum = dimsList.reduce((s, d) => s + (responses[d.key] || 0), 0);
+      evalPayload.puntaje_final = Math.round((sum / (dimsList.length * maxIdx)) * 100);
     }
 
     const evalRows = await sbFetch('evaluaciones', { method: 'POST', body: JSON.stringify(evalPayload) });
@@ -654,10 +696,9 @@ async function submitEvaluation() {
       dimension: dim.key,
       pregunta_key: dim.key,
       pregunta_texto: dim.q,
-      // Supervisor mode: 1-5 BARS score as-is. Self mode: forced-choice A/B
-      // stored as 0/1 (B=1, higher-performance) so it fits the same numeric
-      // column and the self score can be computed as %B chosen × 100.
-      respuesta_score: evalMode === 'supervisor' ? responses[dim.key] : (responses[dim.key] === 'B' ? 1 : 0)
+      // Supervisor mode: 1-5 BARS score. Self mode: multiple-choice index
+      // (0-3), both numeric so they fit the same column.
+      respuesta_score: responses[dim.key]
     }));
     await sbFetch('evaluacion_respuestas', { method: 'POST', body: JSON.stringify(respuestaRows) });
 
