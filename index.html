@@ -657,9 +657,9 @@ async function handleSignup() {
           if (lookup && lookup[0]) targetId = lookup[0].id;
         }
         if (targetId) {
-          await sbFetch(`empleados?id=eq.${targetId}`, {
-            method: 'PATCH',
-            body: JSON.stringify({ departamento, tienda })
+          await sbFetch('rpc/registro_asignar_tienda', {
+            method: 'POST',
+            body: JSON.stringify({ p_empleado_id: targetId, p_tienda: tienda })
           });
         }
       } catch (err) {

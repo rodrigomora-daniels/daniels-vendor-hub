@@ -896,10 +896,11 @@ async function submitReclassify() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Saving...';
   try {
-    await sbFetch(`empleados?id=eq.${reclassifyTarget}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ departamento: dept })
+    const rr = await sbFetch('rpc/admin_reclasificar_departamento', {
+      method: 'POST',
+      body: JSON.stringify({ p_admin_id: admin.id, p_empleado_id: reclassifyTarget, p_departamento: dept })
     });
+    if (!rr || !rr[0] || !rr[0].success) throw new Error((rr && rr[0] && rr[0].message) || 'Not saved');
     // ✅ FIX: reset button and target BEFORE closing so next modal open is clean
     btn.disabled = false;
     btn.textContent = 'Save';
@@ -933,10 +934,11 @@ async function submitReclassifyStore() {
   const btn = document.getElementById('btn-reclassify-store-save');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Saving...';
   try {
-    await sbFetch(`empleados?id=eq.${reclassifyStoreTarget}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ tienda })
+    const rs = await sbFetch('rpc/admin_reclasificar_tienda', {
+      method: 'POST',
+      body: JSON.stringify({ p_admin_id: admin.id, p_empleado_id: reclassifyStoreTarget, p_tienda: tienda })
     });
+    if (!rs || !rs[0] || !rs[0].success) throw new Error((rs && rs[0] && rs[0].message) || 'Not saved');
     btn.disabled = false; btn.textContent = 'Save';
     reclassifyStoreTarget = null;
     closeModal('modal-reclassify-store');
