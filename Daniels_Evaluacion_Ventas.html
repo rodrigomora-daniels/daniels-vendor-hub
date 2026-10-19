@@ -293,7 +293,7 @@ async function init() {
   }
 
   try {
-    const rows = await sbFetch(`empleados?id=eq.${empId}&select=id,nombre_completo,employee_id,tienda,es_admin`);
+    const rows = await sbFetch(`empleados?id=eq.${empId}&select=id,nombre_completo,employee_id,tienda,es_admin,rol`);
     if (!rows || rows.length === 0) {
       content.innerHTML = `<div class="card"><div class="no-cycle">Employee not found. / Empleado no encontrado.</div></div>`;
       return;
@@ -348,12 +348,108 @@ async function renderModePicker() {
         <div class="num">📝</div>
         <div class="txt"><strong>My Self-Assessment / Mi Autoevaluación</strong><br>Complete your own self-assessment for this cycle. / Completa tu propia autoevaluación de este ciclo.</div>
       </div>
+      ${loggedInEmployee.rol === 'vendedor' && !loggedInEmployee.es_admin ? `
+      <div class="bars-option" onclick="startManagerFeedback()">
+        <div class="num">💬</div>
+        <div class="txt"><strong>Anonymous Feedback for Your Manager / Comentarios Anónimos para tu Gerente</strong><br>Your answers are anonymous. Your manager will never see them. / Tus respuestas son anónimas. Tu gerente nunca las verá.</div>
+      </div>` : ''}
       ${canSupervise ? `
       <div class="bars-option" onclick="startSupervisorSearch()">
         <div class="num">👥</div>
         <div class="txt"><strong>Evaluate a Team Member / Evaluar a un Miembro del Equipo</strong><br>Search for and evaluate someone on your team. / Busca y evalúa a alguien de tu equipo.</div>
       </div>` : ''}
     </div>`;
+}
+
+
+/* ════════ ANONYMOUS UPWARD FEEDBACK (vendedor → store manager) ════════ */
+const MANAGER_FEEDBACK_QUESTIONS = [
+  { key: 'respeto', q: 'My manager treats me with respect. / Mi gerente me trata con respeto.' },
+  { key: 'claridad', q: 'My manager gives clear direction and expectations. / Mi gerente da instrucciones y expectativas claras.' },
+  { key: 'disponibilidad', q: 'My manager is available when I need help. / Mi gerente está disponible cuando necesito ayuda.' },
+  { key: 'retroalimentacion', q: 'My manager gives me feedback that helps me improve. / Mi gerente me da retroalimentación que me ayuda a mejorar.' },
+  { key: 'justicia', q: 'My manager is fair with leads, schedules and opportunities. / Mi gerente es justo con clientes, horarios y oportunidades.' },
+  { key: 'ejemplo', q: 'My manager follows the same rules he or she asks of the team. / Mi gerente cumple las mismas reglas que pide al equipo.' }
+];
+const FEEDBACK_SCALE = [
+  { v: 3, t: 'Always / Siempre' }, { v: 2, t: 'Often / Casi siempre' },
+  { v: 1, t: 'Sometimes / A veces' }, { v: 0, t: 'Rarely / Casi nunca' }
+];
+let feedbackManager = null;
+let feedbackAnswers = {};
+
+async function startManagerFeedback() {
+  const content = document.getElementById('app-content');
+  content.innerHTML = `<div class="card"><p style="text-align:center;color:var(--mgray);padding:20px 0;">Loading... / Cargando...</p></div>`;
+  let managers = [];
+  try {
+    managers = await sbFetch('rpc/feedback_managers_elegibles', { method: 'POST', body: JSON.stringify({ p_empleado_id: loggedInEmployee.id }) });
+  } catch (err) {
+    content.innerHTML = `<div class="card"><div class="no-cycle">Could not load managers. / No se pudo cargar la lista.</div></div>`;
+    return;
+  }
+  const rows = (managers || []).map(m => m.ya_respondido
+    ? `<div class="bars-option" style="opacity:.55;cursor:default;"><div class="num">✅</div><div class="txt"><strong>${m.nombre}</strong> — Sent / Enviado</div></div>`
+    : `<div class="bars-option" onclick="selectFeedbackManager('${m.manager_id}','${(m.nombre || '').replace(/'/g, "\\'")}')"><div class="num">👤</div><div class="txt"><strong>${m.nombre}</strong> <span style="color:var(--mgray);font-size:11px;">(${m.tienda || ''})</span></div></div>`
+  ).join('');
+  content.innerHTML = `
+    <div class="card">
+      <h2>Anonymous Feedback / Comentarios Anónimos</h2>
+      <div class="desc">Pick your manager. Your name is never saved with your answers, and managers cannot see them. / Elige a tu gerente. Tu nombre nunca se guarda con tus respuestas y los gerentes no pueden verlas.</div>
+      ${rows || '<p style="color:var(--mgray);font-size:13px;">No managers available. / No hay gerentes disponibles.</p>'}
+      <button class="btn" style="margin-top:14px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="renderModePicker()">← Back / Regresar</button>
+    </div>`;
+}
+
+function selectFeedbackManager(id, nombre) {
+  feedbackManager = { id, nombre };
+  feedbackAnswers = {};
+  const content = document.getElementById('app-content');
+  const qs = MANAGER_FEEDBACK_QUESTIONS.map((q, i) => `
+    <div style="margin-bottom:18px;">
+      <div style="font-size:14px;font-weight:600;color:var(--navy);margin-bottom:8px;">${i + 1}. ${q.q}</div>
+      ${FEEDBACK_SCALE.map(o => `<div class="bars-option" id="fb-${q.key}-${o.v}" onclick="pickFeedback('${q.key}',${o.v})" style="padding:8px 12px;margin-bottom:6px;"><div class="txt">${o.t}</div></div>`).join('')}
+    </div>`).join('');
+  content.innerHTML = `
+    <div class="card">
+      <h2>${nombre}</h2>
+      <div class="desc">Anonymous. Answer honestly. / Anónimo. Responde con honestidad.</div>
+      ${qs}
+      <div class="error-msg" id="fb-error">Please answer every question. / Por favor responde todas las preguntas.</div>
+      <button class="btn btn-primary" id="fb-submit" onclick="submitManagerFeedback()">Send anonymously / Enviar de forma anónima</button>
+      <button class="btn" style="margin-top:10px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="startManagerFeedback()">← Back / Regresar</button>
+    </div>`;
+}
+
+function pickFeedback(key, v) {
+  feedbackAnswers[key] = v;
+  FEEDBACK_SCALE.forEach(o => {
+    const el = document.getElementById(`fb-${key}-${o.v}`);
+    if (el) el.classList.toggle('selected', o.v === v);
+  });
+}
+
+async function submitManagerFeedback() {
+  const errEl = document.getElementById('fb-error');
+  if (MANAGER_FEEDBACK_QUESTIONS.some(q => feedbackAnswers[q.key] === undefined)) {
+    errEl.style.display = 'block'; return;
+  }
+  errEl.style.display = 'none';
+  const btn = document.getElementById('fb-submit');
+  btn.disabled = true; btn.textContent = 'Sending... / Enviando...';
+  try {
+    const rows = await sbFetch('rpc/enviar_feedback_anonimo', { method: 'POST', body: JSON.stringify({ p_empleado_id: loggedInEmployee.id, p_manager_id: feedbackManager.id, p_respuestas: feedbackAnswers }) });
+    const r = rows && rows[0];
+    if (!r || !r.success) { alert((r && r.message) || 'Could not send.'); btn.disabled = false; btn.textContent = 'Send anonymously / Enviar de forma anónima'; return; }
+    document.getElementById('app-content').innerHTML = `
+      <div class="card"><div class="success-screen"><div class="icon">✅</div>
+      <h2>Thank you / Gracias</h2>
+      <p>Your feedback was sent anonymously. / Tus comentarios se enviaron de forma anónima.</p>
+      <button class="btn btn-primary" style="margin-top:16px;" onclick="startManagerFeedback()">Continue / Continuar</button></div></div>`;
+  } catch (err) {
+    alert('Error: ' + err.message);
+    btn.disabled = false; btn.textContent = 'Send anonymously / Enviar de forma anónima';
+  }
 }
 
 async function startSelfAssessment() {
