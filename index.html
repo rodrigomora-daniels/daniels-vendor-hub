@@ -543,7 +543,9 @@ async function checkSignupCode() {
   }
 }
 
+let signupResetMode = false;
 function showResetBanner(emp) {
+  signupResetMode = true;
   document.getElementById('signup-reset-banner').style.display = 'block';
   document.getElementById('signup-reset-banner-text').innerHTML =
     `👋 Welcome back, <strong>${emp.nombre_completo}</strong>! This code resets the password for your existing account (username: <strong>${emp.username}</strong>). Just choose a new password below — your badges and certification history stay exactly as they are.`;
@@ -560,6 +562,7 @@ function showResetBanner(emp) {
 }
 
 function hideResetBanner() {
+  signupResetMode = false;
   document.getElementById('signup-reset-banner').style.display = 'none';
   document.getElementById('signup-firstname').disabled = false;
   document.getElementById('signup-lastname').disabled = false;
@@ -588,12 +591,12 @@ async function handleSignup() {
 
   errEl.classList.remove('show');
 
-  if (!firstName || !lastName) {
+  if (!signupResetMode && (!firstName || !lastName)) {
     errEl.textContent = 'Please enter both your first AND last name. / Por favor escribe tu nombre Y tu apellido.';
     errEl.classList.add('show');
     return;
   }
-  if (!code || !empId || !username || !tienda || !pw1 || !pw2) {
+  if (!code || !empId || !username || (!signupResetMode && !tienda) || !pw1 || !pw2) {
     errEl.textContent = 'Please fill in all required fields, including your store.';
     errEl.classList.add('show');
     return;
