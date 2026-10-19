@@ -186,7 +186,7 @@ let currentDimIdx = 0;
 let responses = {};
 let evalMode = null;        // 'self' | 'supervisor'
 let selectedEvaluado = null; // employee being evaluated, in supervisor mode
-let quotaData = { periodos_meta: null, periodos_total: null };
+let quotaData = { metrics: [], pct_promedio: null };
 
 /* ════════════════════════════════════════════════════════════
    SUPERVISOR DIMENSIONS — same 7 dimensions, 3rd-person BARS,
@@ -493,7 +493,7 @@ async function startSupervisorSearch() {
   selectedEvaluado = null;
   currentDimIdx = 0;
   responses = {};
-  quotaData = { periodos_meta: null, periodos_total: null };
+  quotaData = { metrics: [], pct_promedio: null };
 
   const content = document.getElementById('app-content');
   content.innerHTML = `<div class="card"><p style="text-align:center;color:var(--mgray);padding:20px 0;">Loading team roster... / Cargando lista de empleados...</p></div>`;
@@ -589,33 +589,108 @@ async function selectEvaluado(empId) {
     return;
   }
 
+  previousEval = null;
+  try {
+    const prev = await sbFetch(`evaluaciones?evaluado_id=eq.${empId}&tipo_evaluador=eq.supervisor&estado=eq.completada&ciclo_id=neq.${activeCycle.id}&select=score_final,score_conductual,pct_promedio_cuota,feedback_narrativo,completada_at&order=completada_at.desc&limit=1`);
+    if (prev && prev.length) previousEval = prev[0];
+  } catch (err) { console.warn('Could not load previous evaluation:', err); }
+
+  await loadMetricTemplate();
   renderQuotaScreen();
 }
 
+/* ════════ METRICS (configurable per manager) ════════ */
+let metricRows = [];
+let metricTemplateLoaded = false;
+let previousEval = null;
+
+async function loadMetricTemplate() {
+  if (metricTemplateLoaded && metricRows.length) { metricRows = metricRows.map(r => ({ ...r, real: '' })); return; }
+  let tpl = [];
+  try {
+    tpl = await sbFetch('rpc/metricas_plantilla_get', { method: 'POST', body: JSON.stringify({ p_evaluador_id: loggedInEmployee.id }) });
+  } catch (err) { console.warn('Could not load metric template:', err); }
+  metricRows = (tpl && tpl.length)
+    ? tpl.map(t => ({ nombre: t.nombre, unidad: t.unidad || '', meta: '', real: '' }))
+    : [{ nombre: 'Sales', unidad: '$', meta: '', real: '' }];
+  metricTemplateLoaded = true;
+}
+
+function metricPct(r) {
+  const meta = parseFloat(r.meta), real = parseFloat(r.real);
+  if (!(meta > 0) || isNaN(real) || real < 0) return null;
+  return Math.round((real / meta) * 1000) / 10;
+}
+
+function metricsAverage() {
+  const pcts = metricRows.map(metricPct).filter(v => v !== null).map(v => Math.min(v, 150));
+  return pcts.length ? Math.round((pcts.reduce((a, b) => a + b, 0) / pcts.length) * 10) / 10 : null;
+}
+
+function updateMetric(i, field, value) {
+  metricRows[i][field] = value;
+  const pct = metricPct(metricRows[i]);
+  const el = document.getElementById('metric-pct-' + i);
+  if (el) el.textContent = pct === null ? '—' : pct + '%';
+  const avg = metricsAverage();
+  const avgEl = document.getElementById('metric-avg');
+  if (avgEl) avgEl.textContent = avg === null ? '—' : avg + '%';
+}
+
+function addMetricRow() { metricRows.push({ nombre: '', unidad: '', meta: '', real: '' }); renderQuotaScreen(); }
+function removeMetricRow(i) { metricRows.splice(i, 1); if (!metricRows.length) metricRows.push({ nombre: '', unidad: '', meta: '', real: '' }); renderQuotaScreen(); }
+
 function renderQuotaScreen() {
   const content = document.getElementById('app-content');
+  const fld = 'padding:9px 10px;border:2px solid #e8e4dc;border-radius:8px;font-size:13px;width:100%;';
+  const rowsHtml = metricRows.map((r, i) => `
+    <div style="display:grid;grid-template-columns:1.6fr .7fr 1fr 1fr .8fr auto;gap:6px;align-items:center;margin-bottom:8px;">
+      <input type="text" placeholder="Metric / Métrica" value="${(r.nombre || '').replace(/"/g, '&quot;')}" oninput="updateMetric(${i},'nombre',this.value)" style="${fld}">
+      <input type="text" placeholder="Unit" value="${(r.unidad || '').replace(/"/g, '&quot;')}" oninput="updateMetric(${i},'unidad',this.value)" style="${fld}">
+      <input type="number" min="0" step="any" placeholder="Goal / Meta" value="${r.meta}" oninput="updateMetric(${i},'meta',this.value)" style="${fld}">
+      <input type="number" min="0" step="any" placeholder="Actual / Real" value="${r.real}" oninput="updateMetric(${i},'real',this.value)" style="${fld}">
+      <strong id="metric-pct-${i}" style="color:var(--navy);font-size:13px;text-align:center;">${metricPct(r) === null ? '—' : metricPct(r) + '%'}</strong>
+      <button class="btn" onclick="removeMetricRow(${i})" style="padding:4px 9px;background:transparent;color:var(--mgray);font-size:16px;" title="Remove">✕</button>
+    </div>`).join('');
+
+  const prevHtml = previousEval ? `
+    <div style="background:#f4f1ea;border-left:4px solid var(--gold);padding:12px 14px;border-radius:6px;font-size:13px;margin-bottom:16px;">
+      <strong>Previous evaluation / Evaluación anterior</strong> (${(previousEval.completada_at || '').slice(0, 10)})<br>
+      Final score / Puntaje final: <strong>${previousEval.score_final ?? '—'}</strong>
+      · Quota / Cuota: <strong>${previousEval.pct_promedio_cuota ?? '—'}%</strong>
+      ${previousEval.feedback_narrativo ? `<br><em>"${previousEval.feedback_narrativo.replace(/</g, '&lt;')}"</em>` : ''}
+    </div>` : '';
+
   content.innerHTML = `
     <div class="card">
-      <h2>Quota Performance / Desempeño de Cuota</h2>
-      <div class="desc">Evaluating: <strong>${selectedEvaluado.nombre_completo}</strong> — ${activeCycle.nombre}<br>How many periods (months) in this cycle did they meet their sales quota? / ¿En cuántos periodos (meses) de este ciclo cumplieron su cuota de ventas?</div>
-      <label class="field-label" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--navy);">Periods quota was MET / Periodos con cuota CUMPLIDA</label>
-      <input type="number" min="0" class="field-input" id="quota-met" placeholder="e.g. 4 / ej. 4" style="width:100%;padding:12px 14px;border:2px solid #e8e4dc;border-radius:10px;font-size:14px;margin-bottom:14px;">
-      <label class="field-label" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--navy);">Total periods in this cycle / Total de periodos en este ciclo</label>
-      <input type="number" min="1" class="field-input" id="quota-total" placeholder="e.g. 6 / ej. 6" style="width:100%;padding:12px 14px;border:2px solid #e8e4dc;border-radius:10px;font-size:14px;margin-bottom:14px;">
-      <div class="error-msg" id="quota-error">Please fill in both fields. / Por favor llena ambos campos.</div>
+      <h2>Performance Metrics / Métricas de Desempeño</h2>
+      <div class="desc">Evaluating: <strong>${selectedEvaluado.nombre_completo}</strong> — ${activeCycle.nombre}<br>Enter this person's goals and actual results for the cycle. Add or remove metrics as needed. / Captura las metas y resultados reales de esta persona en el ciclo. Agrega o quita métricas según necesites.</div>
+      ${prevHtml}
+      <div style="display:grid;grid-template-columns:1.6fr .7fr 1fr 1fr .8fr auto;gap:6px;font-size:11px;font-weight:700;color:var(--mgray);margin-bottom:6px;">
+        <span>METRIC</span><span>UNIT</span><span>GOAL</span><span>ACTUAL</span><span style="text-align:center;">% MET</span><span></span>
+      </div>
+      ${rowsHtml}
+      <button class="btn" onclick="addMetricRow()" style="background:transparent;color:var(--navy);font-weight:600;text-decoration:underline;margin-bottom:10px;">+ Add metric / Agregar métrica</button>
+      <div style="display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid #f0ece2;font-size:14px;">
+        <span>Average attainment / Cumplimiento promedio</span><strong id="metric-avg" style="color:var(--navy);">${metricsAverage() === null ? '—' : metricsAverage() + '%'}</strong>
+      </div>
+      <label style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--mgray);margin:8px 0 14px;"><input type="checkbox" id="metric-save-tpl" checked> Remember these metric names for my next evaluations / Recordar estos nombres para mis próximas evaluaciones</label>
+      <div class="error-msg" id="quota-error">Add at least one metric with a goal greater than 0 and an actual value. / Agrega al menos una métrica con meta mayor a 0 y un valor real.</div>
       <button class="btn btn-primary" onclick="confirmQuota()">Continue / Continuar</button>
       <button class="btn" style="margin-top:10px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="renderSupervisorSearchScreen('')">← Back / Regresar</button>
     </div>`;
 }
 
-function confirmQuota() {
-  const met = parseInt(document.getElementById('quota-met').value, 10);
-  const total = parseInt(document.getElementById('quota-total').value, 10);
-  if (isNaN(met) || isNaN(total) || total < 1 || met < 0 || met > total) {
-    document.getElementById('quota-error').classList.add('show');
-    return;
+async function confirmQuota() {
+  const valid = metricRows.filter(r => (r.nombre || '').trim() && metricPct(r) !== null);
+  if (!valid.length) { document.getElementById('quota-error').classList.add('show'); return; }
+  quotaData = { metrics: valid.map(r => ({ nombre: r.nombre.trim(), unidad: (r.unidad || '').trim(), meta: parseFloat(r.meta), real: parseFloat(r.real) })), pct_promedio: metricsAverage() };
+  const saveTpl = document.getElementById('metric-save-tpl');
+  if (saveTpl && saveTpl.checked && !isAdminPreview) {
+    try {
+      await sbFetch('rpc/metricas_plantilla_set', { method: 'POST', body: JSON.stringify({ p_evaluador_id: loggedInEmployee.id, p_items: quotaData.metrics.map((m, i) => ({ nombre: m.nombre, unidad: m.unidad, orden: i })) }) });
+    } catch (err) { console.warn('Could not save metric template:', err); }
   }
-  quotaData = { periodos_meta: met, periodos_total: total };
   currentDimIdx = 0;
   responses = {};
   renderQuestionScreen();
@@ -720,7 +795,7 @@ function renderReviewScreen() {
   const quotaRow = evalMode === 'supervisor'
     ? `<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0ece2;font-size:13px;">
         <span style="color:var(--dkgray)">Quota Performance / Desempeño de Cuota</span>
-        <strong style="color:var(--navy)">${quotaData.periodos_meta}/${quotaData.periodos_total} periods met</strong>
+        <strong style="color:var(--navy)">${quotaData.pct_promedio}% avg (${quotaData.metrics.length} metric${quotaData.metrics.length === 1 ? '' : 's'})</strong>
       </div>`
     : '';
 
@@ -737,6 +812,8 @@ function renderReviewScreen() {
       <div class="desc">Once submitted, you won't be able to change these answers. / Una vez enviado, no podrás cambiar estas respuestas.</div>
       ${quotaRow}
       ${rows}
+      ${evalMode === 'supervisor' ? `<label style="display:block;font-size:13px;font-weight:600;color:var(--navy);margin:16px 0 6px;">Comments for this person (optional) / Comentarios para esta persona (opcional)</label>
+      <textarea id="eval-narrative" rows="3" maxlength="1000" placeholder="What is going well? What should improve by next cycle? / ¿Qué va bien? ¿Qué debe mejorar para el próximo ciclo?" style="width:100%;padding:10px 12px;border:2px solid #e8e4dc;border-radius:8px;font-size:13px;font-family:inherit;"></textarea>` : ''}
       <div class="error-msg" id="submit-error"></div>
       <button class="btn btn-primary" id="btn-submit" style="margin-top:20px" onclick="submitEvaluation()">${submitLabel}</button>
       <button class="btn" style="margin-top:10px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="currentDimIdx=currentDimSet().length-1;renderQuestionScreen();">← Back to edit / Regresar a editar</button>
@@ -781,9 +858,15 @@ async function submitEvaluation() {
       completada_at: new Date().toISOString()
     };
     if (isSupervisor) {
-      evalPayload.periodos_meta = quotaData.periodos_meta;
-      evalPayload.periodos_total = quotaData.periodos_total;
-      evalPayload.pct_promedio_cuota = Math.round((quotaData.periodos_meta / quotaData.periodos_total) * 100);
+      const scores = dims.map(d => responses[d.key]);
+      const conductual = Math.round(((scores.reduce((a, b) => a + b, 0) / scores.length) - 1) / 4 * 100);
+      const cuota = Math.round(Math.min(quotaData.pct_promedio, 100));
+      evalPayload.pct_promedio_cuota = quotaData.pct_promedio;
+      evalPayload.score_conductual = conductual;
+      evalPayload.score_cuota = cuota;
+      evalPayload.score_final = Math.round(0.5 * cuota + 0.5 * conductual);
+      const narr = (document.getElementById('eval-narrative') || {}).value;
+      if (narr && narr.trim()) evalPayload.feedback_narrativo = narr.trim();
     } else {
       // Self score = % of forced-choice questions answered with the
       // higher-performance option (B). Same formula as the original design.
@@ -792,7 +875,9 @@ async function submitEvaluation() {
       const dimsList = currentDimSet();
       const maxIdx = dimsList[0].opts.length - 1;
       const sum = dimsList.reduce((s, d) => s + (responses[d.key] || 0), 0);
-      evalPayload.puntaje_final = Math.round((sum / (dimsList.length * maxIdx)) * 100);
+      const selfScore = Math.round((sum / (dimsList.length * maxIdx)) * 100);
+      evalPayload.score_conductual = selfScore;
+      evalPayload.score_final = selfScore;
     }
 
     const evalRows = await sbFetch('evaluaciones', { method: 'POST', body: JSON.stringify(evalPayload) });
@@ -808,9 +893,12 @@ async function submitEvaluation() {
       respuesta_score: responses[dim.key]
     }));
     await sbFetch('evaluacion_respuestas', { method: 'POST', body: JSON.stringify(respuestaRows) });
+    if (isSupervisor) {
+      await sbFetch('rpc/metricas_guardar', { method: 'POST', body: JSON.stringify({ p_evaluacion_id: evaluacionId, p_evaluador_id: loggedInEmployee.id, p_items: quotaData.metrics }) });
+    }
 
     const successMsg = isSupervisor
-      ? `<h2>Evaluation Submitted! / ¡Evaluación Enviada!</h2><p>Your evaluation of ${selectedEvaluado.nombre_completo} for ${activeCycle.nombre} has been saved. / Tu evaluación de ${selectedEvaluado.nombre_completo} para ${activeCycle.nombre} se guardó.</p>`
+      ? `<h2>Evaluation Submitted! / ¡Evaluación Enviada!</h2><p>Your evaluation of ${selectedEvaluado.nombre_completo} for ${activeCycle.nombre} has been saved. / Tu evaluación de ${selectedEvaluado.nombre_completo} para ${activeCycle.nombre} se guardó.</p>${(previousEval && previousEval.score_final != null && evalPayload.score_final != null) ? `<p style="margin-top:10px;">Change vs previous cycle / Cambio vs ciclo anterior: <strong>${evalPayload.score_final - previousEval.score_final >= 0 ? '+' : ''}${Math.round(evalPayload.score_final - previousEval.score_final)}</strong> pts (${Math.round(previousEval.score_final)} → ${evalPayload.score_final})</p>` : ''}`
       : `<h2>Self-Assessment Submitted! / ¡Autoevaluación Enviada!</h2><p>Thank you, ${loggedInEmployee.nombre_completo}. Your supervisor will review your evaluation and follow up with feedback during ${activeCycle.nombre}. / Gracias, ${loggedInEmployee.nombre_completo}. Tu supervisor revisará tu evaluación durante ${activeCycle.nombre}.</p>`;
 
     document.getElementById('app-content').innerHTML = `
