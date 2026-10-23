@@ -404,7 +404,15 @@ async function checkCertificationStatus() {
     } catch (err) {
       console.warn('certificacion_intentos_extra table not available yet:', err);
     }
-    const maxAttempts = MAX_ATTEMPTS + extraGranted;
+    let maxAttempts = MAX_ATTEMPTS + extraGranted;
+    // Single source of truth for the limit lives on the server (certificacion_estado).
+    try {
+      const est = await sbFetch('rpc/certificacion_estado', { method: 'POST', body: JSON.stringify({ p_empleado_id: loggedInEmployee.id }) });
+      const mine = (est || []).find(x => x.certificacion === TIER_KEY);
+      if (mine) maxAttempts = mine.limite;
+    } catch (err) {
+      console.warn('certificacion_estado unavailable, using local calculation:', err);
+    }
     return {attempts, passed, validIds, maxAttempts};
   } catch (err) {
     console.error('Could not check certification status:', err);
