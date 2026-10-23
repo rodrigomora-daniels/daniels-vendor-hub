@@ -809,6 +809,15 @@ async function loadDashboard() {
     session.resets = [];
   }
 
+  // Extra attempts an admin unlocked from the Cockpit — raise the base limit of 3
+  try {
+    const extras = await sbFetch(`certificacion_intentos_extra?empleado_id=eq.${emp.id}&select=certificacion,cantidad`);
+    session.extras = extras || [];
+  } catch (err) {
+    console.warn('Could not load extra attempts:', err);
+    session.extras = [];
+  }
+
   renderDashboardData();
 }
 
@@ -919,6 +928,7 @@ function renderDashboardData() {
   ['tier1', 'tier2'].forEach(tier => {
     const best = bestByTier[tier];
     const attemptsUsed = attemptsSinceReset(tier, history, session.resets).length;
+    const attemptLimit = 3 + (session.extras || []).filter(x => x.certificacion === tier).reduce((sum, x) => sum + (x.cantidad || 0), 0);
     const statusEl = document.getElementById(`status-${tier}`);
     const scoreLineEl = document.getElementById(`score-line-${tier}`);
     const scoreEl = document.getElementById(`best-score-${tier}`);
@@ -946,10 +956,10 @@ function renderDashboardData() {
       attemptsTag.style.fontSize = '12px';
       attemptsTag.style.color = 'var(--mgray)';
       attemptsTag.style.marginBottom = '10px';
-      attemptsTag.textContent = `Attempts used: ${attemptsUsed} of 3`;
+      attemptsTag.textContent = `Attempts used: ${attemptsUsed} of ${attemptLimit}`;
       cardEl.querySelector('.desc').insertAdjacentElement('afterend', attemptsTag);
     }
-    if (attemptsUsed >= 3 && !(best && best.aprobado)) {
+    if (attemptsUsed >= attemptLimit && !(best && best.aprobado)) {
       btnEl.disabled = true;
       btnEl.textContent = 'No Attempts Remaining';
       btnEl.style.background = '#ccc';
