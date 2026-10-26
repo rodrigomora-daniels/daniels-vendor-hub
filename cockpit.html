@@ -866,13 +866,16 @@ function renderEmployeesTable(employees) {
   if (employees.length === 0) { tbody.innerHTML = `<tr><td colspan="10" class="empty-state">No employees yet.</td></tr>`; return; }
   if (filtered.length === 0) { tbody.innerHTML = `<tr><td colspan="10" class="empty-state">No employees match "${q}".</td></tr>`; return; }
   tbody.innerHTML = filtered.map(e => {
-    const t1Lock = !e.es_admin ? certLockStatus(e.id, 'tier1') : null;
-    const t2Lock = !e.es_admin ? certLockStatus(e.id, 'tier2') : null;
+    const t1Lock = certLockStatus(e.id, 'tier1');
+    const t2Lock = certLockStatus(e.id, 'tier2');
     const escName = (e.nombre_completo || '').replace(/'/g, "\\'");
-    const resetBtns = [
-      (t1Lock && t1Lock.locked) ? `<button class="btn btn-red" onclick="openUnlockAttemptsModal('${e.id}','${escName}','tier1')">Unlock +1 (T1)</button>` : '',
-      (t2Lock && t2Lock.locked) ? `<button class="btn btn-red" onclick="openUnlockAttemptsModal('${e.id}','${escName}','tier2')">Unlock +1 (T2)</button>` : ''
-    ].join('');
+    // Buttons show for ANYONE with attempts on record who hasn't passed (not only when fully locked),
+    // admins/store managers included. Unlock +N adds attempts; Reset starts the count from zero.
+    const certBtns = (lock, tier, label) => (!lock.passed && lock.attemptCount > 0 && !isViewOnly())
+      ? `<button class="btn btn-red" onclick="openUnlockAttemptsModal('${e.id}','${escName}','${tier}')">Unlock +N (${label})</button>` +
+        `<button class="btn btn-ghost" onclick="openCertResetModal('${e.id}','${escName}','${tier}')">Reset (${label})</button>`
+      : '';
+    const resetBtns = certBtns(t1Lock, 'tier1', 'T1') + certBtns(t2Lock, 'tier2', 'T2');
     let adminBadgeLabel = 'ADMIN';
     if (e.nivel_admin === 'super_admin') adminBadgeLabel = 'SUPER ADMIN';
     else if (e.nivel_admin === 'manager_visor') adminBadgeLabel = 'STORE MGMT';
@@ -1142,7 +1145,7 @@ async function openAnswerDetail(recordId, cert) {
 /* ════════ CERT RESET ════════ */
 function openCertResetModal(empId, empName, cert) {
   certResetTarget = { empId, empName, certificacion: cert };
-  document.getElementById('cert-reset-desc').textContent = `${empName} has used all 3 attempts on ${cert === 'tier1' ? 'Sales Tier 1' : 'Sales Tier 2'} without passing.`;
+  document.getElementById('cert-reset-desc').textContent = `${empName} will start over on ${cert === 'tier1' ? 'Sales Tier 1' : 'Sales Tier 2'} with a fresh set of 3 attempts. Past attempts stay in the history.`;
   document.getElementById('cert-reset-notes').value = '';
   document.getElementById('modal-cert-reset').classList.add('show');
 }
