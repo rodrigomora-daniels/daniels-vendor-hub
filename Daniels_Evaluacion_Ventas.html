@@ -619,6 +619,7 @@ async function startSupervisorSearch() {
       return;
     }
   }
+  await refreshNoElegibles();
   renderSupervisorSearchScreen('');
 }
 
@@ -657,9 +658,10 @@ function renderSupervisorResults(query) {
   function empRow(e) {
     const storeTag = e.tienda && e.tienda !== myStore
       ? ` <span style="color:var(--mgray);font-size:11px;font-weight:400;">(${e.tienda})</span>` : '';
+    const neTag = noElegibles[e.id] ? ' <span style="color:var(--red);font-size:11px;font-weight:700;">N/A — not eligible</span>' : '';
     return `<div class="bars-option" onclick="selectEvaluado('${e.id}')">
       <div class="num">👤</div>
-      <div class="txt"><strong>${e.nombre_completo}</strong>${storeTag}</div>
+      <div class="txt"><strong>${e.nombre_completo}</strong>${storeTag}${neTag}</div>
     </div>`;
   }
 
@@ -708,6 +710,67 @@ async function selectEvaluado(empId) {
     if (prev && prev.length) previousEval = prev[0];
   } catch (err) { console.warn('Could not load previous evaluation:', err); }
 
+  await refreshNoElegibles();
+  renderEligibilityScreen();
+}
+
+/* ════════ ELIGIBILITY — the evaluator confirms the person completed the period ════════ */
+let noElegibles = {};
+const NOELEG_REASONS = [
+  { k: 'ingreso_reciente', t: 'Joined during this period (has not completed the minimum time) / Ingresó durante este periodo (no completó el tiempo mínimo)' },
+  { k: 'licencia', t: 'Was on leave for a large part of the period / Estuvo de licencia gran parte del periodo' },
+  { k: 'cambio_rol', t: 'Changed role or store during the period / Cambió de puesto o tienda durante el periodo' },
+  { k: 'otra_politica', t: 'Other company policy / Otra política de la empresa' }
+];
+async function refreshNoElegibles() {
+  noElegibles = {};
+  try {
+    const rows = await sbFetch('rpc/evaluacion_no_elegibles_get', { method: 'POST', body: '{}' });
+    (rows || []).forEach(r => { noElegibles[r.evaluado_id] = r.motivo; });
+  } catch (err) { console.warn('eligibility', err); }
+}
+let pendingReason = null;
+function renderEligibilityScreen() {
+  const e = selectedEvaluado;
+  const cur = noElegibles[e.id];
+  pendingReason = null;
+  const reasonLabel = k => (NOELEG_REASONS.find(r => r.k === k) || {}).t || k;
+  document.getElementById('app-content').innerHTML = cur ? `
+    <div class="card">
+      <h2>${e.nombre_completo}</h2>
+      <div class="badge-admin" style="background:#fdecea;border-left-color:var(--red);">Marked NOT eligible this period / Marcado como NO elegible este periodo<br><span style="font-weight:400;">${reasonLabel(cur)}</span></div>
+      <button class="btn btn-primary" onclick="setEligibility(true)">Mark as eligible and evaluate / Marcar como elegible y evaluar</button>
+      <button class="btn" style="margin-top:10px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="renderSupervisorSearchScreen('')">← Back / Regresar</button>
+    </div>` : `
+    <div class="card">
+      <h2>${e.nombre_completo}</h2>
+      <div class="desc">Did this person complete the evaluation period (${activeCycle.nombre}) and report to you for enough time to be evaluated fairly? / ¿Esta persona completó el periodo de evaluación (${activeCycle.nombre}) y estuvo bajo tu supervisión el tiempo suficiente para evaluarla de forma justa?</div>
+      <button class="btn btn-primary" onclick="proceedToMetrics()">Yes — evaluate / Sí — evaluar</button>
+      <div style="font-size:13px;font-weight:700;color:var(--navy);margin:20px 0 8px;">No — not eligible this period. Reason: / No — no elegible este periodo. Motivo:</div>
+      ${NOELEG_REASONS.map(r => `<div class="bars-option" id="ne-${r.k}" onclick="pickNoElegReason('${r.k}')"><div class="txt">${r.t}</div></div>`).join('')}
+      <div class="error-msg" id="ne-error">Pick a reason. / Elige un motivo.</div>
+      <button class="btn" style="margin-top:6px;background:#8a8a8a;color:#fff;" onclick="setEligibility(false)">Mark as not eligible / Marcar como no elegible</button>
+      <button class="btn" style="margin-top:10px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="renderSupervisorSearchScreen('')">← Back / Regresar</button>
+    </div>`;
+}
+function pickNoElegReason(k) {
+  pendingReason = k;
+  NOELEG_REASONS.forEach(r => { const el = document.getElementById('ne-' + r.k); if (el) el.classList.toggle('selected', r.k === k); });
+}
+async function setEligibility(elegible) {
+  if (!elegible && !pendingReason) { document.getElementById('ne-error').classList.add('show'); return; }
+  try {
+    const rows = await sbFetch('rpc/evaluacion_elegibilidad_set', { method: 'POST', body: JSON.stringify({ p_evaluador_id: loggedInEmployee.id, p_evaluado_id: selectedEvaluado.id, p_elegible: elegible, p_motivo: elegible ? null : pendingReason }) });
+    const r = rows && rows[0];
+    if (!r || !r.success) { alert((r && r.message) || 'Could not save.'); return; }
+  } catch (err) { alert('Error: ' + err.message); return; }
+  if (elegible) { delete noElegibles[selectedEvaluado.id]; await proceedToMetrics(); }
+  else {
+    noElegibles[selectedEvaluado.id] = pendingReason;
+    document.getElementById('app-content').innerHTML = `<div class="card"><div class="success-screen"><div class="icon">✅</div><h2>Saved / Guardado</h2><p>${selectedEvaluado.nombre_completo} will not be evaluated this period. / ${selectedEvaluado.nombre_completo} no será evaluado este periodo.</p><button class="btn btn-primary" style="margin-top:20px;max-width:280px;" onclick="renderSupervisorSearchScreen('')">Evaluate Someone Else / Evaluar a Alguien Más</button></div></div>`;
+  }
+}
+async function proceedToMetrics() {
   await loadMetricTemplate();
   renderQuotaScreen();
 }
