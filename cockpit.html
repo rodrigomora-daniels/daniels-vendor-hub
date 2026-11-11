@@ -190,13 +190,34 @@
 
     <!-- ANONYMOUS MANAGER FEEDBACK — Super Admin only; managers never see this -->
     <div class="section" id="section-mgr-feedback" style="display:none">
-      <div class="section-hdr"><h2>💬 Anonymous Manager Feedback</h2></div>
-      <p style="font-size:12px;color:var(--mgray);margin-bottom:14px;">Aggregated only — individual answers and respondents are never stored together. Scale 0–3 (3 = Always). With very few responses, treat averages with caution.</p>
+      <div class="section-hdr"><h2>💬 Anonymous Leadership Feedback</h2></div>
+      <p style="font-size:12px;color:var(--mgray);margin-bottom:14px;">Reports rating their manager (sellers → store managers, store managers → director). Closed 1–5 behavior scale. Aggregated only; individual answers and respondents are never stored together. ⚠️ = fewer than 3 responses (not counted toward the final score).</p>
       <div style="overflow-x:auto">
         <table>
-          <thead><tr><th>Manager</th><th>Store</th><th>Responses</th><th>Respect</th><th>Clarity</th><th>Available</th><th>Feedback</th><th>Fairness</th><th>Example</th></tr></thead>
-          <tbody id="tbl-mgr-feedback-body"><tr><td colspan="9" class="empty-state">Loading...</td></tr></tbody>
+          <thead><tr><th>Leader</th><th>Store</th><th>Responses</th><th>Clarity</th><th>Fairness</th><th>Development</th><th>Recognition</th><th>Availability</th><th>Respect</th><th>Example</th></tr></thead>
+          <tbody id="tbl-mgr-feedback-body"><tr><td colspan="10" class="empty-state">Loading...</td></tr></tbody>
         </table>
+      </div>
+    </div>
+
+    <div class="section" id="section-eval-results" style="display:none">
+      <div class="section-hdr"><h2>📊 Evaluation Results (current cycle)</h2></div>
+      <p style="font-size:12px;color:var(--mgray);margin-bottom:14px;">Final score = weighted average of the components that exist for each person, using the weights below. "Incomplete" means a weighted component is still missing (the score is then computed on what is available).</p>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Person</th><th>Role</th><th>Store</th><th>KPIs</th><th>Behavior / Management</th><th>Leadership (reports)</th><th>Peers</th><th>Final</th><th>Status</th></tr></thead>
+          <tbody id="tbl-eval-results-body"><tr><td colspan="9" class="empty-state">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section" id="section-eval-config" style="display:none">
+      <div class="section-hdr"><h2>⚙️ Evaluation Setup — weights & KPIs by role</h2></div>
+      <p style="font-size:12px;color:var(--mgray);margin-bottom:14px;">Set once for the whole company. Each role's weights must add up to 100. KPIs are what evaluators score; they only enter the results. If a goal is left blank, the evaluator enters it per person.</p>
+      <div id="eval-config-body"><p class="empty-state">Loading...</p></div>
+      <div style="margin-top:14px;display:flex;gap:10px;align-items:center;">
+        <button class="btn btn-primary" onclick="saveEvalConfig()">Save setup</button>
+        <span id="eval-config-msg" style="font-size:12px;color:var(--mgray);"></span>
       </div>
     </div>
 
@@ -583,7 +604,7 @@ async function handleAdminLogin() {
 /* ════════ LOAD DATA ════════ */
 async function loadAllData() {
   await loadCertAttempts();
-  await Promise.all([loadEmployees(), loadCodes(), loadLeadSource(), loadAuditLog(), loadOrganigrama(), loadEvalCycles(), loadMgrFeedback()]);
+  await Promise.all([loadEmployees(), loadCodes(), loadLeadSource(), loadAuditLog(), loadOrganigrama(), loadEvalCycles(), loadMgrFeedback(), loadEvalConfig(), loadEvalResults()]);
   renderCertAttemptsTable(cachedData.certAttempts);
   const plantBtn = document.getElementById('btn-plant-cert-floating');
   if (plantBtn) plantBtn.style.display = isViewOnly() ? 'none' : 'block';
@@ -734,13 +755,106 @@ async function loadMgrFeedback() {
   const body = document.getElementById('tbl-mgr-feedback-body');
   try {
     const rows = await sbFetch('rpc/admin_ver_feedback_anonimo', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id }) });
-    if (!rows || !rows.length) { body.innerHTML = '<tr><td colspan="9" class="empty-state">No feedback submitted yet this cycle.</td></tr>'; return; }
+    if (!rows || !rows.length) { body.innerHTML = '<tr><td colspan="10" class="empty-state">No feedback submitted yet this cycle.</td></tr>'; return; }
     const f = (o, k) => (o && o[k] !== undefined) ? Number(o[k]).toFixed(2) : '—';
     body.innerHTML = rows.map(r => `<tr><td><strong>${r.nombre}</strong></td><td>${r.tienda || ''}</td><td>${r.n}${r.n < 3 ? ' ⚠️' : ''}</td>` +
-      ['respeto','claridad','disponibilidad','retroalimentacion','justicia','ejemplo'].map(k => `<td>${f(r.promedios, k)}</td>`).join('') + '</tr>').join('');
+      ['claridad','justicia','desarrollo','reconocimiento','disponibilidad','respeto','ejemplo'].map(k => `<td>${f(r.promedios, k)}</td>`).join('') + '</tr>').join('');
+  } catch (err) {
+    body.innerHTML = `<tr><td colspan="10" class="empty-state">Could not load: ${err.message}</td></tr>`;
+  }
+}
+
+async function loadEvalResults() {
+  const sec = document.getElementById('section-eval-results');
+  if (!sec) return;
+  if (!isSuperAdmin()) { sec.style.display = 'none'; return; }
+  sec.style.display = '';
+  const body = document.getElementById('tbl-eval-results-body');
+  try {
+    const rows = await sbFetch('rpc/evaluacion_resultado', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id }) });
+    if (!rows || !rows.length) { body.innerHTML = '<tr><td colspan="9" class="empty-state">No completed evaluations yet this cycle.</td></tr>'; return; }
+    const v = x => (x === null || x === undefined) ? '—' : Number(x).toFixed(0);
+    const roleName = { vendedor: 'Seller', manager: 'Store manager', director: 'Director' };
+    body.innerHTML = rows.map(r => `<tr><td><strong>${r.nombre}</strong></td><td>${roleName[r.rol_eval] || r.rol_eval}</td><td>${r.tienda || ''}</td>` +
+      `<td>${v(r.kpi)}</td><td>${v(r.conducta)}</td><td>${v(r.liderazgo)}${r.n_liderazgo ? ' <span style="color:var(--mgray);font-size:11px;">(n=' + r.n_liderazgo + (r.n_liderazgo < 3 ? ' ⚠️' : '') + ')</span>' : ''}</td>` +
+      `<td>${v(r.pares)}${r.n_pares ? ' <span style="color:var(--mgray);font-size:11px;">(n=' + r.n_pares + ')</span>' : ''}</td>` +
+      `<td><strong>${v(r.final_score)}</strong></td><td>${r.completo ? '<span class="pill pill-green">Complete</span>' : '<span class="pill pill-gray">Incomplete</span>'}</td></tr>`).join('');
   } catch (err) {
     body.innerHTML = `<tr><td colspan="9" class="empty-state">Could not load: ${err.message}</td></tr>`;
   }
+}
+
+/* ════════ EVALUATION SETUP (weights & KPIs by role) ════════ */
+let evalCfg = { pesos: [], kpis: [] };
+const CFG_ROLES = { vendedor: 'Sellers / Vendedores', manager: 'Store managers / Gerentes de tienda', director: 'Director (Héctor) / Directores' };
+const CFG_COMPONENTS = { kpi: 'KPIs (numbers)', conducta: 'Behavior / management rated by boss', liderazgo: 'Leadership (rated by reports, anonymous)', pares: 'Peers (other managers)' };
+
+async function loadEvalConfig() {
+  const sec = document.getElementById('section-eval-config');
+  if (!sec) return;
+  if (!isSuperAdmin()) { sec.style.display = 'none'; return; }
+  sec.style.display = '';
+  try {
+    evalCfg = await sbFetch('rpc/evaluacion_config_get', { method: 'POST', body: '{}' });
+    renderEvalConfig();
+  } catch (err) {
+    document.getElementById('eval-config-body').innerHTML = `<p class="empty-state">Could not load: ${err.message}</p>`;
+  }
+}
+
+function renderEvalConfig() {
+  const body = document.getElementById('eval-config-body');
+  const inp = 'padding:7px 9px;border:1px solid #ccc;border-radius:6px;font-size:13px;';
+  body.innerHTML = Object.keys(CFG_ROLES).map(role => {
+    const weights = Object.keys(CFG_COMPONENTS).map(c => {
+      const w = (evalCfg.pesos.find(p => p.rol_evaluado === role && p.componente === c) || {}).peso ?? 0;
+      return `<label style="font-size:12px;display:flex;flex-direction:column;gap:3px;">${CFG_COMPONENTS[c]}<input type="number" min="0" max="100" step="1" value="${w}" data-role="${role}" data-comp="${c}" class="cfg-weight" oninput="updateCfgTotal('${role}')" style="${inp}width:100px;"></label>`;
+    }).join('');
+    const kpis = evalCfg.kpis.map((k, idx) => ({ k, idx })).filter(x => x.k.rol_evaluado === role && !x.k._off).map(x => `
+      <div style="display:grid;grid-template-columns:2.4fr .6fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center;">
+        <input type="text" value="${(x.k.nombre || '').replace(/"/g, '&quot;')}" oninput="evalCfg.kpis[${x.idx}].nombre=this.value" style="${inp}">
+        <input type="text" value="${x.k.unidad || ''}" oninput="evalCfg.kpis[${x.idx}].unidad=this.value" style="${inp}" placeholder="unit">
+        <input type="number" step="any" value="${x.k.meta_default ?? ''}" oninput="evalCfg.kpis[${x.idx}].meta_default=this.value===''?null:Number(this.value)" style="${inp}" placeholder="goal (optional)">
+        <button class="btn btn-ghost" style="padding:4px 9px;" onclick="removeCfgKpi(${x.idx})" title="Remove">✕</button>
+      </div>`).join('');
+    return `<div style="border:1px solid #e8e4dc;border-radius:10px;padding:14px;margin-bottom:14px;">
+      <h3 style="font-size:14px;color:var(--navy);margin-bottom:10px;">${CFG_ROLES[role]}</h3>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:6px;">${weights}<strong id="cfg-total-${role}" style="font-size:13px;"></strong></div>
+      <div style="font-size:11px;font-weight:700;color:var(--mgray);margin:12px 0 6px;">KPIs</div>
+      ${kpis || '<p class="empty-state" style="padding:6px 0;">No KPIs yet.</p>'}
+      <button class="btn btn-ghost" style="padding:4px 10px;font-size:12px;" onclick="addCfgKpi('${role}')">+ Add KPI</button>
+    </div>`;
+  }).join('');
+  Object.keys(CFG_ROLES).forEach(updateCfgTotal);
+}
+
+function updateCfgTotal(role) {
+  let t = 0;
+  document.querySelectorAll(`.cfg-weight[data-role="${role}"]`).forEach(i => t += Number(i.value) || 0);
+  const el = document.getElementById('cfg-total-' + role);
+  if (el) { el.textContent = 'Total: ' + t + (t === 100 ? ' ✓' : ' (must be 100)'); el.style.color = t === 100 ? '#1a7f37' : '#c0392b'; }
+}
+function addCfgKpi(role) { evalCfg.kpis.push({ id: null, rol_evaluado: role, nombre: '', unidad: '', meta_default: null, orden: 99 }); syncCfgWeights(); renderEvalConfig(); }
+function removeCfgKpi(idx) { const k = evalCfg.kpis[idx]; if (k.id) { k._off = true; } else { evalCfg.kpis.splice(idx, 1); } syncCfgWeights(); renderEvalConfig(); }
+function syncCfgWeights() {
+  document.querySelectorAll('.cfg-weight').forEach(i => {
+    const p = evalCfg.pesos.find(x => x.rol_evaluado === i.dataset.role && x.componente === i.dataset.comp);
+    if (p) p.peso = Number(i.value) || 0; else evalCfg.pesos.push({ rol_evaluado: i.dataset.role, componente: i.dataset.comp, peso: Number(i.value) || 0 });
+  });
+}
+async function saveEvalConfig() {
+  if (!isSuperAdmin()) return;
+  syncCfgWeights();
+  const msg = document.getElementById('eval-config-msg');
+  const kpis = evalCfg.kpis.filter(k => (k.nombre || '').trim()).map((k, i) => ({ id: k.id, rol_evaluado: k.rol_evaluado, nombre: k.nombre.trim(), unidad: k.unidad || '', meta_default: k.meta_default === null || k.meta_default === undefined ? '' : String(k.meta_default), orden: i, activo: !k._off }));
+  msg.textContent = 'Saving...';
+  try {
+    const rows = await sbFetch('rpc/evaluacion_config_set', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id, p_pesos: evalCfg.pesos, p_kpis: kpis }) });
+    const r = rows && rows[0];
+    msg.textContent = r ? r.message : 'No response';
+    msg.style.color = r && r.success ? '#1a7f37' : '#c0392b';
+    if (r && r.success) { await loadEvalConfig(); loadEvalResults(); }
+  } catch (err) { msg.textContent = 'Error: ' + err.message; msg.style.color = '#c0392b'; }
 }
 
 async function loadEvalCycles() {

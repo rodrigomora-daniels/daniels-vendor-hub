@@ -348,35 +348,147 @@ async function renderModePicker() {
         <div class="num">📝</div>
         <div class="txt"><strong>My Self-Assessment / Mi Autoevaluación</strong><br>Complete your own self-assessment for this cycle. / Completa tu propia autoevaluación de este ciclo.</div>
       </div>
-      ${loggedInEmployee.rol === 'vendedor' && !loggedInEmployee.es_admin ? `
+      ${(loggedInEmployee.rol === 'vendedor' && !loggedInEmployee.es_admin) || loggedInEmployee.rol === 'manager' ? `
       <div class="bars-option" onclick="startManagerFeedback()">
         <div class="num">💬</div>
-        <div class="txt"><strong>Anonymous Feedback for Your Manager / Comentarios Anónimos para tu Gerente</strong><br>Your answers are anonymous. Your manager will never see them. / Tus respuestas son anónimas. Tu gerente nunca las verá.</div>
+        <div class="txt"><strong>Anonymous Feedback for Your ${loggedInEmployee.rol === 'manager' ? 'Director' : 'Manager'} / Comentarios Anónimos para tu ${loggedInEmployee.rol === 'manager' ? 'Director' : 'Gerente'}</strong><br>Your answers are anonymous. Your manager will never see them. / Tus respuestas son anónimas. Tu gerente nunca las verá.</div>
       </div>` : ''}
       ${canSupervise ? `
       <div class="bars-option" onclick="startSupervisorSearch()">
         <div class="num">👥</div>
         <div class="txt"><strong>Evaluate a Team Member / Evaluar a un Miembro del Equipo</strong><br>Search for and evaluate someone on your team. / Busca y evalúa a alguien de tu equipo.</div>
       </div>` : ''}
+      ${loggedInEmployee.rol === 'manager' ? `
+      <div class="bars-option" onclick="startPeerEval()">
+        <div class="num">🤝</div>
+        <div class="txt"><strong>Evaluate a Fellow Manager / Evaluar a un Gerente Colega</strong><br>Collaboration, communication and reliability — closed 1-5 questions. / Colaboración, comunicación y confiabilidad — preguntas cerradas 1-5.</div>
+      </div>` : ''}
     </div>`;
 }
 
 
-/* ════════ ANONYMOUS UPWARD FEEDBACK (vendedor → store manager) ════════ */
+/* ════════ ANONYMOUS UPWARD FEEDBACK (reports → their manager) — closed 1-5 behavior scales ════════ */
 const MANAGER_FEEDBACK_QUESTIONS = [
-  { key: 'respeto', q: 'My manager treats me with respect. / Mi gerente me trata con respeto.' },
-  { key: 'claridad', q: 'My manager gives clear direction and expectations. / Mi gerente da instrucciones y expectativas claras.' },
-  { key: 'disponibilidad', q: 'My manager is available when I need help. / Mi gerente está disponible cuando necesito ayuda.' },
-  { key: 'retroalimentacion', q: 'My manager gives me feedback that helps me improve. / Mi gerente me da retroalimentación que me ayuda a mejorar.' },
-  { key: 'justicia', q: 'My manager is fair with leads, schedules and opportunities. / Mi gerente es justo con clientes, horarios y oportunidades.' },
-  { key: 'ejemplo', q: 'My manager follows the same rules he or she asks of the team. / Mi gerente cumple las mismas reglas que pide al equipo.' }
+  { key: 'claridad', title: 'Clarity / Claridad', q: 'Direction and expectations / Dirección y expectativas', opts: [
+    'Expectations are rarely clear; I often have to guess. / Rara vez son claras; muchas veces tengo que adivinar.',
+    'Clear only on big things; details change without notice. / Claras solo en lo grande; los detalles cambian sin aviso.',
+    'Usually clear; sometimes I have to ask again. / Normalmente claras; a veces tengo que preguntar de nuevo.',
+    'Clear goals and priorities, and I know how I am measured. / Metas y prioridades claras, y sé cómo me miden.',
+    'Always clear, and changes are explained before they happen. / Siempre claras, y los cambios se explican antes de que ocurran.'] },
+  { key: 'justicia', title: 'Fairness / Justicia', q: 'Leads, schedules and opportunities / Clientes, horarios y oportunidades', opts: [
+    'Clear favorites; rules change depending on the person. / Hay favoritos claros; las reglas cambian según la persona.',
+    'Often uneven; some people get better treatment. / Seguido desigual; algunas personas reciben mejor trato.',
+    'Mostly fair; occasional exceptions. / Mayormente justo; excepciones ocasionales.',
+    'Fair and consistent; I can explain why decisions were made. / Justo y consistente; se pueden explicar las decisiones.',
+    'Always the same rules for everyone, and decisions are transparent. / Siempre las mismas reglas para todos y decisiones transparentes.'] },
+  { key: 'desarrollo', title: 'Development / Desarrollo', q: 'Coaching and growth / Coaching y crecimiento', opts: [
+    'I get no coaching; I only hear about problems. / No recibo coaching; solo me hablan cuando hay problemas.',
+    'Occasional comments, with no plan to improve. / Comentarios ocasionales, sin plan para mejorar.',
+    'Gives useful feedback when I ask or when something goes wrong. / Da retroalimentación útil cuando pregunto o algo sale mal.',
+    'Regular one-on-one feedback with concrete steps to improve. / Retroalimentación individual regular con pasos concretos.',
+    'Regular coaching and a clear path to grow; my results have improved because of it. / Coaching regular y camino claro de crecimiento; mis resultados mejoraron gracias a ello.'] },
+  { key: 'reconocimiento', title: 'Recognition / Reconocimiento', q: 'Recognition of good work / Reconocimiento del buen trabajo', opts: [
+    'Good work goes unnoticed. / El buen trabajo pasa desapercibido.',
+    'Recognized only for big results. / Se reconoce solo en resultados grandes.',
+    'Recognized sometimes, mostly in private. / Se reconoce a veces, sobre todo en privado.',
+    'Recognizes good work promptly and specifically. / Reconoce el buen trabajo de forma oportuna y específica.',
+    'Recognizes consistently, in public and private, and ties it to what I did. / Reconoce consistentemente, en público y en privado, ligado a lo que hice.'] },
+  { key: 'disponibilidad', title: 'Availability / Disponibilidad', q: 'Help when I need it / Apoyo cuando lo necesito', opts: [
+    'Rarely available when I need help. / Rara vez disponible cuando necesito ayuda.',
+    'Available only after a long wait. / Disponible solo después de mucha espera.',
+    'Available most of the time. / Disponible la mayor parte del tiempo.',
+    'Available and helps me solve the issue. / Disponible y me ayuda a resolver el problema.',
+    'Always available, steps in on the floor and helps close the sale or solve the case. / Siempre disponible, apoya en piso y ayuda a cerrar la venta o resolver el caso.'] },
+  { key: 'respeto', title: 'Respect / Respeto', q: 'Treatment of the team / Trato al equipo', opts: [
+    'Disrespectful, raises voice or humiliates in front of others. / Irrespetuoso, levanta la voz o humilla frente a otros.',
+    'Sometimes disrespectful when under pressure. / A veces irrespetuoso bajo presión.',
+    'Respectful most of the time. / Respetuoso la mayor parte del tiempo.',
+    'Respectful always, and corrects in private. / Siempre respetuoso y corrige en privado.',
+    'Always respectful and creates an environment where people speak up. / Siempre respetuoso y crea un ambiente donde la gente se atreve a hablar.'] },
+  { key: 'ejemplo', title: 'Leading by example / Ejemplo', q: 'Follows the rules he or she sets / Cumple las reglas que pide', opts: [
+    'Asks for things they do not do themselves. / Pide cosas que ellos mismos no hacen.',
+    'Follows the rules only when convenient. / Cumple las reglas solo cuando conviene.',
+    'Usually follows the same rules as the team. / Normalmente cumple las mismas reglas que el equipo.',
+    'Follows the rules and holds themselves accountable. / Cumple las reglas y se hace responsable.',
+    'A clear role model: does what they ask and admits their own mistakes. / Modelo claro: hace lo que pide y reconoce sus propios errores.'] }
 ];
-const FEEDBACK_SCALE = [
-  { v: 3, t: 'Always / Siempre' }, { v: 2, t: 'Often / Casi siempre' },
-  { v: 1, t: 'Sometimes / A veces' }, { v: 0, t: 'Rarely / Casi nunca' }
+
+/* ════════ BOSS → MANAGER / DIRECTOR (results & management, closed 1-5) ════════ */
+const MANAGER_BOSS_DIMENSIONS = [
+  { key: 'objetivos', title: 'Goal delivery / Cumplimiento de objetivos', q: 'Over this cycle, how does this person deliver on the goals they were given? / En este ciclo, ¿cómo cumple esta persona los objetivos asignados?', opts: [
+    'Misses most goals and does not propose a recovery plan. / No alcanza la mayoría de las metas y no propone plan de recuperación.',
+    'Misses several goals; recovers only when pushed. / No alcanza varias metas; recupera solo cuando se le exige.',
+    'Meets most goals; misses some without early warning. / Cumple la mayoría; falla algunas sin avisar a tiempo.',
+    'Meets goals and flags risks early with a plan. / Cumple las metas y avisa riesgos a tiempo con un plan.',
+    'Consistently meets or beats goals and helps other areas reach theirs. / Cumple o supera metas consistentemente y ayuda a otras áreas a lograr las suyas.'] },
+  { key: 'procesos', title: 'Process & policy execution / Ejecución de procesos', q: 'How does this person run store or team processes (reports, standards, policies)? / ¿Cómo ejecuta esta persona los procesos de tienda o equipo (reportes, estándares, políticas)?', opts: [
+    'Processes are ignored or done late. / Los procesos se ignoran o se hacen tarde.',
+    'Done only after reminders. / Se hacen solo después de recordatorios.',
+    'Done on time most of the time. / Se hacen a tiempo la mayor parte del tiempo.',
+    'Done on time and the team follows them too. / Se hacen a tiempo y el equipo también los sigue.',
+    'Done on time, the team follows them, and proposes improvements that get adopted. / A tiempo, el equipo los sigue y propone mejoras que se adoptan.'] },
+  { key: 'talento', title: 'Team development / Desarrollo del equipo', q: 'How does this person develop the people on their team (certifications, coaching, evaluations)? / ¿Cómo desarrolla esta persona a su equipo (certificaciones, coaching, evaluaciones)?', opts: [
+    'Team members are not coached; certifications and evaluations are late. / No hay coaching; certificaciones y evaluaciones atrasadas.',
+    'Coaches only people who struggle. / Solo da coaching a quien batalla.',
+    'Coaches regularly; most of the team is certified. / Da coaching con regularidad; la mayoría del equipo está certificada.',
+    'Coaches everyone with a plan; the whole team is certified and evaluated on time. / Da coaching a todos con plan; todo el equipo certificado y evaluado a tiempo.',
+    'Develops people who grow into bigger roles. / Desarrolla personas que crecen a roles mayores.'] },
+  { key: 'cliente', title: 'Customer & store standards / Cliente y estándares', q: 'What do you observe in customer experience and store standards under this person? / ¿Qué observas en experiencia del cliente y estándares de tienda a su cargo?', opts: [
+    'Frequent customer complaints and standards not met. / Quejas frecuentes y estándares sin cumplir.',
+    'Standards met only when visited or inspected. / Estándares se cumplen solo cuando se visita o se revisa.',
+    'Standards met most days; few complaints. / Estándares cumplidos casi siempre; pocas quejas.',
+    'Standards met every day; complaints are resolved quickly. / Estándares cumplidos todos los días; quejas se resuelven rápido.',
+    'Standards are a source of pride; customers mention the experience positively. / Los estándares son motivo de orgullo; los clientes elogian la experiencia.'] },
+  { key: 'responsabilidad', title: 'Ownership & reliability / Responsabilidad', q: 'When something goes wrong, what does this person do? / Cuando algo sale mal, ¿qué hace esta persona?', opts: [
+    'Blames others or hides the problem. / Culpa a otros u oculta el problema.',
+    'Explains the problem but does not act until asked. / Explica el problema pero no actúa hasta que se le pide.',
+    'Takes responsibility and fixes it. / Asume responsabilidad y lo corrige.',
+    'Takes responsibility, fixes it and tells me before I find out. / Asume responsabilidad, lo corrige y me avisa antes de que me entere.',
+    'Takes responsibility, fixes the root cause, and shares the lesson with other managers. / Asume responsabilidad, corrige la causa y comparte la lección con otros gerentes.'] }
+];
+
+/* ════════ MANAGER ↔ MANAGER (collaboration, closed 1-5) ════════ */
+const PEER_DIMENSIONS = [
+  { key: 'colaboracion', title: 'Collaboration / Colaboración', q: 'How does this manager work with other stores and managers? / ¿Cómo trabaja este gerente con otras tiendas y gerentes?', opts: [
+    'Works only for their own store; does not help others. / Solo trabaja para su tienda; no ayuda a otros.',
+    'Helps only when it benefits their store. / Ayuda solo cuando beneficia a su tienda.',
+    'Helps when asked. / Ayuda cuando se le pide.',
+    'Offers help and shares what works. / Ofrece ayuda y comparte lo que funciona.',
+    'Actively builds company-wide results: shares inventory, ideas and people. / Construye resultados de toda la empresa: comparte inventario, ideas y gente.'] },
+  { key: 'comunicacion', title: 'Communication / Comunicación', q: 'How is communication with this manager? / ¿Cómo es la comunicación con este gerente?', opts: [
+    'Hard to reach; information arrives late or incomplete. / Difícil de contactar; la información llega tarde o incompleta.',
+    'Responds slowly; I often follow up. / Responde lento; muchas veces doy seguimiento.',
+    'Responds in reasonable time. / Responde en tiempo razonable.',
+    'Responds quickly and shares information proactively. / Responde rápido y comparte información de forma proactiva.',
+    'Fast, clear and proactive; I never have to chase information. / Rápido, claro y proactivo; nunca tengo que perseguir información.'] },
+  { key: 'confiabilidad', title: 'Reliability / Confiabilidad', q: 'When this manager commits to something with other managers, what happens? / Cuando este gerente se compromete con otros gerentes, ¿qué sucede?', opts: [
+    'Commitments are often not met. / Los compromisos seguido no se cumplen.',
+    'Commitments are met late or partially. / Se cumplen tarde o parcialmente.',
+    'Usually meets commitments. / Normalmente cumple.',
+    'Meets commitments and warns if something changes. / Cumple y avisa si algo cambia.',
+    'Always meets commitments; I can count on them. / Siempre cumple; puedo contar con esta persona.'] },
+  { key: 'conflicto', title: 'Handling disagreements / Manejo de desacuerdos', q: 'When there is a disagreement with this manager, how is it handled? / Cuando hay un desacuerdo con este gerente, ¿cómo se maneja?', opts: [
+    'Turns it personal or goes to others behind my back. / Lo vuelve personal o va con otros a mis espaldas.',
+    'Avoids the conversation; the issue stays open. / Evita la conversación; el tema queda abierto.',
+    'Talks about it, sometimes with tension. / Lo habla, a veces con tensión.',
+    'Talks directly and respectfully and we find a solution. / Lo habla directo y con respeto y encontramos solución.',
+    'Treats disagreements as a chance to improve; the relationship gets stronger. / Toma los desacuerdos como oportunidad de mejorar; la relación sale fortalecida.'] }
 ];
 let feedbackManager = null;
 let feedbackAnswers = {};
+let evalConfig = null;
+const evalRoleOf = e => (!e ? 'vendedor' : e.rol === 'vendedor' ? 'vendedor' : e.rol === 'manager' ? 'manager' : 'director');
+async function loadEvalConfig() {
+  if (evalConfig) return evalConfig;
+  try { evalConfig = await sbFetch('rpc/evaluacion_config_get', { method: 'POST', body: '{}' }); } catch (err) { console.warn('config', err); evalConfig = { pesos: [], kpis: [] }; }
+  return evalConfig;
+}
+function evalWeights(role) {
+  const w = { kpi: 50, conducta: 50 };
+  ((evalConfig && evalConfig.pesos) || []).filter(p => p.rol_evaluado === role).forEach(p => { w[p.componente] = Number(p.peso); });
+  return w;
+}
+
 
 async function startManagerFeedback() {
   const content = document.getElementById('app-content');
@@ -406,14 +518,15 @@ function selectFeedbackManager(id, nombre) {
   feedbackAnswers = {};
   const content = document.getElementById('app-content');
   const qs = MANAGER_FEEDBACK_QUESTIONS.map((q, i) => `
-    <div style="margin-bottom:18px;">
-      <div style="font-size:14px;font-weight:600;color:var(--navy);margin-bottom:8px;">${i + 1}. ${q.q}</div>
-      ${FEEDBACK_SCALE.map(o => `<div class="bars-option" id="fb-${q.key}-${o.v}" onclick="pickFeedback('${q.key}',${o.v})" style="padding:8px 12px;margin-bottom:6px;"><div class="txt">${o.t}</div></div>`).join('')}
+    <div style="margin-bottom:22px;">
+      <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:2px;">${i + 1}. ${q.title}</div>
+      <div style="font-size:12px;color:var(--mgray);margin-bottom:8px;">${q.q}</div>
+      ${q.opts.map((t, k) => `<div class="bars-option" id="fb-${q.key}-${k + 1}" onclick="pickFeedback('${q.key}',${k + 1})" style="padding:9px 12px;margin-bottom:6px;"><div class="num">${k + 1}</div><div class="txt">${t}</div></div>`).join('')}
     </div>`).join('');
   content.innerHTML = `
     <div class="card">
       <h2>${nombre}</h2>
-      <div class="desc">Anonymous. Answer honestly. / Anónimo. Responde con honestidad.</div>
+      <div class="desc">Anonymous. Pick the statement that best describes what you have actually seen — 1 is the lowest, 5 the highest. Describe behavior, not personality. / Anónimo. Elige la frase que mejor describe lo que has visto realmente — 1 es lo más bajo, 5 lo más alto. Describe conductas, no personalidad.</div>
       ${qs}
       <div class="error-msg" id="fb-error">Please answer every question. / Por favor responde todas las preguntas.</div>
       <button class="btn btn-primary" id="fb-submit" onclick="submitManagerFeedback()">Send anonymously / Enviar de forma anónima</button>
@@ -423,10 +536,10 @@ function selectFeedbackManager(id, nombre) {
 
 function pickFeedback(key, v) {
   feedbackAnswers[key] = v;
-  FEEDBACK_SCALE.forEach(o => {
-    const el = document.getElementById(`fb-${key}-${o.v}`);
-    if (el) el.classList.toggle('selected', o.v === v);
-  });
+  for (let k = 1; k <= 5; k++) {
+    const el = document.getElementById(`fb-${key}-${k}`);
+    if (el) el.classList.toggle('selected', k === v);
+  }
 }
 
 async function submitManagerFeedback() {
@@ -500,7 +613,7 @@ async function startSupervisorSearch() {
 
   if (!allEmployeesForSearch) {
     try {
-      allEmployeesForSearch = await sbFetch(`empleados?select=id,nombre_completo,employee_id,tienda,departamento&order=nombre_completo.asc`);
+      allEmployeesForSearch = await sbFetch(`empleados?select=id,nombre_completo,employee_id,tienda,departamento,rol,es_admin,nivel_admin&order=nombre_completo.asc`);
     } catch (err) {
       content.innerHTML = `<div class="card"><div class="no-cycle">Could not load the employee roster. / No se pudo cargar la lista de empleados.</div></div>`;
       return;
@@ -599,12 +712,61 @@ async function selectEvaluado(empId) {
   renderQuotaScreen();
 }
 
-/* ════════ METRICS (configurable per manager) ════════ */
+/* ════════ PEER EVALUATION (manager ↔ manager, closed 1-5) ════════ */
+async function startPeerEval() {
+  evalMode = 'peer';
+  selectedEvaluado = null;
+  currentDimIdx = 0;
+  responses = {};
+  const content = document.getElementById('app-content');
+  content.innerHTML = `<div class="card"><p style="text-align:center;color:var(--mgray);padding:20px 0;">Loading... / Cargando...</p></div>`;
+  let peers = [], done = [];
+  try {
+    peers = await sbFetch(`empleados?rol=eq.manager&id=neq.${loggedInEmployee.id}&select=id,nombre_completo,tienda,rol&order=nombre_completo.asc`);
+    done = await sbFetch(`evaluaciones?ciclo_id=eq.${activeCycle.id}&evaluador_id=eq.${loggedInEmployee.id}&tipo_evaluador=eq.par&select=evaluado_id`);
+  } catch (err) {
+    content.innerHTML = `<div class="card"><div class="no-cycle">Could not load managers. / No se pudo cargar la lista.</div></div>`;
+    return;
+  }
+  const doneIds = new Set((done || []).map(d => d.evaluado_id));
+  window.__peers = peers || [];
+  const rows = window.__peers.map(m => doneIds.has(m.id)
+    ? `<div class="bars-option" style="opacity:.55;cursor:default;"><div class="num">✅</div><div class="txt"><strong>${m.nombre_completo}</strong> — Done / Listo</div></div>`
+    : `<div class="bars-option" onclick="selectPeer('${m.id}')"><div class="num">👤</div><div class="txt"><strong>${m.nombre_completo}</strong> <span style="color:var(--mgray);font-size:11px;">(${m.tienda || ''})</span></div></div>`).join('');
+  content.innerHTML = `
+    <div class="card">
+      <h2>Fellow Manager Evaluation / Evaluación de Gerente Colega</h2>
+      <div class="desc">Rate how this manager collaborates with the other stores. Closed 1-5 questions about behavior. / Califica cómo colabora este gerente con las demás tiendas. Preguntas cerradas 1-5 sobre conductas.</div>
+      ${rows || '<p style="color:var(--mgray);font-size:13px;">No other managers available. / No hay otros gerentes disponibles.</p>'}
+      <button class="btn" style="margin-top:14px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="renderModePicker()">← Back / Regresar</button>
+    </div>`;
+}
+function selectPeer(id) {
+  selectedEvaluado = (window.__peers || []).find(m => m.id === id);
+  if (!selectedEvaluado) return;
+  evalMode = 'peer';
+  currentDimIdx = 0;
+  responses = {};
+  renderQuestionScreen();
+}
+
+/* ════════ METRICS (KPIs set by the company per role) ════════ */
 let metricRows = [];
 let metricTemplateLoaded = false;
+let metricsLocked = false;
 let previousEval = null;
 
 async function loadMetricTemplate() {
+  // KPIs are set by the company per role (Cockpit → Evaluation Setup). The evaluator only enters results.
+  const cfg = await loadEvalConfig();
+  const role = evalRoleOf(selectedEvaluado);
+  const hq = (cfg.kpis || []).filter(k => k.rol_evaluado === role);
+  if (hq.length) {
+    metricsLocked = true;
+    metricRows = hq.map(k => ({ nombre: k.nombre, unidad: k.unidad || '', meta: (k.meta_default ?? ''), metaLocked: k.meta_default !== null && k.meta_default !== undefined, real: '' }));
+    return;
+  }
+  metricsLocked = false;
   if (metricTemplateLoaded && metricRows.length) { metricRows = metricRows.map(r => ({ ...r, real: '' })); return; }
   let tpl = [];
   try {
@@ -645,12 +807,12 @@ function renderQuotaScreen() {
   const fld = 'padding:9px 10px;border:2px solid #e8e4dc;border-radius:8px;font-size:13px;width:100%;';
   const rowsHtml = metricRows.map((r, i) => `
     <div style="display:grid;grid-template-columns:1.6fr .7fr 1fr 1fr .8fr auto;gap:6px;align-items:center;margin-bottom:8px;">
-      <input type="text" placeholder="Metric / Métrica" value="${(r.nombre || '').replace(/"/g, '&quot;')}" oninput="updateMetric(${i},'nombre',this.value)" style="${fld}">
-      <input type="text" placeholder="Unit" value="${(r.unidad || '').replace(/"/g, '&quot;')}" oninput="updateMetric(${i},'unidad',this.value)" style="${fld}">
-      <input type="number" min="0" step="any" placeholder="Goal / Meta" value="${r.meta}" oninput="updateMetric(${i},'meta',this.value)" style="${fld}">
+      <input type="text" placeholder="Metric / Métrica" value="${(r.nombre || '').replace(/"/g, '&quot;')}" oninput="updateMetric(${i},'nombre',this.value)" style="${fld}" ${metricsLocked ? 'readonly tabindex="-1" title="Set by the company"' : ''}>
+      <input type="text" placeholder="Unit" value="${(r.unidad || '').replace(/"/g, '&quot;')}" oninput="updateMetric(${i},'unidad',this.value)" style="${fld}" ${metricsLocked ? 'readonly tabindex="-1"' : ''}>
+      <input type="number" min="0" step="any" placeholder="Goal / Meta" value="${r.meta}" oninput="updateMetric(${i},'meta',this.value)" style="${fld}" ${r.metaLocked ? 'readonly title="Set by the company"' : ''}>
       <input type="number" min="0" step="any" placeholder="Actual / Real" value="${r.real}" oninput="updateMetric(${i},'real',this.value)" style="${fld}">
       <strong id="metric-pct-${i}" style="color:var(--navy);font-size:13px;text-align:center;">${metricPct(r) === null ? '—' : metricPct(r) + '%'}</strong>
-      <button class="btn" onclick="removeMetricRow(${i})" style="padding:4px 9px;background:transparent;color:var(--mgray);font-size:16px;" title="Remove">✕</button>
+      ${metricsLocked ? '<span></span>' : `<button class="btn" onclick="removeMetricRow(${i})" style="padding:4px 9px;background:transparent;color:var(--mgray);font-size:16px;" title="Remove">✕</button>`}
     </div>`).join('');
 
   const prevHtml = previousEval ? `
@@ -658,23 +820,22 @@ function renderQuotaScreen() {
       <strong>Previous evaluation / Evaluación anterior</strong> (${(previousEval.completada_at || '').slice(0, 10)})<br>
       Final score / Puntaje final: <strong>${previousEval.score_final ?? '—'}</strong>
       · Quota / Cuota: <strong>${previousEval.pct_promedio_cuota ?? '—'}%</strong>
-      ${previousEval.feedback_narrativo ? `<br><em>"${previousEval.feedback_narrativo.replace(/</g, '&lt;')}"</em>` : ''}
     </div>` : '';
 
   content.innerHTML = `
     <div class="card">
       <h2>Performance Metrics / Métricas de Desempeño</h2>
-      <div class="desc">Evaluating: <strong>${selectedEvaluado.nombre_completo}</strong> — ${activeCycle.nombre}<br>Enter this person's goals and actual results for the cycle. Add or remove metrics as needed. / Captura las metas y resultados reales de esta persona en el ciclo. Agrega o quita métricas según necesites.</div>
+      <div class="desc">Evaluating: <strong>${selectedEvaluado.nombre_completo}</strong> — ${activeCycle.nombre}<br>${metricsLocked ? 'These KPIs are set by the company for this role. Enter the goal (if blank) and the actual result. / Estos KPIs los define la empresa para este rol. Captura la meta (si está vacía) y el resultado real.' : "Enter this person's goals and actual results for the cycle. / Captura las metas y resultados reales de esta persona en el ciclo."}</div>
       ${prevHtml}
       <div style="display:grid;grid-template-columns:1.6fr .7fr 1fr 1fr .8fr auto;gap:6px;font-size:11px;font-weight:700;color:var(--mgray);margin-bottom:6px;">
         <span>METRIC</span><span>UNIT</span><span>GOAL</span><span>ACTUAL</span><span style="text-align:center;">% MET</span><span></span>
       </div>
       ${rowsHtml}
-      <button class="btn" onclick="addMetricRow()" style="background:transparent;color:var(--navy);font-weight:600;text-decoration:underline;margin-bottom:10px;">+ Add metric / Agregar métrica</button>
+      ${metricsLocked ? '' : `<button class="btn" onclick="addMetricRow()" style="background:transparent;color:var(--navy);font-weight:600;text-decoration:underline;margin-bottom:10px;">+ Add metric / Agregar métrica</button>`}
       <div style="display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid #f0ece2;font-size:14px;">
         <span>Average attainment / Cumplimiento promedio</span><strong id="metric-avg" style="color:var(--navy);">${metricsAverage() === null ? '—' : metricsAverage() + '%'}</strong>
       </div>
-      <label style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--mgray);margin:8px 0 14px;"><input type="checkbox" id="metric-save-tpl" checked> Remember these metric names for my next evaluations / Recordar estos nombres para mis próximas evaluaciones</label>
+      ${metricsLocked ? '' : `<label style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--mgray);margin:8px 0 14px;"><input type="checkbox" id="metric-save-tpl" checked> Remember these metric names for my next evaluations / Recordar estos nombres para mis próximas evaluaciones</label>`}
       <div class="error-msg" id="quota-error">Add at least one metric with a goal greater than 0 and an actual value. / Agrega al menos una métrica con meta mayor a 0 y un valor real.</div>
       <button class="btn btn-primary" onclick="confirmQuota()">Continue / Continuar</button>
       <button class="btn" style="margin-top:10px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="renderSupervisorSearchScreen('')">← Back / Regresar</button>
@@ -683,6 +844,7 @@ function renderQuotaScreen() {
 
 async function confirmQuota() {
   const valid = metricRows.filter(r => (r.nombre || '').trim() && metricPct(r) !== null);
+  if (metricsLocked && valid.length < metricRows.length) { document.getElementById('quota-error').textContent = 'Fill in every KPI (goal and actual). / Llena todos los KPIs (meta y real).'; document.getElementById('quota-error').classList.add('show'); return; }
   if (!valid.length) { document.getElementById('quota-error').classList.add('show'); return; }
   quotaData = { metrics: valid.map(r => ({ nombre: r.nombre.trim(), unidad: (r.unidad || '').trim(), meta: parseFloat(r.meta), real: parseFloat(r.real) })), pct_promedio: metricsAverage() };
   const saveTpl = document.getElementById('metric-save-tpl');
@@ -701,8 +863,11 @@ async function confirmQuota() {
    Uses DIMENSIONS (1st person) for self, SUPERVISOR_DIMENSIONS
    (3rd person) for supervisor mode.
    ════════════════════════════════════════════════════════════ */
+function isRatedMode() { return evalMode === 'supervisor' || evalMode === 'peer'; }
 function currentDimSet() {
-  return evalMode === 'supervisor' ? SUPERVISOR_DIMENSIONS : VALUES_QUESTIONS;
+  if (evalMode === 'peer') return PEER_DIMENSIONS;
+  if (evalMode === 'supervisor') return evalRoleOf(selectedEvaluado) === 'vendedor' ? SUPERVISOR_DIMENSIONS : MANAGER_BOSS_DIMENSIONS;
+  return VALUES_QUESTIONS;
 }
 
 function renderQuestionScreen() {
@@ -718,11 +883,11 @@ function renderQuestionScreen() {
     ? `<div class="badge-admin">🔍 Admin Preview Mode — this run will NOT be saved to any employee's record. / Modo Vista Admin — esta sesión NO se guardará en el registro de ningún empleado.</div>`
     : '';
 
-  const evaluandoBanner = evalMode === 'supervisor'
+  const evaluandoBanner = isRatedMode()
     ? `<div class="badge-admin" style="background:var(--ltblue);border-left-color:var(--navy);">Evaluating / Evaluando: <strong>${selectedEvaluado.nombre_completo}</strong></div>`
     : '';
 
-  const optsHtml = evalMode === 'supervisor'
+  const optsHtml = isRatedMode()
     ? dim.opts.map((opt, i) => {
         const selected = responses[dim.key] === (i + 1) ? 'selected' : '';
         return `
@@ -784,7 +949,7 @@ function renderReviewScreen() {
   const dims = currentDimSet();
   const rows = dims.map(dim => {
     const raw = responses[dim.key];
-    const display = evalMode === 'supervisor' ? raw + '/5' : String.fromCharCode(65 + raw);
+    const display = isRatedMode() ? raw + '/5' : String.fromCharCode(65 + raw);
     return `
     <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0ece2;font-size:13px;">
       <span style="color:var(--dkgray)">${dim.title}</span>
@@ -799,11 +964,11 @@ function renderReviewScreen() {
       </div>`
     : '';
 
-  const evaluandoLine = evalMode === 'supervisor'
+  const evaluandoLine = isRatedMode()
     ? `<div class="desc">Evaluating: <strong>${selectedEvaluado.nombre_completo}</strong></div>`
     : '';
 
-  const submitLabel = evalMode === 'supervisor' ? 'Submit Evaluation / Enviar Evaluación' : 'Submit Self-Assessment / Enviar Autoevaluación';
+  const submitLabel = isRatedMode() ? 'Submit Evaluation / Enviar Evaluación' : 'Submit Self-Assessment / Enviar Autoevaluación';
 
   content.innerHTML = `
     <div class="card">
@@ -812,8 +977,6 @@ function renderReviewScreen() {
       <div class="desc">Once submitted, you won't be able to change these answers. / Una vez enviado, no podrás cambiar estas respuestas.</div>
       ${quotaRow}
       ${rows}
-      ${evalMode === 'supervisor' ? `<label style="display:block;font-size:13px;font-weight:600;color:var(--navy);margin:16px 0 6px;">Comments for this person (optional) / Comentarios para esta persona (opcional)</label>
-      <textarea id="eval-narrative" rows="3" maxlength="1000" placeholder="What is going well? What should improve by next cycle? / ¿Qué va bien? ¿Qué debe mejorar para el próximo ciclo?" style="width:100%;padding:10px 12px;border:2px solid #e8e4dc;border-radius:8px;font-size:13px;font-family:inherit;"></textarea>` : ''}
       <div class="error-msg" id="submit-error"></div>
       <button class="btn btn-primary" id="btn-submit" style="margin-top:20px" onclick="submitEvaluation()">${submitLabel}</button>
       <button class="btn" style="margin-top:10px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="currentDimIdx=currentDimSet().length-1;renderQuestionScreen();">← Back to edit / Regresar a editar</button>
@@ -846,13 +1009,16 @@ async function submitEvaluation() {
 
   const dims = currentDimSet();
   const isSupervisor = evalMode === 'supervisor';
+  const isPeer = evalMode === 'peer';
+  const isRated = isSupervisor || isPeer;
+  await loadEvalConfig();
 
   try {
     const evalPayload = {
       ciclo_id: activeCycle.id,
-      evaluado_id: isSupervisor ? selectedEvaluado.id : loggedInEmployee.id,
+      evaluado_id: isRated ? selectedEvaluado.id : loggedInEmployee.id,
       evaluador_id: loggedInEmployee.id,
-      tipo_evaluador: isSupervisor ? 'supervisor' : 'self',
+      tipo_evaluador: isSupervisor ? 'supervisor' : isPeer ? 'par' : 'self',
       track: 'sales',
       estado: 'completada',
       completada_at: new Date().toISOString()
@@ -864,9 +1030,14 @@ async function submitEvaluation() {
       evalPayload.pct_promedio_cuota = quotaData.pct_promedio;
       evalPayload.score_conductual = conductual;
       evalPayload.score_cuota = cuota;
-      evalPayload.score_final = Math.round(0.5 * cuota + 0.5 * conductual);
-      const narr = (document.getElementById('eval-narrative') || {}).value;
-      if (narr && narr.trim()) evalPayload.feedback_narrativo = narr.trim();
+      const w = evalWeights(evalRoleOf(selectedEvaluado));
+      const wsum = (w.kpi || 0) + (w.conducta || 0);
+      evalPayload.score_final = wsum > 0 ? Math.round(((w.kpi || 0) * cuota + (w.conducta || 0) * conductual) / wsum) : Math.round(0.5 * cuota + 0.5 * conductual);
+    } else if (isPeer) {
+      const scores = dims.map(d => responses[d.key]);
+      const peerScore = Math.round(((scores.reduce((a, b) => a + b, 0) / scores.length) - 1) / 4 * 100);
+      evalPayload.score_conductual = peerScore;
+      evalPayload.score_final = peerScore;
     } else {
       // Self score = % of forced-choice questions answered with the
       // higher-performance option (B). Same formula as the original design.
@@ -897,7 +1068,9 @@ async function submitEvaluation() {
       await sbFetch('rpc/metricas_guardar', { method: 'POST', body: JSON.stringify({ p_evaluacion_id: evaluacionId, p_evaluador_id: loggedInEmployee.id, p_items: quotaData.metrics }) });
     }
 
-    const successMsg = isSupervisor
+    const successMsg = isPeer
+      ? `<h2>Evaluation Submitted! / ¡Evaluación Enviada!</h2><p>Your evaluation of ${selectedEvaluado.nombre_completo} has been saved. / Tu evaluación de ${selectedEvaluado.nombre_completo} se guardó.</p>`
+      : isSupervisor
       ? `<h2>Evaluation Submitted! / ¡Evaluación Enviada!</h2><p>Your evaluation of ${selectedEvaluado.nombre_completo} for ${activeCycle.nombre} has been saved. / Tu evaluación de ${selectedEvaluado.nombre_completo} para ${activeCycle.nombre} se guardó.</p>${(previousEval && previousEval.score_final != null && evalPayload.score_final != null) ? `<p style="margin-top:10px;">Change vs previous cycle / Cambio vs ciclo anterior: <strong>${evalPayload.score_final - previousEval.score_final >= 0 ? '+' : ''}${Math.round(evalPayload.score_final - previousEval.score_final)}</strong> pts (${Math.round(previousEval.score_final)} → ${evalPayload.score_final})</p>` : ''}`
       : `<h2>Self-Assessment Submitted! / ¡Autoevaluación Enviada!</h2><p>Thank you, ${loggedInEmployee.nombre_completo}. Your supervisor will review your evaluation and follow up with feedback during ${activeCycle.nombre}. / Gracias, ${loggedInEmployee.nombre_completo}. Tu supervisor revisará tu evaluación durante ${activeCycle.nombre}.</p>`;
 
@@ -906,7 +1079,7 @@ async function submitEvaluation() {
         <div class="success-screen">
           <div class="icon">✅</div>
           ${successMsg}
-          ${isSupervisor ? `<button class="btn btn-primary" style="margin-top:20px;max-width:280px;" onclick="startSupervisorSearch()">Evaluate Someone Else / Evaluar a Alguien Más</button>` : ''}
+          ${isSupervisor ? `<button class="btn btn-primary" style="margin-top:20px;max-width:280px;" onclick="startSupervisorSearch()">Evaluate Someone Else / Evaluar a Alguien Más</button>` : isPeer ? `<button class="btn btn-primary" style="margin-top:20px;max-width:280px;" onclick="startPeerEval()">Evaluate Another Manager / Evaluar a Otro Gerente</button>` : ''}
         </div>
       </div>`;
 
@@ -915,7 +1088,7 @@ async function submitEvaluation() {
     errEl.textContent = 'Something went wrong submitting your evaluation. Please try again. / Algo salió mal al enviar tu evaluación. Intenta de nuevo.';
     errEl.classList.add('show');
     btn.disabled = false;
-    btn.textContent = isSupervisor ? 'Submit Evaluation / Enviar Evaluación' : 'Submit Self-Assessment / Enviar Autoevaluación';
+    btn.textContent = isRated ? 'Submit Evaluation / Enviar Evaluación' : 'Submit Self-Assessment / Enviar Autoevaluación';
   }
 }
 
