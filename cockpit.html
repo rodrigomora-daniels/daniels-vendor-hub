@@ -211,6 +211,17 @@
       </div>
     </div>
 
+    <div class="section" id="section-roster" style="display:none">
+      <div class="section-hdr"><h2>🧭 Evaluation Hierarchy (who evaluates whom)</h2></div>
+      <p style="font-size:12px;color:var(--mgray);margin-bottom:14px;">Everyone in the company, loaded from the org list. People link automatically when they sign up with their full name as written here. Not-yet-registered bosses are covered by the Super Admin. Toggle "In cycle" to include/exclude someone from this cycle.</p>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Name</th><th>Position</th><th>Location</th><th>Class</th><th>Reports to</th><th>Reports</th><th>Account</th><th>In cycle</th></tr></thead>
+          <tbody id="tbl-roster-body"><tr><td colspan="8" class="empty-state">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="section" id="section-eval-config" style="display:none">
       <div class="section-hdr"><h2>⚙️ Evaluation Setup — weights & KPIs by role</h2></div>
       <p style="font-size:12px;color:var(--mgray);margin-bottom:14px;">Set once for the whole company. Each role's weights must add up to 100. KPIs are what evaluators score; they only enter the results. If a goal is left blank, the evaluator enters it per person.</p>
@@ -604,7 +615,7 @@ async function handleAdminLogin() {
 /* ════════ LOAD DATA ════════ */
 async function loadAllData() {
   await loadCertAttempts();
-  await Promise.all([loadEmployees(), loadCodes(), loadLeadSource(), loadAuditLog(), loadOrganigrama(), loadEvalCycles(), loadMgrFeedback(), loadEvalConfig(), loadEvalResults()]);
+  await Promise.all([loadEmployees(), loadCodes(), loadLeadSource(), loadAuditLog(), loadOrganigrama(), loadEvalCycles(), loadMgrFeedback(), loadEvalConfig(), loadEvalResults(), loadRoster()]);
   renderCertAttemptsTable(cachedData.certAttempts);
   const plantBtn = document.getElementById('btn-plant-cert-floating');
   if (plantBtn) plantBtn.style.display = isViewOnly() ? 'none' : 'block';
@@ -764,6 +775,27 @@ async function loadMgrFeedback() {
   }
 }
 
+async function loadRoster() {
+  const sec = document.getElementById('section-roster');
+  if (!sec) return;
+  if (!isSuperAdmin()) { sec.style.display = 'none'; return; }
+  sec.style.display = '';
+  const body = document.getElementById('tbl-roster-body');
+  try {
+    const rows = await sbFetch('rpc/admin_roster_listar', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id }) });
+    const cls = { vendedor: 'Seller', manager: 'Manager', director: 'Director', staff: 'Staff' };
+    body.innerHTML = (rows || []).map(r => `<tr><td><strong>${r.nombre}</strong>${r.nota ? '<br><span style="font-size:11px;color:var(--mgray);">' + r.nota + '</span>' : ''}${r.se_evalua ? '' : ' <span class="pill pill-gray">not evaluated</span>'}</td><td>${r.puesto || ''}</td><td>${r.ubicacion || ''}</td><td>${cls[r.rol_eval] || r.rol_eval}</td><td>${r.jefes || '—'}</td><td>${r.n_reportes || ''}</td>` +
+      `<td>${r.registrado ? '<span class="pill pill-green">Registered</span>' : '<span class="pill pill-gray">Not yet</span>'}</td>` +
+      `<td>${r.se_evalua ? `<input type="checkbox" ${r.en_ciclo ? 'checked' : ''} onchange="toggleRosterCycle('${r.roster_id}', this.checked)">` : ''}</td></tr>`).join('');
+  } catch (err) {
+    body.innerHTML = `<tr><td colspan="8" class="empty-state">Could not load: ${err.message}</td></tr>`;
+  }
+}
+async function toggleRosterCycle(id, val) {
+  try { await sbFetch('rpc/admin_roster_set_ciclo', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id, p_roster_id: id, p_en_ciclo: val }) }); }
+  catch (err) { alert('Error: ' + err.message); loadRoster(); }
+}
+
 async function loadEvalResults() {
   const sec = document.getElementById('section-eval-results');
   if (!sec) return;
@@ -786,7 +818,7 @@ async function loadEvalResults() {
 
 /* ════════ EVALUATION SETUP (weights & KPIs by role) ════════ */
 let evalCfg = { pesos: [], kpis: [] };
-const CFG_ROLES = { vendedor: 'Sellers / Vendedores', manager: 'Store managers / Gerentes de tienda', director: 'Director (Héctor) / Directores' };
+const CFG_ROLES = { vendedor: 'Sellers / Vendedores', manager: 'Store managers / Gerentes de tienda', director: 'Director (Héctor) / Directores', staff: 'Staff — non-sales roles / Personal operativo y administrativo' };
 const CFG_COMPONENTS = { kpi: 'KPIs (numbers)', conducta: 'Behavior / management rated by boss', liderazgo: 'Leadership (rated by reports, anonymous)', pares: 'Peers (other managers)' };
 
 async function loadEvalConfig() {

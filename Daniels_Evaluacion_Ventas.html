@@ -299,7 +299,7 @@ async function init() {
       return;
     }
     loggedInEmployee = rows[0];
-    isAdminPreview = !!loggedInEmployee.es_admin;
+    isAdminPreview = false; // admins/managers are real evaluators; everything saves
   } catch (err) {
     console.error('Could not load employee:', err);
     content.innerHTML = `<div class="card"><div class="no-cycle">Connection error loading your profile. / Error de conexión al cargar tu perfil.</div></div>`;
@@ -336,10 +336,16 @@ async function init() {
    self-assessment checks for an existing submission first; selecting
    supervisor mode goes straight to the employee search.
    ════════════════════════════════════════════════════════════ */
+let myContext = null;
 async function renderModePicker() {
   const content = document.getElementById('app-content');
-  const canSupervise = !!loggedInEmployee.es_admin;
-
+  if (!myContext) {
+    try {
+      const r = await sbFetch('rpc/evaluacion_mi_contexto', { method: 'POST', body: JSON.stringify({ p_empleado_id: loggedInEmployee.id }) });
+      myContext = (r && r[0]) || { tiene_reportes: false, n_jefes: 0, n_pares: 0 };
+    } catch (err) { console.warn('context', err); myContext = { tiene_reportes: false, n_jefes: 0, n_pares: 0 }; }
+  }
+  const c = myContext;
   content.innerHTML = `
     <div class="card">
       <h2>What would you like to do? / ¿Qué te gustaría hacer?</h2>
@@ -348,17 +354,17 @@ async function renderModePicker() {
         <div class="num">📝</div>
         <div class="txt"><strong>My Self-Assessment / Mi Autoevaluación</strong><br>Complete your own self-assessment for this cycle. / Completa tu propia autoevaluación de este ciclo.</div>
       </div>
-      ${(loggedInEmployee.rol === 'vendedor' && !loggedInEmployee.es_admin) || loggedInEmployee.rol === 'manager' ? `
+      ${c.n_jefes > 0 ? `
       <div class="bars-option" onclick="startManagerFeedback()">
         <div class="num">💬</div>
-        <div class="txt"><strong>Anonymous Feedback for Your ${loggedInEmployee.rol === 'manager' ? 'Director' : 'Manager'} / Comentarios Anónimos para tu ${loggedInEmployee.rol === 'manager' ? 'Director' : 'Gerente'}</strong><br>Your answers are anonymous. Your manager will never see them. / Tus respuestas son anónimas. Tu gerente nunca las verá.</div>
+        <div class="txt"><strong>Anonymous Feedback for Your Manager / Comentarios Anónimos para tu Jefe</strong><br>Your answers are anonymous. Your manager will never see them. / Tus respuestas son anónimas. Tu jefe nunca las verá.</div>
       </div>` : ''}
-      ${canSupervise ? `
+      ${c.tiene_reportes ? `
       <div class="bars-option" onclick="startSupervisorSearch()">
         <div class="num">👥</div>
-        <div class="txt"><strong>Evaluate a Team Member / Evaluar a un Miembro del Equipo</strong><br>Search for and evaluate someone on your team. / Busca y evalúa a alguien de tu equipo.</div>
+        <div class="txt"><strong>Evaluate My Team / Evaluar a Mi Equipo</strong><br>Evaluate the people who report to you. / Evalúa a las personas que te reportan.</div>
       </div>` : ''}
-      ${loggedInEmployee.rol === 'manager' ? `
+      ${c.n_pares > 0 ? `
       <div class="bars-option" onclick="startPeerEval()">
         <div class="num">🤝</div>
         <div class="txt"><strong>Evaluate a Fellow Manager / Evaluar a un Gerente Colega</strong><br>Collaboration, communication and reliability — closed 1-5 questions. / Colaboración, comunicación y confiabilidad — preguntas cerradas 1-5.</div>
@@ -474,10 +480,43 @@ const PEER_DIMENSIONS = [
     'Talks directly and respectfully and we find a solution. / Lo habla directo y con respeto y encontramos solución.',
     'Treats disagreements as a chance to improve; the relationship gets stronger. / Toma los desacuerdos como oportunidad de mejorar; la relación sale fortalecida.'] }
 ];
+/* ════════ BOSS → STAFF (non-sales roles: closed 1-5) ════════ */
+const STAFF_DIMENSIONS = [
+  { key: 'calidad', title: 'Work quality / Calidad del trabajo', q: 'What do you typically observe in the accuracy and quality of this person\'s work? / ¿Qué observas habitualmente en la exactitud y calidad del trabajo de esta persona?', opts: [
+    'Frequent errors; work usually has to be redone. / Errores frecuentes; el trabajo normalmente se tiene que rehacer.',
+    'Some errors; needs checking before it is final. / Algunos errores; necesita revisión antes de quedar final.',
+    'Accurate most of the time; occasional corrections. / Exacto la mayor parte del tiempo; correcciones ocasionales.',
+    'Accurate and complete; errors are rare and fixed quickly. / Exacto y completo; errores raros y se corrigen rápido.',
+    'Consistently accurate; also spots and fixes problems others miss. / Consistentemente exacto; además detecta y corrige problemas que otros no ven.'] },
+  { key: 'cumplimiento', title: 'Reliability / Cumplimiento', q: 'How does this person handle attendance, punctuality and deadlines? / ¿Cómo maneja esta persona la asistencia, puntualidad y fechas de entrega?', opts: [
+    'Frequently late or absent; deadlines are missed. / Con frecuencia tarde o ausente; no cumple fechas.',
+    'Sometimes late or absent; deadlines need reminders. / A veces tarde o ausente; las fechas requieren recordatorios.',
+    'Generally on time and meets deadlines. / Generalmente puntual y cumple fechas.',
+    'On time and meets deadlines; warns in advance if something changes. / Puntual y cumple fechas; avisa con anticipación si algo cambia.',
+    'Always on time and delivers early; the team relies on this person. / Siempre puntual y entrega antes; el equipo confía en esta persona.'] },
+  { key: 'equipo', title: 'Teamwork / Trabajo en equipo', q: 'How does this person work with coworkers and other areas? / ¿Cómo trabaja esta persona con compañeros y otras áreas?', opts: [
+    'Works alone, creates friction or does not share information. / Trabaja solo, genera fricción o no comparte información.',
+    'Cooperates only when asked. / Coopera solo cuando se le pide.',
+    'Cooperates and shares information when needed. / Coopera y comparte información cuando se necesita.',
+    'Offers help and keeps others informed. / Ofrece ayuda y mantiene informados a los demás.',
+    'Builds the team: helps others succeed and resolves friction directly. / Construye equipo: ayuda a otros a tener éxito y resuelve fricciones de forma directa.'] },
+  { key: 'servicio', title: 'Service attitude / Actitud de servicio', q: 'How does this person treat customers or internal teams that depend on their work? / ¿Cómo trata esta persona a los clientes o equipos internos que dependen de su trabajo?', opts: [
+    'Dismissive or slow to respond; complaints are common. / Indiferente o lento para responder; las quejas son comunes.',
+    'Responds, but only to what is asked. / Responde, pero solo a lo que se le pide.',
+    'Courteous and responsive. / Cortés y receptivo.',
+    'Courteous, anticipates needs and follows up. / Cortés, anticipa necesidades y da seguimiento.',
+    'Others ask for this person by name; follows each case until it is solved. / Otros piden a esta persona por nombre; da seguimiento a cada caso hasta resolverlo.'] },
+  { key: 'iniciativa', title: 'Initiative & improvement / Iniciativa y mejora', q: 'What does this person do when they see something that could work better? / ¿Qué hace esta persona cuando ve algo que podría funcionar mejor?', opts: [
+    'Does only what is assigned; resists change. / Solo hace lo asignado; se resiste al cambio.',
+    'Notices problems but waits for someone else to act. / Nota problemas pero espera a que otro actúe.',
+    'Raises issues to the supervisor. / Plantea los problemas al supervisor.',
+    'Proposes a solution along with the issue. / Propone una solución junto con el problema.',
+    'Implements improvements that benefit the team and shares them. / Implementa mejoras que benefician al equipo y las comparte.'] }
+];
 let feedbackManager = null;
 let feedbackAnswers = {};
 let evalConfig = null;
-const evalRoleOf = e => (!e ? 'vendedor' : e.rol === 'vendedor' ? 'vendedor' : e.rol === 'manager' ? 'manager' : 'director');
+const evalRoleOf = e => (!e ? 'vendedor' : e.rol_eval ? e.rol_eval : e.rol === 'vendedor' ? 'vendedor' : e.rol === 'manager' ? 'manager' : 'director');
 async function loadEvalConfig() {
   if (evalConfig) return evalConfig;
   try { evalConfig = await sbFetch('rpc/evaluacion_config_get', { method: 'POST', body: '{}' }); } catch (err) { console.warn('config', err); evalConfig = { pesos: [], kpis: [] }; }
@@ -613,7 +652,9 @@ async function startSupervisorSearch() {
 
   if (!allEmployeesForSearch) {
     try {
-      allEmployeesForSearch = await sbFetch(`empleados?select=id,nombre_completo,employee_id,tienda,departamento,rol,es_admin,nivel_admin&order=nombre_completo.asc`);
+      const list = await sbFetch('rpc/evaluacion_mis_evaluados', { method: 'POST', body: JSON.stringify({ p_evaluador_id: loggedInEmployee.id }) });
+      allEmployeesForSearch = (list || []).map(r => ({ id: r.empleado_id, roster_id: r.roster_id, nombre_completo: r.nombre, puesto: r.puesto, tienda: r.ubicacion, rol_eval: r.rol_eval, registrado: r.registrado, en_ciclo: r.en_ciclo, cubre: r.cubre }))
+        .sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo));
     } catch (err) {
       content.innerHTML = `<div class="card"><div class="no-cycle">Could not load the employee roster. / No se pudo cargar la lista de empleados.</div></div>`;
       return;
@@ -631,7 +672,7 @@ function renderSupervisorSearchScreen(query) {
   content.innerHTML = `
     <div class="card">
       <h2>Who are you evaluating? / ¿A quién vas a evaluar?</h2>
-      <div class="desc">Your store's team appears first. Search by name to find anyone. / Tu equipo de tienda aparece primero. Busca por nombre para encontrar a cualquier persona.</div>
+      <div class="desc">These are the people who report to you. / Estas son las personas que te reportan.</div>
       <input type="text" id="sup-search" class="field-input" placeholder="Type a name... / Escribe un nombre..." value="${safeQ}" oninput="renderSupervisorResults(this.value)" style="width:100%;padding:12px 14px;border:2px solid #e8e4dc;border-radius:10px;font-size:14px;margin-bottom:14px;" autocomplete="off">
       <div id="sup-results"></div>
       <button class="btn" style="margin-top:14px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="renderModePicker()">← Back / Regresar</button>
@@ -645,40 +686,16 @@ function renderSupervisorResults(query) {
   const box = document.getElementById('sup-results');
   if (!box) return;
   const q = (query || '').trim().toLowerCase();
-  const myStore = loggedInEmployee.tienda;
-
-  // Soft filter: same store first, then everyone else grouped by store — never blocks anyone
-  const pool = (allEmployeesForSearch || [])
-    .filter(e => e.id !== loggedInEmployee.id)
-    .filter(e => !q || (e.nombre_completo || '').toLowerCase().includes(q));
-
-  const sameStore = pool.filter(e => myStore && e.tienda === myStore);
-  const otherStore = pool.filter(e => !myStore || e.tienda !== myStore);
-
+  const pool = (allEmployeesForSearch || []).filter(e => !q || (e.nombre_completo || '').toLowerCase().includes(q));
   function empRow(e) {
-    const storeTag = e.tienda && e.tienda !== myStore
-      ? ` <span style="color:var(--mgray);font-size:11px;font-weight:400;">(${e.tienda})</span>` : '';
+    const meta = [e.puesto, e.tienda].filter(Boolean).join(' · ');
+    const cover = e.cubre ? ` <span style="color:var(--mgray);font-size:11px;">(reports to ${e.cubre} — not registered yet / aún sin registro)</span>` : '';
+    if (!e.registrado) return `<div class="bars-option" style="opacity:.5;cursor:default;"><div class="num">⏳</div><div class="txt"><strong>${e.nombre_completo}</strong> <span style="color:var(--mgray);font-size:11px;">${meta}</span><br><span style="font-size:11px;color:var(--mgray);">Not registered yet — can be evaluated after they sign up. / Aún no se registra.</span>${cover}</div></div>`;
+    if (!e.en_ciclo) return `<div class="bars-option" style="opacity:.5;cursor:default;"><div class="num">➖</div><div class="txt"><strong>${e.nombre_completo}</strong> <span style="color:var(--mgray);font-size:11px;">${meta}</span><br><span style="font-size:11px;color:var(--mgray);">Not in this cycle. / No entra a este ciclo.</span></div></div>`;
     const neTag = noElegibles[e.id] ? ' <span style="color:var(--red);font-size:11px;font-weight:700;">N/A — not eligible</span>' : '';
-    return `<div class="bars-option" onclick="selectEvaluado('${e.id}')">
-      <div class="num">👤</div>
-      <div class="txt"><strong>${e.nombre_completo}</strong>${storeTag}${neTag}</div>
-    </div>`;
+    return `<div class="bars-option" onclick="selectEvaluado('${e.id}')"><div class="num">👤</div><div class="txt"><strong>${e.nombre_completo}</strong> <span style="color:var(--mgray);font-size:11px;">${meta}</span>${neTag}${cover}</div></div>`;
   }
-
-  let html = '';
-  if (!pool.length) {
-    html = `<p style="color:var(--mgray);font-size:13px;padding:10px 0;">No matches found. / No se encontraron coincidencias.</p>`;
-  } else {
-    if (sameStore.length) {
-      html += `<div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">📍 ${myStore}</div>`;
-      html += sameStore.map(empRow).join('');
-    }
-    if (otherStore.length) {
-      html += `<div style="font-size:11px;font-weight:700;color:var(--mgray);margin:10px 0 6px;text-transform:uppercase;letter-spacing:.5px;">${sameStore.length ? '🏢 Other Locations / Otras Tiendas' : '🏢 Everyone / Todos'}</div>`;
-      html += otherStore.map(empRow).join('');
-    }
-  }
-  box.innerHTML = `<div style="max-height:420px;overflow-y:auto;">${html}</div>`;
+  box.innerHTML = `<div style="max-height:420px;overflow-y:auto;">${pool.length ? pool.map(empRow).join('') : '<p style="color:var(--mgray);font-size:13px;padding:10px 0;">No matches found. / No se encontraron coincidencias.</p>'}</div>`;
 }
 
 async function selectEvaluado(empId) {
@@ -785,8 +802,9 @@ async function startPeerEval() {
   content.innerHTML = `<div class="card"><p style="text-align:center;color:var(--mgray);padding:20px 0;">Loading... / Cargando...</p></div>`;
   let peers = [], done = [];
   try {
-    peers = await sbFetch(`empleados?rol=eq.manager&id=neq.${loggedInEmployee.id}&select=id,nombre_completo,tienda,rol&order=nombre_completo.asc`);
-    done = await sbFetch(`evaluaciones?ciclo_id=eq.${activeCycle.id}&evaluador_id=eq.${loggedInEmployee.id}&tipo_evaluador=eq.par&select=evaluado_id`);
+    const pr = await sbFetch('rpc/evaluacion_mis_pares', { method: 'POST', body: JSON.stringify({ p_empleado_id: loggedInEmployee.id }) });
+    peers = (pr || []).map(x => ({ id: x.empleado_id, nombre_completo: x.nombre, tienda: x.ubicacion }));
+    done = (pr || []).filter(x => x.ya_evaluado).map(x => ({ evaluado_id: x.empleado_id }));
   } catch (err) {
     content.innerHTML = `<div class="card"><div class="no-cycle">Could not load managers. / No se pudo cargar la lista.</div></div>`;
     return;
@@ -929,7 +947,7 @@ async function confirmQuota() {
 function isRatedMode() { return evalMode === 'supervisor' || evalMode === 'peer'; }
 function currentDimSet() {
   if (evalMode === 'peer') return PEER_DIMENSIONS;
-  if (evalMode === 'supervisor') return evalRoleOf(selectedEvaluado) === 'vendedor' ? SUPERVISOR_DIMENSIONS : MANAGER_BOSS_DIMENSIONS;
+  if (evalMode === 'supervisor') { const rr = evalRoleOf(selectedEvaluado); return rr === 'vendedor' ? SUPERVISOR_DIMENSIONS : rr === 'staff' ? STAFF_DIMENSIONS : MANAGER_BOSS_DIMENSIONS; }
   return VALUES_QUESTIONS;
 }
 
