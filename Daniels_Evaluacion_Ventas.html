@@ -362,6 +362,10 @@ async function renderModePicker() {
         <div class="txt"><strong>Anonymous Feedback for Your Manager / Comentarios Anónimos para tu Jefe</strong><br>Your answers are anonymous. Your manager will never see them. / Tus respuestas son anónimas. Tu jefe nunca las verá.</div>
       </div>` : ''}
       ${c.tiene_reportes ? `
+      <div class="bars-option" onclick="startTeamDashboard()">
+        <div class="num">📊</div>
+        <div class="txt"><strong>My Team Dashboard / Panel de Mi Equipo</strong><br>Progress, results and your team's KPIs. / Avance, resultados y los KPIs de tu equipo.</div>
+      </div>
       <div class="bars-option" onclick="startSupervisorSearch()">
         <div class="num">👥</div>
         <div class="txt"><strong>Evaluate My Team / Evaluar a Mi Equipo</strong><br>Evaluate the people who report to you. / Evalúa a las personas que te reportan.</div>
@@ -374,6 +378,87 @@ async function renderModePicker() {
     </div>`;
 }
 
+
+/* ════════ MY TEAM DASHBOARD (any boss): progress + team KPIs ════════ */
+let TD = { prog: null, kpis: null, custom: [], tab: 'progress' };
+const TD_ROLE = { vendedor: 'Sellers / Vendedores', manager: 'Managers / Gerentes', director: 'Directors / Directores', staff: 'Staff / Personal' };
+const tdEsc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function tdBand(f) { if (f === null || f === undefined) return null; f = Number(f); return f >= 90 ? ['Excellent', '#27AE60'] : f >= 80 ? ['Good', '#27AE60'] : f >= 70 ? ['Meets (approved)', '#B8860B'] : f >= 60 ? ['Needs improvement', '#C0392B'] : ['Critical', '#C0392B']; }
+function tdStatus(p) {
+  if (!p.en_ciclo) return ['Not in cycle', '#777'];
+  if (p.no_elegible) return ['N/A – not eligible', '#777'];
+  if (!p.esperadas) return ['No evaluator', '#777'];
+  if (p.hechas >= p.esperadas) return ['Completed', '#27AE60'];
+  if (p.hechas > 0) return ['In progress', '#B8860B'];
+  return p.registrado ? ['Not started', '#C0392B'] : ['Awaiting sign-up', '#777'];
+}
+async function startTeamDashboard(tab) {
+  TD.tab = tab || TD.tab || 'progress';
+  const content = document.getElementById('app-content');
+  content.innerHTML = '<div class="card"><h2>My Team Dashboard / Panel de Mi Equipo</h2><div class="desc">Loading…</div></div>';
+  try {
+    TD.prog = await sbFetch('rpc/evaluacion_mi_equipo', { method: 'POST', body: JSON.stringify({ p_empleado_id: loggedInEmployee.id }) });
+    TD.kpis = await sbFetch('rpc/evaluacion_kpis_equipo_get', { method: 'POST', body: JSON.stringify({ p_manager_id: loggedInEmployee.id }) });
+    TD.custom = ((TD.kpis && TD.kpis.propios) || []).map(k => ({ rol: k.rol_evaluado, nombre: k.nombre, unidad: k.unidad || '', meta: k.meta_default ?? '' }));
+  } catch (err) { content.innerHTML = `<div class="card"><h2>My Team Dashboard</h2><div class="desc">Could not load: ${tdEsc(err.message)}</div><button class="btn" onclick="renderModePicker()">← Back</button></div>`; return; }
+  renderTeamDashboard();
+}
+function tdSetTab(t) { TD.tab = t; renderTeamDashboard(); }
+function renderTeamDashboard() {
+  const content = document.getElementById('app-content');
+  const P = TD.prog;
+  if (!P || P.error) { content.innerHTML = '<div class="card"><h2>My Team Dashboard</h2><div class="desc">You have no team members assigned.</div><button class="btn" onclick="renderModePicker()">← Back</button></div>'; return; }
+  const tabBtn = (k, l) => `<button class="btn" onclick="tdSetTab('${k}')" style="padding:7px 14px;${TD.tab === k ? 'background:var(--navy);color:#fff;' : 'background:#eee;color:var(--navy);'}">${l}</button>`;
+  content.innerHTML = `<div class="card">
+    <h2>My Team Dashboard / Panel de Mi Equipo</h2>
+    <div class="desc">${tdEsc(P.ciclo)}</div>
+    <div style="display:flex;gap:8px;margin:10px 0 14px;flex-wrap:wrap">${tabBtn('progress', 'Progress / Avance')}${tabBtn('kpis', 'Team KPIs / KPIs del equipo')}</div>
+    <div id="td-body">${TD.tab === 'progress' ? tdProgressHtml() : tdKpisHtml()}</div>
+    <button class="btn" style="margin-top:14px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="renderModePicker()">← Back / Regresar</button>
+  </div>`;
+}
+function tdProgressHtml() {
+  const P = TD.prog, d = P.dias_restantes, over = d < 0, col = over ? '#C0392B' : d <= 7 ? '#B8860B' : '#27AE60';
+  const fmt = x => new Date(x + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  const act = P.personas.filter(p => p.en_ciclo && !p.no_elegible);
+  const cnt = k => act.filter(p => tdStatus(p)[0] === k).length;
+  const card = (t, v, c) => `<div style="flex:1;min-width:90px;background:#f7f7f7;border-radius:8px;padding:8px 10px"><div style="font-size:10px;color:#777;text-transform:uppercase">${t}</div><div style="font-size:20px;font-weight:800;color:${c || 'inherit'}">${v}</div></div>`;
+  const rows = P.personas.map(p => { const st = tdStatus(p), b = p.hechas ? tdBand(p.final) : null, pct = p.esperadas ? Math.round(p.hechas / p.esperadas * 100) : 0;
+    return `<tr style="border-top:1px solid #eee"><td style="padding:7px 6px"><strong>${tdEsc(p.nombre)}</strong><div style="font-size:11px;color:#777">${tdEsc(p.puesto)}</div></td>
+      <td style="min-width:90px"><div style="background:#eee;border-radius:6px;height:7px;overflow:hidden"><div style="width:${pct}%;height:7px;background:#27AE60"></div></div><div style="font-size:11px;color:#777">${p.hechas}/${p.esperadas}</div></td>
+      <td style="color:${st[1]};font-weight:700;font-size:12px">${st[0]}</td>
+      <td>${p.hechas && p.final != null ? '<strong>' + Number(p.final).toFixed(0) + '</strong>' : '—'}</td>
+      <td style="font-size:12px;color:${b ? b[1] : '#777'};font-weight:700">${b ? b[0] + (st[0] !== 'Completed' ? ' (provisional)' : '') : ''}</td></tr>`; }).join('');
+  return `<div style="border-left:5px solid ${col};background:#fff;padding:8px 12px;margin-bottom:10px"><strong>${fmt(P.inicio)} → ${fmt(P.cierre)}</strong> · <span style="color:${col};font-weight:700">${over ? 'Overdue by ' + (-d) + ' day(s)' : d + ' day(s) left / ' + d + ' día(s) restantes'}</span></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${card('Completed', cnt('Completed'), '#27AE60')}${card('In progress', cnt('In progress'), '#B8860B')}${card('Not started', cnt('Not started'), '#C0392B')}${card('Awaiting sign-up', cnt('Awaiting sign-up'))}</div>
+    <div style="overflow-x:auto"><table style="width:100%;font-size:13px;border-collapse:collapse"><thead><tr style="text-align:left;font-size:11px;color:#777"><th>Person</th><th>Progress</th><th>Status</th><th>Final</th><th>Result</th></tr></thead><tbody>${rows || '<tr><td colspan="5">No team members.</td></tr>'}</tbody></table></div>
+    <div style="font-size:11px;color:#777;margin-top:8px">Final = weighted score from KPIs, behavior and (when applicable) leadership/peers. Provisional until all expected evaluations are done. 70+ = approved. / Final = calificación ponderada; provisional hasta completar todas las evaluaciones. 70+ = aprobado.</div>`;
+}
+function tdKpisHtml() {
+  const K = TD.kpis || { roles: [], empresa: [] };
+  const inp = 'padding:7px 8px;border:1px solid #ccc;border-radius:6px;font-size:13px;';
+  return `<div style="font-size:13px;margin-bottom:12px">🔒 Company KPIs are set by DHC (industry benchmarks) and cannot be changed. You can add up to <strong>${K.max_por_rol || 3} KPIs of your own per role</strong> for your team; they are averaged with the company KPIs when you evaluate. Weights and behavior questions stay company-wide so scores remain comparable.<br><span style="color:#777">Los KPIs de la empresa no se pueden cambiar. Puedes agregar hasta ${K.max_por_rol || 3} KPIs propios por rol; se promedian con los de la empresa. Los pesos y las preguntas de conducta son iguales para todos.</span></div>` +
+    K.roles.map(role => {
+      const comp = (K.empresa || []).filter(k => k.rol_evaluado === role);
+      const mine = TD.custom.map((c, i) => ({ c, i })).filter(x => x.c.rol === role);
+      return `<div style="border:1px solid #e5e5e5;border-radius:10px;padding:10px 12px;margin-bottom:12px"><div style="font-weight:800;margin-bottom:6px">${TD_ROLE[role] || role}</div>
+        ${comp.length ? comp.map(k => `<div style="font-size:13px;padding:3px 0">🔒 ${tdEsc(k.nombre)} <span style="color:#777">${k.unidad ? '(' + tdEsc(k.unidad) + ')' : ''}${k.meta_default != null ? ' · goal ' + k.meta_default : ''}</span></div>`).join('') : '<div style="font-size:12px;color:#777">No company KPIs for this role.</div>'}
+        <div style="margin-top:8px;font-size:12px;font-weight:700;color:#555">Your KPIs / Tus KPIs</div>
+        ${mine.map(x => `<div style="display:flex;gap:6px;margin:5px 0;flex-wrap:wrap"><input placeholder="KPI name / Nombre" value="${tdEsc(x.c.nombre)}" oninput="TD.custom[${x.i}].nombre=this.value" style="${inp}flex:2;min-width:150px"><input placeholder="Unit" value="${tdEsc(x.c.unidad)}" oninput="TD.custom[${x.i}].unidad=this.value" style="${inp}width:60px"><input type="number" min="0" step="any" placeholder="Goal" value="${tdEsc(x.c.meta)}" oninput="TD.custom[${x.i}].meta=this.value" style="${inp}width:90px"><button class="btn" onclick="tdRemoveKpi(${x.i})" style="background:transparent;color:#777;font-size:16px">✕</button></div>`).join('')}
+        ${mine.length < (K.max_por_rol || 3) ? `<button class="btn" onclick="tdAddKpi('${role}')" style="background:transparent;color:var(--navy);font-weight:600;text-decoration:underline">+ Add KPI / Agregar KPI</button>` : '<div style="font-size:11px;color:#777">Maximum reached / Máximo alcanzado</div>'}</div>`; }).join('') +
+    `<div id="td-msg" style="font-size:13px;margin:6px 0"></div><button class="btn btn-primary" onclick="tdSaveKpis()">Save team KPIs / Guardar KPIs</button>`;
+}
+function tdAddKpi(role) { TD.custom.push({ rol: role, nombre: '', unidad: '', meta: '' }); renderTeamDashboard(); }
+function tdRemoveKpi(i) { TD.custom.splice(i, 1); renderTeamDashboard(); }
+async function tdSaveKpis() {
+  const msg = document.getElementById('td-msg');
+  const items = TD.custom.filter(c => c.nombre.trim()).map(c => ({ rol_evaluado: c.rol, nombre: c.nombre.trim(), unidad: c.unidad.trim(), meta_default: c.meta === '' ? null : c.meta }));
+  try {
+    const r = await sbFetch('rpc/evaluacion_kpis_equipo_set', { method: 'POST', body: JSON.stringify({ p_manager_id: loggedInEmployee.id, p_items: items }) });
+    if (r && r.success) { TD.custom = items.map(c => ({ rol: c.rol_evaluado, nombre: c.nombre, unidad: c.unidad || '', meta: c.meta_default ?? '' })); msg.style.color = '#27AE60'; msg.textContent = '✓ Saved. They will appear when you evaluate your team. / Guardado.'; }
+    else { msg.style.color = '#C0392B'; msg.textContent = (r && r.message) || 'Could not save.'; }
+  } catch (err) { msg.style.color = '#C0392B'; msg.textContent = 'Error: ' + err.message; }
+}
 
 function renderMyProgress(p) {
   if (!p || !p.ciclo || !p.tareas) return '';
@@ -865,6 +950,10 @@ async function loadMetricTemplate() {
   const cfg = await loadEvalConfig();
   const role = evalRoleOf(selectedEvaluado);
   const hq = (cfg.kpis || []).filter(k => k.rol_evaluado === role);
+  try {
+    const tk = await sbFetch('rpc/evaluacion_kpis_equipo_get', { method: 'POST', body: JSON.stringify({ p_manager_id: loggedInEmployee.id }) });
+    ((tk && tk.propios) || []).filter(k => k.rol_evaluado === role).forEach(k => hq.push({ nombre: k.nombre, unidad: k.unidad, meta_default: k.meta_default }));
+  } catch (err) { console.warn('team kpis', err); }
   if (hq.length) {
     metricsLocked = true;
     metricRows = hq.map(k => ({ nombre: k.nombre, unidad: k.unidad || '', meta: (k.meta_default ?? ''), metaLocked: k.meta_default !== null && k.meta_default !== undefined, real: '' }));
