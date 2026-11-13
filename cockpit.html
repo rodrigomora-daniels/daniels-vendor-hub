@@ -923,7 +923,7 @@ function renderProg() {
   const q = document.getElementById('prog-f-q').value.trim().toLowerCase(), fl = document.getElementById('prog-f-store').value, fs = document.getElementById('prog-f-status').value;
   if (progTabCur === 'summary') {
     note.textContent = 'Final score = weighted average of the components available (weights in setup below). Provisional until all expected evaluations are completed. Bands: Excellent ≥90 · Good 80–89 · Meets 70–79 (approved) · Needs improvement 60–69 · Critical <60.';
-    head.innerHTML = '<tr><th>Person</th><th>Role</th><th>Location</th><th>Progress</th><th>Status</th><th>KPIs</th><th>Behavior</th><th>Leadership</th><th>Peers</th><th>Final</th><th>Result</th></tr>';
+    head.innerHTML = '<tr><th>Person</th><th>Role</th><th>Location</th><th>Progress</th><th>Status</th><th>KPIs</th><th>Behavior</th><th>Leadership</th><th>Peers</th><th>Self</th><th>Final</th><th>Result</th></tr>';
     const rows = progFiltered();
     body.innerHTML = rows.length ? rows.map(p => {
       const pct = p.esperadas ? Math.round(p.hechas / p.esperadas * 100) : 0;
@@ -931,9 +931,9 @@ function renderProg() {
       return `<tr><td><strong>${pesc(p.nombre)}</strong><div style="font-size:11px;color:var(--mgray)">${pesc(p.puesto)}</div></td><td>${PROG_ROLE[p.rol_eval] || p.rol_eval}</td><td>${pesc(p.ubicacion)}</td>` +
         `<td style="min-width:110px"><div style="background:#eee;border-radius:6px;height:8px;overflow:hidden"><div style="width:${pct}%;height:8px;background:var(--green)"></div></div><div style="font-size:11px;color:var(--mgray)">${p.hechas}/${p.esperadas}</div></td>` +
         `<td><span class="pill ${PROG_STATUS_CLS[p._status]}">${PROG_STATUS[p._status]}</span></td><td>${v(p.kpi)}</td><td>${v(p.conducta)}</td>` +
-        `<td>${v(p.liderazgo)}${p.n_liderazgo ? ` <span style="font-size:11px;color:var(--mgray)">(n=${p.n_liderazgo}${p.n_liderazgo < 3 ? ' ⚠️' : ''})</span>` : ''}</td><td>${v(p.pares)}${p.n_pares ? ` <span style="font-size:11px;color:var(--mgray)">(n=${p.n_pares})</span>` : ''}</td>` +
+        `<td>${v(p.liderazgo)}${p.n_liderazgo ? ` <span style="font-size:11px;color:var(--mgray)">(n=${p.n_liderazgo}${p.n_liderazgo < 3 ? ' ⚠️' : ''})</span>` : ''}</td><td>${v(p.pares)}${p.n_pares ? ` <span style="font-size:11px;color:var(--mgray)">(n=${p.n_pares})</span>` : ''}</td><td>${v(p.auto)}</td>` +
         `<td><strong>${v(p.final)}</strong></td><td>${b ? `<span class="pill ${b.cls}">${b.label}</span>${p._status !== 'completed' ? ' <span style="font-size:11px;color:var(--mgray)">provisional</span>' : ''}` : '—'}</td></tr>`;
-    }).join('') : '<tr><td colspan="11" class="empty-state">Nothing matches these filters.</td></tr>';
+    }).join('') : '<tr><td colspan="12" class="empty-state">Nothing matches these filters.</td></tr>';
   } else if (progTabCur === 'evaluator') {
     note.textContent = 'Everyone who has evaluations to complete this cycle: done vs pending. Chase the ones with pending items before the due date. People not yet registered cannot evaluate; their bosses cover them where noted.';
     head.innerHTML = '<tr><th>Evaluator</th><th>Progress</th><th>Done</th><th>Pending</th><th>Blocked (not registered)</th><th>Pending for…</th><th>Status</th></tr>';
@@ -966,8 +966,8 @@ function progDownload(kind) {
   const csv = rows => '﻿' + rows.map(r => r.map(c => { c = c == null ? '' : String(c); return /[",\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c; }).join(',')).join('\n');
   let rows;
   if (kind === 'summary') {
-    rows = [['Person', 'Position', 'Role', 'Location', 'Evaluations done', 'Evaluations expected', 'Status', 'KPIs', 'Behavior', 'Leadership', 'Leadership n', 'Peers', 'Peers n', 'Final score', 'Result', 'Provisional']];
-    progFiltered().forEach(p => rows.push([p.nombre, p.puesto, PROG_ROLE[p.rol_eval] || p.rol_eval, p.ubicacion, p.hechas, p.esperadas, PROG_STATUS[p._status], p.kpi, p.conducta, p.liderazgo, p.n_liderazgo, p.pares, p.n_pares, p.final, p._band ? p._band.label : '', p._band && p._status !== 'completed' ? 'yes' : '']));
+    rows = [['Person', 'Position', 'Role', 'Location', 'Evaluations done', 'Evaluations expected', 'Status', 'KPIs', 'Behavior', 'Leadership', 'Leadership n', 'Peers', 'Peers n', 'Self', 'Final score', 'Result', 'Provisional']];
+    progFiltered().forEach(p => rows.push([p.nombre, p.puesto, PROG_ROLE[p.rol_eval] || p.rol_eval, p.ubicacion, p.hechas, p.esperadas, PROG_STATUS[p._status], p.kpi, p.conducta, p.liderazgo, p.n_liderazgo, p.pares, p.n_pares, p.auto, p.final, p._band ? p._band.label : '', p._band && p._status !== 'completed' ? 'yes' : '']));
   } else {
     rows = [['Evaluator', 'Evaluated', 'Evaluated role', 'Location', 'Type', 'Status', 'Date', 'Score']];
     PROG.detalle.forEach(d => rows.push([d.evaluador, d.evaluado, PROG_ROLE[d.evaluado_rol] || d.evaluado_rol, d.ubicacion, d.tipo === 'par' ? 'Peer' : 'Supervisor', (PROG_DET_STATUS[d.estado] || [d.estado])[0], d.fecha ? d.fecha.slice(0, 10) : '', d.score]));
@@ -981,7 +981,7 @@ function progDownload(kind) {
 /* ════════ EVALUATION SETUP (weights & KPIs by role) ════════ */
 let evalCfg = { pesos: [], kpis: [] };
 const CFG_ROLES = { vendedor: 'Sellers / Vendedores', manager: 'Store managers / Gerentes de tienda', director: 'Director (Héctor) / Directores', staff: 'Staff — non-sales roles / Personal operativo y administrativo' };
-const CFG_COMPONENTS = { kpi: 'KPIs (numbers)', conducta: 'Behavior / management rated by boss', liderazgo: 'Leadership (rated by reports, anonymous)', pares: 'Peers (other managers)' };
+const CFG_COMPONENTS = { kpi: 'KPIs (numbers)', conducta: 'Behavior / management rated by boss', liderazgo: 'Leadership (rated by reports, anonymous)', pares: 'Peers (other managers)', auto: 'Self-assessment (own evaluation)' };
 
 async function loadEvalConfig() {
   const sec = document.getElementById('section-eval-config');

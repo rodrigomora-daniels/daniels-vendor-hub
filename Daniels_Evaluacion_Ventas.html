@@ -399,7 +399,7 @@ async function startTeamDashboard(tab) {
   try {
     TD.prog = await sbFetch('rpc/evaluacion_mi_equipo', { method: 'POST', body: JSON.stringify({ p_empleado_id: loggedInEmployee.id }) });
     TD.kpis = await sbFetch('rpc/evaluacion_kpis_equipo_get', { method: 'POST', body: JSON.stringify({ p_manager_id: loggedInEmployee.id }) });
-    TD.custom = ((TD.kpis && TD.kpis.propios) || []).map(k => ({ rol: k.rol_evaluado, nombre: k.nombre, unidad: k.unidad || '', meta: k.meta_default ?? '' }));
+    TD.custom = ((TD.kpis && TD.kpis.propios) || []).map(k => ({ rol: k.rol_evaluado, nombre: k.nombre, unidad: k.unidad || '', meta: k.meta_default ?? '', peso: k.peso ?? 1 }));
   } catch (err) { content.innerHTML = `<div class="card"><h2>My Team Dashboard</h2><div class="desc">Could not load: ${tdEsc(err.message)}</div><button class="btn" onclick="renderModePicker()">← Back</button></div>`; return; }
   renderTeamDashboard();
 }
@@ -437,25 +437,25 @@ function tdProgressHtml() {
 function tdKpisHtml() {
   const K = TD.kpis || { roles: [], empresa: [] };
   const inp = 'padding:7px 8px;border:1px solid #ccc;border-radius:6px;font-size:13px;';
-  return `<div style="font-size:13px;margin-bottom:12px">🔒 Company KPIs are set by DHC (industry benchmarks) and cannot be changed. You can add up to <strong>${K.max_por_rol || 3} KPIs of your own per role</strong> for your team; they are averaged with the company KPIs when you evaluate. Weights and behavior questions stay company-wide so scores remain comparable.<br><span style="color:#777">Los KPIs de la empresa no se pueden cambiar. Puedes agregar hasta ${K.max_por_rol || 3} KPIs propios por rol; se promedian con los de la empresa. Los pesos y las preguntas de conducta son iguales para todos.</span></div>` +
+  return `<div style="font-size:13px;margin-bottom:12px">🔒 Company KPIs are set by DHC (industry benchmarks) and cannot be changed. You can add up to <strong>${K.max_por_rol || 3} KPIs of your own per role</strong> for your team; they are averaged with the company KPIs when you evaluate. Give each of your KPIs a <strong>weight</strong> (company KPIs = 1; e.g. 2 counts double). Role weights and behavior questions stay company-wide so scores remain comparable.<br><span style="color:#777">Los KPIs de la empresa no se pueden cambiar. Puedes agregar hasta ${K.max_por_rol || 3} KPIs propios por rol; se promedian con los de la empresa. Los pesos y las preguntas de conducta son iguales para todos.</span></div>` +
     K.roles.map(role => {
       const comp = (K.empresa || []).filter(k => k.rol_evaluado === role);
       const mine = TD.custom.map((c, i) => ({ c, i })).filter(x => x.c.rol === role);
       return `<div style="border:1px solid #e5e5e5;border-radius:10px;padding:10px 12px;margin-bottom:12px"><div style="font-weight:800;margin-bottom:6px">${TD_ROLE[role] || role}</div>
-        ${comp.length ? comp.map(k => `<div style="font-size:13px;padding:3px 0">🔒 ${tdEsc(k.nombre)} <span style="color:#777">${k.unidad ? '(' + tdEsc(k.unidad) + ')' : ''}${k.meta_default != null ? ' · goal ' + k.meta_default : ''}</span></div>`).join('') : '<div style="font-size:12px;color:#777">No company KPIs for this role.</div>'}
+        ${comp.length ? comp.map(k => `<div style="font-size:13px;padding:3px 0">🔒 ${tdEsc(k.nombre)} <span style="color:#777">${k.unidad ? '(' + tdEsc(k.unidad) + ')' : ''}${k.meta_default != null ? ' · goal ' + k.meta_default : ''} · weight ${k.peso ?? 1}</span></div>`).join('') : '<div style="font-size:12px;color:#777">No company KPIs for this role.</div>'}
         <div style="margin-top:8px;font-size:12px;font-weight:700;color:#555">Your KPIs / Tus KPIs</div>
-        ${mine.map(x => `<div style="display:flex;gap:6px;margin:5px 0;flex-wrap:wrap"><input placeholder="KPI name / Nombre" value="${tdEsc(x.c.nombre)}" oninput="TD.custom[${x.i}].nombre=this.value" style="${inp}flex:2;min-width:150px"><input placeholder="Unit" value="${tdEsc(x.c.unidad)}" oninput="TD.custom[${x.i}].unidad=this.value" style="${inp}width:60px"><input type="number" min="0" step="any" placeholder="Goal" value="${tdEsc(x.c.meta)}" oninput="TD.custom[${x.i}].meta=this.value" style="${inp}width:90px"><button class="btn" onclick="tdRemoveKpi(${x.i})" style="background:transparent;color:#777;font-size:16px">✕</button></div>`).join('')}
+        ${mine.map(x => `<div style="display:flex;gap:6px;margin:5px 0;flex-wrap:wrap"><input placeholder="KPI name / Nombre" value="${tdEsc(x.c.nombre)}" oninput="TD.custom[${x.i}].nombre=this.value" style="${inp}flex:2;min-width:150px"><input placeholder="Unit" value="${tdEsc(x.c.unidad)}" oninput="TD.custom[${x.i}].unidad=this.value" style="${inp}width:60px"><input type="number" min="0" step="any" placeholder="Goal" value="${tdEsc(x.c.meta)}" oninput="TD.custom[${x.i}].meta=this.value" style="${inp}width:90px"><input type="number" min="0.5" max="10" step="0.5" placeholder="Weight" title="Relative weight / Peso relativo (company KPIs = 1)" value="${tdEsc(x.c.peso ?? 1)}" oninput="TD.custom[${x.i}].peso=this.value" style="${inp}width:75px"><button class="btn" onclick="tdRemoveKpi(${x.i})" style="background:transparent;color:#777;font-size:16px">✕</button></div>`).join('')}
         ${mine.length < (K.max_por_rol || 3) ? `<button class="btn" onclick="tdAddKpi('${role}')" style="background:transparent;color:var(--navy);font-weight:600;text-decoration:underline">+ Add KPI / Agregar KPI</button>` : '<div style="font-size:11px;color:#777">Maximum reached / Máximo alcanzado</div>'}</div>`; }).join('') +
     `<div id="td-msg" style="font-size:13px;margin:6px 0"></div><button class="btn btn-primary" onclick="tdSaveKpis()">Save team KPIs / Guardar KPIs</button>`;
 }
-function tdAddKpi(role) { TD.custom.push({ rol: role, nombre: '', unidad: '', meta: '' }); renderTeamDashboard(); }
+function tdAddKpi(role) { TD.custom.push({ rol: role, nombre: '', unidad: '', meta: '', peso: 1 }); renderTeamDashboard(); }
 function tdRemoveKpi(i) { TD.custom.splice(i, 1); renderTeamDashboard(); }
 async function tdSaveKpis() {
   const msg = document.getElementById('td-msg');
-  const items = TD.custom.filter(c => c.nombre.trim()).map(c => ({ rol_evaluado: c.rol, nombre: c.nombre.trim(), unidad: c.unidad.trim(), meta_default: c.meta === '' ? null : c.meta }));
+  const items = TD.custom.filter(c => c.nombre.trim()).map(c => ({ rol_evaluado: c.rol, nombre: c.nombre.trim(), unidad: c.unidad.trim(), meta_default: c.meta === '' ? null : c.meta, peso: c.peso === '' ? 1 : c.peso }));
   try {
     const r = await sbFetch('rpc/evaluacion_kpis_equipo_set', { method: 'POST', body: JSON.stringify({ p_manager_id: loggedInEmployee.id, p_items: items }) });
-    if (r && r.success) { TD.custom = items.map(c => ({ rol: c.rol_evaluado, nombre: c.nombre, unidad: c.unidad || '', meta: c.meta_default ?? '' })); msg.style.color = '#27AE60'; msg.textContent = '✓ Saved. They will appear when you evaluate your team. / Guardado.'; }
+    if (r && r.success) { TD.custom = items.map(c => ({ rol: c.rol_evaluado, nombre: c.nombre, unidad: c.unidad || '', meta: c.meta_default ?? '', peso: c.peso ?? 1 })); msg.style.color = '#27AE60'; msg.textContent = '✓ Saved. They will appear when you evaluate your team. / Guardado.'; }
     else { msg.style.color = '#C0392B'; msg.textContent = (r && r.message) || 'Could not save.'; }
   } catch (err) { msg.style.color = '#C0392B'; msg.textContent = 'Error: ' + err.message; }
 }
@@ -957,11 +957,11 @@ async function loadMetricTemplate() {
   const hq = (cfg.kpis || []).filter(k => k.rol_evaluado === role);
   try {
     const tk = await sbFetch('rpc/evaluacion_kpis_equipo_get', { method: 'POST', body: JSON.stringify({ p_manager_id: loggedInEmployee.id }) });
-    ((tk && tk.propios) || []).filter(k => k.rol_evaluado === role).forEach(k => hq.push({ nombre: k.nombre, unidad: k.unidad, meta_default: k.meta_default }));
+    ((tk && tk.propios) || []).filter(k => k.rol_evaluado === role).forEach(k => hq.push({ nombre: k.nombre, unidad: k.unidad, meta_default: k.meta_default, peso: k.peso }));
   } catch (err) { console.warn('team kpis', err); }
   if (hq.length) {
     metricsLocked = true;
-    metricRows = hq.map(k => ({ nombre: k.nombre, unidad: k.unidad || '', meta: (k.meta_default ?? ''), metaLocked: k.meta_default !== null && k.meta_default !== undefined, real: '' }));
+    metricRows = hq.map(k => ({ nombre: k.nombre, unidad: k.unidad || '', peso: Number(k.peso) > 0 ? Number(k.peso) : 1, meta: (k.meta_default ?? ''), metaLocked: k.meta_default !== null && k.meta_default !== undefined, real: '' }));
     return;
   }
   metricsLocked = false;
@@ -983,8 +983,9 @@ function metricPct(r) {
 }
 
 function metricsAverage() {
-  const pcts = metricRows.map(metricPct).filter(v => v !== null).map(v => Math.min(v, 150));
-  return pcts.length ? Math.round((pcts.reduce((a, b) => a + b, 0) / pcts.length) * 10) / 10 : null;
+  let sw = 0, sp = 0;
+  metricRows.forEach(r => { const p = metricPct(r); if (p === null) return; const w = Number(r.peso) > 0 ? Number(r.peso) : 1; sw += w; sp += Math.min(p, 150) * w; });
+  return sw > 0 ? Math.round((sp / sw) * 10) / 10 : null;
 }
 
 function updateMetric(i, field, value) {
