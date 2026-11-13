@@ -896,8 +896,13 @@ async function setEligibility(elegible) {
   }
 }
 async function proceedToMetrics() {
-  await loadMetricTemplate();
-  renderQuotaScreen();
+  try {
+    await loadMetricTemplate();
+    renderQuotaScreen();
+  } catch (err) {
+    console.error('proceedToMetrics failed:', err);
+    document.getElementById('app-content').innerHTML = `<div class="card"><h2>Something went wrong / Algo salió mal</h2><div class="desc">${(err && err.message) || err}</div><button class="btn btn-primary" onclick="proceedToMetrics()">Try again / Reintentar</button><button class="btn" style="margin-top:10px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="renderSupervisorSearchScreen('')">← Back / Regresar</button></div>`;
+  }
 }
 
 /* ════════ PEER EVALUATION (manager ↔ manager, closed 1-5) ════════ */

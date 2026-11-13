@@ -12,112 +12,109 @@
   .top-bar h1{color:#fff;font-size:18px;}
   .top-bar .sub{color:var(--ltblue);font-size:12px;margin-top:2px;}
   .btn-back{background:transparent;border:1px solid var(--ltblue);color:var(--ltblue);padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;}
-  .content{padding:22px 20px 40px;max-width:1080px;margin:0 auto;}
-  .wrap{overflow-x:auto;}
-  .chart{position:relative;width:1000px;height:530px;}
-  .node{position:absolute;width:124px;background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.1);padding:9px 7px 7px;text-align:center;border-top:4px solid var(--navy);}
-  .node.board{border-top-color:var(--gold);}
-  .node.dir{border-top-color:var(--navy);background:var(--ltblue);}
-  .node.mgmt{border-top-color:var(--navy);}
-  .node.wh{border-top-color:#557a95;background:#f0f5fa;}
-  .node.ted{border-top-color:var(--ted);background:#fdf8f5;}
-  .node.karen{border-top-color:var(--karen);background:#fdf5f8;}
-  .node.credit{border-top-color:var(--purple);}
-  .ni{font-size:15px;margin-bottom:2px;}
-  .nm{font-weight:700;color:var(--navy);font-size:10.5px;line-height:1.3;}
-  .nt{font-size:8.5px;color:var(--mgray);margin-top:2px;line-height:1.3;}
-  .nb{display:inline-block;margin-top:3px;padding:2px 5px;border-radius:6px;font-size:7.5px;font-weight:700;}
-  .bb{background:#fdf3e3;color:var(--gold);}  .bd{background:var(--navy);color:#fff;}
-  .bm{background:#edf2fb;color:var(--navy);}  .bc{background:#f0ebfa;color:var(--purple);}
-  .bwh{background:#ddeaf5;color:#557a95;}
-  .lines{position:absolute;top:0;left:0;pointer-events:none;}
-  .legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;font-size:10px;color:var(--mgray);}
-  .li{display:flex;align-items:center;gap:4px;}
-  .ld{width:9px;height:9px;border-radius:2px;}
+  .content{padding:18px 16px 40px;max-width:980px;margin:0 auto;}
+  .tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
+  .tools input{flex:1;min-width:180px;padding:9px 12px;border:1px solid #ccd;border-radius:8px;font-size:14px;}
+  .tools button{padding:9px 14px;border:1px solid var(--navy);background:#fff;color:var(--navy);border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;}
+  .board{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px;}
+  .card{background:#fff;border-radius:10px;box-shadow:0 1px 5px rgba(0,0,0,.1);padding:9px 12px;border-left:5px solid var(--navy);display:inline-flex;gap:10px;align-items:center;max-width:100%;}
+  .card.board-c{border-left-color:var(--gold);background:#fffaf0;}
+  .card.dir{background:var(--ltblue);}
+  .card.mgr{border-left-color:#4060a0;}
+  .card.staff{border-left-color:#9aa7b5;}
+  .card.sel{outline:3px solid var(--gold);}
+  .nm{font-weight:700;color:var(--navy);font-size:14px;}
+  .nt{font-size:12px;color:var(--mgray);margin-top:1px;}
+  .loc{display:inline-block;margin-top:3px;padding:1px 7px;border-radius:8px;background:#edf2fb;color:var(--navy);font-size:10px;font-weight:700;}
+  .also{font-size:11px;color:var(--purple);margin-top:2px;}
+  .cnt{margin-left:auto;background:var(--navy);color:#fff;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap;}
+  ul.tree{list-style:none;margin-left:22px;border-left:2px solid #c9d3e3;padding-left:14px;}
+  ul.tree.root{margin-left:0;border-left:none;padding-left:0;}
+  ul.tree li{margin:7px 0;}
+  .toggle{cursor:pointer;user-select:none;}
+  .collapsed > ul.tree{display:none;}
+  .arrow{display:inline-block;width:14px;color:var(--navy);font-size:12px;}
+  .empty{color:var(--mgray);padding:30px;text-align:center;}
+  .legend{font-size:11px;color:var(--mgray);margin-top:16px;}
 </style>
 </head>
 <body>
 <div class="top-bar">
-  <div><h1>🏢 Org Chart</h1><div class="sub">Daniels Home Center — Organizational Structure</div></div>
+  <div><h1>🏢 Org Chart / Organigrama</h1><div class="sub">Daniels Home Center — live from the company hierarchy</div></div>
   <button class="btn-back" onclick="window.location.href='index.html'">← Back</button>
 </div>
 <div class="content">
-  <div class="legend">
-    <div class="li"><div class="ld" style="background:var(--gold)"></div> Board</div>
-    <div class="li"><div class="ld" style="background:var(--navy)"></div> Rodrigo Direct</div>
-    <div class="li"><div class="ld" style="background:var(--ted)"></div> Ted Direct</div>
-    <div class="li"><div class="ld" style="background:var(--karen)"></div> Karen Direct</div>
-    <div class="li"><svg width="26" height="10"><line x1="0" y1="5" x2="26" y2="5" stroke="#999" stroke-width="1.5" stroke-dasharray="4,3"/></svg> Indirect</div>
+  <div class="tools">
+    <input id="q" placeholder="Search a person or position / Buscar persona o puesto…" oninput="onSearch()">
+    <button onclick="setAll(true)">Expand all / Expandir</button>
+    <button onclick="setAll(false)">Collapse / Contraer</button>
   </div>
-  <div class="wrap"><div class="chart">
-
-    <svg class="lines" width="1000" height="530" xmlns="http://www.w3.org/2000/svg">
-
-      <!-- Rodrigo UP: branch left to Board center (cx=143), right to Ted (cx=350) -->
-      <line x1="286" y1="162" x2="286" y2="128" stroke="#b09840" stroke-width="2"/>
-      <polyline points="286,128 143,128 143,100" fill="none" stroke="#b09840" stroke-width="2"/>
-      <polyline points="286,128 350,128 350,100" fill="none" stroke="var(--ted)" stroke-width="2"/>
-
-      <!-- Ted horizontal bar → managers (Héctor,Maricela,Ángel,Rey) + support branch -->
-      <line x1="350" y1="100" x2="350" y2="138" stroke="var(--ted)" stroke-width="2"/>
-      <line x1="69" y1="138" x2="750" y2="138" stroke="var(--ted)" stroke-width="2"/>
-      <!-- manager drops (not Polo) -->
-      <line x1="69"  y1="138" x2="69"  y2="293" stroke="var(--ted)" stroke-width="2"/>
-      <line x1="209" y1="138" x2="209" y2="293" stroke="var(--ted)" stroke-width="2"/>
-      <line x1="489" y1="138" x2="489" y2="293" stroke="var(--ted)" stroke-width="2"/>
-      <line x1="623" y1="138" x2="623" y2="293" stroke="var(--ted)" stroke-width="2"/>
-      <!-- support branch from bar right end -->
-      <polyline points="750,138 750,388 584,388 584,428" fill="none" stroke="var(--ted)" stroke-width="2"/>
-      <polyline points="750,388 724,388 724,428" fill="none" stroke="var(--ted)" stroke-width="2"/>
-
-      <!-- Karen → Marketing -->
-      <polyline points="488,100 488,118 903,118 903,428" fill="none" stroke="var(--karen)" stroke-width="2"/>
-
-      <!-- Rodrigo → Polo (solid, only direct) -->
-      <polyline points="286,244 286,268 349,268 349,293" fill="none" stroke="#4060a0" stroke-width="2"/>
-
-      <!-- Polo → WH Operations -->
-      <polyline points="349,369 349,396 414,396 414,428" fill="none" stroke="#4060a0" stroke-width="2"/>
-
-      <!-- Rodrigo dashed → Héctor,Maricela,Ángel,Rey -->
-      <line x1="286" y1="244" x2="286" y2="278" stroke="#aaa" stroke-width="1.5" stroke-dasharray="5,4"/>
-      <line x1="69" y1="278" x2="623" y2="278" stroke="#aaa" stroke-width="1.5" stroke-dasharray="5,4"/>
-      <line x1="69"  y1="278" x2="69"  y2="293" stroke="#aaa" stroke-width="1.5" stroke-dasharray="5,4"/>
-      <line x1="209" y1="278" x2="209" y2="293" stroke="#aaa" stroke-width="1.5" stroke-dasharray="5,4"/>
-      <line x1="489" y1="278" x2="489" y2="293" stroke="#aaa" stroke-width="1.5" stroke-dasharray="5,4"/>
-      <line x1="623" y1="278" x2="623" y2="293" stroke="#aaa" stroke-width="1.5" stroke-dasharray="5,4"/>
-
-      <!-- Rodrigo → Ana,Leticia via LEFT side (avoids Polo box) -->
-      <polyline points="223,215 160,215 160,394 134,394 134,428" fill="none" stroke="var(--purple)" stroke-width="1.5"/>
-      <polyline points="160,394 274,394 274,428" fill="none" stroke="var(--purple)" stroke-width="1.5"/>
-
-    </svg>
-
-    <!-- BOARD -->
-    <div class="node board" style="left:11px;top:18px;"><div class="ni">👑</div><div class="nm">Dani Rosenberg</div><span class="nb bb">BOARD</span></div>
-    <div class="node board" style="left:149px;top:18px;"><div class="ni">👑</div><div class="nm">Rebecca Rosenberg</div><span class="nb bb">BOARD</span></div>
-    <div class="node board" style="left:287px;top:18px;"><div class="ni">👔</div><div class="nm">Ted Rosenberg</div><div class="nt">CEO</div><span class="nb bb">BOARD</span></div>
-    <div class="node board" style="left:425px;top:18px;"><div class="ni">📣</div><div class="nm">Karen Rosenberg</div><div class="nt">CMO</div><span class="nb bb">BOARD</span></div>
-
-    <!-- RODRIGO -->
-    <div class="node dir" style="left:223px;top:162px;"><div class="ni">⚙️</div><div class="nm">Rodrigo Mora</div><div class="nt">Managing Director / COO · CFO</div><span class="nb bd">MANAGING DIR.</span></div>
-
-    <!-- MANAGERS -->
-    <div class="node mgmt" style="left:6px;top:293px;"><div class="ni">🛒</div><div class="nm">Héctor Estrada</div><div class="nt">Sales & Merch. Manager</div><span class="nb bm">MGMT</span></div>
-    <div class="node mgmt" style="left:146px;top:293px;"><div class="ni">🤝</div><div class="nm">Maricela Chávez</div><div class="nt">CS & Collections Mgr</div><span class="nb bm">MGMT</span></div>
-    <div class="node mgmt" style="left:286px;top:293px;"><div class="ni">📦</div><div class="nm">Polo Torres</div><div class="nt">Warehouse Manager</div><span class="nb bm">MGMT</span></div>
-    <div class="node mgmt" style="left:426px;top:293px;"><div class="ni">🛍️</div><div class="nm">Ángel Delgado</div><div class="nt">Electronics Buyer & E-Commerce</div><span class="nb bm">MGMT</span></div>
-    <div class="node mgmt" style="left:560px;top:293px;"><div class="ni">👥</div><div class="nm">Rey Quiroz</div><div class="nt">HR Manager</div><span class="nb bm" style="background:#eaf7ea;color:var(--green);">HR</span></div>
-
-    <!-- SUPPORT ROW -->
-    <div class="node credit" style="left:71px;top:428px;"><div class="ni">💳</div><div class="nm">Ana</div><div class="nt">Credit Approver</div><span class="nb bc">CREDIT</span></div>
-    <div class="node credit" style="left:211px;top:428px;"><div class="ni">💳</div><div class="nm">Leticia</div><div class="nt">Credit Approver</div><span class="nb bc">CREDIT</span></div>
-    <div class="node wh" style="left:351px;top:428px;"><div class="ni">📦</div><div class="nm">WH Operations</div><div class="nt">Warehouse Team</div><span class="nb bwh">OPERATIONS</span></div>
-    <div class="node ted" style="left:521px;top:428px;"><div class="ni">🏷️</div><div class="nm">Merchandising</div><div class="nt">Merchandising Team</div></div>
-    <div class="node ted" style="left:661px;top:428px;"><div class="ni">🧾</div><div class="nm">Accounting & Admin</div><div class="nt">Finance & Administration</div></div>
-    <div class="node karen" style="left:840px;top:428px;"><div class="ni">📢</div><div class="nm">Marketing</div><div class="nt">Marketing Team</div></div>
-
-  </div></div>
+  <div class="board">
+    <div class="card board-c"><span>👑</span><div><div class="nm">Dani Rosenberg</div><div class="nt">Founder · Board</div></div></div>
+    <div class="card board-c"><span>👑</span><div><div class="nm">Rebecca Rosenberg</div><div class="nt">Founder · Board</div></div></div>
+  </div>
+  <div id="tree"><div class="empty">Loading… / Cargando…</div></div>
+  <div class="legend">Click a name to expand or collapse its team. Purple note = also reports to another leader. / Da clic en un nombre para expandir su equipo. La nota morada = también reporta a otro líder.</div>
 </div>
+<script>
+const SUPABASE_URL = 'https://ecfxeebhtgkbsdeuiueb.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_oRxEOMLizp1kjlsRjWWaxg_muaaMHFt';
+let NODES = [], BY = {}, KIDS = {};
+const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+async function load() {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/organigrama_publico`, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }, body: '{}' });
+    if (!res.ok) throw new Error(await res.text());
+    NODES = await res.json();
+  } catch (err) { document.getElementById('tree').innerHTML = `<div class="empty">Could not load the org chart: ${esc(err.message)}</div>`; return; }
+  BY = {}; KIDS = {};
+  NODES.forEach(n => { BY[n.id] = n; KIDS[n.id] = []; });
+  // primary leader: prefer a non-Rosenberg boss (operational line), else the first one
+  const isRos = id => /rosenberg/i.test((BY[id] || {}).nombre || '');
+  NODES.forEach(n => {
+    const js = (n.jefes || []).filter(j => BY[j]);
+    n.primary = js.find(j => !isRos(j)) || js[0] || null;
+    n.also = js.filter(j => j !== n.primary);
+    if (n.primary) KIDS[n.primary].push(n.id);
+  });
+  Object.values(KIDS).forEach(a => a.sort((x, y) => (BY[x].rol === BY[y].rol ? 0 : ({ director: 0, manager: 1, vendedor: 2, staff: 3 }[BY[x].rol] - { director: 0, manager: 1, vendedor: 2, staff: 3 }[BY[y].rol])) || BY[x].nombre.localeCompare(BY[y].nombre)));
+  render();
+}
+function total(id) { return KIDS[id].reduce((s, k) => s + 1 + total(k), 0); }
+function nodeHtml(id, depth) {
+  const n = BY[id], kids = KIDS[id], t = total(id);
+  const cls = n.rol === 'director' ? 'dir' : n.rol === 'manager' ? 'mgr' : n.rol === 'staff' ? 'staff' : '';
+  const icon = /^(ted|karen)/i.test(n.nombre) ? '👔' : n.rol === 'director' ? '⚙️' : n.rol === 'manager' ? '🧭' : n.rol === 'vendedor' ? '🛒' : '👤';
+  const collapsed = kids.length && depth >= 2 ? 'collapsed' : '';
+  return `<li class="${collapsed}" data-id="${id}"><div class="card ${cls} ${kids.length ? 'toggle' : ''}" ${kids.length ? `onclick="toggle(this.parentNode)"` : ''}>
+      <span>${icon}</span><div><div class="nm">${kids.length ? '<span class="arrow">▾</span>' : ''}${esc(n.nombre)}</div><div class="nt">${esc(n.puesto)}</div>
+      ${n.ubicacion ? `<span class="loc">${esc(n.ubicacion)}</span>` : ''}${n.also.length ? `<div class="also">also reports to / también reporta a: ${n.also.map(a => esc(BY[a].nombre)).join(', ')}</div>` : ''}</div>
+      ${t ? `<span class="cnt">${t}</span>` : ''}</div>
+    ${kids.length ? `<ul class="tree">${kids.map(k => nodeHtml(k, depth + 1)).join('')}</ul>` : ''}</li>`;
+}
+function render() {
+  const roots = NODES.filter(n => !n.primary).map(n => n.id);
+  roots.sort((a, b) => (/ted/i.test(BY[a].nombre) ? 0 : 1) - (/ted/i.test(BY[b].nombre) ? 0 : 1) || BY[a].nombre.localeCompare(BY[b].nombre));
+  document.getElementById('tree').innerHTML = roots.length ? `<ul class="tree root">${roots.map(r => nodeHtml(r, 0)).join('')}</ul>` : '<div class="empty">No data yet.</div>';
+  syncArrows();
+}
+function syncArrows() { document.querySelectorAll('#tree li').forEach(li => { const a = li.querySelector(':scope > .card .arrow'); if (a) a.textContent = li.classList.contains('collapsed') ? '▸' : '▾'; }); }
+function toggle(li) { li.classList.toggle('collapsed'); syncArrows(); }
+function setAll(open) { document.querySelectorAll('#tree li').forEach(li => { if (li.querySelector(':scope > ul')) li.classList.toggle('collapsed', !open); }); syncArrows(); }
+function onSearch() {
+  const q = document.getElementById('q').value.trim().toLowerCase();
+  document.querySelectorAll('#tree .card').forEach(c => c.classList.remove('sel'));
+  if (!q) { render(); return; }
+  setAll(true);
+  let first = null;
+  document.querySelectorAll('#tree li').forEach(li => {
+    const n = BY[li.dataset.id];
+    if ((n.nombre + ' ' + (n.puesto || '')).toLowerCase().includes(q)) { const c = li.querySelector(':scope > .card'); c.classList.add('sel'); if (!first) first = c; }
+  });
+  if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+load();
+</script>
 </body>
 </html>
