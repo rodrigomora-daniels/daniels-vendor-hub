@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Daniels — How Did the Customer Hear About Us?</title>
+<style>
+  :root {
+    --navy:#1B3A6B; --gold:#C8922A; --ltblue:#D6E4F7; --cream:#FFF8EC;
+    --green:#27AE60; --red:#C0392B; --gray:#F4F4F4; --dkgray:#3C3C3C;
+    --mgray:#6B6B6B; --white:#FFFFFF;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{font-family:Arial,sans-serif;background:var(--cream);color:var(--dkgray);overscroll-behavior:none;min-height:100%;}
+
+  .screen{display:none;min-height:600px;}
+  .screen.active{display:flex;flex-direction:column;}
+
+  /* ── HEADER ── */
+  .top-bar{background:var(--navy);border-bottom:4px solid var(--gold);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+  .logo-block{display:flex;align-items:center;gap:10px;}
+  .logo-text{color:var(--white);font-size:17px;font-weight:700;letter-spacing:.3px;}
+  .logo-sub{color:var(--gold);font-size:11px;}
+  .step-pill{background:var(--gold);color:var(--navy);font-size:12px;font-weight:700;padding:5px 12px;border-radius:20px;}
+
+  /* ── MAIN CONTENT ── */
+  .content{flex:1;background:var(--cream);padding:24px 18px 100px;max-width:680px;margin:0 auto;width:100%;}
+
+  /* ── EMPLOYEE SCREEN ── */
+  .employee-card{background:var(--white);border-radius:14px;padding:28px 22px;box-shadow:0 2px 14px rgba(0,0,0,.08);margin-top:20px;}
+  .employee-card h2{color:var(--navy);font-size:20px;margin-bottom:6px;}
+  .employee-card .sub{color:var(--mgray);font-size:13px;margin-bottom:22px;}
+  .field-label{display:block;font-weight:700;color:var(--navy);font-size:13px;margin-bottom:6px;}
+  .field-input{width:100%;padding:14px 16px;border:2px solid #ddd;border-radius:10px;font-size:17px;margin-bottom:18px;outline:none;transition:border .2s;}
+  .field-input:focus{border-color:var(--navy);}
+  .date-display{background:var(--ltblue);border-radius:10px;padding:12px 16px;font-size:14px;color:var(--navy);font-weight:700;margin-bottom:22px;}
+
+  /* ── BIG SOURCE GRID ── */
+  .grid-title{color:var(--navy);font-size:22px;font-weight:700;text-align:center;margin:6px 0 4px;}
+  .grid-sub{color:var(--mgray);font-size:13px;text-align:center;margin-bottom:22px;}
+
+  .source-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .source-tile{
+    background:var(--white);border:3px solid #e8e4dc;border-radius:16px;
+    padding:22px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:10px;cursor:pointer;transition:all .15s;min-height:118px;
+    user-select:none;
+  }
+  .source-tile:active{transform:scale(0.96);}
+  .source-tile.selected{border-color:var(--navy);background:var(--ltblue);box-shadow:0 4px 14px rgba(27,58,107,.18);}
+  .source-tile .icon{font-size:34px;line-height:1;}
+  .source-tile .label{font-size:14px;font-weight:700;color:var(--dkgray);text-align:center;line-height:1.3;}
+  .source-tile.selected .label{color:var(--navy);}
+  .source-tile .checkmark{position:absolute;top:8px;right:10px;width:22px;height:22px;border-radius:50%;background:var(--navy);color:var(--white);display:none;align-items:center;justify-content:center;font-size:13px;font-weight:700;}
+  .source-tile{position:relative;}
+  .source-tile.selected .checkmark{display:flex;}
+
+  .source-tile.google .icon{color:#4285F4;}
+  .source-tile.daniels .icon{color:var(--navy);}
+  .source-tile.wrap .icon{color:var(--gold);}
+  .source-tile.facebook .icon{color:#1877F2;}
+  .source-tile.instagram .icon{color:#E1306C;}
+  .source-tile.walked .icon{color:var(--green);}
+  .source-tile.friend .icon{color:#9b59b6;}
+  .source-tile.family .icon{color:#16a085;}
+  .source-tile.tv .icon{color:#8e44ad;}
+  .source-tile.billboard .icon{color:#d35400;}
+  .source-tile.textcampaign .icon{color:#2980b9;}
+  .source-tile.other .icon{color:var(--mgray);}
+
+  .other-detail{display:none;margin-top:16px;}
+  .other-detail.show{display:block;}
+  .other-detail textarea{width:100%;padding:14px;border:2px solid #ddd;border-radius:10px;font-size:15px;font-family:Arial;resize:none;outline:none;min-height:70px;}
+  .other-detail textarea:focus{border-color:var(--navy);}
+
+  /* ── FOOTER / SUBMIT ── */
+  .bottom-bar{position:sticky;bottom:0;left:0;right:0;background:var(--white);border-top:1px solid #e8e4dc;padding:14px 18px;box-shadow:0 -4px 14px rgba(0,0,0,.06);}
+  .bottom-bar-inner{max-width:680px;margin:0 auto;}
+  .btn{display:block;width:100%;padding:16px;border-radius:12px;font-size:17px;font-weight:700;cursor:pointer;border:none;text-align:center;transition:opacity .2s;}
+  .btn:active{opacity:.85;}
+  .btn-primary{background:var(--navy);color:var(--white);}
+  .btn-primary:disabled{background:#ccc;color:#888;}
+  .btn-gold{background:var(--gold);color:var(--white);}
+  .btn-ghost{background:transparent;color:var(--navy);font-size:14px;padding:10px;font-weight:600;}
+
+  /* ── SUCCESS SCREEN ── */
+  .success-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center;background:var(--cream);}
+  .success-icon{width:84px;height:84px;border-radius:50%;background:var(--green);color:var(--white);display:flex;align-items:center;justify-content:center;font-size:42px;margin-bottom:24px;animation:popin .35s ease;}
+  @keyframes popin{0%{transform:scale(0);}70%{transform:scale(1.1);}100%{transform:scale(1);}}
+  .success-title{color:var(--navy);font-size:24px;font-weight:700;margin-bottom:8px;}
+  .success-sub{color:var(--mgray);font-size:14px;margin-bottom:32px;max-width:320px;}
+  .success-summary{background:var(--white);border-radius:14px;padding:18px 22px;margin-bottom:28px;width:100%;max-width:340px;box-shadow:0 2px 10px rgba(0,0,0,.06);}
+  .success-summary .row{display:flex;justify-content:space-between;padding:8px 0;font-size:14px;border-bottom:1px solid #f0ece2;}
+  .success-summary .row:last-child{border-bottom:none;}
+  .success-summary .row .k{color:var(--mgray);}
+  .success-summary .row .v{color:var(--navy);font-weight:700;}
+
+  /* ── ADMIN STATS PEEK (mini) ── */
+  .stats-link{margin-top:18px;font-size:12px;color:var(--mgray);text-decoration:underline;cursor:pointer;}
+
+  @media (max-width:380px){
+    .source-tile{min-height:104px;padding:16px 8px;}
+    .source-tile .icon{font-size:28px;}
+    .source-tile .label{font-size:12.5px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="logo-block">
+    <div>
+      <div class="logo-text">🏠 DANIEL'S HOME CENTER</div>
+      <div class="logo-sub">How Did They Hear About Us?</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- SCREEN 2: SOURCE SELECTION -->
+<div class="screen active" id="screen-source">
+  <div class="content">
+    <div class="grid-title">How did the customer<br>hear about us?</div>
+    <div class="grid-sub">Tap one — you can add a note if needed</div>
+
+    <div class="source-grid" id="source-grid">
+      <div class="source-tile google" data-source="Google Search" onclick="selectSource(this)">
+        <div class="checkmark">✓</div>
+        <div class="icon">🔍</div>
+        <div class="label">Google Search</div>
+      </div>
+      <div class="source-tile daniels" data-source="Daniels Website" onclick="selectSource(this)">
+        <div class="checkmark">✓</div>
+        <div class="icon">🌐</div>
+        <div class="label">Daniels Website</div>
+      </div>
+      <div class="source-tile wrap" data-source="Wrap Flyer" onclick="selectSource(this)">
+        <div class="checkmark">✓</div>
+        <div class="icon">📰</div>
+        <div class="label">Wrap Flyer</div>
+      </div>
+      <div class="source-tile facebook" data-source="Facebook" onclick="selectSource(this)">
+        <div class="checkmark">✓</div>
+        <div class="icon">📘</div>
+        <div class="label">Facebook</div>
+      </div>
+      <div class="source-tile instagram" data-source="Instagram" onclick="selectSource(this)">
+        <div class="checkmark">✓</div>
+        <div class="icon">📷</div>
+        <div class="label">Instagram</div>
+      </div>
+      <div class="source-tile walked" data-source="Walked By / Passing Location" onclick="selectSource(this)">
+        <div class="checkmark">✓</div>
+        <div class="icon">🚶</div>
+        <div class="label">Walked By / Passing Location</div>
+      </div>
+      <div class="source-tile friend" data-source="Referred by Friend" onclick="selectSource(this)">
+        <div class="checkmark">✓</div>
+        <div class="icon">🗣️</div>
+        <div class="label">Referred by Friend</div>
+      </div>
+      <div class="source-tile family" data-source="Referred by Family Member" onclick="selectSource(this)">
+        <div class="checkmark">✓</div>
+        <div class="icon">👨‍👩‍👧</div>
+        <div class="label">Family Member</div>
+      </div>
+      <div class="source-tile tv" data-source="TV Commercial" onclick="selectSource(this)">
+        <div class="checkmark">✓</div>
+        <div class="icon">📺</div>
+        <div class="label">TV Commercial</div>
+      </div>
+      <div class="source-tile billboard" data-source="Billboard" onclick="selectSource(this)">
+        <div class="checkmark">✓</div>
+        <div class="icon">🛣️</div>
+        <div class="label">Billboard</div>
+      </div>
+      <div class="source-tile textcampaign" data-source="Text Campaign" onclick="selectSource(this)">
+        <div class="checkmark">✓</div>
+        <div class="icon">💬</div>
+        <div class="label">Text Campaign</div>
+      </div>
+      <div class="source-tile other" data-source="Other" onclick="selectSource(this)" style="grid-column:span 2;">
+        <div class="checkmark">✓</div>
+        <div class="icon">✏️</div>
+        <div class="label">Other</div>
+      </div>
+    </div>
+
+    <div class="other-detail" id="other-detail">
+      <textarea id="other-text" placeholder="Briefly describe the source..."></textarea>
+    </div>
+  </div>
+  <div class="bottom-bar">
+    <div class="bottom-bar-inner">
+      <button class="btn btn-primary" id="btn-submit" onclick="submitForm()" disabled>Submit</button>
+      <button class="btn btn-ghost" onclick="goBackToHub()">← Back</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 3: SUCCESS -->
+<div class="screen" id="screen-success">
+  <div class="success-wrap">
+    <div class="success-icon">✓</div>
+    <div class="success-title">Got it — thank you!</div>
+    <div class="success-sub">This helps Daniel's understand what's working and invest in the right places.</div>
+    <div class="success-summary">
+      <div class="row"><span class="k">Source</span><span class="v" id="sum-source">—</span></div>
+      <div class="row"><span class="k">Date</span><span class="v" id="sum-date">—</span></div>
+    </div>
+    <button class="btn btn-gold" style="max-width:280px" onclick="resetForm()">+ New Entry</button>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════
+   SUPABASE CONNECTION — fill in once project is created
+   ════════════════════════════════════════════════════════════ */
+const SUPABASE_URL = 'https://ecfxeebhtgkbsdeuiueb.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_oRxEOMLizp1kjlsRjWWaxg_muaaMHFt';
+
+// Who is submitting (passed by the hub: lead form is opened with ?emp=...&name=...)
+const QS = new URLSearchParams(location.search);
+// /next/: the name comes from the signed-in session (stored by index.html), falling back to ?name=
+let SESS_EMP = null;
+try { SESS_EMP = JSON.parse(sessionStorage.getItem('dh_emp') || 'null'); } catch (e) {}
+const EMP_NAME = ((SESS_EMP && SESS_EMP.nombre_completo) || QS.get('name') || '').trim() || 'Unknown';
+
+// Lightweight direct REST call - no SDK needed, keeps file dependency-free
+async function saveLead(record) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/customer_source_log`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(record)
+    });
+    if (!res.ok) throw new Error(`Supabase error: ${res.status} ${await res.text()}`);
+    return { ok: true, local: false };
+  } catch (err) {
+    console.error('Supabase save failed, queued on this device:', err);
+    saveLocalFallback(record);
+    return { ok: true, local: true, error: err.message };
+  }
+}
+
+// Retry anything that was queued on this device (flaky wifi) the next time the form opens or saves.
+async function flushQueue() {
+  let q = [];
+  try { q = JSON.parse(localStorage.getItem('lead_queue') || '[]'); } catch (e) { q = []; }
+  if (!q.length) return;
+  const left = [];
+  for (const rec of q) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/customer_source_log`, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, Prefer: 'return=minimal' }, body: JSON.stringify(rec) });
+      if (!res.ok) left.push(rec);
+    } catch (e) { left.push(rec); }
+  }
+  try { localStorage.setItem('lead_queue', JSON.stringify(left)); } catch (e) {}
+}
+window.addEventListener('load', flushQueue);
+
+// Fallback: if offline or not yet configured, queue locally so nothing is lost.
+// Uses in-memory storage for this session (no browser storage per artifact rules);
+// for the production GitHub-hosted version this queues in a JS array you can export.
+function saveLocalFallback(record) {
+  try {
+    const q = JSON.parse(localStorage.getItem('lead_queue') || '[]');
+    q.push(record);
+    localStorage.setItem('lead_queue', JSON.stringify(q));
+  } catch (e) { console.warn('Could not queue locally', e); }
+}
+
+/* ════════════════════════════════════════════════════════════
+   APP STATE & LOGIC
+   ════════════════════════════════════════════════════════════ */
+let state = { source: null, otherNote: '' };
+
+function goBackToHub() {
+  window.location.href = 'index.html';
+}
+
+
+function formatToday() {
+  const d = new Date();
+  return d.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+}
+// No employee/date screen needed — source selection is the entry point.
+
+function selectSource(el) {
+  document.querySelectorAll('.source-tile').forEach(t => t.classList.remove('selected'));
+  el.classList.add('selected');
+  state.source = el.dataset.source;
+
+  const otherBox = document.getElementById('other-detail');
+  if (state.source === 'Other') {
+    otherBox.classList.add('show');
+  } else {
+    otherBox.classList.remove('show');
+    document.getElementById('other-text').value = '';
+  }
+  document.getElementById('btn-submit').disabled = false;
+}
+
+async function submitForm() {
+  const btn = document.getElementById('btn-submit');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
+  state.otherNote = document.getElementById('other-text').value.trim();
+
+  const record = {
+    employee_name: EMP_NAME,
+    source: state.source,
+    other_note: state.source === 'Other' ? state.otherNote : null,
+    submitted_at: new Date().toISOString()
+  };
+
+  const result = await saveLead(record);
+
+  // Populate success screen
+  document.getElementById('sum-source').textContent = state.source === 'Other' && state.otherNote
+    ? `Other: ${state.otherNote}` : state.source;
+  document.getElementById('sum-date').textContent = formatToday() + (result && result.local ? '  ·  ⚠️ No connection — saved on this tablet, will sync automatically' : '');
+
+  document.getElementById('screen-source').classList.remove('active');
+  document.getElementById('screen-success').classList.add('active');
+  btn.disabled = false;
+  btn.textContent = 'Submit';
+}
+
+function resetForm() {
+  state = { source: null, otherNote: '' };
+  document.querySelectorAll('.source-tile').forEach(t => t.classList.remove('selected'));
+  document.getElementById('other-detail').classList.remove('show');
+  document.getElementById('other-text').value = '';
+  document.getElementById('btn-submit').disabled = true;
+  document.getElementById('screen-success').classList.remove('active');
+  document.getElementById('screen-source').classList.add('active');
+}
+</script>
+</body>
+</html>

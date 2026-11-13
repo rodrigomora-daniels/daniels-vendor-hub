@@ -1,0 +1,1758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Daniels Workspace — Admin Cockpit</title>
+<style>
+  :root {
+    --navy:#1B3A6B; --gold:#C8922A; --ltblue:#D6E4F7; --cream:#FFF8EC;
+    --green:#27AE60; --red:#C0392B; --gray:#F4F4F4; --dkgray:#3C3C3C;
+    --mgray:#6B6B6B; --white:#FFFFFF;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:Arial,sans-serif;background:#f0f2f5;color:var(--dkgray);min-height:100vh;}
+  .screen{display:none;}
+  .screen.active{display:block;}
+  .login-wrap{max-width:420px;margin:60px auto;}
+  .login-card{background:var(--white);border-radius:16px;padding:36px 32px;box-shadow:0 8px 30px rgba(0,0,0,.15);}
+  .login-card h1{color:var(--navy);font-size:22px;margin-bottom:6px;text-align:center;}
+  .login-card .sub{color:var(--mgray);font-size:13px;text-align:center;margin-bottom:24px;}
+  .field-label{display:block;font-weight:700;color:var(--navy);font-size:13px;margin-bottom:6px;}
+  .field-input{width:100%;padding:13px 16px;border:2px solid #e0ddd6;border-radius:10px;font-size:15px;margin-bottom:16px;outline:none;}
+  .field-input:focus{border-color:var(--navy);}
+  .error-msg{background:#fdecea;border-left:4px solid var(--red);color:var(--red);padding:10px 14px;border-radius:6px;font-size:13px;margin-bottom:14px;display:none;}
+  .error-msg.show{display:block;}
+  .btn{display:inline-block;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:opacity .15s;}
+  .btn:hover{opacity:.85;}
+  .btn-primary{background:var(--navy);color:var(--white);}
+  .btn-gold{background:var(--gold);color:var(--white);}
+  .btn-red{background:var(--red);color:var(--white);}
+  .btn-ghost{background:transparent;border:1px solid #ccc;color:var(--dkgray);}
+  .btn-block{width:100%;display:block;text-align:center;padding:13px;font-size:15px;}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+  /* spinner — used in loading states */
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .cockpit-header{background:var(--navy);border-bottom:4px solid var(--gold);padding:18px 28px;display:flex;align-items:center;justify-content:space-between;}
+  .cockpit-header .btn-ghost{background:transparent;border:1px solid var(--ltblue);color:var(--ltblue);}
+  .cockpit-header .btn-ghost:hover{background:rgba(255,255,255,.1);}
+  .cockpit-header h1{color:var(--white);font-size:19px;}
+  .cockpit-header .sub{color:var(--gold);font-size:12px;}
+  .cockpit-content{padding:28px 24px;max-width:1200px;margin:0 auto;}
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
+  @media (max-width:900px){ .kpi-grid{grid-template-columns:repeat(2,1fr);} }
+  .kpi-card{background:var(--white);border-radius:12px;padding:18px 20px;box-shadow:0 2px 10px rgba(0,0,0,.06);}
+  .kpi-card .lbl{font-size:11px;color:var(--mgray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+  .kpi-card .val{font-size:28px;font-weight:700;color:var(--navy);}
+  .kpi-card .sub{font-size:12px;color:var(--mgray);margin-top:4px;}
+  .section{background:var(--white);border-radius:14px;padding:22px;box-shadow:0 2px 10px rgba(0,0,0,.06);margin-bottom:24px;}
+  .section-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+  .section-hdr h2{color:var(--navy);font-size:16px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;background:var(--gray);padding:9px 12px;color:var(--navy);font-weight:700;border-bottom:2px solid #e0ddd6;}
+  td{padding:9px 12px;border-bottom:1px solid #f0ece2;vertical-align:middle;}
+  tr:hover td{background:#fafafa;}
+  .pill{display:inline-block;padding:3px 9px;border-radius:10px;font-size:11px;font-weight:700;}
+  .pill-green{background:#eaf7ea;color:var(--green);}
+  .pill-red{background:#fdecea;color:var(--red);}
+  .pill-gray{background:#eee;color:var(--mgray);}
+  .pill-gold{background:#fdf3e3;color:var(--gold);}
+  .row-actions{display:flex;gap:6px;}
+  .row-actions .btn{padding:5px 10px;font-size:11px;}
+  .empty-state{text-align:center;padding:30px;color:var(--mgray);font-size:13px;}
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:center;justify-content:center;}
+  .modal-overlay.show{display:flex;}
+  .modal-box{background:var(--white);border-radius:14px;padding:26px;max-width:420px;width:90%;}
+  .modal-box h3{color:var(--navy);margin-bottom:14px;font-size:17px;}
+  .modal-box .field-label{margin-top:10px;}
+  ::-webkit-scrollbar{height:6px;}
+</style>
+</head>
+<body>
+
+<!-- ══════════ ADMIN LOGIN GATE ══════════ -->
+<div class="screen active" id="screen-admin-login">
+  <div class="login-wrap">
+    <div class="login-card">
+      <h1>🔐 Admin Cockpit</h1>
+      <div class="sub">My Daniels Workspace — Authorized access only</div>
+      <div class="error-msg" id="login-error"></div>
+      <label class="field-label">Username</label>
+      <input type="text" class="field-input" id="login-username" placeholder="rodrigo.mora">
+      <label class="field-label">Password</label>
+      <input type="password" class="field-input" id="login-password" placeholder="••••••••">
+      <button class="btn btn-primary btn-block" id="btn-login" onclick="handleAdminLogin()">Sign In</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ COCKPIT ══════════ -->
+<div class="screen" id="screen-cockpit">
+  <div class="cockpit-header">
+    <div>
+      <h1>🔐 Admin Cockpit</h1>
+      <div class="sub" id="admin-greeting">—</div>
+    </div>
+    <div>
+      <button class="btn btn-ghost" onclick="window.location.href='index.html'">← My Daniels Workspace</button>
+      <button class="btn btn-ghost" onclick="DH.logout().then(()=>location.reload())">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="cockpit-content">
+
+    <!-- KPIs -->
+    <div class="kpi-grid" id="kpi-grid-header">
+      <div class="kpi-card">
+        <div class="lbl">Total Employees</div>
+        <div class="val" id="kpi-total-emp">—</div>
+        <div class="sub" id="kpi-total-emp-sub">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="lbl">Invitation Codes</div>
+        <div class="val" id="kpi-codes">—</div>
+        <div class="sub" id="kpi-codes-sub">used / available</div>
+      </div>
+      <div class="kpi-card">
+        <div class="lbl">Tier 1 Certified</div>
+        <div class="val" id="kpi-tier1">—</div>
+        <div class="sub">of total employees</div>
+      </div>
+      <div class="kpi-card">
+        <div class="lbl">Tier 2 Certified</div>
+        <div class="val" id="kpi-tier2">—</div>
+        <div class="sub">of total employees</div>
+      </div>
+    </div>
+
+    <!-- EMPLOYEES TABLE -->
+    <div class="section" id="section-employees">
+      <div class="section-hdr">
+        <h2>👥 Employees</h2>
+        <button class="btn btn-gold" onclick="exportCSV('employees')">⬇ Export CSV</button>
+      </div>
+      <input type="text" class="field-input" id="employee-search" placeholder="Search by name or username…" style="margin-bottom:14px" oninput="renderEmployeesTable(cachedData.employees)">
+      <div style="overflow-x:auto">
+        <table id="tbl-employees">
+          <thead>
+            <tr>
+              <th>Name</th><th>Username</th><th>Employee ID</th><th>Store</th><th>Department</th><th>Location</th>
+              <th>Tier 1</th><th>Tier 2</th><th>Points</th><th id="th-employees-actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tbl-employees-body">
+            <tr><td colspan="10" class="empty-state">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ORGANIGRAMA -->
+    <div class="section" id="section-organigrama">
+      <div class="section-hdr">
+        <h2>🏢 Organigrama (Reporting Structure)</h2>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-gold" onclick="exportCSV('organigrama')">⬇ Export Current</button>
+          <button class="btn btn-primary" id="btn-org-upload-open" onclick="openAddOrgRowModal()">+ Add Reporting Relationship</button>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--mgray);margin-bottom:14px;">This table is what the evaluation module reads to know who evaluates whom — not just a visual chart.</p>
+      <div style="overflow-x:auto">
+        <table id="tbl-organigrama">
+          <thead>
+            <tr>
+              <th>Employee</th><th>Reports To</th><th>Weight</th><th>Track</th><th>Level</th><th>Title</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="tbl-organigrama-body">
+            <tr><td colspan="7" class="empty-state">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- EVALUATION CYCLES — Super Admin controls when evaluation season is open -->
+    <div class="section" id="section-eval-cycles">
+      <div class="section-hdr">
+        <h2>📋 Evaluation Cycles</h2>
+        <button class="btn btn-primary" id="btn-cycle-new-open" onclick="openNewCycleModal()">+ Open New Cycle</button>
+      </div>
+      <p style="font-size:12px;color:var(--mgray);margin-bottom:14px;">Only one cycle should be active at a time — the evaluation module reads whichever cycle has "activo = true". Close a cycle before opening a new one.</p>
+      <div style="overflow-x:auto">
+        <table id="tbl-eval-cycles">
+          <thead><tr><th>Name</th><th>Type</th><th>Start</th><th>End</th><th>Status</th><th></th></tr></thead>
+          <tbody id="tbl-eval-cycles-body"><tr><td colspan="6" class="empty-state">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+
+    <!-- ANONYMOUS MANAGER FEEDBACK — Super Admin only; managers never see this -->
+    <div class="section" id="section-mgr-feedback" style="display:none">
+      <div class="section-hdr"><h2>💬 Anonymous Leadership Feedback</h2></div>
+      <p style="font-size:12px;color:var(--mgray);margin-bottom:14px;">Reports rating their manager (sellers → store managers, store managers → director). Closed 1–5 behavior scale. Aggregated only; individual answers and respondents are never stored together. ⚠️ = fewer than 3 responses (not counted toward the final score).</p>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Leader</th><th>Store</th><th>Responses</th><th>Clarity</th><th>Fairness</th><th>Development</th><th>Recognition</th><th>Availability</th><th>Respect</th><th>Example</th></tr></thead>
+          <tbody id="tbl-mgr-feedback-body"><tr><td colspan="10" class="empty-state">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section" id="section-eval-results" style="display:none">
+      <div class="section-hdr"><h2>📊 Evaluation Progress &amp; Results <span id="prog-cycle" style="font-size:12px;color:var(--mgray);font-weight:400;"></span></h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-gold" onclick="progDownload('summary')">⬇ Summary CSV</button>
+          <button class="btn btn-gold" onclick="progDownload('detail')">⬇ Who-evaluates-whom CSV</button>
+          <button class="btn btn-ghost" onclick="loadEvalResults()">↻ Refresh</button>
+        </div>
+      </div>
+      <div id="prog-due" style="margin-bottom:12px"></div>
+      <div id="prog-cards" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+        <button class="btn btn-ghost prog-tab" data-tab="summary" onclick="progTab('summary')">Summary by person</button>
+        <button class="btn btn-ghost prog-tab" data-tab="evaluator" onclick="progTab('evaluator')">By evaluator (who owes what)</button>
+        <button class="btn btn-ghost prog-tab" data-tab="detail" onclick="progTab('detail')">Who evaluates whom</button>
+        <button class="btn btn-ghost prog-tab" data-tab="feedback" onclick="progTab('feedback')">Upward feedback (anonymous)</button>
+        <span style="flex:1"></span>
+        <select id="prog-f-status" onchange="renderProg()" style="padding:7px;border:1px solid #ccc;border-radius:6px;font-size:13px"></select>
+        <select id="prog-f-band" onchange="renderProg()" style="padding:7px;border:1px solid #ccc;border-radius:6px;font-size:13px"></select>
+        <select id="prog-f-store" onchange="renderProg()" style="padding:7px;border:1px solid #ccc;border-radius:6px;font-size:13px"></select>
+        <input id="prog-f-q" oninput="renderProg()" placeholder="Search name…" style="padding:7px 9px;border:1px solid #ccc;border-radius:6px;font-size:13px;width:150px">
+      </div>
+      <p style="font-size:12px;color:var(--mgray);margin-bottom:10px;" id="prog-note"></p>
+      <div style="overflow-x:auto"><table><thead id="prog-head"></thead><tbody id="prog-body"><tr><td class="empty-state">Loading...</td></tr></tbody></table></div>
+    </div>
+
+    <div class="section" id="section-roster" style="display:none">
+      <div class="section-hdr"><h2>🧭 Evaluation Hierarchy (who evaluates whom)</h2></div>
+      <p style="font-size:12px;color:var(--mgray);margin-bottom:14px;">Everyone in the company, loaded from the org list. People link automatically when they sign up with their full name as written here. Not-yet-registered bosses are covered by the Super Admin. Toggle "In cycle" to include/exclude someone from this cycle.</p>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Name</th><th>Position</th><th>Location</th><th>Class</th><th>Reports to</th><th>Reports</th><th>Account</th><th>In cycle</th></tr></thead>
+          <tbody id="tbl-roster-body"><tr><td colspan="8" class="empty-state">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section" id="section-eval-config" style="display:none">
+      <div class="section-hdr"><h2>⚙️ Evaluation Setup — weights & KPIs by role</h2></div>
+      <p style="font-size:12px;color:var(--mgray);margin-bottom:14px;">Set once for the whole company. Each role's weights must add up to 100. KPIs are what evaluators score; they only enter the results. If a goal is left blank, the evaluator enters it per person.</p>
+      <div id="eval-config-body"><p class="empty-state">Loading...</p></div>
+      <div style="margin-top:14px;display:flex;gap:10px;align-items:center;">
+        <button class="btn btn-primary" onclick="saveEvalConfig()">Save setup</button>
+        <span id="eval-config-msg" style="font-size:12px;color:var(--mgray);"></span>
+      </div>
+    </div>
+
+    <div class="section" id="section-codes">
+      <div class="section-hdr">
+        <h2>🎫 Invitation Codes</h2>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-primary" onclick="openGenerateCodeModal()">+ Generate Code</button>
+          <button class="btn btn-ghost" onclick="openCodesFullList()">View Full List</button>
+        </div>
+      </div>
+      <div style="font-size:13px;color:var(--mgray);margin-bottom:14px;" id="codes-summary-line">Loading…</div>
+      <div style="font-size:11px;color:var(--mgray);margin-bottom:8px;">Showing 10 most recent</div>
+      <div style="overflow-x:auto">
+        <table id="tbl-codes">
+          <thead><tr><th>Code</th><th>Status</th><th>Used By</th><th>Created</th></tr></thead>
+          <tbody id="tbl-codes-body"><tr><td colspan="4" class="empty-state">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- LEAD SOURCE -->
+    <div class="section" id="section-leadsource">
+      <div class="section-hdr">
+        <h2>📍 How They Found Us — Entries</h2>
+        <button class="btn btn-ghost" onclick="openLeadSourceFullList()">View Full List</button>
+      </div>
+      <div class="kpi-grid" style="margin-bottom:16px">
+        <div class="kpi-card"><div class="lbl">Total Entries</div><div class="val" id="kpi-ls-total">—</div></div>
+        <div class="kpi-card"><div class="lbl">Top Source</div><div class="val" id="kpi-ls-top" style="font-size:16px">—</div></div>
+        <div class="kpi-card"><div class="lbl">Top Employee</div><div class="val" id="kpi-ls-emp" style="font-size:16px">—</div></div>
+        <div class="kpi-card"><div class="lbl">This Week</div><div class="val" id="kpi-ls-week">—</div></div>
+      </div>
+      <div style="font-size:11px;color:var(--mgray);margin-bottom:8px;">Showing 10 most recent</div>
+      <div style="overflow-x:auto">
+        <table id="tbl-leadsource">
+          <thead><tr><th>Employee</th><th>Source</th><th>Note</th><th>Date</th></tr></thead>
+          <tbody id="tbl-leadsource-body"><tr><td colspan="4" class="empty-state">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- AUDIT LOG -->
+    <div class="section" id="section-auditlog">
+      <div class="section-hdr">
+        <h2>📋 Admin Activity Log</h2>
+        <button class="btn btn-ghost" onclick="openAuditLogFullList()">View Full List</button>
+      </div>
+      <div style="font-size:11px;color:var(--mgray);margin-bottom:8px;">Showing 5 most recent</div>
+      <div style="overflow-x:auto">
+        <table id="tbl-auditlog">
+          <thead><tr><th>Admin</th><th>Action</th><th>Detail</th><th>Date</th></tr></thead>
+          <tbody id="tbl-auditlog-body"><tr><td colspan="4" class="empty-state">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CERTIFICATION ATTEMPTS — was incorrectly outside screen-cockpit, fixed here -->
+    <div class="section" id="section-certattempts">
+      <div class="section-hdr">
+        <h2>🎓 Certification Attempts</h2>
+        <button class="btn btn-gold" onclick="exportCSV('certattempts')">⬇ Export CSV</button>
+      </div>
+      <div class="kpi-grid" style="margin-bottom:16px">
+        <div class="kpi-card"><div class="lbl">Tier 1 Pass Rate</div><div class="val" id="kpi-t1-passrate">—</div><div class="sub" id="kpi-t1-passrate-sub">—</div></div>
+        <div class="kpi-card"><div class="lbl">Tier 2 Pass Rate</div><div class="val" id="kpi-t2-passrate">—</div><div class="sub" id="kpi-t2-passrate-sub">—</div></div>
+        <div class="kpi-card"><div class="lbl">In Progress</div><div class="val" id="kpi-cert-inprogress">—</div><div class="sub">exams currently open</div></div>
+        <div class="kpi-card"><div class="lbl">Locked (3 strikes)</div><div class="val" id="kpi-cert-locked">—</div><div class="sub">need admin reset</div></div>
+      </div>
+      <input type="text" class="field-input" id="certattempts-search" placeholder="Search by employee name…" style="margin-bottom:14px" oninput="renderCertAttemptsTable(cachedData.certAttempts)">
+      <div style="overflow-x:auto">
+        <table id="tbl-certattempts">
+          <thead><tr><th>Employee</th><th>Cert</th><th>Attempt #</th><th>Status</th><th>Score</th><th>Time Used</th><th>Date</th><th>Actions</th></tr></thead>
+          <tbody id="tbl-certattempts-body"><tr><td colspan="8" class="empty-state">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /cockpit-content -->
+</div><!-- /screen-cockpit -->
+
+<!-- ══════════ MODALS ══════════ -->
+
+<div class="modal-overlay" id="modal-plant">
+  <div class="modal-box">
+    <h3>🌱 Plant Certification</h3>
+    <div class="error-msg" id="plant-error"></div>
+    <label class="field-label">Employee</label>
+    <select class="field-input" id="plant-employee"></select>
+    <label class="field-label">Certification</label>
+    <select class="field-input" id="plant-cert">
+      <option value="tier1">Sales Tier 1</option>
+      <option value="tier2">Sales Tier 2</option>
+    </select>
+    <label class="field-label">Score (points earned)</label>
+    <input type="number" class="field-input" id="plant-score" placeholder="e.g. 84">
+    <label class="field-label">Total Points Possible</label>
+    <input type="number" class="field-input" id="plant-total" placeholder="e.g. 84" value="84">
+    <label class="field-label">Date Completed</label>
+    <input type="date" class="field-input" id="plant-date">
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-plant')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="submitPlantCert()">Plant It</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-reset">
+  <div class="modal-box">
+    <h3>🔑 Reset Password</h3>
+    <p style="font-size:13px;color:var(--mgray);margin-bottom:14px" id="reset-pw-desc"></p>
+    <div id="reset-pw-result" style="display:none;background:var(--gray);border-radius:8px;padding:14px;margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px;">Reset code — share with the employee:</div>
+      <div id="reset-pw-value" style="font-family:monospace;font-size:20px;font-weight:700;color:var(--navy);"></div>
+      <div style="font-size:11px;color:var(--mgray);margin-top:8px;line-height:1.5;">Tell them: <em>"Go to Sign In, tap 'New employee? Sign Up', and enter this code."</em></div>
+    </div>
+    <button class="btn btn-primary btn-block" id="btn-reset-pw-generate" onclick="submitResetPassword()">Lock Account &amp; Generate Reset Code</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal('modal-reset')">Close</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-answers">
+  <div class="modal-box" style="max-width:640px;max-height:80vh;overflow-y:auto">
+    <h3 id="answers-modal-title">Answer Detail</h3>
+    <div id="answers-modal-body">Loading...</div>
+    <div style="margin-top:14px"><button class="btn btn-ghost btn-block" onclick="closeModal('modal-answers')">Close</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-cert-reset">
+  <div class="modal-box">
+    <h3>🔓 Reset Certification</h3>
+    <p style="font-size:13px;color:var(--mgray);margin-bottom:14px" id="cert-reset-desc"></p>
+    <label class="field-label">Reason / Notes (optional)</label>
+    <input type="text" class="field-input" id="cert-reset-notes" placeholder="e.g. approved by Ted, retrained">
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-cert-reset')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="submitCertReset()">Reset Attempts</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-reclassify">
+  <div class="modal-box" style="max-width:420px">
+    <h3>🏷️ Reclassify Department</h3>
+    <p style="font-size:13px;color:var(--mgray);margin-bottom:14px;" id="reclassify-desc"></p>
+    <label class="field-label">Department / Área</label>
+    <select class="field-input" id="reclassify-departamento">
+      <option value="sales">Sales / Ventas</option>
+      <option value="operations">Operations / Operaciones</option>
+      <option value="merchandising">Merchandising</option>
+      <option value="customer_service">Customer Service / Servicio al Cliente</option>
+      <option value="warehouse">Warehouse / Almacén</option>
+      <option value="ecommerce">E-Commerce</option>
+      <option value="hr">HR / Recursos Humanos</option>
+      <option value="credit">Credit / Crédito</option>
+      <option value="store_management">Store Management / Gerencia de Tienda</option>
+      <option value="management">Management / Gerencia</option>
+      <option value="senior_management">Senior Management / Dirección General</option>
+    </select>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-reclassify')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" id="btn-reclassify-save" onclick="submitReclassify()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-new-cycle">
+  <div class="modal-box" style="max-width:440px">
+    <h3>📋 Open New Evaluation Cycle</h3>
+    <p style="font-size:12px;color:var(--mgray);margin-bottom:14px;">This closes any currently active cycle and opens this one — the evaluation module will immediately start using it.</p>
+    <label class="field-label">Cycle Name</label>
+    <input type="text" class="field-input" id="cycle-nombre" placeholder="e.g. Ciclo 2 — Feb/Mar 2027">
+    <label class="field-label">Type</label>
+    <select class="field-input" id="cycle-tipo">
+      <option value="formal">Formal (semestral)</option>
+      <option value="pulso">Pulso (quarterly check-in)</option>
+    </select>
+    <label class="field-label">Start Date</label>
+    <input type="date" class="field-input" id="cycle-inicio">
+    <label class="field-label">End Date</label>
+    <input type="date" class="field-input" id="cycle-cierre">
+    <div id="cycle-error" class="error-msg"></div>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-new-cycle')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" id="btn-cycle-save" onclick="submitNewCycle()">Open Cycle</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-reclassify-store">
+  <div class="modal-box" style="max-width:420px">
+    <h3>📍 Reassign Store / Tienda</h3>
+    <p style="font-size:13px;color:var(--mgray);margin-bottom:14px;" id="reclassify-store-desc"></p>
+    <label class="field-label">Store / Tienda</label>
+    <select class="field-input" id="reclassify-tienda">
+      <option value="Euclid / Anaheim">Euclid / Anaheim</option>
+      <option value="Cerritos">Cerritos</option>
+      <option value="Chino">Chino</option>
+    </select>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-reclassify-store')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" id="btn-reclassify-store-save" onclick="submitReclassifyStore()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-add-org-row">
+  <div class="modal-box" style="max-width:520px">
+    <h3>🏢 Add Reporting Relationship</h3>
+    <p style="font-size:12px;color:var(--mgray);margin-bottom:14px;">Pick two people from the roster — no file needed.</p>
+    <label class="field-label">Employee / Empleado</label>
+    <select class="field-input" id="org-row-employee"></select>
+    <label class="field-label" style="margin-top:10px">Reports To / Reporta A</label>
+    <select class="field-input" id="org-row-supervisor">
+      <option value="">— Top of org (no supervisor) —</option>
+    </select>
+    <label class="field-label" style="margin-top:10px">Track</label>
+    <select class="field-input" id="org-row-track">
+      <option value="sales">Sales</option>
+      <option value="operations">Operations</option>
+      <option value="warehouse">Warehouse</option>
+      <option value="ecommerce">E-Commerce</option>
+      <option value="leadership">Leadership</option>
+    </select>
+    <label class="field-label" style="margin-top:10px">Level (1=top … 5=associate)</label>
+    <input type="number" min="1" max="5" class="field-input" id="org-row-nivel" value="3">
+    <label class="field-label" style="margin-top:10px">Title to display (optional)</label>
+    <input type="text" class="field-input" id="org-row-titulo" placeholder="e.g. Customer Service Manager">
+    <label class="field-label" style="margin-top:10px">Weight % of this supervisor's evaluation</label>
+    <input type="number" min="1" max="100" class="field-input" id="org-row-peso" value="100">
+    <p style="font-size:11px;color:var(--mgray);margin-top:4px;">For co-evaluation (two managers each own part of the score), add this person twice — once per supervisor — with weights that add up to 100.</p>
+    <div id="org-row-error" class="error-msg"></div>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-add-org-row')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" id="btn-org-row-save" onclick="submitAddOrgRow()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-unlock-attempts">
+  <div class="modal-box">
+    <h3>🔓 Unlock Extra Attempts</h3>
+    <p style="font-size:13px;color:var(--mgray);margin-bottom:14px" id="unlock-attempts-desc"></p>
+    <label class="field-label">How many extra attempts?</label>
+    <input type="number" class="field-input" id="unlock-attempts-qty" value="1" min="1" max="10">
+    <label class="field-label" style="margin-top:10px">Reason / Notes (optional)</label>
+    <input type="text" class="field-input" id="unlock-attempts-notes" placeholder="e.g. approved by Ted, retrained">
+    <p style="font-size:11px;color:var(--mgray);margin-top:8px;line-height:1.5">This does not delete or reset anything — every past attempt stays in their history. It simply raises how many total attempts they're allowed.</p>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-unlock-attempts')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="submitUnlockAttempts()">Unlock Attempts</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-change-role">
+  <div class="modal-box">
+    <h3>👤 Change Role</h3>
+    <p style="font-size:13px;color:var(--mgray);margin-bottom:14px" id="role-change-desc"></p>
+    <label class="field-label">New role</label>
+    <select class="field-input" id="role-select">
+      <option value="vendedor|none">Vendedor</option>
+      <option value="manager|none">Manager</option>
+      <option value="manager|manager_visor">Store Management — View Only</option>
+      <option value="admin|admin_secundario">Admin — Secondary</option>
+      <option value="admin|super_admin">Super Admin (full control)</option>
+    </select>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-change-role')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="submitRoleChange()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-generate-code">
+  <div class="modal-box">
+    <h3>🎫 Generate Invitation Code(s)</h3>
+    <label class="field-label">How many?</label>
+    <input type="number" class="field-input" id="gencode-qty" value="1" min="1" max="25">
+    <label class="field-label">Assign role</label>
+    <select class="field-input" id="gencode-rol">
+      <option value="vendedor">Vendedor</option>
+      <option value="manager">Manager</option>
+    </select>
+    <label class="field-label">Store (optional)</label>
+    <input type="text" class="field-input" id="gencode-tienda" placeholder="e.g. Anaheim — Mega Center">
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-generate-code')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="submitGenerateCode()">Generate</button>
+    </div>
+    <div id="gencode-result" style="display:none;margin-top:16px;background:var(--gray);border-radius:8px;padding:14px;">
+      <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px;">New code(s) — copy and share:</div>
+      <div id="gencode-result-list" style="font-family:monospace;font-size:14px;line-height:1.8;"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-full-list">
+  <div class="modal-box" style="max-width:900px;max-height:85vh;overflow-y:auto;">
+    <h3 id="full-list-title">Full List</h3>
+    <div id="full-list-filters" style="display:flex;gap:10px;align-items:flex-end;margin-bottom:14px;flex-wrap:wrap;"></div>
+    <div style="overflow-x:auto">
+      <table id="full-list-table">
+        <thead id="full-list-thead"></thead>
+        <tbody id="full-list-tbody"></tbody>
+      </table>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-gold" onclick="exportFullListCSV()">⬇ Export CSV (filtered)</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-full-list')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="dh-session.js"></script>
+<script>
+const SUPABASE_URL = 'https://ecfxeebhtgkbsdeuiueb.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_oRxEOMLizp1kjlsRjWWaxg_muaaMHFt';
+
+async function sbFetch(path, options = {}) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Prefer': options.method === 'POST' ? 'return=representation' : undefined,
+      ...(options.headers || {})
+    }
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Supabase error ${res.status}: ${errText}`);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+let admin = null;
+const isSuperAdmin = () => !!(admin && admin.nivel_admin === 'super_admin');
+const isViewOnly = () => !!(admin && admin.nivel_admin === 'manager_visor');
+let roleChangeTarget = null;
+let cachedData = { employees: [], codes: [], leadsource: [], auditlog: [], certAttempts: [], certResets: [], organigrama: [] };
+let certResetTarget = null;
+const examFileByTier = { tier1: 'Daniels_Certification_Tier1.html', tier2: 'Daniels_Certification_Tier2.html' };
+let questionBankCache = {};
+
+/* ════════ LOGIN ════════ */
+async function handleAdminLogin() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  const btn = document.getElementById('btn-login');
+  errEl.classList.remove('show');
+  if (!username || !password) { errEl.textContent = 'Please enter both fields.'; errEl.classList.add('show'); return; }
+  btn.disabled = true; btn.textContent = 'Signing in...';
+  try {
+    const emp = await DH.login(username, password);
+    if (!emp) throw new Error('Invalid credentials.');
+    if (!emp.es_admin) { await DH.logout(); throw new Error('This account does not have admin access.'); }
+    admin = emp;   // iniciar_sesion already returns nivel_admin
+    document.getElementById('screen-admin-login').classList.remove('active');
+    document.getElementById('screen-cockpit').classList.add('active');
+    let tierLabel = 'Admin';
+    if (isSuperAdmin()) tierLabel = 'Super Admin';
+    else if (isViewOnly()) tierLabel = 'Store Management — View Only';
+    document.getElementById('admin-greeting').textContent = `Signed in as ${emp.nombre_completo} (${tierLabel})`;
+    loadAllData();
+  } catch (err) {
+    errEl.textContent = err.message.includes('admin access') ? err.message : 'Incorrect username or password.';
+    errEl.classList.add('show');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Sign In';
+  }
+}
+
+/* ════════ LOAD DATA ════════ */
+async function loadAllData() {
+  await loadCertAttempts();
+  await Promise.all([loadEmployees(), loadCodes(), loadLeadSource(), loadAuditLog(), loadOrganigrama(), loadEvalCycles(), loadMgrFeedback(), loadEvalConfig(), loadEvalResults(), loadRoster()]);
+  renderCertAttemptsTable(cachedData.certAttempts);
+  const plantBtn = document.getElementById('btn-plant-cert-floating');
+  if (plantBtn) plantBtn.style.display = isViewOnly() ? 'none' : 'block';
+  applyViewOnlyRestrictions();
+}
+
+function applyViewOnlyRestrictions() {
+  if (!isViewOnly()) return;
+  ['section-codes', 'section-leadsource', 'section-auditlog', 'section-organigrama'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  const th = document.getElementById('th-employees-actions');
+  if (th) th.style.display = 'none';
+}
+
+async function loadEmployees() {
+  try {
+    const employees = await DH.rpc('admin_empleados_listar');
+    const ov = await DH.rpc('admin_cert_overview', { p_detalle: false });
+    const progress = (ov && ov.progreso) || [];
+    const merged = employees.map(emp => {
+      const empProgress = progress.filter(p => p.empleado_id === emp.id);
+      const tier1 = empProgress.find(p => p.certificacion === 'tier1' && p.aprobado);
+      const tier2 = empProgress.find(p => p.certificacion === 'tier2' && p.aprobado);
+      const totalPoints = empProgress.filter(p => p.aprobado).reduce((s, p) => s + (p.score || 0), 0);
+      return { ...emp, tier1, tier2, totalPoints };
+    });
+    cachedData.employees = merged;
+    renderEmployeesTable(merged);
+    renderKPIs(merged);
+    populatePlantDropdown(merged);
+  } catch (err) {
+    console.error('Failed to load employees:', err);
+    document.getElementById('tbl-employees-body').innerHTML = `<tr><td colspan="10" class="empty-state">Error loading employees.</td></tr>`;
+  }
+}
+
+/* ════════ ORGANIGRAMA ════════ */
+async function loadOrganigrama() {
+  try {
+    const rows = await sbFetch('organigrama?activo=eq.true&select=id,empleado_id,supervisor_id,track,nivel,titulo_display,peso');
+    cachedData.organigrama = rows || [];
+    renderOrganigramaTable(cachedData.organigrama);
+  } catch (err) {
+    console.warn('organigrama table not available yet:', err);
+    cachedData.organigrama = [];
+    document.getElementById('tbl-organigrama-body').innerHTML = `<tr><td colspan="7" class="empty-state">Table not set up yet — run the migration SQL first.</td></tr>`;
+  }
+  if (!isSuperAdmin()) {
+    const btn = document.getElementById('btn-org-upload-open');
+    if (btn) btn.style.display = 'none';
+  }
+}
+
+function renderOrganigramaTable(rows) {
+  const tbody = document.getElementById('tbl-organigrama-body');
+  if (!rows || rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-state">No reporting relationships added yet.</td></tr>`;
+    return;
+  }
+  const byId = {};
+  (cachedData.employees || []).forEach(e => { byId[e.id] = e; });
+  tbody.innerHTML = rows.map(r => {
+    const emp = byId[r.empleado_id];
+    const sup = r.supervisor_id ? byId[r.supervisor_id] : null;
+    return `<tr>
+      <td>${emp ? emp.nombre_completo : '(unknown)'}</td>
+      <td>${sup ? sup.nombre_completo : '— top of org —'}</td>
+      <td>${r.peso}%</td>
+      <td>${r.track}</td>
+      <td>${r.nivel}</td>
+      <td>${r.titulo_display || (emp ? emp.rol : '')}</td>
+      <td>${isSuperAdmin() ? `<button class="btn btn-red" style="padding:4px 10px;font-size:11px;" onclick="deleteOrgRow('${r.id}')">Remove</button>` : ''}</td>
+    </tr>`;
+  }).join('');
+}
+
+function openAddOrgRowModal() {
+  if (!isSuperAdmin()) { alert('Only a Super Admin can edit the organigrama.'); return; }
+  const employees = (cachedData.employees || []).slice().sort((a, b) => (a.nombre_completo || '').localeCompare(b.nombre_completo || ''));
+  const empSelect = document.getElementById('org-row-employee');
+  const supSelect = document.getElementById('org-row-supervisor');
+  empSelect.innerHTML = employees.map(e => `<option value="${e.id}">${e.nombre_completo}</option>`).join('');
+  supSelect.innerHTML = '<option value="">— Top of org (no supervisor) —</option>' + employees.map(e => `<option value="${e.id}">${e.nombre_completo}</option>`).join('');
+  document.getElementById('org-row-track').value = 'sales';
+  document.getElementById('org-row-nivel').value = '3';
+  document.getElementById('org-row-titulo').value = '';
+  document.getElementById('org-row-peso').value = '100';
+  document.getElementById('org-row-error').classList.remove('show');
+  const saveBtn = document.getElementById('btn-org-row-save');
+  saveBtn.disabled = false; saveBtn.textContent = 'Save';
+  document.getElementById('modal-add-org-row').classList.add('show');
+}
+
+async function submitAddOrgRow() {
+  const empId = document.getElementById('org-row-employee').value;
+  const supId = document.getElementById('org-row-supervisor').value;
+  const track = document.getElementById('org-row-track').value;
+  const nivel = parseInt(document.getElementById('org-row-nivel').value, 10) || 3;
+  const titulo = document.getElementById('org-row-titulo').value.trim();
+  const peso = parseFloat(document.getElementById('org-row-peso').value) || 100;
+  const errEl = document.getElementById('org-row-error');
+  errEl.classList.remove('show');
+  if (empId === supId && supId) { errEl.textContent = 'A person cannot report to themselves.'; errEl.classList.add('show'); return; }
+  const btn = document.getElementById('btn-org-row-save');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Saving...';
+  try {
+    const existingSamePair = await sbFetch(`organigrama?empleado_id=eq.${empId}&activo=eq.true&${supId ? `supervisor_id=eq.${supId}` : 'supervisor_id=is.null'}&select=id`);
+    if (existingSamePair && existingSamePair.length) {
+      await sbFetch(`organigrama?id=in.(${existingSamePair.map(e => e.id).join(',')})`, { method: 'PATCH', body: JSON.stringify({ activo: false }) });
+    }
+    const otherActive = await sbFetch(`organigrama?empleado_id=eq.${empId}&activo=eq.true&select=peso`);
+    const currentTotal = (otherActive || []).reduce((s, r) => s + (r.peso || 0), 0);
+    if (currentTotal + peso > 100) {
+      if (!confirm(`This person's total supervisor weight would be ${currentTotal + peso}%, over 100%. Save anyway?`)) {
+        btn.disabled = false; btn.textContent = 'Save'; return;
+      }
+    }
+    await sbFetch('organigrama', { method: 'POST', body: JSON.stringify([{ empleado_id: empId, supervisor_id: supId || null, track, nivel, peso, titulo_display: titulo || null, activo: true }]) });
+    btn.disabled = false; btn.textContent = 'Save';
+    closeModal('modal-add-org-row');
+    await loadOrganigrama();
+  } catch (err) {
+    errEl.textContent = 'Error saving: ' + err.message;
+    errEl.classList.add('show');
+    btn.disabled = false; btn.textContent = 'Save';
+  }
+}
+
+async function deleteOrgRow(rowId) {
+  if (!confirm('Remove this reporting relationship?')) return;
+  try {
+    await sbFetch(`organigrama?id=eq.${rowId}`, { method: 'PATCH', body: JSON.stringify({ activo: false }) });
+    await loadOrganigrama();
+  } catch (err) { alert('Error removing: ' + err.message); }
+}
+
+/* ════════ EMPLOYEES TABLE ════════ */
+/* ════════════════════════════════════════════════════════════
+   EVALUATION CYCLES — Super Admin opens/closes cycles. The
+   evaluation module reads whichever row has activo=true.
+   ════════════════════════════════════════════════════════════ */
+async function loadMgrFeedback() {
+  const sec = document.getElementById('section-mgr-feedback');
+  if (!sec) return;
+  if (!isSuperAdmin()) { sec.style.display = 'none'; return; }
+  sec.style.display = '';
+  const body = document.getElementById('tbl-mgr-feedback-body');
+  try {
+    const rows = await DH.rpc('admin_ver_feedback_anonimo');
+    if (!rows || !rows.length) { body.innerHTML = '<tr><td colspan="10" class="empty-state">No feedback submitted yet this cycle.</td></tr>'; return; }
+    const f = (o, k) => (o && o[k] !== undefined) ? Number(o[k]).toFixed(2) : '—';
+    body.innerHTML = rows.map(r => `<tr><td><strong>${r.nombre}</strong></td><td>${r.tienda || ''}</td><td>${r.n}${r.n < 3 ? ' ⚠️' : ''}</td>` +
+      ['claridad','justicia','desarrollo','reconocimiento','disponibilidad','respeto','ejemplo'].map(k => `<td>${f(r.promedios, k)}</td>`).join('') + '</tr>').join('');
+  } catch (err) {
+    body.innerHTML = `<tr><td colspan="10" class="empty-state">Could not load: ${err.message}</td></tr>`;
+  }
+}
+
+async function loadRoster() {
+  const sec = document.getElementById('section-roster');
+  if (!sec) return;
+  if (!isSuperAdmin()) { sec.style.display = 'none'; return; }
+  sec.style.display = '';
+  const body = document.getElementById('tbl-roster-body');
+  try {
+    const rows = await DH.rpc('admin_roster_listar');
+    const cls = { vendedor: 'Seller', manager: 'Manager', director: 'Director', staff: 'Staff' };
+    body.innerHTML = (rows || []).map(r => `<tr><td><strong>${r.nombre}</strong>${r.nota ? '<br><span style="font-size:11px;color:var(--mgray);">' + r.nota + '</span>' : ''}${r.se_evalua ? '' : ' <span class="pill pill-gray">not evaluated</span>'}</td><td>${r.puesto || ''}</td><td>${r.ubicacion || ''}</td><td>${cls[r.rol_eval] || r.rol_eval}</td><td>${r.jefes || '—'}</td><td>${r.n_reportes || ''}</td>` +
+      `<td>${r.registrado ? '<span class="pill pill-green">Registered</span>' : '<span class="pill pill-gray">Not yet</span>'}</td>` +
+      `<td>${r.se_evalua ? `<input type="checkbox" ${r.en_ciclo ? 'checked' : ''} onchange="toggleRosterCycle('${r.roster_id}', this.checked)">` : ''}</td></tr>`).join('');
+  } catch (err) {
+    body.innerHTML = `<tr><td colspan="8" class="empty-state">Could not load: ${err.message}</td></tr>`;
+  }
+}
+async function toggleRosterCycle(id, val) {
+  try { await DH.rpc('admin_roster_set_ciclo', { p_roster_id: id, p_en_ciclo: val }); }
+  catch (err) { alert('Error: ' + err.message); loadRoster(); }
+}
+
+/* ════════ EVALUATION PROGRESS & RESULTS ════════ */
+let PROG = { personas: [], detalle: [], feedback: [], ciclo: '' };
+let progTabCur = 'summary';
+const PROG_BANDS = [ // thresholds (score 0-100)
+  { key: 'excellent', min: 90, label: 'Excellent', cls: 'pill-green', ok: true },
+  { key: 'good', min: 80, label: 'Good', cls: 'pill-green', ok: true },
+  { key: 'meets', min: 70, label: 'Meets (approved)', cls: 'pill-gold', ok: true },
+  { key: 'needs', min: 60, label: 'Needs improvement (not approved)', cls: 'pill-red', ok: false },
+  { key: 'critical', min: -1, label: 'Critical', cls: 'pill-red', ok: false }
+];
+const PROG_STATUS = { completed: 'Completed', in_progress: 'In progress', not_started: 'Not started', awaiting: 'Awaiting sign-up', not_eligible: 'N/A – not eligible', not_cycle: 'Not in cycle', no_eval: 'No evaluator' };
+const PROG_STATUS_CLS = { completed: 'pill-green', in_progress: 'pill-gold', not_started: 'pill-gray', awaiting: 'pill-gray', not_eligible: 'pill-gray', not_cycle: 'pill-gray', no_eval: 'pill-gray' };
+const PROG_DET_STATUS = { completada: ['Completed', 'pill-green'], pendiente: ['Pending', 'pill-gold'], evaluado_no_registrado: ['Evaluated not registered', 'pill-gray'], evaluador_no_registrado: ['Evaluator not registered', 'pill-gray'], no_elegible: ['Not eligible', 'pill-gray'], no_en_ciclo: ['Not in cycle', 'pill-gray'] };
+const PROG_ROLE = { vendedor: 'Seller', manager: 'Manager', director: 'Director', staff: 'Staff' };
+const pesc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function progStatus(p) {
+  if (!p.en_ciclo) return 'not_cycle';
+  if (p.no_elegible) return 'not_eligible';
+  if (!p.esperadas) return 'no_eval';
+  if (p.hechas >= p.esperadas) return 'completed';
+  if (p.hechas > 0) return 'in_progress';
+  return p.registrado ? 'not_started' : 'awaiting';
+}
+function progBand(p) {
+  if (p.final === null || p.final === undefined || !p.hechas) return null;
+  const f = Number(p.final);
+  return PROG_BANDS.find(b => f >= b.min);
+}
+
+async function loadEvalResults() {
+  const sec = document.getElementById('section-eval-results');
+  if (!sec) return;
+  if (!(isSuperAdmin() || (admin && admin.nivel_admin === 'admin_secundario'))) { sec.style.display = 'none'; return; }
+  sec.style.display = '';
+  const body = document.getElementById('prog-body');
+  try {
+    const r = await DH.rpc('evaluacion_progreso');
+    if (!r || r.error) throw new Error((r && r.error) || 'no data');
+    PROG = r;
+    PROG.personas.forEach(p => { p._status = progStatus(p); p._band = progBand(p); });
+    document.getElementById('prog-cycle').textContent = r.ciclo ? '· ' + r.ciclo : '';
+    const stores = [...new Set(PROG.personas.map(p => p.ubicacion).filter(Boolean))].sort();
+    document.getElementById('prog-f-status').innerHTML = '<option value="">All statuses</option>' + Object.keys(PROG_STATUS).map(k => `<option value="${k}">${PROG_STATUS[k]}</option>`).join('');
+    document.getElementById('prog-f-band').innerHTML = '<option value="">All results</option><option value="approved">Approved (≥70)</option><option value="failed">Not approved (<70)</option>' + PROG_BANDS.map(b => `<option value="${b.key}">${b.label}</option>`).join('');
+    document.getElementById('prog-f-store').innerHTML = '<option value="">All locations</option>' + stores.map(x => `<option>${pesc(x)}</option>`).join('');
+    renderProgDue();
+    renderProgCards();
+    progTab(progTabCur);
+  } catch (err) {
+    body.innerHTML = `<tr><td class="empty-state">Could not load: ${pesc(err.message)}</td></tr>`;
+  }
+}
+
+function renderProgDue() {
+  const el = document.getElementById('prog-due');
+  const d = PROG.dias_restantes, over = d !== null && d < 0;
+  const col = over ? 'var(--red)' : d <= 7 ? 'var(--gold)' : 'var(--green)';
+  const fmt = x => x ? new Date(x + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+  el.innerHTML = `<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:#fff;border:1px solid #e5e5e5;border-left:5px solid ${col};border-radius:10px;padding:10px 14px">
+    <div><div style="font-size:11px;color:var(--mgray);text-transform:uppercase">Evaluation period</div><div style="font-weight:700">${fmt(PROG.inicio)} → ${fmt(PROG.cierre)}</div></div>
+    <div><div style="font-size:11px;color:var(--mgray);text-transform:uppercase">Due date</div><div style="font-weight:800;color:${col}">${over ? 'Overdue by ' + (-d) + ' day(s)' : d + ' day(s) left'}</div></div>
+    <div style="flex:1;font-size:12px;color:var(--mgray)">${PROG.alcance === 'team' ? 'Showing only the people in your reporting line.' : 'Showing everyone in the company.'}</div>
+    ${isSuperAdmin() ? '<button class="btn btn-ghost" onclick="editCycleDates()">✎ Edit period</button>' : ''}
+  </div>`;
+}
+async function editCycleDates() {
+  const ini = prompt('Period start (YYYY-MM-DD):', PROG.inicio || ''); if (!ini) return;
+  const fin = prompt('Due date / period end (YYYY-MM-DD):', PROG.cierre || ''); if (!fin) return;
+  try {
+    const r = await DH.rpc('admin_ciclo_set_fechas', { p_inicio: ini, p_cierre: fin });
+    if (r && r.success) loadEvalResults(); else alert((r && r.message) || 'Could not save');
+  } catch (err) { alert('Error: ' + err.message); }
+}
+
+function renderProgCards() {
+  const act = PROG.personas.filter(p => p.en_ciclo && !p.no_elegible);
+  const n = k => act.filter(p => p._status === k).length;
+  const scored = act.filter(p => p._band);
+  const avg = scored.length ? (scored.reduce((a, p) => a + Number(p.final), 0) / scored.length).toFixed(1) : '—';
+  const appr = scored.filter(p => p._band.ok).length, fail = scored.filter(p => !p._band.ok).length, crit = scored.filter(p => p._band.key === 'critical').length;
+  const exp = PROG.detalle.filter(d => !['no_en_ciclo', 'no_elegible'].includes(d.estado));
+  const done = exp.filter(d => d.estado === 'completada').length;
+  const card = (t, v, sub, color) => `<div style="flex:1;min-width:130px;background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:10px 12px"><div style="font-size:11px;color:var(--mgray);text-transform:uppercase;letter-spacing:.5px">${t}</div><div style="font-size:24px;font-weight:800;color:${color || 'inherit'}">${v}</div><div style="font-size:11px;color:var(--mgray)">${sub || ''}</div></div>`;
+  document.getElementById('prog-cards').innerHTML =
+    card('Evaluations done', done + '/' + exp.length, exp.length ? Math.round(done / exp.length * 100) + '% of expected' : '') +
+    card('Completed', n('completed'), 'people fully evaluated', 'var(--green)') +
+    card('In progress', n('in_progress'), '', 'var(--gold)') +
+    card('Not started', n('not_started'), 'registered, no evals yet') +
+    card('Awaiting sign-up', n('awaiting'), 'not registered yet') +
+    card('Avg score', avg, scored.length + ' scored') +
+    card('Approved', appr, 'score ≥ 70', 'var(--green)') +
+    card('Not approved', fail, crit + ' critical (<60)', fail ? 'var(--red)' : 'inherit');
+}
+
+function progTab(t) {
+  progTabCur = t;
+  document.querySelectorAll('.prog-tab').forEach(b => { b.style.background = b.dataset.tab === t ? 'var(--gold)' : ''; b.style.color = b.dataset.tab === t ? '#fff' : ''; });
+  renderProg();
+}
+
+function progFiltered() {
+  const fs = document.getElementById('prog-f-status').value, fb = document.getElementById('prog-f-band').value, fl = document.getElementById('prog-f-store').value, q = document.getElementById('prog-f-q').value.trim().toLowerCase();
+  return PROG.personas.filter(p => (!fs || p._status === fs) && (!fl || p.ubicacion === fl) && (!q || p.nombre.toLowerCase().includes(q)) &&
+    (!fb || (fb === 'approved' ? (p._band && p._band.ok) : fb === 'failed' ? (p._band && !p._band.ok) : (p._band && p._band.key === fb))));
+}
+
+function renderProg() {
+  const head = document.getElementById('prog-head'), body = document.getElementById('prog-body'), note = document.getElementById('prog-note');
+  const v = x => (x === null || x === undefined) ? '—' : Number(x).toFixed(0);
+  const q = document.getElementById('prog-f-q').value.trim().toLowerCase(), fl = document.getElementById('prog-f-store').value, fs = document.getElementById('prog-f-status').value;
+  if (progTabCur === 'summary') {
+    note.textContent = 'Final score = weighted average of the components available (weights in setup below). Provisional until all expected evaluations are completed. Bands: Excellent ≥90 · Good 80–89 · Meets 70–79 (approved) · Needs improvement 60–69 · Critical <60.';
+    head.innerHTML = '<tr><th>Person</th><th>Role</th><th>Location</th><th>Progress</th><th>Status</th><th>KPIs</th><th>Behavior</th><th>Leadership</th><th>Peers</th><th>Self</th><th>Final</th><th>Result</th></tr>';
+    const rows = progFiltered();
+    body.innerHTML = rows.length ? rows.map(p => {
+      const pct = p.esperadas ? Math.round(p.hechas / p.esperadas * 100) : 0;
+      const b = p._band;
+      return `<tr><td><strong>${pesc(p.nombre)}</strong><div style="font-size:11px;color:var(--mgray)">${pesc(p.puesto)}</div></td><td>${PROG_ROLE[p.rol_eval] || p.rol_eval}</td><td>${pesc(p.ubicacion)}</td>` +
+        `<td style="min-width:110px"><div style="background:#eee;border-radius:6px;height:8px;overflow:hidden"><div style="width:${pct}%;height:8px;background:var(--green)"></div></div><div style="font-size:11px;color:var(--mgray)">${p.hechas}/${p.esperadas}</div></td>` +
+        `<td><span class="pill ${PROG_STATUS_CLS[p._status]}">${PROG_STATUS[p._status]}</span></td><td>${v(p.kpi)}</td><td>${v(p.conducta)}</td>` +
+        `<td>${v(p.liderazgo)}${p.n_liderazgo ? ` <span style="font-size:11px;color:var(--mgray)">(n=${p.n_liderazgo}${p.n_liderazgo < 3 ? ' ⚠️' : ''})</span>` : ''}</td><td>${v(p.pares)}${p.n_pares ? ` <span style="font-size:11px;color:var(--mgray)">(n=${p.n_pares})</span>` : ''}</td><td>${v(p.auto)}</td>` +
+        `<td><strong>${v(p.final)}</strong></td><td>${b ? `<span class="pill ${b.cls}">${b.label}</span>${p._status !== 'completed' ? ' <span style="font-size:11px;color:var(--mgray)">provisional</span>' : ''}` : '—'}</td></tr>`;
+    }).join('') : '<tr><td colspan="12" class="empty-state">Nothing matches these filters.</td></tr>';
+  } else if (progTabCur === 'evaluator') {
+    note.textContent = 'Everyone who has evaluations to complete this cycle: done vs pending. Chase the ones with pending items before the due date. People not yet registered cannot evaluate; their bosses cover them where noted.';
+    head.innerHTML = '<tr><th>Evaluator</th><th>Progress</th><th>Done</th><th>Pending</th><th>Blocked (not registered)</th><th>Pending for…</th><th>Status</th></tr>';
+    const m = {};
+    PROG.detalle.forEach(d => { if (['no_en_ciclo', 'no_elegible'].includes(d.estado)) return; const e = m[d.evaluador] || (m[d.evaluador] = { n: d.evaluador, reg: d.evaluador_registrado, done: 0, pend: 0, blk: 0, who: [] });
+      if (d.estado === 'completada') e.done++; else if (d.estado === 'pendiente') { e.pend++; e.who.push(d.evaluado); } else e.blk++; });
+    let rows = Object.values(m).filter(e => !q || e.n.toLowerCase().includes(q));
+    if (fs === 'completed') rows = rows.filter(e => e.pend === 0 && e.done > 0); else if (fs === 'not_started') rows = rows.filter(e => e.done === 0 && e.pend > 0); else if (fs === 'in_progress') rows = rows.filter(e => e.done > 0 && e.pend > 0); else if (fs === 'awaiting') rows = rows.filter(e => !e.reg);
+    rows.sort((a, b) => b.pend - a.pend || a.n.localeCompare(b.n));
+    body.innerHTML = rows.length ? rows.map(e => { const tot = e.done + e.pend, pct = tot ? Math.round(e.done / tot * 100) : 0;
+      const st = !e.reg ? ['Awaiting sign-up', 'pill-gray'] : e.pend === 0 && e.done > 0 ? ['Completed', 'pill-green'] : e.done > 0 ? ['In progress', 'pill-gold'] : e.pend > 0 ? ['Not started', 'pill-red'] : ['Nothing due', 'pill-gray'];
+      return `<tr><td><strong>${pesc(e.n)}</strong></td><td style="min-width:110px"><div style="background:#eee;border-radius:6px;height:8px;overflow:hidden"><div style="width:${pct}%;height:8px;background:var(--green)"></div></div></td><td>${e.done}</td><td>${e.pend}</td><td>${e.blk}</td><td style="font-size:12px;color:var(--mgray)">${pesc(e.who.slice(0, 4).join(', '))}${e.who.length > 4 ? ' +' + (e.who.length - 4) : ''}</td><td><span class="pill ${st[1]}">${st[0]}</span></td></tr>`; }).join('') : '<tr><td colspan="7" class="empty-state">Nothing matches these filters.</td></tr>';
+  } else if (progTabCur === 'detail') {
+    note.textContent = 'Every expected evaluation: boss → report (supervisor) and manager ↔ manager (peer). "Not registered" means that person has not signed up yet; bosses not registered are covered by the Super Admin.';
+    head.innerHTML = '<tr><th>Evaluator</th><th></th><th>Evaluated</th><th>Role</th><th>Location</th><th>Type</th><th>Status</th><th>Date</th><th>Score</th></tr>';
+    const stKey = { completed: 'completada', not_started: 'pendiente', in_progress: 'pendiente', awaiting: 'evaluado_no_registrado', not_eligible: 'no_elegible', not_cycle: 'no_en_ciclo' };
+    const rows = PROG.detalle.filter(d => (!fl || d.ubicacion === fl) && (!q || d.evaluado.toLowerCase().includes(q) || d.evaluador.toLowerCase().includes(q)) && (!fs || d.estado === stKey[fs]));
+    body.innerHTML = rows.length ? rows.map(d => { const st = PROG_DET_STATUS[d.estado] || [d.estado, 'pill-gray'];
+      return `<tr><td>${pesc(d.evaluador)}</td><td>→</td><td><strong>${pesc(d.evaluado)}</strong></td><td>${PROG_ROLE[d.evaluado_rol] || d.evaluado_rol}</td><td>${pesc(d.ubicacion)}</td><td>${d.tipo === 'par' ? 'Peer' : 'Supervisor'}</td><td><span class="pill ${st[1]}">${st[0]}</span></td><td>${d.fecha ? new Date(d.fecha).toLocaleDateString() : ''}</td><td>${v(d.score)}</td></tr>`; }).join('') : '<tr><td colspan="9" class="empty-state">Nothing matches these filters.</td></tr>';
+  } else {
+    note.textContent = 'Anonymous upward feedback from reports to their boss. Only counts are shown here; averages appear on a boss only after 3+ responses so nobody can be identified.';
+    head.innerHTML = '<tr><th>Boss</th><th>Location</th><th>Responses received</th><th>Registered reports (expected)</th><th>Total reports in cycle</th><th>Status</th></tr>';
+    const rows = PROG.feedback.filter(f => !q || f.jefe.toLowerCase().includes(q));
+    body.innerHTML = rows.length ? rows.map(f => { const st = f.recibidas >= 3 ? ['Results visible', 'pill-green'] : f.recibidas > 0 ? ['Collecting (<3, hidden)', 'pill-gold'] : ['No responses', 'pill-gray'];
+      return `<tr><td><strong>${pesc(f.jefe)}</strong></td><td>${pesc(f.ubicacion)}</td><td>${f.recibidas}</td><td>${f.esperadas}</td><td>${f.reportes_total}</td><td><span class="pill ${st[1]}">${st[0]}</span></td></tr>`; }).join('') : '<tr><td colspan="6" class="empty-state">No data.</td></tr>';
+  }
+}
+
+function progDownload(kind) {
+  const csv = rows => '﻿' + rows.map(r => r.map(c => { c = c == null ? '' : String(c); return /[",\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c; }).join(',')).join('\n');
+  let rows;
+  if (kind === 'summary') {
+    rows = [['Person', 'Position', 'Role', 'Location', 'Evaluations done', 'Evaluations expected', 'Status', 'KPIs', 'Behavior', 'Leadership', 'Leadership n', 'Peers', 'Peers n', 'Self', 'Final score', 'Result', 'Provisional']];
+    progFiltered().forEach(p => rows.push([p.nombre, p.puesto, PROG_ROLE[p.rol_eval] || p.rol_eval, p.ubicacion, p.hechas, p.esperadas, PROG_STATUS[p._status], p.kpi, p.conducta, p.liderazgo, p.n_liderazgo, p.pares, p.n_pares, p.auto, p.final, p._band ? p._band.label : '', p._band && p._status !== 'completed' ? 'yes' : '']));
+  } else {
+    rows = [['Evaluator', 'Evaluated', 'Evaluated role', 'Location', 'Type', 'Status', 'Date', 'Score']];
+    PROG.detalle.forEach(d => rows.push([d.evaluador, d.evaluado, PROG_ROLE[d.evaluado_rol] || d.evaluado_rol, d.ubicacion, d.tipo === 'par' ? 'Peer' : 'Supervisor', (PROG_DET_STATUS[d.estado] || [d.estado])[0], d.fecha ? d.fecha.slice(0, 10) : '', d.score]));
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv(rows)], { type: 'text/csv;charset=utf-8' }));
+  a.download = `DHC_evaluation_${kind}_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+/* ════════ EVALUATION SETUP (weights & KPIs by role) ════════ */
+let evalCfg = { pesos: [], kpis: [] };
+const CFG_ROLES = { vendedor: 'Sellers / Vendedores', manager: 'Store managers / Gerentes de tienda', director: 'Director (Héctor) / Directores', staff: 'Staff — non-sales roles / Personal operativo y administrativo' };
+const CFG_COMPONENTS = { kpi: 'KPIs (numbers)', conducta: 'Behavior / management rated by boss', liderazgo: 'Leadership (rated by reports, anonymous)', pares: 'Peers (other managers)', auto: 'Self-assessment (own evaluation)' };
+
+async function loadEvalConfig() {
+  const sec = document.getElementById('section-eval-config');
+  if (!sec) return;
+  if (!isSuperAdmin()) { sec.style.display = 'none'; return; }
+  sec.style.display = '';
+  try {
+    evalCfg = await sbFetch('rpc/evaluacion_config_get', { method: 'POST', body: '{}' });
+    renderEvalConfig();
+  } catch (err) {
+    document.getElementById('eval-config-body').innerHTML = `<p class="empty-state">Could not load: ${err.message}</p>`;
+  }
+}
+
+function renderEvalConfig() {
+  const body = document.getElementById('eval-config-body');
+  const inp = 'padding:7px 9px;border:1px solid #ccc;border-radius:6px;font-size:13px;';
+  body.innerHTML = Object.keys(CFG_ROLES).map(role => {
+    const weights = Object.keys(CFG_COMPONENTS).map(c => {
+      const w = (evalCfg.pesos.find(p => p.rol_evaluado === role && p.componente === c) || {}).peso ?? 0;
+      return `<label style="font-size:12px;display:flex;flex-direction:column;gap:3px;">${CFG_COMPONENTS[c]}<input type="number" min="0" max="100" step="1" value="${w}" data-role="${role}" data-comp="${c}" class="cfg-weight" oninput="updateCfgTotal('${role}')" style="${inp}width:100px;"></label>`;
+    }).join('');
+    const kpis = evalCfg.kpis.map((k, idx) => ({ k, idx })).filter(x => x.k.rol_evaluado === role && !x.k._off).map(x => `
+      <div style="display:grid;grid-template-columns:2.4fr .6fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center;">
+        <input type="text" value="${(x.k.nombre || '').replace(/"/g, '&quot;')}" oninput="evalCfg.kpis[${x.idx}].nombre=this.value" style="${inp}">
+        <input type="text" value="${x.k.unidad || ''}" oninput="evalCfg.kpis[${x.idx}].unidad=this.value" style="${inp}" placeholder="unit">
+        <input type="number" step="any" value="${x.k.meta_default ?? ''}" oninput="evalCfg.kpis[${x.idx}].meta_default=this.value===''?null:Number(this.value)" style="${inp}" placeholder="goal (optional)">
+        <button class="btn btn-ghost" style="padding:4px 9px;" onclick="removeCfgKpi(${x.idx})" title="Remove">✕</button>
+      </div>`).join('');
+    return `<div style="border:1px solid #e8e4dc;border-radius:10px;padding:14px;margin-bottom:14px;">
+      <h3 style="font-size:14px;color:var(--navy);margin-bottom:10px;">${CFG_ROLES[role]}</h3>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:6px;">${weights}<strong id="cfg-total-${role}" style="font-size:13px;"></strong></div>
+      <div style="font-size:11px;font-weight:700;color:var(--mgray);margin:12px 0 6px;">KPIs</div>
+      ${kpis || '<p class="empty-state" style="padding:6px 0;">No KPIs yet.</p>'}
+      <button class="btn btn-ghost" style="padding:4px 10px;font-size:12px;" onclick="addCfgKpi('${role}')">+ Add KPI</button>
+    </div>`;
+  }).join('');
+  Object.keys(CFG_ROLES).forEach(updateCfgTotal);
+}
+
+function updateCfgTotal(role) {
+  let t = 0;
+  document.querySelectorAll(`.cfg-weight[data-role="${role}"]`).forEach(i => t += Number(i.value) || 0);
+  const el = document.getElementById('cfg-total-' + role);
+  if (el) { el.textContent = 'Total: ' + t + (t === 100 ? ' ✓' : ' (must be 100)'); el.style.color = t === 100 ? '#1a7f37' : '#c0392b'; }
+}
+function addCfgKpi(role) { evalCfg.kpis.push({ id: null, rol_evaluado: role, nombre: '', unidad: '', meta_default: null, orden: 99 }); syncCfgWeights(); renderEvalConfig(); }
+function removeCfgKpi(idx) { const k = evalCfg.kpis[idx]; if (k.id) { k._off = true; } else { evalCfg.kpis.splice(idx, 1); } syncCfgWeights(); renderEvalConfig(); }
+function syncCfgWeights() {
+  document.querySelectorAll('.cfg-weight').forEach(i => {
+    const p = evalCfg.pesos.find(x => x.rol_evaluado === i.dataset.role && x.componente === i.dataset.comp);
+    if (p) p.peso = Number(i.value) || 0; else evalCfg.pesos.push({ rol_evaluado: i.dataset.role, componente: i.dataset.comp, peso: Number(i.value) || 0 });
+  });
+}
+async function saveEvalConfig() {
+  if (!isSuperAdmin()) return;
+  syncCfgWeights();
+  const msg = document.getElementById('eval-config-msg');
+  const kpis = evalCfg.kpis.filter(k => (k.nombre || '').trim()).map((k, i) => ({ id: k.id, rol_evaluado: k.rol_evaluado, nombre: k.nombre.trim(), unidad: k.unidad || '', meta_default: k.meta_default === null || k.meta_default === undefined ? '' : String(k.meta_default), orden: i, activo: !k._off }));
+  msg.textContent = 'Saving...';
+  try {
+    const rows = await DH.rpc('evaluacion_config_set', { p_pesos: evalCfg.pesos, p_kpis: kpis });
+    const r = rows && rows[0];
+    msg.textContent = r ? r.message : 'No response';
+    msg.style.color = r && r.success ? '#1a7f37' : '#c0392b';
+    if (r && r.success) { await loadEvalConfig(); loadEvalResults(); }
+  } catch (err) { msg.textContent = 'Error: ' + err.message; msg.style.color = '#c0392b'; }
+}
+
+async function loadEvalCycles() {
+  try {
+    const rows = await sbFetch('evaluacion_ciclos?select=id,nombre,tipo,fecha_inicio,fecha_cierre,activo&order=fecha_inicio.desc');
+    cachedData.evalCycles = rows || [];
+    renderEvalCyclesTable(cachedData.evalCycles);
+  } catch (err) {
+    console.warn('evaluacion_ciclos table not available yet:', err);
+    cachedData.evalCycles = [];
+    document.getElementById('tbl-eval-cycles-body').innerHTML = `<tr><td colspan="6" class="empty-state">Table not set up yet.</td></tr>`;
+  }
+  if (!isSuperAdmin()) {
+    const btn = document.getElementById('btn-cycle-new-open');
+    if (btn) btn.style.display = 'none';
+  }
+}
+
+function renderEvalCyclesTable(rows) {
+  const tbody = document.getElementById('tbl-eval-cycles-body');
+  if (!rows || rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty-state">No cycles yet.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(c => {
+    const statusPill = c.activo ? '<span class="pill pill-green">ACTIVE</span>' : '<span class="pill pill-gray">Closed</span>';
+    const toggleBtn = isSuperAdmin()
+      ? (c.activo
+          ? `<button class="btn btn-red" style="padding:4px 10px;font-size:11px;" onclick="closeEvalCycle('${c.id}')">Close</button>`
+          : `<button class="btn btn-primary" style="padding:4px 10px;font-size:11px;" onclick="reopenEvalCycle('${c.id}')">Reopen</button>`)
+      : '';
+    return `<tr>
+      <td>${c.nombre}</td>
+      <td>${c.tipo}</td>
+      <td>${c.fecha_inicio}</td>
+      <td>${c.fecha_cierre}</td>
+      <td>${statusPill}</td>
+      <td>${toggleBtn}</td>
+    </tr>`;
+  }).join('');
+}
+
+function openNewCycleModal() {
+  if (!isSuperAdmin()) { alert('Only a Super Admin can open evaluation cycles.'); return; }
+  document.getElementById('cycle-nombre').value = '';
+  document.getElementById('cycle-tipo').value = 'formal';
+  document.getElementById('cycle-inicio').value = new Date().toISOString().split('T')[0];
+  document.getElementById('cycle-cierre').value = '';
+  document.getElementById('cycle-error').classList.remove('show');
+  const btn = document.getElementById('btn-cycle-save');
+  btn.disabled = false; btn.textContent = 'Open Cycle';
+  document.getElementById('modal-new-cycle').classList.add('show');
+}
+
+async function submitNewCycle() {
+  const nombre = document.getElementById('cycle-nombre').value.trim();
+  const tipo = document.getElementById('cycle-tipo').value;
+  const inicio = document.getElementById('cycle-inicio').value;
+  const cierre = document.getElementById('cycle-cierre').value;
+  const errEl = document.getElementById('cycle-error');
+  errEl.classList.remove('show');
+
+  if (!nombre || !inicio || !cierre) {
+    errEl.textContent = 'Please fill in all fields.';
+    errEl.classList.add('show');
+    return;
+  }
+
+  const btn = document.getElementById('btn-cycle-save');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Opening...';
+
+  try {
+    // Close any currently active cycle first — only one active at a time
+    const active = (cachedData.evalCycles || []).filter(c => c.activo);
+    if (active.length) {
+      await sbFetch(`evaluacion_ciclos?id=in.(${active.map(c => c.id).join(',')})`, {
+        method: 'PATCH', body: JSON.stringify({ activo: false })
+      });
+    }
+    await sbFetch('evaluacion_ciclos', {
+      method: 'POST',
+      body: JSON.stringify([{ nombre, tipo, fecha_inicio: inicio, fecha_cierre: cierre, activo: true }])
+    });
+    btn.disabled = false; btn.textContent = 'Open Cycle';
+    closeModal('modal-new-cycle');
+    await loadEvalCycles();
+  } catch (err) {
+    errEl.textContent = 'Error opening cycle: ' + err.message;
+    errEl.classList.add('show');
+    btn.disabled = false;
+    btn.textContent = 'Open Cycle';
+  }
+}
+
+async function closeEvalCycle(cycleId) {
+  if (!confirm('Close this evaluation cycle? Employees will no longer be able to submit evaluations until a new cycle opens.')) return;
+  try {
+    await sbFetch(`evaluacion_ciclos?id=eq.${cycleId}`, { method: 'PATCH', body: JSON.stringify({ activo: false }) });
+    await loadEvalCycles();
+  } catch (err) { alert('Error closing cycle: ' + err.message); }
+}
+
+async function reopenEvalCycle(cycleId) {
+  if (!confirm('Reopen this cycle? Any other active cycle will be closed automatically.')) return;
+  try {
+    const active = (cachedData.evalCycles || []).filter(c => c.activo);
+    if (active.length) {
+      await sbFetch(`evaluacion_ciclos?id=in.(${active.map(c => c.id).join(',')})`, {
+        method: 'PATCH', body: JSON.stringify({ activo: false })
+      });
+    }
+    await sbFetch(`evaluacion_ciclos?id=eq.${cycleId}`, { method: 'PATCH', body: JSON.stringify({ activo: true }) });
+    await loadEvalCycles();
+  } catch (err) { alert('Error reopening cycle: ' + err.message); }
+}
+
+function renderEmployeesTable(employees) {
+  const tbody = document.getElementById('tbl-employees-body');
+  const searchEl = document.getElementById('employee-search');
+  const q = (searchEl && searchEl.value || '').trim().toLowerCase();
+  const filtered = q ? employees.filter(e => (e.nombre_completo || '').toLowerCase().includes(q) || (e.username || '').toLowerCase().includes(q)) : employees;
+  if (employees.length === 0) { tbody.innerHTML = `<tr><td colspan="10" class="empty-state">No employees yet.</td></tr>`; return; }
+  if (filtered.length === 0) { tbody.innerHTML = `<tr><td colspan="10" class="empty-state">No employees match "${q}".</td></tr>`; return; }
+  tbody.innerHTML = filtered.map(e => {
+    const t1Lock = certLockStatus(e.id, 'tier1');
+    const t2Lock = certLockStatus(e.id, 'tier2');
+    const escName = (e.nombre_completo || '').replace(/'/g, "\\'");
+    // Buttons show for ANYONE with attempts on record who hasn't passed (not only when fully locked),
+    // admins/store managers included. Unlock +N adds attempts; Reset starts the count from zero.
+    const certBtns = (lock, tier, label) => (!lock.passed && lock.attemptCount > 0 && !isViewOnly())
+      ? `<button class="btn btn-red" onclick="openUnlockAttemptsModal('${e.id}','${escName}','${tier}')">Unlock +N (${label})</button>` +
+        `<button class="btn btn-ghost" onclick="openCertResetModal('${e.id}','${escName}','${tier}')">Reset (${label})</button>`
+      : '';
+    const resetBtns = certBtns(t1Lock, 'tier1', 'T1') + certBtns(t2Lock, 'tier2', 'T2');
+    let adminBadgeLabel = 'ADMIN';
+    if (e.nivel_admin === 'super_admin') adminBadgeLabel = 'SUPER ADMIN';
+    else if (e.nivel_admin === 'manager_visor') adminBadgeLabel = 'STORE MGMT';
+    const adminBadge = e.es_admin ? ` <span class="pill pill-gold">${adminBadgeLabel}</span>` : '';
+    const isMe = admin && e.id === admin.id;
+    const changeRoleBtn = (isSuperAdmin() && !isMe) ? `<button class="btn btn-ghost" onclick="openChangeRoleModal('${e.id}','${escName}','${e.rol}','${e.nivel_admin || ''}')">Change Role</button>` : '';
+    const deptDisplay = e.departamento ? e.departamento.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase()) : '<span style="color:var(--red)">Unset</span>';
+    const reclassifyBtn = isSuperAdmin() ? ` <button class="btn btn-ghost" style="padding:2px 8px;font-size:11px;" onclick="openReclassifyModal('${e.id}','${escName}','${e.departamento || ''}')">✎</button>` : '';
+    const canEditStore = isSuperAdmin() || (admin && admin.nivel_admin === 'admin_secundario');
+    const storeDisplay = e.tienda || '<span style="color:var(--red)">Unset</span>';
+    const storeBtn = canEditStore ? ` <button class="btn btn-ghost" style="padding:2px 8px;font-size:11px;" onclick="openReclassifyStoreModal('${e.id}','${escName}','${e.tienda || ''}')">✎</button>` : '';
+    return `<tr>
+      <td>${e.nombre_completo}${adminBadge}${isMe ? ' <span class="pill pill-gray">YOU</span>' : ''}</td>
+      <td>${e.username}</td>
+      <td>${e.employee_id || '—'}</td>
+      <td>${e.tienda || '—'}</td>
+      <td>${deptDisplay}${reclassifyBtn}</td>
+      <td>${storeDisplay}${storeBtn}</td>
+      <td>${e.tier1 ? `<span class="pill pill-green">${e.tier1.porcentaje}%</span>` : (t1Lock && t1Lock.locked ? '<span class="pill pill-red">Locked</span>' : '<span class="pill pill-gray">—</span>')}</td>
+      <td>${e.tier2 ? `<span class="pill pill-green">${e.tier2.porcentaje}%</span>` : (t2Lock && t2Lock.locked ? '<span class="pill pill-red">Locked</span>' : '<span class="pill pill-gray">—</span>')}</td>
+      <td>${e.totalPoints}</td>
+      <td class="row-actions">${isViewOnly() ? '' : `
+        <button class="btn btn-ghost" onclick="openResetModal('${e.id}','${escName}')">Reset PW</button>
+        ${resetBtns}${changeRoleBtn}
+        ${!e.es_admin ? `<button class="btn btn-red" onclick="deleteEmployee('${e.id}','${e.nombre_completo}')">Delete</button>` : ''}
+      `}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ════════ RECLASSIFY — BUG FIX: reset button state on success ════════ */
+let reclassifyTarget = null;
+
+function openReclassifyModal(empId, empName, currentDept) {
+  if (!isSuperAdmin()) { alert('Only a Super Admin can reclassify departments.'); return; }
+  reclassifyTarget = empId;
+  document.getElementById('reclassify-desc').textContent = `${empName} — pick the correct department.`;
+  document.getElementById('reclassify-departamento').value = currentDept || 'sales';
+  // Always reset button state when opening the modal
+  const btn = document.getElementById('btn-reclassify-save');
+  btn.disabled = false;
+  btn.textContent = 'Save';
+  document.getElementById('modal-reclassify').classList.add('show');
+}
+
+async function submitReclassify() {
+  if (!reclassifyTarget) return;
+  const dept = document.getElementById('reclassify-departamento').value;
+  const btn = document.getElementById('btn-reclassify-save');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Saving...';
+  try {
+    const rr = await DH.rpc('admin_reclasificar_departamento', { p_empleado_id: reclassifyTarget, p_departamento: dept });
+    if (!rr || !rr[0] || !rr[0].success) throw new Error((rr && rr[0] && rr[0].message) || 'Not saved');
+    // ✅ FIX: reset button and target BEFORE closing so next modal open is clean
+    btn.disabled = false;
+    btn.textContent = 'Save';
+    reclassifyTarget = null;
+    closeModal('modal-reclassify');
+    await loadEmployees();
+  } catch (err) {
+    alert('Error saving: ' + err.message);
+    btn.disabled = false;
+    btn.textContent = 'Save';
+  }
+}
+
+/* ════════ RECLASSIFY STORE (Super Admin + Admin Secundario) ════════ */
+let reclassifyStoreTarget = null;
+
+function openReclassifyStoreModal(empId, empName, currentStore) {
+  const canEdit = isSuperAdmin() || (admin && admin.nivel_admin === 'admin_secundario');
+  if (!canEdit) { alert('Only an Admin or Super Admin can reassign stores.'); return; }
+  reclassifyStoreTarget = empId;
+  document.getElementById('reclassify-store-desc').textContent = `${empName} — pick the correct store.`;
+  document.getElementById('reclassify-tienda').value = currentStore || 'Euclid / Anaheim';
+  const btn = document.getElementById('btn-reclassify-store-save');
+  btn.disabled = false; btn.textContent = 'Save';
+  document.getElementById('modal-reclassify-store').classList.add('show');
+}
+
+async function submitReclassifyStore() {
+  if (!reclassifyStoreTarget) return;
+  const tienda = document.getElementById('reclassify-tienda').value;
+  const btn = document.getElementById('btn-reclassify-store-save');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Saving...';
+  try {
+    const rs = await DH.rpc('admin_reclasificar_tienda', { p_empleado_id: reclassifyStoreTarget, p_tienda: tienda });
+    if (!rs || !rs[0] || !rs[0].success) throw new Error((rs && rs[0] && rs[0].message) || 'Not saved');
+    btn.disabled = false; btn.textContent = 'Save';
+    reclassifyStoreTarget = null;
+    closeModal('modal-reclassify-store');
+    await loadEmployees();
+  } catch (err) {
+    alert('Error saving: ' + err.message);
+    btn.disabled = false; btn.textContent = 'Save';
+  }
+}
+
+function renderKPIs(employees) {
+  const total = employees.length;
+  const tier1Count = employees.filter(e => e.tier1).length;
+  const tier2Count = employees.filter(e => e.tier2).length;
+  document.getElementById('kpi-total-emp').textContent = total;
+  const vendorCount = employees.filter(e=>!e.es_admin).length;
+  const storeManagerCount = employees.filter(e=>e.nivel_admin === 'manager_visor').length;
+  const adminCount = employees.filter(e=>e.es_admin && e.nivel_admin !== 'manager_visor').length;
+  document.getElementById('kpi-total-emp-sub').textContent = `${vendorCount} vendors, ${adminCount} admin${storeManagerCount ? `, ${storeManagerCount} store mgr` : ''}`;
+  document.getElementById('kpi-tier1').textContent = `${tier1Count}/${total}`;
+  document.getElementById('kpi-tier2').textContent = `${tier2Count}/${total}`;
+}
+
+/* ════════ CERT ATTEMPTS ════════ */
+function lastResetFor(empId, cert, resets) {
+  const r = resets.filter(x => x.empleado_id === empId && x.certificacion === cert);
+  if (!r.length) return null;
+  return r.reduce((latest, x) => (!latest || new Date(x.reset_at) > new Date(latest)) ? x.reset_at : latest, null);
+}
+function attemptsSinceReset(empId, cert, rows, resets) {
+  const lastReset = lastResetFor(empId, cert, resets);
+  return rows.filter(r => r.empleado_id === empId && r.certificacion === cert && (!lastReset || new Date(r.started_at || r.fecha_completado) > new Date(lastReset)));
+}
+function extraAttemptsFor(empId, cert, extras) {
+  return (extras || []).filter(x => x.empleado_id === empId && x.certificacion === cert).reduce((sum, x) => sum + (x.cantidad || 0), 0);
+}
+function certLockStatus(empId, cert) {
+  const rows = cachedData.certAttempts || [];
+  const resets = cachedData.certResets || [];
+  const extras = cachedData.certExtraAttempts || [];
+  const attempts = attemptsSinceReset(empId, cert, rows, resets);
+  const passed = attempts.some(r => r.aprobado === true);
+  const extraGranted = extraAttemptsFor(empId, cert, extras);
+  const effectiveMax = 3 + extraGranted;
+  return { passed, attemptCount: attempts.length, extraGranted, effectiveMax, locked: !passed && attempts.length >= effectiveMax };
+}
+
+async function loadCertAttempts() {
+  try {
+    const ov = await DH.rpc('admin_cert_overview', { p_detalle: true });
+    const rows = (ov && ov.progreso) || [];
+    const resets = (ov && ov.resets) || [];
+    const extras = (ov && ov.extras) || [];
+    cachedData.certAttempts = rows || [];
+    cachedData.certResets = resets || [];
+    cachedData.certExtraAttempts = extras || [];
+    renderCertKPIs(cachedData.certAttempts, cachedData.certResets);
+    renderCertAttemptsTable(cachedData.certAttempts);
+  } catch (err) {
+    console.error('Failed to load certification attempts:', err);
+    document.getElementById('tbl-certattempts-body').innerHTML = `<tr><td colspan="8" class="empty-state">Error loading attempts.</td></tr>`;
+  }
+}
+
+function renderCertKPIs(rows, resets) {
+  ['tier1','tier2'].forEach(cert => {
+    const completed = rows.filter(r => r.certificacion === cert && r.aprobado != null);
+    const passed = completed.filter(r => r.aprobado === true).length;
+    const rate = completed.length ? Math.round(passed / completed.length * 100) : 0;
+    const label = cert === 'tier1' ? 't1' : 't2';
+    document.getElementById(`kpi-${label}-passrate`).textContent = completed.length ? `${rate}%` : '—';
+    document.getElementById(`kpi-${label}-passrate-sub`).textContent = `${passed} passed / ${completed.length} completed`;
+  });
+  document.getElementById('kpi-cert-inprogress').textContent = rows.filter(r => r.estado === 'in_progress' && r.aprobado == null).length;
+  const byPair = {};
+  rows.forEach(r => { const key = r.empleado_id + '|' + r.certificacion; (byPair[key] = byPair[key] || []).push(r); });
+  let lockedCount = 0;
+  Object.keys(byPair).forEach(key => {
+    const [empId, cert] = key.split('|');
+    const attempts = attemptsSinceReset(empId, cert, rows, resets);
+    const passed = attempts.some(r => r.aprobado === true);
+    if (!passed && attempts.length >= 3) lockedCount++;
+  });
+  document.getElementById('kpi-cert-locked').textContent = lockedCount;
+}
+
+function renderCertAttemptsTable(rows) {
+  const tbody = document.getElementById('tbl-certattempts-body');
+  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No attempts yet.</td></tr>`; return; }
+  const employeesById = {};
+  cachedData.employees.forEach(e => employeesById[e.id] = e.nombre_completo);
+  const grouped = {};
+  const sorted = [...rows].sort((a,b) => new Date(a.started_at || a.fecha_completado) - new Date(b.started_at || b.fecha_completado));
+  sorted.forEach(r => { const key = r.empleado_id + '|' + r.certificacion; grouped[key] = (grouped[key] || 0) + 1; r._attemptNum = grouped[key]; });
+  const searchEl = document.getElementById('certattempts-search');
+  const q = (searchEl && searchEl.value || '').trim().toLowerCase();
+  const visibleRows = q ? rows.filter(r => (employeesById[r.empleado_id] || 'unknown').toLowerCase().includes(q)) : rows;
+  if (q && visibleRows.length === 0) { tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No attempts match "${q}".</td></tr>`; return; }
+  tbody.innerHTML = visibleRows.map(r => {
+    const name = employeesById[r.empleado_id] || 'Unknown';
+    const certLabel = r.certificacion === 'tier1' ? 'Tier 1' : 'Tier 2';
+    let statusPill;
+    if (r.aprobado === true) statusPill = '<span class="pill pill-green">Passed</span>';
+    else if (r.aprobado === false) statusPill = '<span class="pill pill-red">Failed</span>';
+    else if (r.estado === 'abandoned') statusPill = '<span class="pill pill-gray">Abandoned</span>';
+    else if (r.estado === 'in_progress') statusPill = '<span class="pill pill-gray">In Progress</span>';
+    else statusPill = '<span class="pill pill-gray">—</span>';
+    const scoreTxt = r.porcentaje != null ? `${r.porcentaje}%` : '—';
+    const timeTxt = r.tiempo_usado_segundos != null ? `${Math.floor(r.tiempo_usado_segundos/60)}:${String(r.tiempo_usado_segundos%60).padStart(2,'0')}` : '—';
+    const dateTxt = r.fecha_completado ? new Date(r.fecha_completado).toLocaleString() : (r.started_at ? new Date(r.started_at).toLocaleString()+' (started)' : '—');
+    const canView = r.detalle_respuestas && Array.isArray(r.detalle_respuestas) && r.detalle_respuestas.length > 0;
+    let statusText = r.aprobado === true ? 'Passed' : r.aprobado === false ? 'Failed' : r.estado === 'abandoned' ? 'Abandoned' : 'In Progress';
+    return `<tr>
+      <td>${name}</td><td>${certLabel}</td><td>${r._attemptNum || '—'}</td><td>${statusPill}</td>
+      <td>${scoreTxt}</td><td>${timeTxt}</td><td>${dateTxt}</td>
+      <td class="row-actions">
+        ${(canView && !isViewOnly()) ? `<button class="btn btn-ghost" onclick='openAnswerDetail(${JSON.stringify(r.id)}, ${JSON.stringify(r.certificacion)})'>View Answers</button>` : ''}
+        ${isSuperAdmin() ? `<button class="btn btn-red" onclick='deleteAttempt(${JSON.stringify(r.id)}, ${JSON.stringify(name)}, ${JSON.stringify(certLabel)}, ${JSON.stringify(statusText)})'>Delete</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+/* ════════ ANSWER DETAIL ════════ */
+async function getQuestionBank(tier) {
+  if (questionBankCache[tier]) return questionBankCache[tier];
+  const res = await fetch(examFileByTier[tier]);
+  if (!res.ok) throw new Error(`Could not load ${examFileByTier[tier]}`);
+  const html = await res.text();
+  const match = html.match(/const QUESTIONS\s*=\s*(\[[\s\S]*?\]);/);
+  if (!match) throw new Error('Could not locate question bank in ' + examFileByTier[tier]);
+  const QUESTIONS = new Function('return ' + match[1])();
+  questionBankCache[tier] = QUESTIONS;
+  return QUESTIONS;
+}
+
+async function openAnswerDetail(recordId, cert) {
+  document.getElementById('answers-modal-title').textContent = 'Loading…';
+  document.getElementById('answers-modal-body').innerHTML = 'Loading answers…';
+  document.getElementById('modal-answers').classList.add('show');
+  try {
+    const record = (cachedData.certAttempts || []).find(r => r.id === recordId);
+    if (!record) throw new Error('Attempt not found.');
+    const QUESTIONS = await getQuestionBank(cert);
+    const employeesById = {};
+    cachedData.employees.forEach(e => employeesById[e.id] = e.nombre_completo);
+    const name = employeesById[record.empleado_id] || 'Unknown';
+    document.getElementById('answers-modal-title').textContent = `${name} — ${cert === 'tier1' ? 'Sales Tier 1' : 'Sales Tier 2'} (${record.porcentaje != null ? record.porcentaje + '%' : '—'})`;
+    const answers = record.detalle_respuestas || [];
+    const letters = ['A','B','C','D'];
+    const presentedIndices = (record.preguntas_seleccionadas && record.preguntas_seleccionadas.length) ? record.preguntas_seleccionadas : QUESTIONS.map((_, i) => i);
+    let html = '';
+    presentedIndices.forEach((qi, i) => {
+      const q = QUESTIONS[qi];
+      if (!q) return;
+      const given = answers[qi] !== undefined ? answers[qi] : answers[i];
+      const isCorrect = given === q.correct;
+      html += `<div style="border-left:4px solid ${isCorrect ? '#2e7d32' : '#c62828'};padding:8px 12px;margin-bottom:10px;background:${isCorrect ? '#f1f8f1' : '#fdf1f1'};border-radius:4px;">
+        <div style="font-weight:700;font-size:12px;color:var(--mgray);margin-bottom:2px">${isCorrect ? '✅' : '❌'} Q${i+1} · ${q.section}</div>
+        <div style="font-size:13px;margin-bottom:6px">${q.q}</div>
+        <div style="font-size:12px;color:#333">Answered: <strong>${given != null ? letters[given] + ' — ' + q.opts[given] : '— (not answered)'}</strong></div>
+        ${!isCorrect ? `<div style="font-size:12px;color:#333">Correct: <strong>${letters[q.correct]} — ${q.opts[q.correct]}</strong></div>` : ''}
+      </div>`;
+    });
+    document.getElementById('answers-modal-body').innerHTML = html;
+  } catch (err) {
+    document.getElementById('answers-modal-body').innerHTML = `<div class="empty-state">Error: ${err.message}</div>`;
+  }
+}
+
+/* ════════ CERT RESET ════════ */
+function openCertResetModal(empId, empName, cert) {
+  certResetTarget = { empId, empName, certificacion: cert };
+  document.getElementById('cert-reset-desc').textContent = `${empName} will start over on ${cert === 'tier1' ? 'Sales Tier 1' : 'Sales Tier 2'} with a fresh set of 3 attempts. Past attempts stay in the history.`;
+  document.getElementById('cert-reset-notes').value = '';
+  document.getElementById('modal-cert-reset').classList.add('show');
+}
+async function submitCertReset() {
+  if (!certResetTarget) return;
+  const notes = document.getElementById('cert-reset-notes').value.trim();
+  try {
+    const rows = await DH.rpc('admin_reset_certificacion', { p_empleado_id: certResetTarget.empId, p_certificacion: certResetTarget.certificacion, p_notas: notes || null });
+    if (!rows[0].success) { alert(rows[0].message); return; }
+    closeModal('modal-cert-reset');
+    loadAllData();
+  } catch (err) { alert('Error resetting certification: ' + err.message); }
+}
+
+/* ════════ UNLOCK ATTEMPTS ════════ */
+let unlockAttemptsTarget = null;
+function openUnlockAttemptsModal(empId, empName, cert) {
+  unlockAttemptsTarget = { empId, empName, certificacion: cert };
+  const certLabel = cert === 'tier1' ? 'Sales Tier 1' : 'Sales Tier 2';
+  document.getElementById('unlock-attempts-desc').textContent = `${empName} is locked on ${certLabel}. Choose how many additional attempts to unlock.`;
+  document.getElementById('unlock-attempts-qty').value = '1';
+  document.getElementById('unlock-attempts-notes').value = '';
+  document.getElementById('modal-unlock-attempts').classList.add('show');
+}
+async function submitUnlockAttempts() {
+  if (!unlockAttemptsTarget) return;
+  const qty = parseInt(document.getElementById('unlock-attempts-qty').value, 10);
+  const notes = document.getElementById('unlock-attempts-notes').value.trim();
+  if (!qty || qty < 1) { alert('Enter a quantity of at least 1.'); return; }
+  try {
+    const rows = await DH.rpc('admin_otorgar_intentos_extra', { p_empleado_id: unlockAttemptsTarget.empId, p_certificacion: unlockAttemptsTarget.certificacion, p_cantidad: qty, p_notas: notes || null });
+    if (!rows[0].success) { alert(rows[0].message); return; }
+    closeModal('modal-unlock-attempts');
+    loadAllData();
+  } catch (err) { alert('Error unlocking attempts: ' + err.message); }
+}
+
+/* ════════ CHANGE ROLE ════════ */
+function openChangeRoleModal(empId, empName, currentRol, currentNivel) {
+  if (!isSuperAdmin()) { alert('Only a Super Admin can change roles.'); return; }
+  roleChangeTarget = { empId, empName };
+  document.getElementById('role-change-desc').textContent = `Change role for ${empName}.`;
+  document.getElementById('role-select').value = currentNivel ? `admin|${currentNivel}` : `${currentRol}|none`;
+  document.getElementById('modal-change-role').classList.add('show');
+}
+async function submitRoleChange() {
+  if (!roleChangeTarget) return;
+  const [rol, nivel] = document.getElementById('role-select').value.split('|');
+  try {
+    const rows = await DH.rpc('admin_cambiar_rol_empleado', { p_empleado_id: roleChangeTarget.empId, p_nuevo_rol: rol, p_nuevo_nivel_admin: nivel === 'none' ? null : nivel });
+    if (!rows[0].success) { alert(rows[0].message); return; }
+    closeModal('modal-change-role');
+    loadAllData();
+  } catch (err) { alert('Error changing role: ' + err.message); }
+}
+
+/* ════════ INVITATION CODES ════════ */
+function openGenerateCodeModal() {
+  document.getElementById('gencode-qty').value = 1;
+  document.getElementById('gencode-rol').value = 'vendedor';
+  document.getElementById('gencode-tienda').value = '';
+  document.getElementById('gencode-result').style.display = 'none';
+  document.getElementById('gencode-result-list').innerHTML = '';
+  document.getElementById('modal-generate-code').classList.add('show');
+}
+async function submitGenerateCode() {
+  const qty = Math.max(1, Math.min(25, parseInt(document.getElementById('gencode-qty').value, 10) || 1));
+  const rol = document.getElementById('gencode-rol').value;
+  const tienda = document.getElementById('gencode-tienda').value.trim();
+  try {
+    const rows = await DH.rpc('admin_generar_codigo', { p_rol_asignado: rol, p_tienda_asignada: tienda || null, p_cantidad: qty });
+    const codes = (rows || []).map(r => r.codigo);
+    document.getElementById('gencode-result-list').innerHTML = codes.map(cd => `<div>${cd}</div>`).join('');
+    document.getElementById('gencode-result').style.display = 'block';
+    loadCodes();
+  } catch (err) { alert('Error generating code: ' + err.message); }
+}
+
+/* ════════ FULL LIST MODAL ════════ */
+let fullListState = { data: [], filtered: [], dateField: null, rowFn: null, exportColumns: null, exportFilename: 'export' };
+function openFullListModal(opts) {
+  fullListState = { filtered: opts.data, ...opts };
+  document.getElementById('full-list-title').textContent = opts.title;
+  document.getElementById('full-list-thead').innerHTML = opts.headerHtml;
+  const filtersEl = document.getElementById('full-list-filters');
+  if (opts.dateField) {
+    filtersEl.style.display = 'flex';
+    filtersEl.innerHTML = `
+      <div><label class="field-label">From</label><input type="date" class="field-input" id="full-list-from" style="margin-bottom:0"></div>
+      <div><label class="field-label">To</label><input type="date" class="field-input" id="full-list-to" style="margin-bottom:0"></div>
+      <button class="btn btn-ghost" onclick="renderFullListRows()">Apply</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('full-list-from').value='';document.getElementById('full-list-to').value='';renderFullListRows()">Clear</button>`;
+  } else { filtersEl.style.display = 'none'; filtersEl.innerHTML = ''; }
+  renderFullListRows();
+  document.getElementById('modal-full-list').classList.add('show');
+}
+function renderFullListRows() {
+  let rows = fullListState.data;
+  if (fullListState.dateField) {
+    const fromVal = document.getElementById('full-list-from')?.value;
+    const toVal = document.getElementById('full-list-to')?.value;
+    if (fromVal) rows = rows.filter(r => new Date(r[fullListState.dateField]) >= new Date(fromVal));
+    if (toVal) rows = rows.filter(r => new Date(r[fullListState.dateField]) <= new Date(toVal + 'T23:59:59'));
+  }
+  fullListState.filtered = rows;
+  const colCount = (fullListState.headerHtml.match(/<th/g) || []).length || 4;
+  document.getElementById('full-list-tbody').innerHTML = rows.length ? rows.map(fullListState.rowFn).join('') : `<tr><td colspan="${colCount}" class="empty-state">No records in this range.</td></tr>`;
+}
+function exportFullListCSV() {
+  const csv = toCSV(fullListState.filtered || fullListState.data, fullListState.exportColumns);
+  downloadCSV(csv, `${fullListState.exportFilename}_${new Date().toISOString().split('T')[0]}.csv`);
+}
+
+/* ════════ DELETE ATTEMPT ════════ */
+async function deleteAttempt(recordId, empName, certLabel, statusText) {
+  if (!confirm(`Delete this ${certLabel} attempt for ${empName} (${statusText})?\n\nThis cannot be undone.`)) return;
+  try {
+    const rows = await DH.rpc('admin_eliminar_intento_certificacion', { p_intento_id: recordId, p_detalle: `${empName} — ${certLabel} — ${statusText}` });
+    if (!rows[0].success) { alert(rows[0].message); return; }
+    loadAllData();
+  } catch (err) { alert('Error deleting attempt: ' + err.message); }
+}
+
+/* ════════ CODES ════════ */
+async function loadCodes() {
+  try {
+    const codes = await DH.rpc('admin_codigos_listar');
+    cachedData.codes = codes;
+    const usedCount = codes.filter(c => c.usado).length;
+    document.getElementById('kpi-codes').textContent = `${usedCount}/${codes.length}`;
+    const summaryEl = document.getElementById('codes-summary-line');
+    if (summaryEl) summaryEl.textContent = `${usedCount} used · ${codes.length - usedCount} available · ${codes.length} total`;
+    const employeesById = {};
+    cachedData.employees.forEach(e => employeesById[e.id] = e.nombre_completo);
+    const tbody = document.getElementById('tbl-codes-body');
+    if (codes.length === 0) { tbody.innerHTML = `<tr><td colspan="4" class="empty-state">No codes yet.</td></tr>`; return; }
+    tbody.innerHTML = codes.slice(0, 10).map(c => codeRowHtml(c, employeesById)).join('');
+  } catch (err) { console.error('Failed to load codes:', err); }
+}
+function codeRowHtml(c, employeesById) {
+  return `<tr>
+    <td><code>${c.codigo}</code></td>
+    <td>${c.usado ? '<span class="pill pill-green">Used</span>' : '<span class="pill pill-gray">Available</span>'}</td>
+    <td>${c.usado_por_empleado_id ? (employeesById[c.usado_por_empleado_id] || '—') : '—'}</td>
+    <td>${new Date(c.created_at).toLocaleDateString()}</td>
+  </tr>`;
+}
+function openCodesFullList() {
+  const employeesById = {};
+  cachedData.employees.forEach(e => employeesById[e.id] = e.nombre_completo);
+  openFullListModal({ title: 'All Invitation Codes', data: cachedData.codes, headerHtml: '<tr><th>Code</th><th>Status</th><th>Used By</th><th>Created</th></tr>', rowFn: (c) => codeRowHtml(c, employeesById), dateField: 'created_at', exportColumns: [{ label: 'Code', get: r => r.codigo }, { label: 'Used', get: r => r.usado ? 'Yes' : 'No' }, { label: 'Used At', get: r => r.used_at }, { label: 'Created', get: r => r.created_at }], exportFilename: 'daniels_invitation_codes' });
+}
+
+/* ════════ LEAD SOURCE ════════ */
+async function loadLeadSource() {
+  try {
+    const entries = await sbFetch('customer_source_log?select=*&order=submitted_at.desc');
+    cachedData.leadsource = entries;
+    document.getElementById('kpi-ls-total').textContent = entries.length;
+    const sourceCounts = {}, empCounts = {};
+    const oneWeekAgo = new Date(Date.now() - 7*24*60*60*1000);
+    let weekCount = 0;
+    entries.forEach(e => { sourceCounts[e.source] = (sourceCounts[e.source]||0) + 1; empCounts[e.employee_name] = (empCounts[e.employee_name]||0) + 1; if (new Date(e.submitted_at) >= oneWeekAgo) weekCount++; });
+    const topSource = Object.entries(sourceCounts).sort((a,b)=>b[1]-a[1])[0];
+    const topEmp = Object.entries(empCounts).sort((a,b)=>b[1]-a[1])[0];
+    document.getElementById('kpi-ls-top').textContent = topSource ? `${topSource[0]} (${topSource[1]})` : '—';
+    document.getElementById('kpi-ls-emp').textContent = topEmp ? `${topEmp[0]} (${topEmp[1]})` : '—';
+    document.getElementById('kpi-ls-week').textContent = weekCount;
+    const tbody = document.getElementById('tbl-leadsource-body');
+    if (entries.length === 0) { tbody.innerHTML = `<tr><td colspan="4" class="empty-state">No entries yet.</td></tr>`; return; }
+    tbody.innerHTML = entries.slice(0, 10).map(leadSourceRowHtml).join('');
+  } catch (err) { console.error('Failed to load lead source:', err); }
+}
+function leadSourceRowHtml(e) {
+  return `<tr><td>${e.employee_name}</td><td>${e.source}</td><td>${e.other_note || '—'}</td><td>${new Date(e.submitted_at).toLocaleString()}</td></tr>`;
+}
+function openLeadSourceFullList() {
+  openFullListModal({ title: 'All "How They Found Us" Entries', data: cachedData.leadsource, headerHtml: '<tr><th>Employee</th><th>Source</th><th>Note</th><th>Date</th></tr>', rowFn: leadSourceRowHtml, dateField: 'submitted_at', exportColumns: [{ label: 'Employee', get: r => r.employee_name }, { label: 'Source', get: r => r.source }, { label: 'Note', get: r => r.other_note }, { label: 'Date', get: r => r.submitted_at }], exportFilename: 'daniels_lead_source' });
+}
+
+/* ════════ AUDIT LOG ════════ */
+async function loadAuditLog() {
+  try {
+    const logs = await sbFetch('admin_audit_log?select=*&order=created_at.desc&limit=500');
+    cachedData.auditlog = logs;
+    const tbody = document.getElementById('tbl-auditlog-body');
+    if (logs.length === 0) { tbody.innerHTML = `<tr><td colspan="4" class="empty-state">No admin actions recorded yet.</td></tr>`; return; }
+    tbody.innerHTML = logs.slice(0, 5).map(auditLogRowHtml).join('');
+  } catch (err) { console.error('Failed to load audit log:', err); document.getElementById('tbl-auditlog-body').innerHTML = `<tr><td colspan="4" class="empty-state">Error loading activity log.</td></tr>`; }
+}
+const AUDIT_ACTION_LABELS = { 'reset_certificacion': 'Certification Reset', 'eliminar_intento_certificacion': 'Deleted Certification Attempt', 'sembrar_certificacion': 'Certification Planted', 'cambiar_rol_empleado': 'Changed Employee Role', 'generar_codigo': 'Generated Invitation Code(s)', 'reset_password': 'Password Reset', 'Deleted employee': 'Deleted Employee' };
+function auditActionLabel(accion) { return AUDIT_ACTION_LABELS[accion] || accion; }
+function auditLogRowHtml(l) { return `<tr><td>${l.admin_username}</td><td><span class="pill pill-gray">${auditActionLabel(l.accion)}</span></td><td>${l.detalle || '—'}</td><td>${new Date(l.created_at).toLocaleString()}</td></tr>`; }
+function openAuditLogFullList() {
+  openFullListModal({ title: 'Full Admin Activity Log', data: cachedData.auditlog, headerHtml: '<tr><th>Admin</th><th>Action</th><th>Detail</th><th>Date</th></tr>', rowFn: auditLogRowHtml, dateField: 'created_at', exportColumns: [{ label: 'Admin', get: r => r.admin_username }, { label: 'Action', get: r => auditActionLabel(r.accion) }, { label: 'Detail', get: r => r.detalle }, { label: 'Date', get: r => r.created_at }], exportFilename: 'daniels_admin_audit_log' });
+}
+
+/* ════════ DELETE EMPLOYEE ════════ */
+async function deleteEmployee(empId, name) {
+  if (!confirm(`Delete ${name}? This also deletes their certification history. Cannot be undone.`)) return;
+  try {
+    const rows = await DH.rpc('admin_eliminar_empleado', { p_empleado_id: empId });
+    if (!rows[0].success) { alert(rows[0].message); return; }
+    loadEmployees(); loadAuditLog();
+  } catch (err) { alert('Error deleting employee: ' + err.message); }
+}
+
+/* ════════ RESET PASSWORD ════════ */
+let resetPwTarget = null;
+function openResetModal(empId, empName) {
+  resetPwTarget = { empId, empName };
+  document.getElementById('reset-pw-desc').textContent = `This locks ${empName}'s account and generates a one-time code so THEY can set their own new password.`;
+  document.getElementById('reset-pw-result').style.display = 'none';
+  document.getElementById('btn-reset-pw-generate').style.display = 'block';
+  document.getElementById('modal-reset').classList.add('show');
+}
+async function submitResetPassword() {
+  if (!resetPwTarget) return;
+  try {
+    const rows = await DH.rpc('admin_iniciar_reset_password', { p_empleado_id: resetPwTarget.empId });
+    if (!rows[0].success) { alert(rows[0].message); return; }
+    document.getElementById('reset-pw-value').textContent = rows[0].codigo;
+    document.getElementById('reset-pw-result').style.display = 'block';
+    document.getElementById('btn-reset-pw-generate').style.display = 'none';
+    loadAllData();
+  } catch (err) { alert('Error generating reset code: ' + err.message); }
+}
+
+/* ════════ PLANT CERTIFICATION ════════ */
+function populatePlantDropdown(employees) {
+  const sel = document.getElementById('plant-employee');
+  sel.innerHTML = employees.filter(e=>!e.es_admin || e.nivel_admin === 'manager_visor').map(e => `<option value="${e.id}">${e.nombre_completo} (${e.username})</option>`).join('');
+}
+function openPlantModal() {
+  document.getElementById('plant-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('modal-plant').classList.add('show');
+}
+async function submitPlantCert() {
+  const errEl = document.getElementById('plant-error');
+  errEl.classList.remove('show');
+  const empId = document.getElementById('plant-employee').value;
+  const cert = document.getElementById('plant-cert').value;
+  const score = parseInt(document.getElementById('plant-score').value);
+  const total = parseInt(document.getElementById('plant-total').value);
+  const date = document.getElementById('plant-date').value;
+  if (!empId || !score || !total || !date) { errEl.textContent = 'Please fill in all fields.'; errEl.classList.add('show'); return; }
+  try {
+    const rows = await DH.rpc('admin_sembrar_certificacion', { p_empleado_id: empId, p_certificacion: cert, p_score: score, p_total_puntos: total, p_fecha: new Date(date).toISOString() });
+    if (!rows[0].success) { errEl.textContent = rows[0].message; errEl.classList.add('show'); return; }
+    closeModal('modal-plant');
+    loadAllData();
+  } catch (err) { errEl.textContent = 'Error: ' + err.message; errEl.classList.add('show'); }
+}
+
+/* ════════ UTILS ════════ */
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
+
+function toCSV(rows, headers) {
+  const escape = (val) => { if (val === null || val === undefined) return ''; const s = String(val).replace(/"/g, '""'); return /[",\n]/.test(s) ? `"${s}"` : s; };
+  return [headers.map(h => escape(h.label)).join(','), ...rows.map(row => headers.map(h => escape(h.get(row))).join(','))].join('\n');
+}
+function downloadCSV(content, filename) {
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+function exportCSV(type) {
+  const dateStamp = new Date().toISOString().split('T')[0];
+  if (type === 'employees') {
+    downloadCSV(toCSV(cachedData.employees, [{ label: 'Name', get: r => r.nombre_completo }, { label: 'Username', get: r => r.username }, { label: 'Employee ID', get: r => r.employee_id }, { label: 'Store', get: r => r.tienda }, { label: 'Department', get: r => r.departamento }, { label: 'Role', get: r => r.rol }, { label: 'Tier 1 %', get: r => r.tier1 ? r.tier1.porcentaje : '' }, { label: 'Tier 2 %', get: r => r.tier2 ? r.tier2.porcentaje : '' }, { label: 'Total Points', get: r => r.totalPoints }]), `daniels_employees_${dateStamp}.csv`);
+  }
+  if (type === 'organigrama') {
+    const byId = {};
+    cachedData.employees.forEach(e => { byId[e.id] = e; });
+    downloadCSV(toCSV(cachedData.organigrama, [{ label: 'empleado_username', get: r => byId[r.empleado_id] ? byId[r.empleado_id].username : '' }, { label: 'supervisor_username', get: r => r.supervisor_id && byId[r.supervisor_id] ? byId[r.supervisor_id].username : '' }, { label: 'track', get: r => r.track }, { label: 'nivel', get: r => r.nivel }, { label: 'titulo_display', get: r => r.titulo_display || '' }]), `daniels_organigrama_${dateStamp}.csv`);
+  }
+  if (type === 'certattempts') {
+    const byId = {}; cachedData.employees.forEach(e => byId[e.id] = e.nombre_completo);
+    downloadCSV(toCSV(cachedData.certAttempts, [{ label: 'Employee', get: r => byId[r.empleado_id] || 'Unknown' }, { label: 'Certification', get: r => r.certificacion }, { label: 'Status', get: r => r.estado || '' }, { label: 'Score %', get: r => r.porcentaje }, { label: 'Time Used (sec)', get: r => r.tiempo_usado_segundos }, { label: 'Started At', get: r => r.started_at }, { label: 'Completed At', get: r => r.fecha_completado }]), `daniels_certification_attempts_${dateStamp}.csv`);
+  }
+}
+
+document.getElementById('login-password').addEventListener('keypress', (e) => { if (e.key === 'Enter') handleAdminLogin(); });
+
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.createElement('button');
+  btn.className = 'btn btn-gold';
+  btn.textContent = '🌱 Plant Certification';
+  btn.style.cssText = 'position:fixed;bottom:24px;right:24px;padding:14px 22px;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.2);';
+  btn.id = 'btn-plant-cert-floating';
+  btn.style.display = 'none';
+  btn.onclick = openPlantModal;
+  document.getElementById('screen-cockpit').appendChild(btn);
+});
+
+/* /next/: if the hub already signed this tab in with an admin account, skip the login screen. */
+(async function restoreAdminSession() {
+  const emp = await DH.restore();
+  if (!emp || !emp.es_admin) return;
+  admin = emp;
+  document.getElementById('screen-admin-login').classList.remove('active');
+  document.getElementById('screen-cockpit').classList.add('active');
+  let tierLabel = 'Admin';
+  if (isSuperAdmin()) tierLabel = 'Super Admin';
+  else if (isViewOnly()) tierLabel = 'Store Management — View Only';
+  document.getElementById('admin-greeting').textContent = `Signed in as ${emp.nombre_completo} (${tierLabel})`;
+  loadAllData();
+})();
+</script>
+</body>
+</html>

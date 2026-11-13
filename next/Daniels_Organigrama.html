@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Daniels Workspace — Org Chart</title>
+<style>
+  :root{--navy:#1B3A6B;--gold:#C8922A;--ltblue:#D6E4F7;--green:#27AE60;--mgray:#6B6B6B;--purple:#7B5EA7;--ted:#8B4513;--karen:#C2185B;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:Arial,sans-serif;background:#f0f2f5;min-height:100vh;}
+  .top-bar{background:var(--navy);border-bottom:4px solid var(--gold);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;}
+  .top-bar h1{color:#fff;font-size:18px;}
+  .top-bar .sub{color:var(--ltblue);font-size:12px;margin-top:2px;}
+  .btn-back{background:transparent;border:1px solid var(--ltblue);color:var(--ltblue);padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;}
+  .content{padding:18px 16px 40px;max-width:980px;margin:0 auto;}
+  .tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
+  .tools input{flex:1;min-width:180px;padding:9px 12px;border:1px solid #ccd;border-radius:8px;font-size:14px;}
+  .tools button{padding:9px 14px;border:1px solid var(--navy);background:#fff;color:var(--navy);border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;}
+  .board{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px;}
+  .card{background:#fff;border-radius:10px;box-shadow:0 1px 5px rgba(0,0,0,.1);padding:9px 12px;border-left:5px solid var(--navy);display:inline-flex;gap:10px;align-items:center;max-width:100%;}
+  .card.board-c{border-left-color:var(--gold);background:#fffaf0;}
+  .card.dir{background:var(--ltblue);}
+  .card.mgr{border-left-color:#4060a0;}
+  .card.staff{border-left-color:#9aa7b5;}
+  .card.sel{outline:3px solid var(--gold);}
+  .nm{font-weight:700;color:var(--navy);font-size:14px;}
+  .nt{font-size:12px;color:var(--mgray);margin-top:1px;}
+  .loc{display:inline-block;margin-top:3px;padding:1px 7px;border-radius:8px;background:#edf2fb;color:var(--navy);font-size:10px;font-weight:700;}
+  .also{font-size:11px;color:var(--purple);margin-top:2px;}
+  .cnt{margin-left:auto;background:var(--navy);color:#fff;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap;}
+  ul.tree{list-style:none;margin-left:22px;border-left:2px solid #c9d3e3;padding-left:14px;}
+  ul.tree.root{margin-left:0;border-left:none;padding-left:0;}
+  ul.tree li{margin:7px 0;}
+  .toggle{cursor:pointer;user-select:none;}
+  .collapsed > ul.tree{display:none;}
+  .arrow{display:inline-block;width:14px;color:var(--navy);font-size:12px;}
+  .empty{color:var(--mgray);padding:30px;text-align:center;}
+  .legend{font-size:11px;color:var(--mgray);margin-top:16px;}
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <div><h1>🏢 Org Chart / Organigrama</h1><div class="sub">Daniels Home Center — live from the company hierarchy</div></div>
+  <button class="btn-back" onclick="window.location.href='index.html'">← Back</button>
+</div>
+<div class="content">
+  <div class="tools">
+    <input id="q" placeholder="Search a person or position / Buscar persona o puesto…" oninput="onSearch()">
+    <button onclick="setAll(true)">Expand all / Expandir</button>
+    <button onclick="setAll(false)">Collapse / Contraer</button>
+  </div>
+  <div class="board">
+    <div class="card board-c"><span>👑</span><div><div class="nm">Dani Rosenberg</div><div class="nt">Founder · Board</div></div></div>
+    <div class="card board-c"><span>👑</span><div><div class="nm">Rebecca Rosenberg</div><div class="nt">Founder · Board</div></div></div>
+  </div>
+  <div id="tree"><div class="empty">Loading… / Cargando…</div></div>
+  <div class="legend">Click a name to expand or collapse its team. Purple note = also reports to another leader. / Da clic en un nombre para expandir su equipo. La nota morada = también reporta a otro líder.</div>
+</div>
+<script>
+const SUPABASE_URL = 'https://ecfxeebhtgkbsdeuiueb.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_oRxEOMLizp1kjlsRjWWaxg_muaaMHFt';
+let NODES = [], BY = {}, KIDS = {};
+const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+async function load() {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/organigrama_publico`, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }, body: '{}' });
+    if (!res.ok) throw new Error(await res.text());
+    NODES = await res.json();
+  } catch (err) { document.getElementById('tree').innerHTML = `<div class="empty">Could not load the org chart: ${esc(err.message)}</div>`; return; }
+  BY = {}; KIDS = {};
+  NODES.forEach(n => { BY[n.id] = n; KIDS[n.id] = []; });
+  // primary leader: prefer a non-Rosenberg boss (operational line), else the first one
+  const isRos = id => /rosenberg/i.test((BY[id] || {}).nombre || '');
+  NODES.forEach(n => {
+    const js = (n.jefes || []).filter(j => BY[j]);
+    n.primary = js.find(j => !isRos(j)) || js[0] || null;
+    n.also = js.filter(j => j !== n.primary);
+    if (n.primary) KIDS[n.primary].push(n.id);
+  });
+  Object.values(KIDS).forEach(a => a.sort((x, y) => (BY[x].rol === BY[y].rol ? 0 : ({ director: 0, manager: 1, vendedor: 2, staff: 3 }[BY[x].rol] - { director: 0, manager: 1, vendedor: 2, staff: 3 }[BY[y].rol])) || BY[x].nombre.localeCompare(BY[y].nombre)));
+  render();
+}
+function total(id) { return KIDS[id].reduce((s, k) => s + 1 + total(k), 0); }
+function nodeHtml(id, depth) {
+  const n = BY[id], kids = KIDS[id], t = total(id);
+  const cls = n.rol === 'director' ? 'dir' : n.rol === 'manager' ? 'mgr' : n.rol === 'staff' ? 'staff' : '';
+  const icon = /^(ted|karen)/i.test(n.nombre) ? '👔' : n.rol === 'director' ? '⚙️' : n.rol === 'manager' ? '🧭' : n.rol === 'vendedor' ? '🛒' : '👤';
+  const collapsed = kids.length && depth >= 2 ? 'collapsed' : '';
+  return `<li class="${collapsed}" data-id="${id}"><div class="card ${cls} ${kids.length ? 'toggle' : ''}" ${kids.length ? `onclick="toggle(this.parentNode)"` : ''}>
+      <span>${icon}</span><div><div class="nm">${kids.length ? '<span class="arrow">▾</span>' : ''}${esc(n.nombre)}</div><div class="nt">${esc(n.puesto)}</div>
+      ${n.ubicacion ? `<span class="loc">${esc(n.ubicacion)}</span>` : ''}${n.also.length ? `<div class="also">also reports to / también reporta a: ${n.also.map(a => esc(BY[a].nombre)).join(', ')}</div>` : ''}</div>
+      ${t ? `<span class="cnt">${t}</span>` : ''}</div>
+    ${kids.length ? `<ul class="tree">${kids.map(k => nodeHtml(k, depth + 1)).join('')}</ul>` : ''}</li>`;
+}
+function render() {
+  const roots = NODES.filter(n => !n.primary).map(n => n.id);
+  roots.sort((a, b) => (/ted/i.test(BY[a].nombre) ? 0 : 1) - (/ted/i.test(BY[b].nombre) ? 0 : 1) || BY[a].nombre.localeCompare(BY[b].nombre));
+  document.getElementById('tree').innerHTML = roots.length ? `<ul class="tree root">${roots.map(r => nodeHtml(r, 0)).join('')}</ul>` : '<div class="empty">No data yet.</div>';
+  syncArrows();
+}
+function syncArrows() { document.querySelectorAll('#tree li').forEach(li => { const a = li.querySelector(':scope > .card .arrow'); if (a) a.textContent = li.classList.contains('collapsed') ? '▸' : '▾'; }); }
+function toggle(li) { li.classList.toggle('collapsed'); syncArrows(); }
+function setAll(open) { document.querySelectorAll('#tree li').forEach(li => { if (li.querySelector(':scope > ul')) li.classList.toggle('collapsed', !open); }); syncArrows(); }
+function onSearch() {
+  const q = document.getElementById('q').value.trim().toLowerCase();
+  document.querySelectorAll('#tree .card').forEach(c => c.classList.remove('sel'));
+  if (!q) { render(); return; }
+  setAll(true);
+  let first = null;
+  document.querySelectorAll('#tree li').forEach(li => {
+    const n = BY[li.dataset.id];
+    if ((n.nombre + ' ' + (n.puesto || '')).toLowerCase().includes(q)) { const c = li.querySelector(':scope > .card'); c.classList.add('sel'); if (!first) first = c; }
+  });
+  if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+load();
+</script>
+</body>
+</html>

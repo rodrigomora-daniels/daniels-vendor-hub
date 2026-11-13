@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Daniels Workspace — Mi Evaluación / My Evaluation</title>
+<style>
+  :root {
+    --navy:#1B3A6B; --gold:#C8922A; --ltblue:#D6E4F7; --cream:#FFF8EC;
+    --green:#27AE60; --red:#C0392B; --gray:#F4F4F4; --dkgray:#3C3C3C;
+    --mgray:#6B6B6B; --white:#FFFFFF;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:Arial,sans-serif;background:#f0f2f5;min-height:100vh;}
+  .top-bar{background:var(--navy);border-bottom:4px solid var(--gold);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;}
+  .top-bar h1{color:var(--white);font-size:18px;}
+  .top-bar .sub{color:var(--ltblue);font-size:12px;margin-top:2px;}
+  .btn-back{background:transparent;border:1px solid var(--ltblue);color:var(--ltblue);padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;}
+  .content{max-width:760px;margin:0 auto;padding:24px 20px 60px;}
+  .card{background:var(--white);border-radius:14px;padding:26px 24px;box-shadow:0 2px 12px rgba(0,0,0,.07);margin-bottom:20px;}
+  .card h2{color:var(--navy);font-size:18px;margin-bottom:6px;}
+  .card .desc{color:var(--mgray);font-size:13px;line-height:1.5;margin-bottom:16px;}
+  .badge-admin{background:#fdf3e3;border-left:4px solid var(--gold);color:var(--navy);padding:14px 16px;border-radius:6px;font-size:13px;margin-bottom:18px;font-weight:700;}
+  .no-cycle{background:#fdecea;border-left:4px solid var(--red);color:var(--red);padding:16px;border-radius:6px;font-size:14px;text-align:center;}
+  .dim-block{border-top:1px solid #eee;padding-top:20px;margin-top:20px;}
+  .dim-block:first-of-type{border-top:none;padding-top:0;margin-top:0;}
+  .dim-title{color:var(--navy);font-size:15px;font-weight:700;margin-bottom:4px;}
+  .dim-num{display:inline-block;background:var(--navy);color:var(--white);width:22px;height:22px;border-radius:50%;text-align:center;line-height:22px;font-size:11px;margin-right:8px;}
+  .dim-q{color:var(--dkgray);font-size:14px;font-style:italic;margin-bottom:14px;line-height:1.5;}
+  .bars-option{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border:2px solid #e8e4dc;border-radius:10px;margin-bottom:8px;cursor:pointer;transition:all .15s;}
+  .bars-option:hover{border-color:var(--gold);background:var(--cream);}
+  .bars-option.selected{border-color:var(--navy);background:var(--ltblue);}
+  .bars-option input{margin-top:3px;flex-shrink:0;}
+  .bars-option .num{font-weight:700;color:var(--navy);flex-shrink:0;width:20px;}
+  .bars-option .txt{font-size:13px;color:var(--dkgray);line-height:1.5;}
+  .btn{display:block;width:100%;padding:15px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;border:none;text-align:center;transition:opacity .2s;}
+  .btn:disabled{background:#ccc;color:#888;cursor:not-allowed;}
+  .btn-primary{background:var(--navy);color:var(--white);}
+  .btn-primary:active:not(:disabled){opacity:.85;}
+  .progress-track{background:#e8e4dc;border-radius:6px;height:8px;overflow:hidden;margin-bottom:6px;}
+  .progress-fill{background:var(--gold);height:100%;transition:width .3s;}
+  .progress-label{font-size:12px;color:var(--mgray);text-align:right;margin-bottom:20px;}
+  .error-msg{background:#fdecea;border-left:4px solid var(--red);color:var(--red);padding:10px 14px;border-radius:6px;font-size:13px;margin-bottom:16px;display:none;}
+  .error-msg.show{display:block;}
+  .success-screen{text-align:center;padding:40px 20px;}
+  .success-screen .icon{font-size:56px;margin-bottom:16px;}
+  .success-screen h2{color:var(--navy);margin-bottom:10px;}
+  .success-screen p{color:var(--mgray);font-size:14px;line-height:1.6;max-width:440px;margin:0 auto;}
+  .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div>
+    <h1>📋 Mi Evaluación / My Evaluation</h1>
+    <div class="sub" id="cycle-label">—</div>
+  </div>
+  <button class="btn-back" onclick="window.location.href='index.html'">← Back / Regresar</button>
+</div>
+
+<div class="content" id="app-content">
+  <div class="card">
+    <p style="text-align:center;color:var(--mgray);padding:30px 0;">Loading... / Cargando...</p>
+  </div>
+</div>
+
+<script src="dh-session.js"></script>
+<script>
+/* ════════════════════════════════════════════════════════════
+   SUPABASE CONFIG — identical to Tier1/Tier2/Cockpit
+   ════════════════════════════════════════════════════════════ */
+const SUPABASE_URL = 'https://ecfxeebhtgkbsdeuiueb.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_oRxEOMLizp1kjlsRjWWaxg_muaaMHFt';
+
+async function sbFetch(path, options = {}) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Prefer': options.method === 'POST' ? 'return=representation' : undefined,
+      ...(options.headers || {})
+    }
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Supabase error ${res.status}: ${errText}`);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+let loggedInEmployee = null;
+let activeCycle = null;
+let isAdminPreview = false;
+
+/* ════════════════════════════════════════════════════════════
+   SELF-ASSESSMENT — forced-choice A/B (NOT BARS). The employee
+   picks the option that best describes their habitual behavior.
+   Option B is always the higher-performance answer, but the
+   employee never sees which one "wins" — that's what prevents
+   inflation. Score = % of times they picked B.
+   Source: original benchmark design (industry BARS + forced-choice
+   methodology), bilingual EN/ES on one line per Tier1/2 pattern.
+   ════════════════════════════════════════════════════════════ */
+/* ════════════════════════════════════════════════════════════
+   SELF-ASSESSMENT — values-based reflection over the full cycle
+   (last ~6 months), NOT moment-in-time sales scenarios. Multiple
+   choice with frequency/quantity anchors, first person. This is
+   about how the employee showed up as a colleague and teammate,
+   not about sales technique — that's covered separately by the
+   quota numbers the supervisor enters.
+   ════════════════════════════════════════════════════════════ */
+const VALUES_QUESTIONS = [
+  {
+    key: 'trabajo_equipo',
+    title: 'Teamwork / Trabajo en Equipo',
+    q: "Thinking about the last 6 months, how often did you help a coworker out — covering a customer, answering a question, jumping in on a busy day? / Pensando en los últimos 6 meses, ¿con qué frecuencia ayudaste a un compañero — cubriendo un cliente, respondiendo una pregunta, apoyando en un día ocupado?",
+    opts: [
+      "Rarely — I mostly stayed focused on my own work. / Rara vez — me enfoqué principalmente en mi propio trabajo.",
+      "A few times when someone asked directly. / Algunas veces cuando alguien me lo pidió directamente.",
+      "Regularly — it's become a normal part of how I work. / Regularmente — se ha vuelto parte normal de cómo trabajo.",
+      "Very often — coworkers know they can count on me. / Muy seguido — mis compañeros saben que pueden contar conmigo."
+    ]
+  },
+  {
+    key: 'comunicacion_respeto',
+    title: 'Communication & Respect / Comunicación y Respeto',
+    q: "How would you describe how you communicate with coworkers and managers when there's a disagreement or a mistake? / ¿Cómo describirías tu forma de comunicarte con compañeros y gerentes cuando hay un desacuerdo o un error?",
+    opts: [
+      "I tend to avoid the conversation or let it go unresolved. / Tiendo a evitar la conversación o dejarla sin resolver.",
+      "I bring it up eventually, sometimes after some frustration builds. / Lo menciono eventualmente, a veces después de que se acumula algo de frustración.",
+      "I address it directly and respectfully, close to when it happens. / Lo abordo directa y respetuosamente, cerca de cuando ocurre.",
+      "I address it directly, and I also make space for the other person's side before reacting. / Lo abordo directamente, y además doy espacio a la perspectiva de la otra persona antes de reaccionar."
+    ]
+  },
+  {
+    key: 'integridad_politicas',
+    title: 'Integrity / Integridad',
+    q: "Over the last 6 months, how would you describe your approach to store policies and honesty with customers and coworkers? / En los últimos 6 meses, ¿cómo describirías tu enfoque hacia las políticas de la tienda y la honestidad con clientes y compañeros?",
+    opts: [
+      "I sometimes bend a rule if it makes things easier in the moment. / A veces flexibilizo una regla si hace las cosas más fáciles en el momento.",
+      "I generally follow policy, but I don't always double-check the details. / Generalmente sigo la política, pero no siempre verifico los detalles.",
+      "I follow policy consistently, even when it's inconvenient. / Sigo la política consistentemente, incluso cuando es inconveniente.",
+      "I follow policy consistently, and I speak up if I see something that isn't right. / Sigo la política consistentemente, y hablo si veo algo que no está bien."
+    ]
+  },
+  {
+    key: 'confiabilidad',
+    title: 'Reliability / Confiabilidad',
+    q: "How would you describe your attendance and punctuality over the last 6 months? / ¿Cómo describirías tu asistencia y puntualidad en los últimos 6 meses?",
+    opts: [
+      "I've had a few unplanned absences or late arrivals. / He tenido algunas ausencias imprevistas o llegadas tarde.",
+      "Mostly reliable, with an occasional issue. / Mayormente confiable, con algún problema ocasional.",
+      "Reliable — I show up on time and communicate ahead if something comes up. / Confiable — llego a tiempo y comunico con anticipación si surge algo.",
+      "Fully reliable, and I've covered shifts or helped when the team was short-staffed. / Totalmente confiable, y he cubierto turnos o ayudado cuando el equipo estuvo corto de personal."
+    ]
+  },
+  {
+    key: 'iniciativa_crecimiento',
+    title: 'Initiative & Growth / Iniciativa y Crecimiento',
+    q: "In the last 6 months, how many times did you take initiative on something beyond your basic job description — a suggestion, a process improvement, learning something new? / En los últimos 6 meses, ¿cuántas veces tomaste iniciativa en algo más allá de tu descripción básica de trabajo — una sugerencia, una mejora de proceso, aprender algo nuevo?",
+    opts: [
+      "None that I can think of. / Ninguna que recuerde.",
+      "Once or twice. / Una o dos veces.",
+      "A handful of times — it's something I try to do. / Varias veces — es algo que trato de hacer.",
+      "Regularly — I actively look for ways to contribute beyond my role. / Regularmente — busco activamente formas de contribuir más allá de mi rol."
+    ]
+  },
+  {
+    key: 'cultura_dhc',
+    title: 'Company Culture / Cultura de la Empresa',
+    q: "Overall, how connected do you feel to the DHC team and how it operates day to day? / En general, ¿qué tan conectado te sientes con el equipo de DHC y cómo opera día a día?",
+    opts: [
+      "Mostly just here to do my job and go home. / Principalmente aquí para hacer mi trabajo e irme a casa.",
+      "I feel part of the team, though I don't think about it much beyond my shift. / Me siento parte del equipo, aunque no pienso mucho en ello más allá de mi turno.",
+      "I feel genuinely connected and want to see the team do well. / Me siento genuinamente conectado y quiero que al equipo le vaya bien.",
+      "I feel connected and I actively try to make DHC a better place to work for others too. / Me siento conectado y trato activamente de hacer de DHC un mejor lugar para trabajar para los demás también."
+    ]
+  }
+];
+
+
+let currentDimIdx = 0;
+let responses = {};
+let evalMode = null;        // 'self' | 'supervisor'
+let selectedEvaluado = null; // employee being evaluated, in supervisor mode
+let quotaData = { metrics: [], pct_promedio: null };
+
+/* ════════════════════════════════════════════════════════════
+   SUPERVISOR DIMENSIONS — same 7 dimensions, 3rd-person BARS,
+   observable-behavior framing. Bilingual throughout.
+   ════════════════════════════════════════════════════════════ */
+const SUPERVISOR_DIMENSIONS = [
+  {
+    key: 'desempeno_ventas',
+    title: 'Sales Performance / Desempeño en Ventas',
+    q: "When this person has a customer who already picked a base product, what do you typically observe? / Cuando esta persona tiene un cliente que ya eligió un producto base, ¿qué observas habitualmente?",
+    opts: [
+      "They process the sale as-is — rarely expand the conversation. / Procesan la venta tal cual — rara vez amplían la conversación.",
+      "They mention higher options only if the customer asks directly. / Mencionan opciones superiores solo si el cliente pregunta directamente.",
+      "They actively present a Good, a Better, and a Best option, explaining the value difference. / Presentan activamente una opción Good, una Better y una Best, explicando la diferencia de valor.",
+      "They present Good/Better/Best with benefits specific to the customer and get their confirmation before moving on. / Presentan Good/Better/Best con beneficios específicos al cliente y obtienen su confirmación antes de continuar.",
+      "They do this consistently, connect upgrades to specific customer needs, and document the outcome regardless of the decision. / Hacen esto consistentemente, conectan los upgrades a necesidades específicas del cliente, y documentan el resultado sin importar la decisión."
+    ]
+  },
+  {
+    key: 'conocimiento_producto',
+    title: 'Product Knowledge & Certification / Conocimiento de Producto y Certificación',
+    q: "When this person gets a specific product question they're not sure about, what do you typically observe? / Cuando esta persona recibe una pregunta específica de producto que no sabe con certeza, ¿qué observas habitualmente?",
+    opts: [
+      "They guess rather than admit uncertainty. / Adivinan en vez de admitir incertidumbre.",
+      "They say they're not sure and move on without following up. / Dicen que no están seguros y siguen sin dar seguimiento.",
+      "They admit they don't know and offer to check later. / Admiten que no saben y ofrecen revisar después.",
+      "They admit they don't know, check on the spot, and come back with the real answer. / Admiten que no saben, revisan en el momento, y regresan con la respuesta real.",
+      "They do this consistently, and also proactively keep their product knowledge current through training and recertification. / Hacen esto consistentemente, y además mantienen su conocimiento actualizado proactivamente con capacitación y recertificación."
+    ]
+  },
+  {
+    key: 'experiencia_cliente',
+    title: 'Customer Experience / Experiencia del Cliente',
+    q: "When a customer raises an objection with this person, what do you typically observe? / Cuando un cliente plantea una objeción con esta persona, ¿qué observas habitualmente?",
+    opts: [
+      "They accept it and let the customer leave without further conversation. / Lo aceptan y dejan ir al cliente sin más conversación.",
+      "They repeat the same information already given. / Repiten la misma información ya dada.",
+      "They acknowledge the concern and try to address it directly. / Reconocen la preocupación e intentan abordarla directamente.",
+      "They use a structured approach to genuinely understand and address what's behind the objection. / Usan un enfoque estructurado para entender y abordar genuinamente lo que hay detrás de la objeción.",
+      "They do this consistently, and follow up afterward regardless of whether the customer bought that day. / Hacen esto consistentemente, y dan seguimiento después sin importar si el cliente compró ese día."
+    ]
+  },
+  {
+    key: 'trabajo_equipo',
+    title: 'Teamwork & Culture / Trabajo en Equipo y Cultura',
+    q: "When a coworker is overwhelmed with customers, what do you typically observe from this person? / Cuando un compañero está saturado de clientes, ¿qué observas habitualmente de esta persona?",
+    opts: [
+      "They focus only on their own customers. / Se enfocan solo en sus propios clientes.",
+      "They help only if directly asked by a manager. / Ayudan solo si un gerente se lo pide directamente.",
+      "They offer to help when they notice it, if they have a free moment. / Ofrecen ayudar cuando lo notan, si tienen un momento libre.",
+      "They proactively step in without being asked, as long as it doesn't hurt their own customers. / Intervienen proactivamente sin que se les pida, siempre que no afecte a sus propios clientes.",
+      "They do this consistently, and also actively contribute to a positive team environment day to day. / Hacen esto consistentemente, y además contribuyen activamente a un ambiente de equipo positivo día a día."
+    ]
+  },
+  {
+    key: 'ejecucion_politicas',
+    title: 'Policy Execution / Ejecución de Políticas',
+    q: "When a policy situation comes up (Haul Away, Price Match, Return/Exchange), what do you typically observe? / Cuando surge una situación de política, ¿qué observas habitualmente?",
+    opts: [
+      "They're not always sure of the exact rule — guess or wing it. / No siempre están seguros de la regla exacta — adivinan o improvisan.",
+      "They know the general idea but not the specific details. / Conocen la idea general pero no los detalles específicos.",
+      "They know the specific policy details for most common situations. / Conocen los detalles específicos para las situaciones más comunes.",
+      "They know the details confidently and apply them consistently, even in less common situations. / Conocen los detalles con confianza y los aplican consistentemente, incluso en situaciones menos comunes.",
+      "They do this consistently, and also help coworkers who are unsure of a policy detail. / Hacen esto consistentemente, y además ayudan a compañeros que no están seguros de un detalle."
+    ]
+  },
+  {
+    key: 'financiamiento',
+    title: 'Financing Presentation / Presentación de Financiamiento',
+    q: "When a customer's total comes up in conversation, what do you typically observe about how this person handles financing? / Cuando sale el total en la conversación, ¿qué observas sobre cómo esta persona maneja el financiamiento?",
+    opts: [
+      "They avoid bringing it up unless asked directly. / Evitan mencionarlo a menos que se les pregunte directamente.",
+      "They mention it briefly but don't walk through specific numbers. / Lo mencionan brevemente pero no revisan números específicos.",
+      "They present the monthly reframe when price hesitation comes up. / Presentan el replanteo mensual cuando surge duda de precio.",
+      "They present it clearly and comfortably as a standard part of the conversation, with accurate numbers. / Lo presentan clara y cómodamente como parte estándar de la conversación, con números precisos.",
+      "They do this consistently, and are also comfortable proactively using the Pre-Screen Tool. / Hacen esto consistentemente, y además se sienten cómodos usando la Herramienta de Pre-Screen proactivamente."
+    ]
+  },
+  {
+    key: 'desarrollo_iniciativa',
+    title: 'Development & Initiative / Desarrollo e Iniciativa',
+    q: "How would you describe this person's approach to ongoing training and certification? / ¿Cómo describirías el enfoque de esta persona hacia la capacitación y certificación continua?",
+    opts: [
+      "Completes training only when required, nothing beyond that. / Completa la capacitación solo cuando se requiere, nada más.",
+      "Completes required training on time but doesn't go beyond that. / Completa la capacitación a tiempo pero no va más allá.",
+      "Stays current on required certifications and occasionally reviews material independently. / Se mantiene al corriente y ocasionalmente revisa material por su cuenta.",
+      "Proactively keeps certifications current and regularly looks for ways to improve. / Mantiene sus certificaciones al corriente proactivamente y busca mejorar regularmente.",
+      "Does this consistently, and actively seeks feedback to identify their next area of growth. / Hace esto consistentemente, y busca activamente retroalimentación para identificar su siguiente área de crecimiento."
+    ]
+  }
+];
+
+/* ════════════════════════════════════════════════════════════
+   INIT — same real pattern as Tier1: ?emp= param, es_admin check
+   ════════════════════════════════════════════════════════════ */
+async function init() {
+  const content = document.getElementById('app-content');
+
+  // /next/: identity comes from the server-issued session token, not from ?emp=
+  if (!DH.token()) { window.location.href = 'index.html'; return; }
+  try {
+    const me = await DH.restore();
+    if (!me) { window.location.href = 'index.html?expired=1'; return; }
+    loggedInEmployee = me;
+    isAdminPreview = false; // admins/managers are real evaluators; everything saves
+  } catch (err) {
+    console.error('Could not load employee:', err);
+    content.innerHTML = `<div class="card"><div class="no-cycle">Connection error loading your profile. / Error de conexión al cargar tu perfil.</div></div>`;
+    return;
+  }
+
+  try {
+    const cycles = await sbFetch(`evaluacion_ciclos?activo=eq.true&select=id,nombre,tipo,fecha_inicio,fecha_cierre&order=fecha_inicio.desc&limit=1`);
+    activeCycle = (cycles && cycles.length) ? cycles[0] : null;
+  } catch (err) {
+    console.warn('Could not load evaluation cycle (table may not exist yet):', err);
+    activeCycle = null;
+  }
+
+  if (!activeCycle) {
+    content.innerHTML = `
+      <div class="card">
+        <div class="no-cycle">
+          There is no active evaluation cycle right now. Check back when your manager opens the next cycle. / No hay un ciclo de evaluación activo en este momento. Vuelve a revisar cuando tu gerente abra el siguiente ciclo.
+        </div>
+      </div>`;
+    document.getElementById('cycle-label').textContent = 'No active cycle / Sin ciclo activo';
+    return;
+  }
+
+  document.getElementById('cycle-label').textContent = `${activeCycle.nombre} — ${loggedInEmployee.nombre_completo}`;
+
+  renderModePicker();
+}
+
+/* ════════════════════════════════════════════════════════════
+   MODE PICKER — "My Self-Assessment" always shown; "Evaluate a
+   Team Member" only shown to es_admin (managers/leads). Selecting
+   self-assessment checks for an existing submission first; selecting
+   supervisor mode goes straight to the employee search.
+   ════════════════════════════════════════════════════════════ */
+let myContext = null;
+async function renderModePicker() {
+  const content = document.getElementById('app-content');
+  if (!myContext) {
+    try {
+      const r = await DH.rpc('evaluacion_mi_contexto');
+      myContext = (r && r[0]) || { tiene_reportes: false, n_jefes: 0, n_pares: 0 };
+    } catch (err) { console.warn('context', err); myContext = { tiene_reportes: false, n_jefes: 0, n_pares: 0 }; }
+  }
+  const c = myContext;
+  let prog = null;
+  try { prog = await DH.rpc('evaluacion_mi_progreso'); } catch (err) { console.warn('progress', err); }
+  content.innerHTML = renderMyProgress(prog) + `
+    <div class="card">
+      <h2>What would you like to do? / ¿Qué te gustaría hacer?</h2>
+      <div class="desc">${activeCycle.nombre}</div>
+      <div class="bars-option" onclick="startSelfAssessment()" style="margin-top:8px;">
+        <div class="num">📝</div>
+        <div class="txt"><strong>My Self-Assessment / Mi Autoevaluación</strong><br>Complete your own self-assessment for this cycle. / Completa tu propia autoevaluación de este ciclo.</div>
+      </div>
+      ${c.n_jefes > 0 ? `
+      <div class="bars-option" onclick="startManagerFeedback()">
+        <div class="num">💬</div>
+        <div class="txt"><strong>Anonymous Feedback for Your Manager / Comentarios Anónimos para tu Jefe</strong><br>Your answers are anonymous. Your manager will never see them. / Tus respuestas son anónimas. Tu jefe nunca las verá.</div>
+      </div>` : ''}
+      ${c.tiene_reportes ? `
+      <div class="bars-option" onclick="startTeamDashboard()">
+        <div class="num">📊</div>
+        <div class="txt"><strong>My Team Dashboard / Panel de Mi Equipo</strong><br>Progress, results and your team's KPIs. / Avance, resultados y los KPIs de tu equipo.</div>
+      </div>
+      <div class="bars-option" onclick="startSupervisorSearch()">
+        <div class="num">👥</div>
+        <div class="txt"><strong>Evaluate My Team / Evaluar a Mi Equipo</strong><br>Evaluate the people who report to you. / Evalúa a las personas que te reportan.</div>
+      </div>` : ''}
+      ${c.n_pares > 0 ? `
+      <div class="bars-option" onclick="startPeerEval()">
+        <div class="num">🤝</div>
+        <div class="txt"><strong>Evaluate a Fellow Manager / Evaluar a un Gerente Colega</strong><br>Collaboration, communication and reliability — closed 1-5 questions. / Colaboración, comunicación y confiabilidad — preguntas cerradas 1-5.</div>
+      </div>` : ''}
+    </div>`;
+}
+
+
+/* ════════ MY TEAM DASHBOARD (any boss): progress + team KPIs ════════ */
+let TD = { prog: null, kpis: null, custom: [], tab: 'progress' };
+const TD_ROLE = { vendedor: 'Sellers / Vendedores', manager: 'Managers / Gerentes', director: 'Directors / Directores', staff: 'Staff / Personal' };
+const tdEsc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function tdBand(f) { if (f === null || f === undefined) return null; f = Number(f); return f >= 90 ? ['Excellent', '#27AE60'] : f >= 80 ? ['Good', '#27AE60'] : f >= 70 ? ['Meets (approved)', '#B8860B'] : f >= 60 ? ['Needs improvement', '#C0392B'] : ['Critical', '#C0392B']; }
+function tdStatus(p) {
+  if (!p.en_ciclo) return ['Not in cycle', '#777'];
+  if (p.no_elegible) return ['N/A – not eligible', '#777'];
+  if (!p.esperadas) return ['No evaluator', '#777'];
+  if (p.hechas >= p.esperadas) return ['Completed', '#27AE60'];
+  if (p.hechas > 0) return ['In progress', '#B8860B'];
+  return p.registrado ? ['Not started', '#C0392B'] : ['Awaiting sign-up', '#777'];
+}
+async function startTeamDashboard(tab) {
+  TD.tab = tab || TD.tab || 'progress';
+  const content = document.getElementById('app-content');
+  content.innerHTML = '<div class="card"><h2>My Team Dashboard / Panel de Mi Equipo</h2><div class="desc">Loading…</div></div>';
+  try {
+    TD.prog = await DH.rpc('evaluacion_mi_equipo');
+    TD.kpis = await DH.rpc('evaluacion_kpis_equipo_get');
+    TD.custom = ((TD.kpis && TD.kpis.propios) || []).map(k => ({ rol: k.rol_evaluado, nombre: k.nombre, unidad: k.unidad || '', meta: k.meta_default ?? '', peso: k.peso ?? 1 }));
+  } catch (err) { content.innerHTML = `<div class="card"><h2>My Team Dashboard</h2><div class="desc">Could not load: ${tdEsc(err.message)}</div><button class="btn" onclick="renderModePicker()">← Back</button></div>`; return; }
+  renderTeamDashboard();
+}
+function tdSetTab(t) { TD.tab = t; renderTeamDashboard(); }
+function renderTeamDashboard() {
+  const content = document.getElementById('app-content');
+  const P = TD.prog;
+  if (!P || P.error) { content.innerHTML = '<div class="card"><h2>My Team Dashboard</h2><div class="desc">You have no team members assigned.</div><button class="btn" onclick="renderModePicker()">← Back</button></div>'; return; }
+  const tabBtn = (k, l) => `<button class="btn" onclick="tdSetTab('${k}')" style="padding:7px 14px;${TD.tab === k ? 'background:var(--navy);color:#fff;' : 'background:#eee;color:var(--navy);'}">${l}</button>`;
+  content.innerHTML = `<div class="card">
+    <h2>My Team Dashboard / Panel de Mi Equipo</h2>
+    <div class="desc">${tdEsc(P.ciclo)}</div>
+    <div style="display:flex;gap:8px;margin:10px 0 14px;flex-wrap:wrap">${tabBtn('progress', 'Progress / Avance')}${tabBtn('kpis', 'Team KPIs / KPIs del equipo')}</div>
+    <div id="td-body">${TD.tab === 'progress' ? tdProgressHtml() : tdKpisHtml()}</div>
+    <button class="btn" style="margin-top:14px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="renderModePicker()">← Back / Regresar</button>
+  </div>`;
+}
+function tdProgressHtml() {
+  const P = TD.prog, d = P.dias_restantes, over = d < 0, col = over ? '#C0392B' : d <= 7 ? '#B8860B' : '#27AE60';
+  const fmt = x => new Date(x + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  const act = P.personas.filter(p => p.en_ciclo && !p.no_elegible);
+  const cnt = k => act.filter(p => tdStatus(p)[0] === k).length;
+  const card = (t, v, c) => `<div style="flex:1;min-width:90px;background:#f7f7f7;border-radius:8px;padding:8px 10px"><div style="font-size:10px;color:#777;text-transform:uppercase">${t}</div><div style="font-size:20px;font-weight:800;color:${c || 'inherit'}">${v}</div></div>`;
+  const rows = P.personas.map(p => { const st = tdStatus(p), b = p.hechas ? tdBand(p.final) : null, pct = p.esperadas ? Math.round(p.hechas / p.esperadas * 100) : 0;
+    return `<tr style="border-top:1px solid #eee"><td style="padding:7px 6px"><strong>${tdEsc(p.nombre)}</strong><div style="font-size:11px;color:#777">${tdEsc(p.puesto)}</div></td>
+      <td style="min-width:90px"><div style="background:#eee;border-radius:6px;height:7px;overflow:hidden"><div style="width:${pct}%;height:7px;background:#27AE60"></div></div><div style="font-size:11px;color:#777">${p.hechas}/${p.esperadas}</div></td>
+      <td style="color:${st[1]};font-weight:700;font-size:12px">${st[0]}</td>
+      <td>${p.hechas && p.final != null ? '<strong>' + Number(p.final).toFixed(0) + '</strong>' : '—'}</td>
+      <td style="font-size:12px;color:${b ? b[1] : '#777'};font-weight:700">${b ? b[0] + (st[0] !== 'Completed' ? ' (provisional)' : '') : ''}</td></tr>`; }).join('');
+  return `<div style="border-left:5px solid ${col};background:#fff;padding:8px 12px;margin-bottom:10px"><strong>${fmt(P.inicio)} → ${fmt(P.cierre)}</strong> · <span style="color:${col};font-weight:700">${over ? 'Overdue by ' + (-d) + ' day(s)' : d + ' day(s) left / ' + d + ' día(s) restantes'}</span></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${card('Completed', cnt('Completed'), '#27AE60')}${card('In progress', cnt('In progress'), '#B8860B')}${card('Not started', cnt('Not started'), '#C0392B')}${card('Awaiting sign-up', cnt('Awaiting sign-up'))}</div>
+    <div style="overflow-x:auto"><table style="width:100%;font-size:13px;border-collapse:collapse"><thead><tr style="text-align:left;font-size:11px;color:#777"><th>Person</th><th>Progress</th><th>Status</th><th>Final</th><th>Result</th></tr></thead><tbody>${rows || '<tr><td colspan="5">No team members.</td></tr>'}</tbody></table></div>
+    <div style="font-size:11px;color:#777;margin-top:8px">Final = weighted score from KPIs, behavior and (when applicable) leadership/peers. Provisional until all expected evaluations are done. 70+ = approved. / Final = calificación ponderada; provisional hasta completar todas las evaluaciones. 70+ = aprobado.</div>`;
+}
+function tdKpisHtml() {
+  const K = TD.kpis || { roles: [], empresa: [] };
+  const inp = 'padding:7px 8px;border:1px solid #ccc;border-radius:6px;font-size:13px;';
+  return `<div style="font-size:13px;margin-bottom:12px">🔒 Company KPIs are set by DHC (industry benchmarks) and cannot be changed. You can add up to <strong>${K.max_por_rol || 3} KPIs of your own per role</strong> for your team; they are averaged with the company KPIs when you evaluate. Give each of your KPIs a <strong>weight</strong> (company KPIs = 1; e.g. 2 counts double). Role weights and behavior questions stay company-wide so scores remain comparable.<br><span style="color:#777">Los KPIs de la empresa no se pueden cambiar. Puedes agregar hasta ${K.max_por_rol || 3} KPIs propios por rol; se promedian con los de la empresa. Los pesos y las preguntas de conducta son iguales para todos.</span></div>` +
+    K.roles.map(role => {
+      const comp = (K.empresa || []).filter(k => k.rol_evaluado === role);
+      const mine = TD.custom.map((c, i) => ({ c, i })).filter(x => x.c.rol === role);
+      return `<div style="border:1px solid #e5e5e5;border-radius:10px;padding:10px 12px;margin-bottom:12px"><div style="font-weight:800;margin-bottom:6px">${TD_ROLE[role] || role}</div>
+        ${comp.length ? comp.map(k => `<div style="font-size:13px;padding:3px 0">🔒 ${tdEsc(k.nombre)} <span style="color:#777">${k.unidad ? '(' + tdEsc(k.unidad) + ')' : ''}${k.meta_default != null ? ' · goal ' + k.meta_default : ''} · weight ${k.peso ?? 1}</span></div>`).join('') : '<div style="font-size:12px;color:#777">No company KPIs for this role.</div>'}
+        <div style="margin-top:8px;font-size:12px;font-weight:700;color:#555">Your KPIs / Tus KPIs</div>
+        ${mine.map(x => `<div style="display:flex;gap:6px;margin:5px 0;flex-wrap:wrap"><input placeholder="KPI name / Nombre" value="${tdEsc(x.c.nombre)}" oninput="TD.custom[${x.i}].nombre=this.value" style="${inp}flex:2;min-width:150px"><input placeholder="Unit" value="${tdEsc(x.c.unidad)}" oninput="TD.custom[${x.i}].unidad=this.value" style="${inp}width:60px"><input type="number" min="0" step="any" placeholder="Goal" value="${tdEsc(x.c.meta)}" oninput="TD.custom[${x.i}].meta=this.value" style="${inp}width:90px"><input type="number" min="0.5" max="10" step="0.5" placeholder="Weight" title="Relative weight / Peso relativo (company KPIs = 1)" value="${tdEsc(x.c.peso ?? 1)}" oninput="TD.custom[${x.i}].peso=this.value" style="${inp}width:75px"><button class="btn" onclick="tdRemoveKpi(${x.i})" style="background:transparent;color:#777;font-size:16px">✕</button></div>`).join('')}
+        ${mine.length < (K.max_por_rol || 3) ? `<button class="btn" onclick="tdAddKpi('${role}')" style="background:transparent;color:var(--navy);font-weight:600;text-decoration:underline">+ Add KPI / Agregar KPI</button>` : '<div style="font-size:11px;color:#777">Maximum reached / Máximo alcanzado</div>'}</div>`; }).join('') +
+    `<div id="td-msg" style="font-size:13px;margin:6px 0"></div><button class="btn btn-primary" onclick="tdSaveKpis()">Save team KPIs / Guardar KPIs</button>`;
+}
+function tdAddKpi(role) { TD.custom.push({ rol: role, nombre: '', unidad: '', meta: '', peso: 1 }); renderTeamDashboard(); }
+function tdRemoveKpi(i) { TD.custom.splice(i, 1); renderTeamDashboard(); }
+async function tdSaveKpis() {
+  const msg = document.getElementById('td-msg');
+  const items = TD.custom.filter(c => c.nombre.trim()).map(c => ({ rol_evaluado: c.rol, nombre: c.nombre.trim(), unidad: c.unidad.trim(), meta_default: c.meta === '' ? null : c.meta, peso: c.peso === '' ? 1 : c.peso }));
+  try {
+    const r = await DH.rpc('evaluacion_kpis_equipo_set', { p_items: items });
+    if (r && r.success) { TD.custom = items.map(c => ({ rol: c.rol_evaluado, nombre: c.nombre, unidad: c.unidad || '', meta: c.meta_default ?? '', peso: c.peso ?? 1 })); msg.style.color = '#27AE60'; msg.textContent = '✓ Saved. They will appear when you evaluate your team. / Guardado.'; }
+    else { msg.style.color = '#C0392B'; msg.textContent = (r && r.message) || 'Could not save.'; }
+  } catch (err) { msg.style.color = '#C0392B'; msg.textContent = 'Error: ' + err.message; }
+}
+
+function renderMyProgress(p) {
+  if (!p || !p.ciclo || !p.tareas) return '';
+  const T = p.tareas, req = T.filter(t => t.estado === 'hecho' || t.estado === 'pendiente');
+  const done = req.filter(t => t.estado === 'hecho').length, pend = req.filter(t => t.estado === 'pendiente');
+  const blocked = T.filter(t => t.estado === 'no_registrado').length;
+  const d = p.dias_restantes, over = d < 0, col = over ? '#C0392B' : d <= 7 ? '#B8860B' : '#27AE60';
+  const fmt = x => new Date(x + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  const pct = req.length ? Math.round(done / req.length * 100) : 100;
+  const label = { self: 'Self-assessment / Autoevaluación', supervisor: 'Team member / Equipo', par: 'Fellow manager / Gerente colega', feedback: 'Anonymous feedback to manager / Comentarios a tu jefe' };
+  const list = pend.length ? pend.map(t => `<li>${label[t.tipo]}: <strong>${t.tipo === 'self' ? 'yours' : t.nombre}</strong></li>`).join('') : '';
+  return `<div class="card" style="border-left:5px solid ${col}">
+    <h2>My Progress / Mi Progreso</h2>
+    <div class="desc">${p.ciclo} · ${fmt(p.inicio)} → ${fmt(p.cierre)}</div>
+    <div style="font-size:14px;font-weight:700;color:${col};margin:6px 0">${over ? 'Overdue by ' + (-d) + ' day(s) / Vencido hace ' + (-d) + ' día(s)' : 'Due ' + fmt(p.cierre) + ' — ' + d + ' day(s) left / ' + d + ' día(s) restantes'}</div>
+    <div style="background:#eee;border-radius:8px;height:10px;overflow:hidden"><div style="width:${pct}%;height:10px;background:#27AE60"></div></div>
+    <div style="font-size:13px;margin-top:6px">${done} of ${req.length} completed / ${done} de ${req.length} completadas</div>
+    ${pend.length ? `<ul style="font-size:13px;margin:8px 0 0 18px;line-height:1.6">${list}</ul>` : '<div style="font-size:13px;margin-top:6px">✅ You are all caught up. / Estás al corriente.</div>'}
+    ${blocked ? `<div style="font-size:12px;color:#777;margin-top:8px">${blocked} person(s) have not registered yet; you can evaluate them once they sign up. / ${blocked} persona(s) aún no se registran; podrás evaluarlas cuando lo hagan.</div>` : ''}
+  </div>`;
+}
+
+/* ════════ ANONYMOUS UPWARD FEEDBACK (reports → their manager) — closed 1-5 behavior scales ════════ */
+const MANAGER_FEEDBACK_QUESTIONS = [
+  { key: 'claridad', title: 'Clarity / Claridad', q: 'Direction and expectations / Dirección y expectativas', opts: [
+    'Expectations are rarely clear; I often have to guess. / Rara vez son claras; muchas veces tengo que adivinar.',
+    'Clear only on big things; details change without notice. / Claras solo en lo grande; los detalles cambian sin aviso.',
+    'Usually clear; sometimes I have to ask again. / Normalmente claras; a veces tengo que preguntar de nuevo.',
+    'Clear goals and priorities, and I know how I am measured. / Metas y prioridades claras, y sé cómo me miden.',
+    'Always clear, and changes are explained before they happen. / Siempre claras, y los cambios se explican antes de que ocurran.'] },
+  { key: 'justicia', title: 'Fairness / Justicia', q: 'Leads, schedules and opportunities / Clientes, horarios y oportunidades', opts: [
+    'Clear favorites; rules change depending on the person. / Hay favoritos claros; las reglas cambian según la persona.',
+    'Often uneven; some people get better treatment. / Seguido desigual; algunas personas reciben mejor trato.',
+    'Mostly fair; occasional exceptions. / Mayormente justo; excepciones ocasionales.',
+    'Fair and consistent; I can explain why decisions were made. / Justo y consistente; se pueden explicar las decisiones.',
+    'Always the same rules for everyone, and decisions are transparent. / Siempre las mismas reglas para todos y decisiones transparentes.'] },
+  { key: 'desarrollo', title: 'Development / Desarrollo', q: 'Coaching and growth / Coaching y crecimiento', opts: [
+    'I get no coaching; I only hear about problems. / No recibo coaching; solo me hablan cuando hay problemas.',
+    'Occasional comments, with no plan to improve. / Comentarios ocasionales, sin plan para mejorar.',
+    'Gives useful feedback when I ask or when something goes wrong. / Da retroalimentación útil cuando pregunto o algo sale mal.',
+    'Regular one-on-one feedback with concrete steps to improve. / Retroalimentación individual regular con pasos concretos.',
+    'Regular coaching and a clear path to grow; my results have improved because of it. / Coaching regular y camino claro de crecimiento; mis resultados mejoraron gracias a ello.'] },
+  { key: 'reconocimiento', title: 'Recognition / Reconocimiento', q: 'Recognition of good work / Reconocimiento del buen trabajo', opts: [
+    'Good work goes unnoticed. / El buen trabajo pasa desapercibido.',
+    'Recognized only for big results. / Se reconoce solo en resultados grandes.',
+    'Recognized sometimes, mostly in private. / Se reconoce a veces, sobre todo en privado.',
+    'Recognizes good work promptly and specifically. / Reconoce el buen trabajo de forma oportuna y específica.',
+    'Recognizes consistently, in public and private, and ties it to what I did. / Reconoce consistentemente, en público y en privado, ligado a lo que hice.'] },
+  { key: 'disponibilidad', title: 'Availability / Disponibilidad', q: 'Help when I need it / Apoyo cuando lo necesito', opts: [
+    'Rarely available when I need help. / Rara vez disponible cuando necesito ayuda.',
+    'Available only after a long wait. / Disponible solo después de mucha espera.',
+    'Available most of the time. / Disponible la mayor parte del tiempo.',
+    'Available and helps me solve the issue. / Disponible y me ayuda a resolver el problema.',
+    'Always available, steps in on the floor and helps close the sale or solve the case. / Siempre disponible, apoya en piso y ayuda a cerrar la venta o resolver el caso.'] },
+  { key: 'respeto', title: 'Respect / Respeto', q: 'Treatment of the team / Trato al equipo', opts: [
+    'Disrespectful, raises voice or humiliates in front of others. / Irrespetuoso, levanta la voz o humilla frente a otros.',
+    'Sometimes disrespectful when under pressure. / A veces irrespetuoso bajo presión.',
+    'Respectful most of the time. / Respetuoso la mayor parte del tiempo.',
+    'Respectful always, and corrects in private. / Siempre respetuoso y corrige en privado.',
+    'Always respectful and creates an environment where people speak up. / Siempre respetuoso y crea un ambiente donde la gente se atreve a hablar.'] },
+  { key: 'ejemplo', title: 'Leading by example / Ejemplo', q: 'Follows the rules he or she sets / Cumple las reglas que pide', opts: [
+    'Asks for things they do not do themselves. / Pide cosas que ellos mismos no hacen.',
+    'Follows the rules only when convenient. / Cumple las reglas solo cuando conviene.',
+    'Usually follows the same rules as the team. / Normalmente cumple las mismas reglas que el equipo.',
+    'Follows the rules and holds themselves accountable. / Cumple las reglas y se hace responsable.',
+    'A clear role model: does what they ask and admits their own mistakes. / Modelo claro: hace lo que pide y reconoce sus propios errores.'] }
+];
+
+/* ════════ BOSS → MANAGER / DIRECTOR (results & management, closed 1-5) ════════ */
+const MANAGER_BOSS_DIMENSIONS = [
+  { key: 'objetivos', title: 'Goal delivery / Cumplimiento de objetivos', q: 'Over this cycle, how does this person deliver on the goals they were given? / En este ciclo, ¿cómo cumple esta persona los objetivos asignados?', opts: [
+    'Misses most goals and does not propose a recovery plan. / No alcanza la mayoría de las metas y no propone plan de recuperación.',
+    'Misses several goals; recovers only when pushed. / No alcanza varias metas; recupera solo cuando se le exige.',
+    'Meets most goals; misses some without early warning. / Cumple la mayoría; falla algunas sin avisar a tiempo.',
+    'Meets goals and flags risks early with a plan. / Cumple las metas y avisa riesgos a tiempo con un plan.',
+    'Consistently meets or beats goals and helps other areas reach theirs. / Cumple o supera metas consistentemente y ayuda a otras áreas a lograr las suyas.'] },
+  { key: 'procesos', title: 'Process & policy execution / Ejecución de procesos', q: 'How does this person run store or team processes (reports, standards, policies)? / ¿Cómo ejecuta esta persona los procesos de tienda o equipo (reportes, estándares, políticas)?', opts: [
+    'Processes are ignored or done late. / Los procesos se ignoran o se hacen tarde.',
+    'Done only after reminders. / Se hacen solo después de recordatorios.',
+    'Done on time most of the time. / Se hacen a tiempo la mayor parte del tiempo.',
+    'Done on time and the team follows them too. / Se hacen a tiempo y el equipo también los sigue.',
+    'Done on time, the team follows them, and proposes improvements that get adopted. / A tiempo, el equipo los sigue y propone mejoras que se adoptan.'] },
+  { key: 'talento', title: 'Team development / Desarrollo del equipo', q: 'How does this person develop the people on their team (certifications, coaching, evaluations)? / ¿Cómo desarrolla esta persona a su equipo (certificaciones, coaching, evaluaciones)?', opts: [
+    'Team members are not coached; certifications and evaluations are late. / No hay coaching; certificaciones y evaluaciones atrasadas.',
+    'Coaches only people who struggle. / Solo da coaching a quien batalla.',
+    'Coaches regularly; most of the team is certified. / Da coaching con regularidad; la mayoría del equipo está certificada.',
+    'Coaches everyone with a plan; the whole team is certified and evaluated on time. / Da coaching a todos con plan; todo el equipo certificado y evaluado a tiempo.',
+    'Develops people who grow into bigger roles. / Desarrolla personas que crecen a roles mayores.'] },
+  { key: 'cliente', title: 'Customer & store standards / Cliente y estándares', q: 'What do you observe in customer experience and store standards under this person? / ¿Qué observas en experiencia del cliente y estándares de tienda a su cargo?', opts: [
+    'Frequent customer complaints and standards not met. / Quejas frecuentes y estándares sin cumplir.',
+    'Standards met only when visited or inspected. / Estándares se cumplen solo cuando se visita o se revisa.',
+    'Standards met most days; few complaints. / Estándares cumplidos casi siempre; pocas quejas.',
+    'Standards met every day; complaints are resolved quickly. / Estándares cumplidos todos los días; quejas se resuelven rápido.',
+    'Standards are a source of pride; customers mention the experience positively. / Los estándares son motivo de orgullo; los clientes elogian la experiencia.'] },
+  { key: 'responsabilidad', title: 'Ownership & reliability / Responsabilidad', q: 'When something goes wrong, what does this person do? / Cuando algo sale mal, ¿qué hace esta persona?', opts: [
+    'Blames others or hides the problem. / Culpa a otros u oculta el problema.',
+    'Explains the problem but does not act until asked. / Explica el problema pero no actúa hasta que se le pide.',
+    'Takes responsibility and fixes it. / Asume responsabilidad y lo corrige.',
+    'Takes responsibility, fixes it and tells me before I find out. / Asume responsabilidad, lo corrige y me avisa antes de que me entere.',
+    'Takes responsibility, fixes the root cause, and shares the lesson with other managers. / Asume responsabilidad, corrige la causa y comparte la lección con otros gerentes.'] }
+];
+
+/* ════════ MANAGER ↔ MANAGER (collaboration, closed 1-5) ════════ */
+const PEER_DIMENSIONS = [
+  { key: 'colaboracion', title: 'Collaboration / Colaboración', q: 'How does this manager work with other stores and managers? / ¿Cómo trabaja este gerente con otras tiendas y gerentes?', opts: [
+    'Works only for their own store; does not help others. / Solo trabaja para su tienda; no ayuda a otros.',
+    'Helps only when it benefits their store. / Ayuda solo cuando beneficia a su tienda.',
+    'Helps when asked. / Ayuda cuando se le pide.',
+    'Offers help and shares what works. / Ofrece ayuda y comparte lo que funciona.',
+    'Actively builds company-wide results: shares inventory, ideas and people. / Construye resultados de toda la empresa: comparte inventario, ideas y gente.'] },
+  { key: 'comunicacion', title: 'Communication / Comunicación', q: 'How is communication with this manager? / ¿Cómo es la comunicación con este gerente?', opts: [
+    'Hard to reach; information arrives late or incomplete. / Difícil de contactar; la información llega tarde o incompleta.',
+    'Responds slowly; I often follow up. / Responde lento; muchas veces doy seguimiento.',
+    'Responds in reasonable time. / Responde en tiempo razonable.',
+    'Responds quickly and shares information proactively. / Responde rápido y comparte información de forma proactiva.',
+    'Fast, clear and proactive; I never have to chase information. / Rápido, claro y proactivo; nunca tengo que perseguir información.'] },
+  { key: 'confiabilidad', title: 'Reliability / Confiabilidad', q: 'When this manager commits to something with other managers, what happens? / Cuando este gerente se compromete con otros gerentes, ¿qué sucede?', opts: [
+    'Commitments are often not met. / Los compromisos seguido no se cumplen.',
+    'Commitments are met late or partially. / Se cumplen tarde o parcialmente.',
+    'Usually meets commitments. / Normalmente cumple.',
+    'Meets commitments and warns if something changes. / Cumple y avisa si algo cambia.',
+    'Always meets commitments; I can count on them. / Siempre cumple; puedo contar con esta persona.'] },
+  { key: 'conflicto', title: 'Handling disagreements / Manejo de desacuerdos', q: 'When there is a disagreement with this manager, how is it handled? / Cuando hay un desacuerdo con este gerente, ¿cómo se maneja?', opts: [
+    'Turns it personal or goes to others behind my back. / Lo vuelve personal o va con otros a mis espaldas.',
+    'Avoids the conversation; the issue stays open. / Evita la conversación; el tema queda abierto.',
+    'Talks about it, sometimes with tension. / Lo habla, a veces con tensión.',
+    'Talks directly and respectfully and we find a solution. / Lo habla directo y con respeto y encontramos solución.',
+    'Treats disagreements as a chance to improve; the relationship gets stronger. / Toma los desacuerdos como oportunidad de mejorar; la relación sale fortalecida.'] }
+];
+/* ════════ BOSS → STAFF (non-sales roles: closed 1-5) ════════ */
+const STAFF_DIMENSIONS = [
+  { key: 'calidad', title: 'Work quality / Calidad del trabajo', q: 'What do you typically observe in the accuracy and quality of this person\'s work? / ¿Qué observas habitualmente en la exactitud y calidad del trabajo de esta persona?', opts: [
+    'Frequent errors; work usually has to be redone. / Errores frecuentes; el trabajo normalmente se tiene que rehacer.',
+    'Some errors; needs checking before it is final. / Algunos errores; necesita revisión antes de quedar final.',
+    'Accurate most of the time; occasional corrections. / Exacto la mayor parte del tiempo; correcciones ocasionales.',
+    'Accurate and complete; errors are rare and fixed quickly. / Exacto y completo; errores raros y se corrigen rápido.',
+    'Consistently accurate; also spots and fixes problems others miss. / Consistentemente exacto; además detecta y corrige problemas que otros no ven.'] },
+  { key: 'cumplimiento', title: 'Reliability / Cumplimiento', q: 'How does this person handle attendance, punctuality and deadlines? / ¿Cómo maneja esta persona la asistencia, puntualidad y fechas de entrega?', opts: [
+    'Frequently late or absent; deadlines are missed. / Con frecuencia tarde o ausente; no cumple fechas.',
+    'Sometimes late or absent; deadlines need reminders. / A veces tarde o ausente; las fechas requieren recordatorios.',
+    'Generally on time and meets deadlines. / Generalmente puntual y cumple fechas.',
+    'On time and meets deadlines; warns in advance if something changes. / Puntual y cumple fechas; avisa con anticipación si algo cambia.',
+    'Always on time and delivers early; the team relies on this person. / Siempre puntual y entrega antes; el equipo confía en esta persona.'] },
+  { key: 'equipo', title: 'Teamwork / Trabajo en equipo', q: 'How does this person work with coworkers and other areas? / ¿Cómo trabaja esta persona con compañeros y otras áreas?', opts: [
+    'Works alone, creates friction or does not share information. / Trabaja solo, genera fricción o no comparte información.',
+    'Cooperates only when asked. / Coopera solo cuando se le pide.',
+    'Cooperates and shares information when needed. / Coopera y comparte información cuando se necesita.',
+    'Offers help and keeps others informed. / Ofrece ayuda y mantiene informados a los demás.',
+    'Builds the team: helps others succeed and resolves friction directly. / Construye equipo: ayuda a otros a tener éxito y resuelve fricciones de forma directa.'] },
+  { key: 'servicio', title: 'Service attitude / Actitud de servicio', q: 'How does this person treat customers or internal teams that depend on their work? / ¿Cómo trata esta persona a los clientes o equipos internos que dependen de su trabajo?', opts: [
+    'Dismissive or slow to respond; complaints are common. / Indiferente o lento para responder; las quejas son comunes.',
+    'Responds, but only to what is asked. / Responde, pero solo a lo que se le pide.',
+    'Courteous and responsive. / Cortés y receptivo.',
+    'Courteous, anticipates needs and follows up. / Cortés, anticipa necesidades y da seguimiento.',
+    'Others ask for this person by name; follows each case until it is solved. / Otros piden a esta persona por nombre; da seguimiento a cada caso hasta resolverlo.'] },
+  { key: 'iniciativa', title: 'Initiative & improvement / Iniciativa y mejora', q: 'What does this person do when they see something that could work better? / ¿Qué hace esta persona cuando ve algo que podría funcionar mejor?', opts: [
+    'Does only what is assigned; resists change. / Solo hace lo asignado; se resiste al cambio.',
+    'Notices problems but waits for someone else to act. / Nota problemas pero espera a que otro actúe.',
+    'Raises issues to the supervisor. / Plantea los problemas al supervisor.',
+    'Proposes a solution along with the issue. / Propone una solución junto con el problema.',
+    'Implements improvements that benefit the team and shares them. / Implementa mejoras que benefician al equipo y las comparte.'] }
+];
+let feedbackManager = null;
+let feedbackAnswers = {};
+let evalConfig = null;
+const evalRoleOf = e => (!e ? 'vendedor' : e.rol_eval ? e.rol_eval : e.rol === 'vendedor' ? 'vendedor' : e.rol === 'manager' ? 'manager' : 'director');
+async function loadEvalConfig() {
+  if (evalConfig) return evalConfig;
+  try { evalConfig = await sbFetch('rpc/evaluacion_config_get', { method: 'POST', body: '{}' }); } catch (err) { console.warn('config', err); evalConfig = { pesos: [], kpis: [] }; }
+  return evalConfig;
+}
+function evalWeights(role) {
+  const w = { kpi: 50, conducta: 50 };
+  ((evalConfig && evalConfig.pesos) || []).filter(p => p.rol_evaluado === role).forEach(p => { w[p.componente] = Number(p.peso); });
+  return w;
+}
+
+
+async function startManagerFeedback() {
+  const content = document.getElementById('app-content');
+  content.innerHTML = `<div class="card"><p style="text-align:center;color:var(--mgray);padding:20px 0;">Loading... / Cargando...</p></div>`;
+  let managers = [];
+  try {
+    managers = await DH.rpc('feedback_managers_elegibles');
+  } catch (err) {
+    content.innerHTML = `<div class="card"><div class="no-cycle">Could not load managers. / No se pudo cargar la lista.</div></div>`;
+    return;
+  }
+  const rows = (managers || []).map(m => m.ya_respondido
+    ? `<div class="bars-option" style="opacity:.55;cursor:default;"><div class="num">✅</div><div class="txt"><strong>${m.nombre}</strong> — Sent / Enviado</div></div>`
+    : `<div class="bars-option" onclick="selectFeedbackManager('${m.manager_id}','${(m.nombre || '').replace(/'/g, "\\'")}')"><div class="num">👤</div><div class="txt"><strong>${m.nombre}</strong> <span style="color:var(--mgray);font-size:11px;">(${m.tienda || ''})</span></div></div>`
+  ).join('');
+  content.innerHTML = `
+    <div class="card">
+      <h2>Anonymous Feedback / Comentarios Anónimos</h2>
+      <div class="desc">Pick your manager. Your name is never saved with your answers, and managers cannot see them. / Elige a tu gerente. Tu nombre nunca se guarda con tus respuestas y los gerentes no pueden verlas.</div>
+      ${rows || '<p style="color:var(--mgray);font-size:13px;">No managers available. / No hay gerentes disponibles.</p>'}
+      <button class="btn" style="margin-top:14px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="renderModePicker()">← Back / Regresar</button>
+    </div>`;
+}
+
+function selectFeedbackManager(id, nombre) {
+  feedbackManager = { id, nombre };
+  feedbackAnswers = {};
+  const content = document.getElementById('app-content');
+  const qs = MANAGER_FEEDBACK_QUESTIONS.map((q, i) => `
+    <div style="margin-bottom:22px;">
+      <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:2px;">${i + 1}. ${q.title}</div>
+      <div style="font-size:12px;color:var(--mgray);margin-bottom:8px;">${q.q}</div>
+      ${q.opts.map((t, k) => `<div class="bars-option" id="fb-${q.key}-${k + 1}" onclick="pickFeedback('${q.key}',${k + 1})" style="padding:9px 12px;margin-bottom:6px;"><div class="num">${k + 1}</div><div class="txt">${t}</div></div>`).join('')}
+    </div>`).join('');
+  content.innerHTML = `
+    <div class="card">
+      <h2>${nombre}</h2>
+      <div class="desc">Anonymous. Pick the statement that best describes what you have actually seen — 1 is the lowest, 5 the highest. Describe behavior, not personality. / Anónimo. Elige la frase que mejor describe lo que has visto realmente — 1 es lo más bajo, 5 lo más alto. Describe conductas, no personalidad.</div>
+      ${qs}
+      <div class="error-msg" id="fb-error">Please answer every question. / Por favor responde todas las preguntas.</div>
+      <button class="btn btn-primary" id="fb-submit" onclick="submitManagerFeedback()">Send anonymously / Enviar de forma anónima</button>
+      <button class="btn" style="margin-top:10px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="startManagerFeedback()">← Back / Regresar</button>
+    </div>`;
+}
+
+function pickFeedback(key, v) {
+  feedbackAnswers[key] = v;
+  for (let k = 1; k <= 5; k++) {
+    const el = document.getElementById(`fb-${key}-${k}`);
+    if (el) el.classList.toggle('selected', k === v);
+  }
+}
+
+async function submitManagerFeedback() {
+  const errEl = document.getElementById('fb-error');
+  if (MANAGER_FEEDBACK_QUESTIONS.some(q => feedbackAnswers[q.key] === undefined)) {
+    errEl.style.display = 'block'; return;
+  }
+  errEl.style.display = 'none';
+  const btn = document.getElementById('fb-submit');
+  btn.disabled = true; btn.textContent = 'Sending... / Enviando...';
+  try {
+    const rows = await DH.rpc('enviar_feedback_anonimo', { p_manager_id: feedbackManager.id, p_respuestas: feedbackAnswers });
+    const r = rows && rows[0];
+    if (!r || !r.success) { alert((r && r.message) || 'Could not send.'); btn.disabled = false; btn.textContent = 'Send anonymously / Enviar de forma anónima'; return; }
+    document.getElementById('app-content').innerHTML = `
+      <div class="card"><div class="success-screen"><div class="icon">✅</div>
+      <h2>Thank you / Gracias</h2>
+      <p>Your feedback was sent anonymously. / Tus comentarios se enviaron de forma anónima.</p>
+      <button class="btn btn-primary" style="margin-top:16px;" onclick="startManagerFeedback()">Continue / Continuar</button></div></div>`;
+  } catch (err) {
+    alert('Error: ' + err.message);
+    btn.disabled = false; btn.textContent = 'Send anonymously / Enviar de forma anónima';
+  }
+}
+
+async function startSelfAssessment() {
+  evalMode = 'self';
+  currentDimIdx = 0;
+  responses = {};
+  const content = document.getElementById('app-content');
+
+  let existing = [];
+  try {
+    existing = await DH.rpc('evaluacion_existente', { p_ciclo_id: activeCycle.id, p_evaluado_id: loggedInEmployee.id, p_tipo: 'self' });
+  } catch (err) {
+    console.warn('Could not check existing evaluation:', err);
+  }
+
+  if (existing && existing.length && existing[0].estado !== 'pendiente' && !isAdminPreview) {
+    content.innerHTML = `
+      <div class="card">
+        <div class="success-screen">
+          <div class="icon">✅</div>
+          <h2>Self-Assessment Already Submitted / Autoevaluación Ya Enviada</h2>
+          <p>You've already completed your self-assessment for ${activeCycle.nombre}. / Ya completaste tu autoevaluación para ${activeCycle.nombre}.</p>
+        </div>
+      </div>`;
+    return;
+  }
+  renderQuestionScreen();
+}
+
+/* ════════════════════════════════════════════════════════════
+   SUPERVISOR MODE — search real registered employees by name
+   (same empleados table that drives certifications/badges), pick
+   one, enter their quota result, then BARS in third person.
+   Always saves for real — no preview/skip-save behavior here,
+   this is real management work product.
+   ════════════════════════════════════════════════════════════ */
+let allEmployeesForSearch = null;
+
+async function startSupervisorSearch() {
+  evalMode = 'supervisor';
+  selectedEvaluado = null;
+  currentDimIdx = 0;
+  responses = {};
+  quotaData = { metrics: [], pct_promedio: null };
+
+  const content = document.getElementById('app-content');
+  content.innerHTML = `<div class="card"><p style="text-align:center;color:var(--mgray);padding:20px 0;">Loading team roster... / Cargando lista de empleados...</p></div>`;
+
+  if (!allEmployeesForSearch) {
+    try {
+      const list = await DH.rpc('evaluacion_mis_evaluados');
+      allEmployeesForSearch = (list || []).map(r => ({ id: r.empleado_id, roster_id: r.roster_id, nombre_completo: r.nombre, puesto: r.puesto, tienda: r.ubicacion, rol_eval: r.rol_eval, registrado: r.registrado, en_ciclo: r.en_ciclo, cubre: r.cubre }))
+        .sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo));
+    } catch (err) {
+      content.innerHTML = `<div class="card"><div class="no-cycle">Could not load the employee roster. / No se pudo cargar la lista de empleados.</div></div>`;
+      return;
+    }
+  }
+  await refreshNoElegibles();
+  renderSupervisorSearchScreen('');
+}
+
+function renderSupervisorSearchScreen(query) {
+  const content = document.getElementById('app-content');
+  const safeQ = (query || '').replace(/"/g, '&quot;');
+  // The shell (with the input) is drawn ONCE. Typing only refreshes #sup-results,
+  // so the input never loses focus between keystrokes.
+  content.innerHTML = `
+    <div class="card">
+      <h2>Who are you evaluating? / ¿A quién vas a evaluar?</h2>
+      <div class="desc">These are the people who report to you. / Estas son las personas que te reportan.</div>
+      <input type="text" id="sup-search" class="field-input" placeholder="Type a name... / Escribe un nombre..." value="${safeQ}" oninput="renderSupervisorResults(this.value)" style="width:100%;padding:12px 14px;border:2px solid #e8e4dc;border-radius:10px;font-size:14px;margin-bottom:14px;" autocomplete="off">
+      <div id="sup-results"></div>
+      <button class="btn" style="margin-top:14px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="renderModePicker()">← Back / Regresar</button>
+    </div>`;
+  renderSupervisorResults(query || '');
+  const inp = document.getElementById('sup-search');
+  if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+}
+
+function renderSupervisorResults(query) {
+  const box = document.getElementById('sup-results');
+  if (!box) return;
+  const q = (query || '').trim().toLowerCase();
+  const pool = (allEmployeesForSearch || []).filter(e => !q || (e.nombre_completo || '').toLowerCase().includes(q));
+  function empRow(e) {
+    const meta = [e.puesto, e.tienda].filter(Boolean).join(' · ');
+    const cover = e.cubre ? ` <span style="color:var(--mgray);font-size:11px;">(reports to ${e.cubre} — not registered yet / aún sin registro)</span>` : '';
+    if (!e.registrado) return `<div class="bars-option" style="opacity:.5;cursor:default;"><div class="num">⏳</div><div class="txt"><strong>${e.nombre_completo}</strong> <span style="color:var(--mgray);font-size:11px;">${meta}</span><br><span style="font-size:11px;color:var(--mgray);">Not registered yet — can be evaluated after they sign up. / Aún no se registra.</span>${cover}</div></div>`;
+    if (!e.en_ciclo) return `<div class="bars-option" style="opacity:.5;cursor:default;"><div class="num">➖</div><div class="txt"><strong>${e.nombre_completo}</strong> <span style="color:var(--mgray);font-size:11px;">${meta}</span><br><span style="font-size:11px;color:var(--mgray);">Not in this cycle. / No entra a este ciclo.</span></div></div>`;
+    const neTag = noElegibles[e.id] ? ' <span style="color:var(--red);font-size:11px;font-weight:700;">N/A — not eligible</span>' : '';
+    return `<div class="bars-option" onclick="selectEvaluado('${e.id}')"><div class="num">👤</div><div class="txt"><strong>${e.nombre_completo}</strong> <span style="color:var(--mgray);font-size:11px;">${meta}</span>${neTag}${cover}</div></div>`;
+  }
+  box.innerHTML = `<div style="max-height:420px;overflow-y:auto;">${pool.length ? pool.map(empRow).join('') : '<p style="color:var(--mgray);font-size:13px;padding:10px 0;">No matches found. / No se encontraron coincidencias.</p>'}</div>`;
+}
+
+async function selectEvaluado(empId) {
+  selectedEvaluado = (allEmployeesForSearch || []).find(e => e.id === empId);
+  if (!selectedEvaluado) return;
+
+  // Check for an existing supervisor evaluation of this person, this cycle, by this evaluator
+  let existing = [];
+  try {
+    existing = await DH.rpc('evaluacion_existente', { p_ciclo_id: activeCycle.id, p_evaluado_id: empId, p_tipo: 'supervisor' });
+  } catch (err) {
+    console.warn('Could not check existing evaluation:', err);
+  }
+  if (existing && existing.length && existing[0].estado !== 'pendiente') {
+    document.getElementById('app-content').innerHTML = `
+      <div class="card">
+        <div class="success-screen">
+          <div class="icon">✅</div>
+          <h2>Already Evaluated / Ya Evaluado</h2>
+          <p>You've already submitted an evaluation for ${selectedEvaluado.nombre_completo} this cycle. / Ya enviaste una evaluación de ${selectedEvaluado.nombre_completo} este ciclo.</p>
+        </div>
+      </div>`;
+    return;
+  }
+
+  previousEval = null;
+  try {
+    const prev = await DH.rpc('evaluacion_previa', { p_evaluado_id: empId, p_ciclo_id: activeCycle.id });
+    if (prev && prev.length) previousEval = prev[0];
+  } catch (err) { console.warn('Could not load previous evaluation:', err); }
+
+  await refreshNoElegibles();
+  renderEligibilityScreen();
+}
+
+/* ════════ ELIGIBILITY — the evaluator confirms the person completed the period ════════ */
+let noElegibles = {};
+const NOELEG_REASONS = [
+  { k: 'ingreso_reciente', t: 'Joined during this period (has not completed the minimum time) / Ingresó durante este periodo (no completó el tiempo mínimo)' },
+  { k: 'licencia', t: 'Was on leave for a large part of the period / Estuvo de licencia gran parte del periodo' },
+  { k: 'cambio_rol', t: 'Changed role or store during the period / Cambió de puesto o tienda durante el periodo' },
+  { k: 'otra_politica', t: 'Other company policy / Otra política de la empresa' }
+];
+async function refreshNoElegibles() {
+  noElegibles = {};
+  try {
+    const rows = await sbFetch('rpc/evaluacion_no_elegibles_get', { method: 'POST', body: '{}' });
+    (rows || []).forEach(r => { noElegibles[r.evaluado_id] = r.motivo; });
+  } catch (err) { console.warn('eligibility', err); }
+}
+let pendingReason = null;
+function renderEligibilityScreen() {
+  const e = selectedEvaluado;
+  const cur = noElegibles[e.id];
+  pendingReason = null;
+  const reasonLabel = k => (NOELEG_REASONS.find(r => r.k === k) || {}).t || k;
+  document.getElementById('app-content').innerHTML = cur ? `
+    <div class="card">
+      <h2>${e.nombre_completo}</h2>
+      <div class="badge-admin" style="background:#fdecea;border-left-color:var(--red);">Marked NOT eligible this period / Marcado como NO elegible este periodo<br><span style="font-weight:400;">${reasonLabel(cur)}</span></div>
+      <button class="btn btn-primary" onclick="setEligibility(true)">Mark as eligible and evaluate / Marcar como elegible y evaluar</button>
+      <button class="btn" style="margin-top:10px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="renderSupervisorSearchScreen('')">← Back / Regresar</button>
+    </div>` : `
+    <div class="card">
+      <h2>${e.nombre_completo}</h2>
+      <div class="desc">Did this person complete the evaluation period (${activeCycle.nombre}) and report to you for enough time to be evaluated fairly? / ¿Esta persona completó el periodo de evaluación (${activeCycle.nombre}) y estuvo bajo tu supervisión el tiempo suficiente para evaluarla de forma justa?</div>
+      <button class="btn btn-primary" onclick="proceedToMetrics()">Yes — evaluate / Sí — evaluar</button>
+      <div style="font-size:13px;font-weight:700;color:var(--navy);margin:20px 0 8px;">No — not eligible this period. Reason: / No — no elegible este periodo. Motivo:</div>
+      ${NOELEG_REASONS.map(r => `<div class="bars-option" id="ne-${r.k}" onclick="pickNoElegReason('${r.k}')"><div class="txt">${r.t}</div></div>`).join('')}
+      <div class="error-msg" id="ne-error">Pick a reason. / Elige un motivo.</div>
+      <button class="btn" style="margin-top:6px;background:#8a8a8a;color:#fff;" onclick="setEligibility(false)">Mark as not eligible / Marcar como no elegible</button>
+      <button class="btn" style="margin-top:10px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="renderSupervisorSearchScreen('')">← Back / Regresar</button>
+    </div>`;
+}
+function pickNoElegReason(k) {
+  pendingReason = k;
+  NOELEG_REASONS.forEach(r => { const el = document.getElementById('ne-' + r.k); if (el) el.classList.toggle('selected', r.k === k); });
+}
+async function setEligibility(elegible) {
+  if (!elegible && !pendingReason) { document.getElementById('ne-error').classList.add('show'); return; }
+  try {
+    const rows = await DH.rpc('evaluacion_elegibilidad_set', { p_evaluado_id: selectedEvaluado.id, p_elegible: elegible, p_motivo: elegible ? null : pendingReason });
+    const r = rows && rows[0];
+    if (!r || !r.success) { alert((r && r.message) || 'Could not save.'); return; }
+  } catch (err) { alert('Error: ' + err.message); return; }
+  if (elegible) { delete noElegibles[selectedEvaluado.id]; await proceedToMetrics(); }
+  else {
+    noElegibles[selectedEvaluado.id] = pendingReason;
+    document.getElementById('app-content').innerHTML = `<div class="card"><div class="success-screen"><div class="icon">✅</div><h2>Saved / Guardado</h2><p>${selectedEvaluado.nombre_completo} will not be evaluated this period. / ${selectedEvaluado.nombre_completo} no será evaluado este periodo.</p><button class="btn btn-primary" style="margin-top:20px;max-width:280px;" onclick="renderSupervisorSearchScreen('')">Evaluate Someone Else / Evaluar a Alguien Más</button></div></div>`;
+  }
+}
+async function proceedToMetrics() {
+  try {
+    await loadMetricTemplate();
+    renderQuotaScreen();
+  } catch (err) {
+    console.error('proceedToMetrics failed:', err);
+    document.getElementById('app-content').innerHTML = `<div class="card"><h2>Something went wrong / Algo salió mal</h2><div class="desc">${(err && err.message) || err}</div><button class="btn btn-primary" onclick="proceedToMetrics()">Try again / Reintentar</button><button class="btn" style="margin-top:10px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="renderSupervisorSearchScreen('')">← Back / Regresar</button></div>`;
+  }
+}
+
+/* ════════ PEER EVALUATION (manager ↔ manager, closed 1-5) ════════ */
+async function startPeerEval() {
+  evalMode = 'peer';
+  selectedEvaluado = null;
+  currentDimIdx = 0;
+  responses = {};
+  const content = document.getElementById('app-content');
+  content.innerHTML = `<div class="card"><p style="text-align:center;color:var(--mgray);padding:20px 0;">Loading... / Cargando...</p></div>`;
+  let peers = [], done = [];
+  try {
+    const pr = await DH.rpc('evaluacion_mis_pares');
+    peers = (pr || []).map(x => ({ id: x.empleado_id, nombre_completo: x.nombre, tienda: x.ubicacion }));
+    done = (pr || []).filter(x => x.ya_evaluado).map(x => ({ evaluado_id: x.empleado_id }));
+  } catch (err) {
+    content.innerHTML = `<div class="card"><div class="no-cycle">Could not load managers. / No se pudo cargar la lista.</div></div>`;
+    return;
+  }
+  const doneIds = new Set((done || []).map(d => d.evaluado_id));
+  window.__peers = peers || [];
+  const rows = window.__peers.map(m => doneIds.has(m.id)
+    ? `<div class="bars-option" style="opacity:.55;cursor:default;"><div class="num">✅</div><div class="txt"><strong>${m.nombre_completo}</strong> — Done / Listo</div></div>`
+    : `<div class="bars-option" onclick="selectPeer('${m.id}')"><div class="num">👤</div><div class="txt"><strong>${m.nombre_completo}</strong> <span style="color:var(--mgray);font-size:11px;">(${m.tienda || ''})</span></div></div>`).join('');
+  content.innerHTML = `
+    <div class="card">
+      <h2>Fellow Manager Evaluation / Evaluación de Gerente Colega</h2>
+      <div class="desc">Rate how this manager collaborates with the other stores. Closed 1-5 questions about behavior. / Califica cómo colabora este gerente con las demás tiendas. Preguntas cerradas 1-5 sobre conductas.</div>
+      ${rows || '<p style="color:var(--mgray);font-size:13px;">No other managers available. / No hay otros gerentes disponibles.</p>'}
+      <button class="btn" style="margin-top:14px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="renderModePicker()">← Back / Regresar</button>
+    </div>`;
+}
+function selectPeer(id) {
+  selectedEvaluado = (window.__peers || []).find(m => m.id === id);
+  if (!selectedEvaluado) return;
+  evalMode = 'peer';
+  currentDimIdx = 0;
+  responses = {};
+  renderQuestionScreen();
+}
+
+/* ════════ METRICS (KPIs set by the company per role) ════════ */
+let metricRows = [];
+let metricTemplateLoaded = false;
+let metricsLocked = false;
+let previousEval = null;
+
+async function loadMetricTemplate() {
+  // KPIs are set by the company per role (Cockpit → Evaluation Setup). The evaluator only enters results.
+  const cfg = await loadEvalConfig();
+  const role = evalRoleOf(selectedEvaluado);
+  const hq = (cfg.kpis || []).filter(k => k.rol_evaluado === role);
+  try {
+    const tk = await DH.rpc('evaluacion_kpis_equipo_get');
+    ((tk && tk.propios) || []).filter(k => k.rol_evaluado === role).forEach(k => hq.push({ nombre: k.nombre, unidad: k.unidad, meta_default: k.meta_default, peso: k.peso }));
+  } catch (err) { console.warn('team kpis', err); }
+  if (hq.length) {
+    metricsLocked = true;
+    metricRows = hq.map(k => ({ nombre: k.nombre, unidad: k.unidad || '', peso: Number(k.peso) > 0 ? Number(k.peso) : 1, meta: (k.meta_default ?? ''), metaLocked: k.meta_default !== null && k.meta_default !== undefined, real: '' }));
+    return;
+  }
+  metricsLocked = false;
+  if (metricTemplateLoaded && metricRows.length) { metricRows = metricRows.map(r => ({ ...r, real: '' })); return; }
+  let tpl = [];
+  try {
+    tpl = await DH.rpc('metricas_plantilla_get');
+  } catch (err) { console.warn('Could not load metric template:', err); }
+  metricRows = (tpl && tpl.length)
+    ? tpl.map(t => ({ nombre: t.nombre, unidad: t.unidad || '', meta: '', real: '' }))
+    : [{ nombre: 'Sales', unidad: '$', meta: '', real: '' }];
+  metricTemplateLoaded = true;
+}
+
+function metricPct(r) {
+  const meta = parseFloat(r.meta), real = parseFloat(r.real);
+  if (!(meta > 0) || isNaN(real) || real < 0) return null;
+  return Math.round((real / meta) * 1000) / 10;
+}
+
+function metricsAverage() {
+  let sw = 0, sp = 0;
+  metricRows.forEach(r => { const p = metricPct(r); if (p === null) return; const w = Number(r.peso) > 0 ? Number(r.peso) : 1; sw += w; sp += Math.min(p, 150) * w; });
+  return sw > 0 ? Math.round((sp / sw) * 10) / 10 : null;
+}
+
+function updateMetric(i, field, value) {
+  metricRows[i][field] = value;
+  const pct = metricPct(metricRows[i]);
+  const el = document.getElementById('metric-pct-' + i);
+  if (el) el.textContent = pct === null ? '—' : pct + '%';
+  const avg = metricsAverage();
+  const avgEl = document.getElementById('metric-avg');
+  if (avgEl) avgEl.textContent = avg === null ? '—' : avg + '%';
+}
+
+function addMetricRow() { metricRows.push({ nombre: '', unidad: '', meta: '', real: '' }); renderQuotaScreen(); }
+function removeMetricRow(i) { metricRows.splice(i, 1); if (!metricRows.length) metricRows.push({ nombre: '', unidad: '', meta: '', real: '' }); renderQuotaScreen(); }
+
+function renderQuotaScreen() {
+  const content = document.getElementById('app-content');
+  const fld = 'padding:9px 10px;border:2px solid #e8e4dc;border-radius:8px;font-size:13px;width:100%;';
+  const rowsHtml = metricRows.map((r, i) => `
+    <div style="display:grid;grid-template-columns:1.6fr .7fr 1fr 1fr .8fr auto;gap:6px;align-items:center;margin-bottom:8px;">
+      <input type="text" placeholder="Metric / Métrica" value="${(r.nombre || '').replace(/"/g, '&quot;')}" oninput="updateMetric(${i},'nombre',this.value)" style="${fld}" ${metricsLocked ? 'readonly tabindex="-1" title="Set by the company"' : ''}>
+      <input type="text" placeholder="Unit" value="${(r.unidad || '').replace(/"/g, '&quot;')}" oninput="updateMetric(${i},'unidad',this.value)" style="${fld}" ${metricsLocked ? 'readonly tabindex="-1"' : ''}>
+      <input type="number" min="0" step="any" placeholder="Goal / Meta" value="${r.meta}" oninput="updateMetric(${i},'meta',this.value)" style="${fld}" ${r.metaLocked ? 'readonly title="Set by the company"' : ''}>
+      <input type="number" min="0" step="any" placeholder="Actual / Real" value="${r.real}" oninput="updateMetric(${i},'real',this.value)" style="${fld}">
+      <strong id="metric-pct-${i}" style="color:var(--navy);font-size:13px;text-align:center;">${metricPct(r) === null ? '—' : metricPct(r) + '%'}</strong>
+      ${metricsLocked ? '<span></span>' : `<button class="btn" onclick="removeMetricRow(${i})" style="padding:4px 9px;background:transparent;color:var(--mgray);font-size:16px;" title="Remove">✕</button>`}
+    </div>`).join('');
+
+  const prevHtml = previousEval ? `
+    <div style="background:#f4f1ea;border-left:4px solid var(--gold);padding:12px 14px;border-radius:6px;font-size:13px;margin-bottom:16px;">
+      <strong>Previous evaluation / Evaluación anterior</strong> (${(previousEval.completada_at || '').slice(0, 10)})<br>
+      Final score / Puntaje final: <strong>${previousEval.score_final ?? '—'}</strong>
+      · Quota / Cuota: <strong>${previousEval.pct_promedio_cuota ?? '—'}%</strong>
+    </div>` : '';
+
+  content.innerHTML = `
+    <div class="card">
+      <h2>Performance Metrics / Métricas de Desempeño</h2>
+      <div class="desc">Evaluating: <strong>${selectedEvaluado.nombre_completo}</strong> — ${activeCycle.nombre}<br>${metricsLocked ? 'These KPIs are set by the company for this role. Enter the goal (if blank) and the actual result. / Estos KPIs los define la empresa para este rol. Captura la meta (si está vacía) y el resultado real.' : "Enter this person's goals and actual results for the cycle. / Captura las metas y resultados reales de esta persona en el ciclo."}</div>
+      ${prevHtml}
+      <div style="display:grid;grid-template-columns:1.6fr .7fr 1fr 1fr .8fr auto;gap:6px;font-size:11px;font-weight:700;color:var(--mgray);margin-bottom:6px;">
+        <span>METRIC</span><span>UNIT</span><span>GOAL</span><span>ACTUAL</span><span style="text-align:center;">% MET</span><span></span>
+      </div>
+      ${rowsHtml}
+      ${metricsLocked ? '' : `<button class="btn" onclick="addMetricRow()" style="background:transparent;color:var(--navy);font-weight:600;text-decoration:underline;margin-bottom:10px;">+ Add metric / Agregar métrica</button>`}
+      <div style="display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid #f0ece2;font-size:14px;">
+        <span>Average attainment / Cumplimiento promedio</span><strong id="metric-avg" style="color:var(--navy);">${metricsAverage() === null ? '—' : metricsAverage() + '%'}</strong>
+      </div>
+      ${metricsLocked ? '' : `<label style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--mgray);margin:8px 0 14px;"><input type="checkbox" id="metric-save-tpl" checked> Remember these metric names for my next evaluations / Recordar estos nombres para mis próximas evaluaciones</label>`}
+      <div class="error-msg" id="quota-error">Add at least one metric with a goal greater than 0 and an actual value. / Agrega al menos una métrica con meta mayor a 0 y un valor real.</div>
+      <button class="btn btn-primary" onclick="confirmQuota()">Continue / Continuar</button>
+      <button class="btn" style="margin-top:10px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="renderSupervisorSearchScreen('')">← Back / Regresar</button>
+    </div>`;
+}
+
+async function confirmQuota() {
+  const valid = metricRows.filter(r => (r.nombre || '').trim() && metricPct(r) !== null);
+  if (metricsLocked && valid.length < metricRows.length) { document.getElementById('quota-error').textContent = 'Fill in every KPI (goal and actual). / Llena todos los KPIs (meta y real).'; document.getElementById('quota-error').classList.add('show'); return; }
+  if (!valid.length) { document.getElementById('quota-error').classList.add('show'); return; }
+  quotaData = { metrics: valid.map(r => ({ nombre: r.nombre.trim(), unidad: (r.unidad || '').trim(), meta: parseFloat(r.meta), real: parseFloat(r.real) })), pct_promedio: metricsAverage() };
+  const saveTpl = document.getElementById('metric-save-tpl');
+  if (saveTpl && saveTpl.checked && !isAdminPreview) {
+    try {
+      await DH.rpc('metricas_plantilla_set', { p_items: quotaData.metrics.map((m, i) => ({ nombre: m.nombre, unidad: m.unidad, orden: i })) });
+    } catch (err) { console.warn('Could not save metric template:', err); }
+  }
+  currentDimIdx = 0;
+  responses = {};
+  renderQuestionScreen();
+}
+
+/* ════════════════════════════════════════════════════════════
+   RENDER — one dimension at a time, forced-choice BARS.
+   Uses DIMENSIONS (1st person) for self, SUPERVISOR_DIMENSIONS
+   (3rd person) for supervisor mode.
+   ════════════════════════════════════════════════════════════ */
+function isRatedMode() { return evalMode === 'supervisor' || evalMode === 'peer'; }
+function currentDimSet() {
+  if (evalMode === 'peer') return PEER_DIMENSIONS;
+  if (evalMode === 'supervisor') { const rr = evalRoleOf(selectedEvaluado); return rr === 'vendedor' ? SUPERVISOR_DIMENSIONS : rr === 'staff' ? STAFF_DIMENSIONS : MANAGER_BOSS_DIMENSIONS; }
+  return VALUES_QUESTIONS;
+}
+
+function renderQuestionScreen() {
+  const content = document.getElementById('app-content');
+  const dims = currentDimSet();
+  const dim = dims[currentDimIdx];
+  const pct = Math.round((currentDimIdx / dims.length) * 100);
+
+  // Preview mode applies to BOTH self and supervisor flows for admins —
+  // lets a Super Admin walk the entire module (including "evaluating"
+  // a real person) without ever writing to that person's real record.
+  const adminBanner = isAdminPreview
+    ? `<div class="badge-admin">🔍 Admin Preview Mode — this run will NOT be saved to any employee's record. / Modo Vista Admin — esta sesión NO se guardará en el registro de ningún empleado.</div>`
+    : '';
+
+  const evaluandoBanner = isRatedMode()
+    ? `<div class="badge-admin" style="background:var(--ltblue);border-left-color:var(--navy);">Evaluating / Evaluando: <strong>${selectedEvaluado.nombre_completo}</strong></div>`
+    : '';
+
+  const optsHtml = isRatedMode()
+    ? dim.opts.map((opt, i) => {
+        const selected = responses[dim.key] === (i + 1) ? 'selected' : '';
+        return `
+          <div class="bars-option ${selected}" onclick="selectOption('${dim.key}', ${i + 1})">
+            <div class="num">${i + 1}</div>
+            <div class="txt">${opt}</div>
+          </div>`;
+      }).join('')
+    : dim.opts.map((opt, i) => {
+        const selected = responses[dim.key] === i ? 'selected' : '';
+        return `
+          <div class="bars-option ${selected}" onclick="selectOption('${dim.key}', ${i})">
+            <div class="num">${String.fromCharCode(65 + i)}</div>
+            <div class="txt">${opt}</div>
+          </div>`;
+      }).join('');
+
+  content.innerHTML = `
+    ${adminBanner}
+    ${evaluandoBanner}
+    <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+    <div class="progress-label">Question ${currentDimIdx + 1} of ${dims.length} / Pregunta ${currentDimIdx + 1} de ${dims.length}</div>
+    <div class="card">
+      <div class="dim-title"><span class="dim-num">${currentDimIdx + 1}</span>${dim.title}</div>
+      <div class="dim-q">${dim.q}</div>
+      ${optsHtml}
+      <div class="error-msg" id="dim-error">Please select an option before continuing. / Por favor selecciona una opción antes de continuar.</div>
+      <button class="btn btn-primary" id="btn-next" style="margin-top:18px" onclick="nextDimension()">
+        ${currentDimIdx === dims.length - 1 ? 'Review & Submit / Revisar y Enviar' : 'Next / Siguiente →'}
+      </button>
+    </div>`;
+}
+
+function selectOption(key, value) {
+  responses[key] = value;
+  renderQuestionScreen();
+}
+
+function nextDimension() {
+  const dims = currentDimSet();
+  const dim = dims[currentDimIdx];
+  if (responses[dim.key] === undefined) {
+    document.getElementById('dim-error').classList.add('show');
+    return;
+  }
+  if (currentDimIdx < dims.length - 1) {
+    currentDimIdx++;
+    renderQuestionScreen();
+  } else {
+    renderReviewScreen();
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   REVIEW & SUBMIT
+   ════════════════════════════════════════════════════════════ */
+function renderReviewScreen() {
+  const content = document.getElementById('app-content');
+  const dims = currentDimSet();
+  const rows = dims.map(dim => {
+    const raw = responses[dim.key];
+    const display = isRatedMode() ? raw + '/5' : String.fromCharCode(65 + raw);
+    return `
+    <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0ece2;font-size:13px;">
+      <span style="color:var(--dkgray)">${dim.title}</span>
+      <strong style="color:var(--navy)">${display}</strong>
+    </div>`;
+  }).join('');
+
+  const quotaRow = evalMode === 'supervisor'
+    ? `<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0ece2;font-size:13px;">
+        <span style="color:var(--dkgray)">Quota Performance / Desempeño de Cuota</span>
+        <strong style="color:var(--navy)">${quotaData.pct_promedio}% avg (${quotaData.metrics.length} metric${quotaData.metrics.length === 1 ? '' : 's'})</strong>
+      </div>`
+    : '';
+
+  const evaluandoLine = isRatedMode()
+    ? `<div class="desc">Evaluating: <strong>${selectedEvaluado.nombre_completo}</strong></div>`
+    : '';
+
+  const submitLabel = isRatedMode() ? 'Submit Evaluation / Enviar Evaluación' : 'Submit Self-Assessment / Enviar Autoevaluación';
+
+  content.innerHTML = `
+    <div class="card">
+      <h2>Review Your Answers / Revisa Tus Respuestas</h2>
+      ${evaluandoLine}
+      <div class="desc">Once submitted, you won't be able to change these answers. / Una vez enviado, no podrás cambiar estas respuestas.</div>
+      ${quotaRow}
+      ${rows}
+      <div class="error-msg" id="submit-error"></div>
+      <button class="btn btn-primary" id="btn-submit" style="margin-top:20px" onclick="submitEvaluation()">${submitLabel}</button>
+      <button class="btn" style="margin-top:10px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="currentDimIdx=currentDimSet().length-1;renderQuestionScreen();">← Back to edit / Regresar a editar</button>
+    </div>`;
+}
+
+async function submitEvaluation() {
+  const btn = document.getElementById('btn-submit');
+  const errEl = document.getElementById('submit-error');
+  errEl.classList.remove('show');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Submitting... / Enviando...';
+
+  // Preview-mode skip-save now applies to BOTH self and supervisor flows —
+  // a Super Admin can fully test evaluating a real person without it
+  // ever hitting that person's actual record.
+  if (isAdminPreview) {
+    setTimeout(() => {
+      document.getElementById('app-content').innerHTML = `
+        <div class="card">
+          <div class="success-screen">
+            <div class="icon">🔍</div>
+            <h2>Admin Preview Complete / Vista Admin Completada</h2>
+            <p>Nothing was saved — this was a preview run only. / Nada se guardó — esta fue solo una corrida de vista previa.</p>
+          </div>
+        </div>`;
+    }, 500);
+    return;
+  }
+
+  const dims = currentDimSet();
+  const isSupervisor = evalMode === 'supervisor';
+  const isPeer = evalMode === 'peer';
+  const isRated = isSupervisor || isPeer;
+  await loadEvalConfig();
+
+  try {
+    const evalPayload = {
+      ciclo_id: activeCycle.id,
+      evaluado_id: isRated ? selectedEvaluado.id : loggedInEmployee.id,
+      evaluador_id: loggedInEmployee.id,
+      tipo_evaluador: isSupervisor ? 'supervisor' : isPeer ? 'par' : 'self',
+      track: 'sales',
+      estado: 'completada',
+      completada_at: new Date().toISOString()
+    };
+    if (isSupervisor) {
+      const scores = dims.map(d => responses[d.key]);
+      const conductual = Math.round(((scores.reduce((a, b) => a + b, 0) / scores.length) - 1) / 4 * 100);
+      const cuota = Math.round(Math.min(quotaData.pct_promedio, 100));
+      evalPayload.pct_promedio_cuota = quotaData.pct_promedio;
+      evalPayload.score_conductual = conductual;
+      evalPayload.score_cuota = cuota;
+      const w = evalWeights(evalRoleOf(selectedEvaluado));
+      const wsum = (w.kpi || 0) + (w.conducta || 0);
+      evalPayload.score_final = wsum > 0 ? Math.round(((w.kpi || 0) * cuota + (w.conducta || 0) * conductual) / wsum) : Math.round(0.5 * cuota + 0.5 * conductual);
+    } else if (isPeer) {
+      const scores = dims.map(d => responses[d.key]);
+      const peerScore = Math.round(((scores.reduce((a, b) => a + b, 0) / scores.length) - 1) / 4 * 100);
+      evalPayload.score_conductual = peerScore;
+      evalPayload.score_final = peerScore;
+    } else {
+      // Self score = % of forced-choice questions answered with the
+      // higher-performance option (B). Same formula as the original design.
+      // Self score = average of chosen option index / (options - 1), scaled to 100.
+      // e.g. picking the top option (index 3 of 4) on everything = 100.
+      const dimsList = currentDimSet();
+      const maxIdx = dimsList[0].opts.length - 1;
+      const sum = dimsList.reduce((s, d) => s + (responses[d.key] || 0), 0);
+      const selfScore = Math.round((sum / (dimsList.length * maxIdx)) * 100);
+      evalPayload.score_conductual = selfScore;
+      evalPayload.score_final = selfScore;
+    }
+
+    const evalRows = await sbFetch('evaluaciones', { method: 'POST', body: JSON.stringify(evalPayload) });
+    const evaluacionId = evalRows[0].id;
+
+    const respuestaRows = dims.map(dim => ({
+      evaluacion_id: evaluacionId,
+      dimension: dim.key,
+      pregunta_key: dim.key,
+      pregunta_texto: dim.q,
+      // Supervisor mode: 1-5 BARS score. Self mode: multiple-choice index
+      // (0-3), both numeric so they fit the same column.
+      respuesta_score: responses[dim.key]
+    }));
+    await sbFetch('evaluacion_respuestas', { method: 'POST', body: JSON.stringify(respuestaRows) });
+    if (isSupervisor) {
+      await DH.rpc('metricas_guardar', { p_evaluacion_id: evaluacionId, p_items: quotaData.metrics });
+    }
+
+    const successMsg = isPeer
+      ? `<h2>Evaluation Submitted! / ¡Evaluación Enviada!</h2><p>Your evaluation of ${selectedEvaluado.nombre_completo} has been saved. / Tu evaluación de ${selectedEvaluado.nombre_completo} se guardó.</p>`
+      : isSupervisor
+      ? `<h2>Evaluation Submitted! / ¡Evaluación Enviada!</h2><p>Your evaluation of ${selectedEvaluado.nombre_completo} for ${activeCycle.nombre} has been saved. / Tu evaluación de ${selectedEvaluado.nombre_completo} para ${activeCycle.nombre} se guardó.</p>${(previousEval && previousEval.score_final != null && evalPayload.score_final != null) ? `<p style="margin-top:10px;">Change vs previous cycle / Cambio vs ciclo anterior: <strong>${evalPayload.score_final - previousEval.score_final >= 0 ? '+' : ''}${Math.round(evalPayload.score_final - previousEval.score_final)}</strong> pts (${Math.round(previousEval.score_final)} → ${evalPayload.score_final})</p>` : ''}`
+      : `<h2>Self-Assessment Submitted! / ¡Autoevaluación Enviada!</h2><p>Thank you, ${loggedInEmployee.nombre_completo}. Your supervisor will review your evaluation and follow up with feedback during ${activeCycle.nombre}. / Gracias, ${loggedInEmployee.nombre_completo}. Tu supervisor revisará tu evaluación durante ${activeCycle.nombre}.</p>`;
+
+    document.getElementById('app-content').innerHTML = `
+      <div class="card">
+        <div class="success-screen">
+          <div class="icon">✅</div>
+          ${successMsg}
+          ${isSupervisor ? `<button class="btn btn-primary" style="margin-top:20px;max-width:280px;" onclick="startSupervisorSearch()">Evaluate Someone Else / Evaluar a Alguien Más</button>` : isPeer ? `<button class="btn btn-primary" style="margin-top:20px;max-width:280px;" onclick="startPeerEval()">Evaluate Another Manager / Evaluar a Otro Gerente</button>` : ''}
+        </div>
+      </div>`;
+
+  } catch (err) {
+    console.error('Submit failed:', err);
+    errEl.textContent = 'Something went wrong submitting your evaluation. Please try again. / Algo salió mal al enviar tu evaluación. Intenta de nuevo.';
+    errEl.classList.add('show');
+    btn.disabled = false;
+    btn.textContent = isRated ? 'Submit Evaluation / Enviar Evaluación' : 'Submit Self-Assessment / Enviar Autoevaluación';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
