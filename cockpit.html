@@ -201,14 +201,26 @@
     </div>
 
     <div class="section" id="section-eval-results" style="display:none">
-      <div class="section-hdr"><h2>📊 Evaluation Results (current cycle)</h2></div>
-      <p style="font-size:12px;color:var(--mgray);margin-bottom:14px;">Final score = weighted average of the components that exist for each person, using the weights below. "Incomplete" means a weighted component is still missing (the score is then computed on what is available).</p>
-      <div style="overflow-x:auto">
-        <table>
-          <thead><tr><th>Person</th><th>Role</th><th>Store</th><th>KPIs</th><th>Behavior / Management</th><th>Leadership (reports)</th><th>Peers</th><th>Final</th><th>Status</th></tr></thead>
-          <tbody id="tbl-eval-results-body"><tr><td colspan="9" class="empty-state">Loading...</td></tr></tbody>
-        </table>
+      <div class="section-hdr"><h2>📊 Evaluation Progress &amp; Results <span id="prog-cycle" style="font-size:12px;color:var(--mgray);font-weight:400;"></span></h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-gold" onclick="progDownload('summary')">⬇ Summary CSV</button>
+          <button class="btn btn-gold" onclick="progDownload('detail')">⬇ Who-evaluates-whom CSV</button>
+          <button class="btn btn-ghost" onclick="loadEvalResults()">↻ Refresh</button>
+        </div>
       </div>
+      <div id="prog-cards" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+        <button class="btn btn-ghost prog-tab" data-tab="summary" onclick="progTab('summary')">Summary by person</button>
+        <button class="btn btn-ghost prog-tab" data-tab="detail" onclick="progTab('detail')">Who evaluates whom</button>
+        <button class="btn btn-ghost prog-tab" data-tab="feedback" onclick="progTab('feedback')">Upward feedback (anonymous)</button>
+        <span style="flex:1"></span>
+        <select id="prog-f-status" onchange="renderProg()" style="padding:7px;border:1px solid #ccc;border-radius:6px;font-size:13px"></select>
+        <select id="prog-f-band" onchange="renderProg()" style="padding:7px;border:1px solid #ccc;border-radius:6px;font-size:13px"></select>
+        <select id="prog-f-store" onchange="renderProg()" style="padding:7px;border:1px solid #ccc;border-radius:6px;font-size:13px"></select>
+        <input id="prog-f-q" oninput="renderProg()" placeholder="Search name…" style="padding:7px 9px;border:1px solid #ccc;border-radius:6px;font-size:13px;width:150px">
+      </div>
+      <p style="font-size:12px;color:var(--mgray);margin-bottom:10px;" id="prog-note"></p>
+      <div style="overflow-x:auto"><table><thead id="prog-head"></thead><tbody id="prog-body"><tr><td class="empty-state">Loading...</td></tr></tbody></table></div>
     </div>
 
     <div class="section" id="section-roster" style="display:none">
@@ -796,24 +808,138 @@ async function toggleRosterCycle(id, val) {
   catch (err) { alert('Error: ' + err.message); loadRoster(); }
 }
 
+/* ════════ EVALUATION PROGRESS & RESULTS ════════ */
+let PROG = { personas: [], detalle: [], feedback: [], ciclo: '' };
+let progTabCur = 'summary';
+const PROG_BANDS = [ // thresholds (score 0-100)
+  { key: 'excellent', min: 90, label: 'Excellent', cls: 'pill-green', ok: true },
+  { key: 'good', min: 80, label: 'Good', cls: 'pill-green', ok: true },
+  { key: 'meets', min: 70, label: 'Meets (approved)', cls: 'pill-gold', ok: true },
+  { key: 'needs', min: 60, label: 'Needs improvement (not approved)', cls: 'pill-red', ok: false },
+  { key: 'critical', min: -1, label: 'Critical', cls: 'pill-red', ok: false }
+];
+const PROG_STATUS = { completed: 'Completed', in_progress: 'In progress', not_started: 'Not started', awaiting: 'Awaiting sign-up', not_eligible: 'N/A – not eligible', not_cycle: 'Not in cycle', no_eval: 'No evaluator' };
+const PROG_STATUS_CLS = { completed: 'pill-green', in_progress: 'pill-gold', not_started: 'pill-gray', awaiting: 'pill-gray', not_eligible: 'pill-gray', not_cycle: 'pill-gray', no_eval: 'pill-gray' };
+const PROG_DET_STATUS = { completada: ['Completed', 'pill-green'], pendiente: ['Pending', 'pill-gold'], evaluado_no_registrado: ['Evaluated not registered', 'pill-gray'], evaluador_no_registrado: ['Evaluator not registered', 'pill-gray'], no_elegible: ['Not eligible', 'pill-gray'], no_en_ciclo: ['Not in cycle', 'pill-gray'] };
+const PROG_ROLE = { vendedor: 'Seller', manager: 'Manager', director: 'Director', staff: 'Staff' };
+const pesc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function progStatus(p) {
+  if (!p.en_ciclo) return 'not_cycle';
+  if (p.no_elegible) return 'not_eligible';
+  if (!p.esperadas) return 'no_eval';
+  if (p.hechas >= p.esperadas) return 'completed';
+  if (p.hechas > 0) return 'in_progress';
+  return p.registrado ? 'not_started' : 'awaiting';
+}
+function progBand(p) {
+  if (p.final === null || p.final === undefined || !p.hechas) return null;
+  const f = Number(p.final);
+  return PROG_BANDS.find(b => f >= b.min);
+}
+
 async function loadEvalResults() {
   const sec = document.getElementById('section-eval-results');
   if (!sec) return;
   if (!isSuperAdmin()) { sec.style.display = 'none'; return; }
   sec.style.display = '';
-  const body = document.getElementById('tbl-eval-results-body');
+  const body = document.getElementById('prog-body');
   try {
-    const rows = await sbFetch('rpc/evaluacion_resultado', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id }) });
-    if (!rows || !rows.length) { body.innerHTML = '<tr><td colspan="9" class="empty-state">No completed evaluations yet this cycle.</td></tr>'; return; }
-    const v = x => (x === null || x === undefined) ? '—' : Number(x).toFixed(0);
-    const roleName = { vendedor: 'Seller', manager: 'Store manager', director: 'Director' };
-    body.innerHTML = rows.map(r => `<tr><td><strong>${r.nombre}</strong></td><td>${roleName[r.rol_eval] || r.rol_eval}</td><td>${r.tienda || ''}</td>` +
-      `<td>${v(r.kpi)}</td><td>${v(r.conducta)}</td><td>${v(r.liderazgo)}${r.n_liderazgo ? ' <span style="color:var(--mgray);font-size:11px;">(n=' + r.n_liderazgo + (r.n_liderazgo < 3 ? ' ⚠️' : '') + ')</span>' : ''}</td>` +
-      `<td>${v(r.pares)}${r.n_pares ? ' <span style="color:var(--mgray);font-size:11px;">(n=' + r.n_pares + ')</span>' : ''}</td>` +
-      `<td><strong>${v(r.final_score)}</strong></td><td>${r.completo ? '<span class="pill pill-green">Complete</span>' : '<span class="pill pill-gray">Incomplete</span>'}</td></tr>`).join('');
+    const r = await sbFetch('rpc/evaluacion_progreso', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id }) });
+    if (!r || r.error) throw new Error((r && r.error) || 'no data');
+    PROG = r;
+    PROG.personas.forEach(p => { p._status = progStatus(p); p._band = progBand(p); });
+    document.getElementById('prog-cycle').textContent = r.ciclo ? '· ' + r.ciclo : '';
+    const stores = [...new Set(PROG.personas.map(p => p.ubicacion).filter(Boolean))].sort();
+    document.getElementById('prog-f-status').innerHTML = '<option value="">All statuses</option>' + Object.keys(PROG_STATUS).map(k => `<option value="${k}">${PROG_STATUS[k]}</option>`).join('');
+    document.getElementById('prog-f-band').innerHTML = '<option value="">All results</option><option value="approved">Approved (≥70)</option><option value="failed">Not approved (<70)</option>' + PROG_BANDS.map(b => `<option value="${b.key}">${b.label}</option>`).join('');
+    document.getElementById('prog-f-store').innerHTML = '<option value="">All locations</option>' + stores.map(x => `<option>${pesc(x)}</option>`).join('');
+    renderProgCards();
+    progTab(progTabCur);
   } catch (err) {
-    body.innerHTML = `<tr><td colspan="9" class="empty-state">Could not load: ${err.message}</td></tr>`;
+    body.innerHTML = `<tr><td class="empty-state">Could not load: ${pesc(err.message)}</td></tr>`;
   }
+}
+
+function renderProgCards() {
+  const act = PROG.personas.filter(p => p.en_ciclo && !p.no_elegible);
+  const n = k => act.filter(p => p._status === k).length;
+  const scored = act.filter(p => p._band);
+  const avg = scored.length ? (scored.reduce((a, p) => a + Number(p.final), 0) / scored.length).toFixed(1) : '—';
+  const appr = scored.filter(p => p._band.ok).length, fail = scored.filter(p => !p._band.ok).length, crit = scored.filter(p => p._band.key === 'critical').length;
+  const exp = PROG.detalle.filter(d => !['no_en_ciclo', 'no_elegible'].includes(d.estado));
+  const done = exp.filter(d => d.estado === 'completada').length;
+  const card = (t, v, sub, color) => `<div style="flex:1;min-width:130px;background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:10px 12px"><div style="font-size:11px;color:var(--mgray);text-transform:uppercase;letter-spacing:.5px">${t}</div><div style="font-size:24px;font-weight:800;color:${color || 'inherit'}">${v}</div><div style="font-size:11px;color:var(--mgray)">${sub || ''}</div></div>`;
+  document.getElementById('prog-cards').innerHTML =
+    card('Evaluations done', done + '/' + exp.length, exp.length ? Math.round(done / exp.length * 100) + '% of expected' : '') +
+    card('Completed', n('completed'), 'people fully evaluated', 'var(--green)') +
+    card('In progress', n('in_progress'), '', 'var(--gold)') +
+    card('Not started', n('not_started'), 'registered, no evals yet') +
+    card('Awaiting sign-up', n('awaiting'), 'not registered yet') +
+    card('Avg score', avg, scored.length + ' scored') +
+    card('Approved', appr, 'score ≥ 70', 'var(--green)') +
+    card('Not approved', fail, crit + ' critical (<60)', fail ? 'var(--red)' : 'inherit');
+}
+
+function progTab(t) {
+  progTabCur = t;
+  document.querySelectorAll('.prog-tab').forEach(b => { b.style.background = b.dataset.tab === t ? 'var(--gold)' : ''; b.style.color = b.dataset.tab === t ? '#fff' : ''; });
+  renderProg();
+}
+
+function progFiltered() {
+  const fs = document.getElementById('prog-f-status').value, fb = document.getElementById('prog-f-band').value, fl = document.getElementById('prog-f-store').value, q = document.getElementById('prog-f-q').value.trim().toLowerCase();
+  return PROG.personas.filter(p => (!fs || p._status === fs) && (!fl || p.ubicacion === fl) && (!q || p.nombre.toLowerCase().includes(q)) &&
+    (!fb || (fb === 'approved' ? (p._band && p._band.ok) : fb === 'failed' ? (p._band && !p._band.ok) : (p._band && p._band.key === fb))));
+}
+
+function renderProg() {
+  const head = document.getElementById('prog-head'), body = document.getElementById('prog-body'), note = document.getElementById('prog-note');
+  const v = x => (x === null || x === undefined) ? '—' : Number(x).toFixed(0);
+  const q = document.getElementById('prog-f-q').value.trim().toLowerCase(), fl = document.getElementById('prog-f-store').value, fs = document.getElementById('prog-f-status').value;
+  if (progTabCur === 'summary') {
+    note.textContent = 'Final score = weighted average of the components available (weights in setup below). Provisional until all expected evaluations are completed. Bands: Excellent ≥90 · Good 80–89 · Meets 70–79 (approved) · Needs improvement 60–69 · Critical <60.';
+    head.innerHTML = '<tr><th>Person</th><th>Role</th><th>Location</th><th>Progress</th><th>Status</th><th>KPIs</th><th>Behavior</th><th>Leadership</th><th>Peers</th><th>Final</th><th>Result</th></tr>';
+    const rows = progFiltered();
+    body.innerHTML = rows.length ? rows.map(p => {
+      const pct = p.esperadas ? Math.round(p.hechas / p.esperadas * 100) : 0;
+      const b = p._band;
+      return `<tr><td><strong>${pesc(p.nombre)}</strong><div style="font-size:11px;color:var(--mgray)">${pesc(p.puesto)}</div></td><td>${PROG_ROLE[p.rol_eval] || p.rol_eval}</td><td>${pesc(p.ubicacion)}</td>` +
+        `<td style="min-width:110px"><div style="background:#eee;border-radius:6px;height:8px;overflow:hidden"><div style="width:${pct}%;height:8px;background:var(--green)"></div></div><div style="font-size:11px;color:var(--mgray)">${p.hechas}/${p.esperadas}</div></td>` +
+        `<td><span class="pill ${PROG_STATUS_CLS[p._status]}">${PROG_STATUS[p._status]}</span></td><td>${v(p.kpi)}</td><td>${v(p.conducta)}</td>` +
+        `<td>${v(p.liderazgo)}${p.n_liderazgo ? ` <span style="font-size:11px;color:var(--mgray)">(n=${p.n_liderazgo}${p.n_liderazgo < 3 ? ' ⚠️' : ''})</span>` : ''}</td><td>${v(p.pares)}${p.n_pares ? ` <span style="font-size:11px;color:var(--mgray)">(n=${p.n_pares})</span>` : ''}</td>` +
+        `<td><strong>${v(p.final)}</strong></td><td>${b ? `<span class="pill ${b.cls}">${b.label}</span>${p._status !== 'completed' ? ' <span style="font-size:11px;color:var(--mgray)">provisional</span>' : ''}` : '—'}</td></tr>`;
+    }).join('') : '<tr><td colspan="11" class="empty-state">Nothing matches these filters.</td></tr>';
+  } else if (progTabCur === 'detail') {
+    note.textContent = 'Every expected evaluation: boss → report (supervisor) and manager ↔ manager (peer). "Not registered" means that person has not signed up yet; bosses not registered are covered by the Super Admin.';
+    head.innerHTML = '<tr><th>Evaluator</th><th></th><th>Evaluated</th><th>Role</th><th>Location</th><th>Type</th><th>Status</th><th>Date</th><th>Score</th></tr>';
+    const stKey = { completed: 'completada', not_started: 'pendiente', in_progress: 'pendiente', awaiting: 'evaluado_no_registrado', not_eligible: 'no_elegible', not_cycle: 'no_en_ciclo' };
+    const rows = PROG.detalle.filter(d => (!fl || d.ubicacion === fl) && (!q || d.evaluado.toLowerCase().includes(q) || d.evaluador.toLowerCase().includes(q)) && (!fs || d.estado === stKey[fs]));
+    body.innerHTML = rows.length ? rows.map(d => { const st = PROG_DET_STATUS[d.estado] || [d.estado, 'pill-gray'];
+      return `<tr><td>${pesc(d.evaluador)}</td><td>→</td><td><strong>${pesc(d.evaluado)}</strong></td><td>${PROG_ROLE[d.evaluado_rol] || d.evaluado_rol}</td><td>${pesc(d.ubicacion)}</td><td>${d.tipo === 'par' ? 'Peer' : 'Supervisor'}</td><td><span class="pill ${st[1]}">${st[0]}</span></td><td>${d.fecha ? new Date(d.fecha).toLocaleDateString() : ''}</td><td>${v(d.score)}</td></tr>`; }).join('') : '<tr><td colspan="9" class="empty-state">Nothing matches these filters.</td></tr>';
+  } else {
+    note.textContent = 'Anonymous upward feedback from reports to their boss. Only counts are shown here; averages appear on a boss only after 3+ responses so nobody can be identified.';
+    head.innerHTML = '<tr><th>Boss</th><th>Location</th><th>Responses received</th><th>Registered reports (expected)</th><th>Total reports in cycle</th><th>Status</th></tr>';
+    const rows = PROG.feedback.filter(f => !q || f.jefe.toLowerCase().includes(q));
+    body.innerHTML = rows.length ? rows.map(f => { const st = f.recibidas >= 3 ? ['Results visible', 'pill-green'] : f.recibidas > 0 ? ['Collecting (<3, hidden)', 'pill-gold'] : ['No responses', 'pill-gray'];
+      return `<tr><td><strong>${pesc(f.jefe)}</strong></td><td>${pesc(f.ubicacion)}</td><td>${f.recibidas}</td><td>${f.esperadas}</td><td>${f.reportes_total}</td><td><span class="pill ${st[1]}">${st[0]}</span></td></tr>`; }).join('') : '<tr><td colspan="6" class="empty-state">No data.</td></tr>';
+  }
+}
+
+function progDownload(kind) {
+  const csv = rows => '﻿' + rows.map(r => r.map(c => { c = c == null ? '' : String(c); return /[",\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c; }).join(',')).join('\n');
+  let rows;
+  if (kind === 'summary') {
+    rows = [['Person', 'Position', 'Role', 'Location', 'Evaluations done', 'Evaluations expected', 'Status', 'KPIs', 'Behavior', 'Leadership', 'Leadership n', 'Peers', 'Peers n', 'Final score', 'Result', 'Provisional']];
+    progFiltered().forEach(p => rows.push([p.nombre, p.puesto, PROG_ROLE[p.rol_eval] || p.rol_eval, p.ubicacion, p.hechas, p.esperadas, PROG_STATUS[p._status], p.kpi, p.conducta, p.liderazgo, p.n_liderazgo, p.pares, p.n_pares, p.final, p._band ? p._band.label : '', p._band && p._status !== 'completed' ? 'yes' : '']));
+  } else {
+    rows = [['Evaluator', 'Evaluated', 'Evaluated role', 'Location', 'Type', 'Status', 'Date', 'Score']];
+    PROG.detalle.forEach(d => rows.push([d.evaluador, d.evaluado, PROG_ROLE[d.evaluado_rol] || d.evaluado_rol, d.ubicacion, d.tipo === 'par' ? 'Peer' : 'Supervisor', (PROG_DET_STATUS[d.estado] || [d.estado])[0], d.fecha ? d.fecha.slice(0, 10) : '', d.score]));
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv(rows)], { type: 'text/csv;charset=utf-8' }));
+  a.download = `DHC_evaluation_${kind}_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
 }
 
 /* ════════ EVALUATION SETUP (weights & KPIs by role) ════════ */
