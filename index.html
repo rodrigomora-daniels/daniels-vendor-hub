@@ -1027,7 +1027,11 @@ function switchTab(tabName) {
 }
 
 function navigateToTool(toolName) {
-  window.location.href = TOOL_URLS[toolName];
+  let url = TOOL_URLS[toolName];
+  if (toolName === 'leadsource' && session && session.empleado) {
+    url += `?emp=${encodeURIComponent(session.empleado.id)}&name=${encodeURIComponent(session.empleado.nombre_completo || '')}`;
+  }
+  window.location.href = url;
 }
 
 function goToExam(tier) {

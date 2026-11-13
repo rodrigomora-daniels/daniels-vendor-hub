@@ -216,16 +216,15 @@
 /* ════════════════════════════════════════════════════════════
    SUPABASE CONNECTION — fill in once project is created
    ════════════════════════════════════════════════════════════ */
-const SUPABASE_URL = 'YOUR_SUPABASE_URL_HERE';      // e.g. https://xxxxx.supabase.co
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY_HERE';
+const SUPABASE_URL = 'https://ecfxeebhtgkbsdeuiueb.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_oRxEOMLizp1kjlsRjWWaxg_muaaMHFt';
+
+// Who is submitting (passed by the hub: lead form is opened with ?emp=...&name=...)
+const QS = new URLSearchParams(location.search);
+const EMP_NAME = (QS.get('name') || '').trim() || 'Unknown';
 
 // Lightweight direct REST call - no SDK needed, keeps file dependency-free
 async function saveLead(record) {
-  if (SUPABASE_URL.includes('YOUR_SUPABASE')) {
-    console.warn('Supabase not configured yet - saving locally only.');
-    saveLocalFallback(record);
-    return { ok: true, local: true };
-  }
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/customer_source_log`, {
       method: 'POST',
@@ -237,22 +236,40 @@ async function saveLead(record) {
       },
       body: JSON.stringify(record)
     });
-    if (!res.ok) throw new Error(`Supabase error: ${res.status}`);
+    if (!res.ok) throw new Error(`Supabase error: ${res.status} ${await res.text()}`);
     return { ok: true, local: false };
   } catch (err) {
-    console.error('Supabase save failed, falling back to local storage:', err);
+    console.error('Supabase save failed, queued on this device:', err);
     saveLocalFallback(record);
     return { ok: true, local: true, error: err.message };
   }
 }
 
+// Retry anything that was queued on this device (flaky wifi) the next time the form opens or saves.
+async function flushQueue() {
+  let q = [];
+  try { q = JSON.parse(localStorage.getItem('lead_queue') || '[]'); } catch (e) { q = []; }
+  if (!q.length) return;
+  const left = [];
+  for (const rec of q) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/customer_source_log`, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, Prefer: 'return=minimal' }, body: JSON.stringify(rec) });
+      if (!res.ok) left.push(rec);
+    } catch (e) { left.push(rec); }
+  }
+  try { localStorage.setItem('lead_queue', JSON.stringify(left)); } catch (e) {}
+}
+window.addEventListener('load', flushQueue);
+
 // Fallback: if offline or not yet configured, queue locally so nothing is lost.
 // Uses in-memory storage for this session (no browser storage per artifact rules);
 // for the production GitHub-hosted version this queues in a JS array you can export.
-let localQueue = [];
 function saveLocalFallback(record) {
-  localQueue.push(record);
-  console.log('Queued locally (not yet synced):', record, '| Queue size:', localQueue.length);
+  try {
+    const q = JSON.parse(localStorage.getItem('lead_queue') || '[]');
+    q.push(record);
+    localStorage.setItem('lead_queue', JSON.stringify(q));
+  } catch (e) { console.warn('Could not queue locally', e); }
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -294,17 +311,18 @@ async function submitForm() {
   state.otherNote = document.getElementById('other-text').value.trim();
 
   const record = {
+    employee_name: EMP_NAME,
     source: state.source,
     other_note: state.source === 'Other' ? state.otherNote : null,
     submitted_at: new Date().toISOString()
   };
 
-  await saveLead(record);
+  const result = await saveLead(record);
 
   // Populate success screen
   document.getElementById('sum-source').textContent = state.source === 'Other' && state.otherNote
     ? `Other: ${state.otherNote}` : state.source;
-  document.getElementById('sum-date').textContent = formatToday();
+  document.getElementById('sum-date').textContent = formatToday() + (result && result.local ? '  ·  ⚠️ No connection — saved on this tablet, will sync automatically' : '');
 
   document.getElementById('screen-source').classList.remove('active');
   document.getElementById('screen-success').classList.add('active');
