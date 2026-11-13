@@ -346,7 +346,9 @@ async function renderModePicker() {
     } catch (err) { console.warn('context', err); myContext = { tiene_reportes: false, n_jefes: 0, n_pares: 0 }; }
   }
   const c = myContext;
-  content.innerHTML = `
+  let prog = null;
+  try { prog = await sbFetch('rpc/evaluacion_mi_progreso', { method: 'POST', body: JSON.stringify({ p_empleado_id: loggedInEmployee.id }) }); } catch (err) { console.warn('progress', err); }
+  content.innerHTML = renderMyProgress(prog) + `
     <div class="card">
       <h2>What would you like to do? / ¿Qué te gustaría hacer?</h2>
       <div class="desc">${activeCycle.nombre}</div>
@@ -372,6 +374,27 @@ async function renderModePicker() {
     </div>`;
 }
 
+
+function renderMyProgress(p) {
+  if (!p || !p.ciclo || !p.tareas) return '';
+  const T = p.tareas, req = T.filter(t => t.estado === 'hecho' || t.estado === 'pendiente');
+  const done = req.filter(t => t.estado === 'hecho').length, pend = req.filter(t => t.estado === 'pendiente');
+  const blocked = T.filter(t => t.estado === 'no_registrado').length;
+  const d = p.dias_restantes, over = d < 0, col = over ? '#C0392B' : d <= 7 ? '#B8860B' : '#27AE60';
+  const fmt = x => new Date(x + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  const pct = req.length ? Math.round(done / req.length * 100) : 100;
+  const label = { self: 'Self-assessment / Autoevaluación', supervisor: 'Team member / Equipo', par: 'Fellow manager / Gerente colega', feedback: 'Anonymous feedback to manager / Comentarios a tu jefe' };
+  const list = pend.length ? pend.map(t => `<li>${label[t.tipo]}: <strong>${t.tipo === 'self' ? 'yours' : t.nombre}</strong></li>`).join('') : '';
+  return `<div class="card" style="border-left:5px solid ${col}">
+    <h2>My Progress / Mi Progreso</h2>
+    <div class="desc">${p.ciclo} · ${fmt(p.inicio)} → ${fmt(p.cierre)}</div>
+    <div style="font-size:14px;font-weight:700;color:${col};margin:6px 0">${over ? 'Overdue by ' + (-d) + ' day(s) / Vencido hace ' + (-d) + ' día(s)' : 'Due ' + fmt(p.cierre) + ' — ' + d + ' day(s) left / ' + d + ' día(s) restantes'}</div>
+    <div style="background:#eee;border-radius:8px;height:10px;overflow:hidden"><div style="width:${pct}%;height:10px;background:#27AE60"></div></div>
+    <div style="font-size:13px;margin-top:6px">${done} of ${req.length} completed / ${done} de ${req.length} completadas</div>
+    ${pend.length ? `<ul style="font-size:13px;margin:8px 0 0 18px;line-height:1.6">${list}</ul>` : '<div style="font-size:13px;margin-top:6px">✅ You are all caught up. / Estás al corriente.</div>'}
+    ${blocked ? `<div style="font-size:12px;color:#777;margin-top:8px">${blocked} person(s) have not registered yet; you can evaluate them once they sign up. / ${blocked} persona(s) aún no se registran; podrás evaluarlas cuando lo hagan.</div>` : ''}
+  </div>`;
+}
 
 /* ════════ ANONYMOUS UPWARD FEEDBACK (reports → their manager) — closed 1-5 behavior scales ════════ */
 const MANAGER_FEEDBACK_QUESTIONS = [

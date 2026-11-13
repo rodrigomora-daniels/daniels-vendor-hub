@@ -208,9 +208,11 @@
           <button class="btn btn-ghost" onclick="loadEvalResults()">↻ Refresh</button>
         </div>
       </div>
+      <div id="prog-due" style="margin-bottom:12px"></div>
       <div id="prog-cards" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
         <button class="btn btn-ghost prog-tab" data-tab="summary" onclick="progTab('summary')">Summary by person</button>
+        <button class="btn btn-ghost prog-tab" data-tab="evaluator" onclick="progTab('evaluator')">By evaluator (who owes what)</button>
         <button class="btn btn-ghost prog-tab" data-tab="detail" onclick="progTab('detail')">Who evaluates whom</button>
         <button class="btn btn-ghost prog-tab" data-tab="feedback" onclick="progTab('feedback')">Upward feedback (anonymous)</button>
         <span style="flex:1"></span>
@@ -841,7 +843,7 @@ function progBand(p) {
 async function loadEvalResults() {
   const sec = document.getElementById('section-eval-results');
   if (!sec) return;
-  if (!isSuperAdmin()) { sec.style.display = 'none'; return; }
+  if (!(isSuperAdmin() || (admin && admin.nivel_admin === 'admin_secundario'))) { sec.style.display = 'none'; return; }
   sec.style.display = '';
   const body = document.getElementById('prog-body');
   try {
@@ -854,11 +856,33 @@ async function loadEvalResults() {
     document.getElementById('prog-f-status').innerHTML = '<option value="">All statuses</option>' + Object.keys(PROG_STATUS).map(k => `<option value="${k}">${PROG_STATUS[k]}</option>`).join('');
     document.getElementById('prog-f-band').innerHTML = '<option value="">All results</option><option value="approved">Approved (≥70)</option><option value="failed">Not approved (<70)</option>' + PROG_BANDS.map(b => `<option value="${b.key}">${b.label}</option>`).join('');
     document.getElementById('prog-f-store').innerHTML = '<option value="">All locations</option>' + stores.map(x => `<option>${pesc(x)}</option>`).join('');
+    renderProgDue();
     renderProgCards();
     progTab(progTabCur);
   } catch (err) {
     body.innerHTML = `<tr><td class="empty-state">Could not load: ${pesc(err.message)}</td></tr>`;
   }
+}
+
+function renderProgDue() {
+  const el = document.getElementById('prog-due');
+  const d = PROG.dias_restantes, over = d !== null && d < 0;
+  const col = over ? 'var(--red)' : d <= 7 ? 'var(--gold)' : 'var(--green)';
+  const fmt = x => x ? new Date(x + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+  el.innerHTML = `<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:#fff;border:1px solid #e5e5e5;border-left:5px solid ${col};border-radius:10px;padding:10px 14px">
+    <div><div style="font-size:11px;color:var(--mgray);text-transform:uppercase">Evaluation period</div><div style="font-weight:700">${fmt(PROG.inicio)} → ${fmt(PROG.cierre)}</div></div>
+    <div><div style="font-size:11px;color:var(--mgray);text-transform:uppercase">Due date</div><div style="font-weight:800;color:${col}">${over ? 'Overdue by ' + (-d) + ' day(s)' : d + ' day(s) left'}</div></div>
+    <div style="flex:1;font-size:12px;color:var(--mgray)">${PROG.alcance === 'team' ? 'Showing only the people in your reporting line.' : 'Showing everyone in the company.'}</div>
+    ${isSuperAdmin() ? '<button class="btn btn-ghost" onclick="editCycleDates()">✎ Edit period</button>' : ''}
+  </div>`;
+}
+async function editCycleDates() {
+  const ini = prompt('Period start (YYYY-MM-DD):', PROG.inicio || ''); if (!ini) return;
+  const fin = prompt('Due date / period end (YYYY-MM-DD):', PROG.cierre || ''); if (!fin) return;
+  try {
+    const r = await sbFetch('rpc/admin_ciclo_set_fechas', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id, p_inicio: ini, p_cierre: fin }) });
+    if (r && r.success) loadEvalResults(); else alert((r && r.message) || 'Could not save');
+  } catch (err) { alert('Error: ' + err.message); }
 }
 
 function renderProgCards() {
@@ -910,6 +934,18 @@ function renderProg() {
         `<td>${v(p.liderazgo)}${p.n_liderazgo ? ` <span style="font-size:11px;color:var(--mgray)">(n=${p.n_liderazgo}${p.n_liderazgo < 3 ? ' ⚠️' : ''})</span>` : ''}</td><td>${v(p.pares)}${p.n_pares ? ` <span style="font-size:11px;color:var(--mgray)">(n=${p.n_pares})</span>` : ''}</td>` +
         `<td><strong>${v(p.final)}</strong></td><td>${b ? `<span class="pill ${b.cls}">${b.label}</span>${p._status !== 'completed' ? ' <span style="font-size:11px;color:var(--mgray)">provisional</span>' : ''}` : '—'}</td></tr>`;
     }).join('') : '<tr><td colspan="11" class="empty-state">Nothing matches these filters.</td></tr>';
+  } else if (progTabCur === 'evaluator') {
+    note.textContent = 'Everyone who has evaluations to complete this cycle: done vs pending. Chase the ones with pending items before the due date. People not yet registered cannot evaluate; their bosses cover them where noted.';
+    head.innerHTML = '<tr><th>Evaluator</th><th>Progress</th><th>Done</th><th>Pending</th><th>Blocked (not registered)</th><th>Pending for…</th><th>Status</th></tr>';
+    const m = {};
+    PROG.detalle.forEach(d => { if (['no_en_ciclo', 'no_elegible'].includes(d.estado)) return; const e = m[d.evaluador] || (m[d.evaluador] = { n: d.evaluador, reg: d.evaluador_registrado, done: 0, pend: 0, blk: 0, who: [] });
+      if (d.estado === 'completada') e.done++; else if (d.estado === 'pendiente') { e.pend++; e.who.push(d.evaluado); } else e.blk++; });
+    let rows = Object.values(m).filter(e => !q || e.n.toLowerCase().includes(q));
+    if (fs === 'completed') rows = rows.filter(e => e.pend === 0 && e.done > 0); else if (fs === 'not_started') rows = rows.filter(e => e.done === 0 && e.pend > 0); else if (fs === 'in_progress') rows = rows.filter(e => e.done > 0 && e.pend > 0); else if (fs === 'awaiting') rows = rows.filter(e => !e.reg);
+    rows.sort((a, b) => b.pend - a.pend || a.n.localeCompare(b.n));
+    body.innerHTML = rows.length ? rows.map(e => { const tot = e.done + e.pend, pct = tot ? Math.round(e.done / tot * 100) : 0;
+      const st = !e.reg ? ['Awaiting sign-up', 'pill-gray'] : e.pend === 0 && e.done > 0 ? ['Completed', 'pill-green'] : e.done > 0 ? ['In progress', 'pill-gold'] : e.pend > 0 ? ['Not started', 'pill-red'] : ['Nothing due', 'pill-gray'];
+      return `<tr><td><strong>${pesc(e.n)}</strong></td><td style="min-width:110px"><div style="background:#eee;border-radius:6px;height:8px;overflow:hidden"><div style="width:${pct}%;height:8px;background:var(--green)"></div></div></td><td>${e.done}</td><td>${e.pend}</td><td>${e.blk}</td><td style="font-size:12px;color:var(--mgray)">${pesc(e.who.slice(0, 4).join(', '))}${e.who.length > 4 ? ' +' + (e.who.length - 4) : ''}</td><td><span class="pill ${st[1]}">${st[0]}</span></td></tr>`; }).join('') : '<tr><td colspan="7" class="empty-state">Nothing matches these filters.</td></tr>';
   } else if (progTabCur === 'detail') {
     note.textContent = 'Every expected evaluation: boss → report (supervisor) and manager ↔ manager (peer). "Not registered" means that person has not signed up yet; bosses not registered are covered by the Super Admin.';
     head.innerHTML = '<tr><th>Evaluator</th><th></th><th>Evaluated</th><th>Role</th><th>Location</th><th>Type</th><th>Status</th><th>Date</th><th>Score</th></tr>';
