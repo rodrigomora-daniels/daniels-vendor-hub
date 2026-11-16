@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Daniels Workspace — Org Chart</title>
 <style>
-  :root{--navy:#1B3A6B;--gold:#C8922A;--ltblue:#D6E4F7;--green:#27AE60;--mgray:#6B6B6B;--purple:#7B5EA7;--ind:#00B050;--ted:#8B4513;--karen:#C2185B;}
+  :root{--navy:#1B3A6B;--gold:#C8922A;--ltblue:#D6E4F7;--green:#27AE60;--mgray:#6B6B6B;--purple:#7B5EA7;--ind:#00B050;--ted:#8B4513;--karen:#C2185B;--reb:#00838F;}
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:Arial,sans-serif;background:#f0f2f5;min-height:100vh;}
   .top-bar{background:var(--navy);border-bottom:4px solid var(--gold);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;}
@@ -104,6 +104,7 @@
   .oanchor{height:2px;width:2px;margin:0 auto;}
   .bn.go{cursor:pointer;border:1px solid currentColor;} .bn.go:hover{filter:brightness(.92);}
   .olb{position:absolute;z-index:1;pointer-events:none;}
+  .bn.rb{background:#dff1f3;color:var(--reb);}
   .bn.t{background:#f3e6dc;color:var(--ted);} .bn.k{background:#fbe3ec;color:var(--karen);}
   .oblock .line-h{margin:0 0 8px 6px;}
   .oblock.l-rod{--lc:#1B3A6B;border-top:4px solid #1B3A6B;} .oblock.l-ted{--lc:#8B4513;border-top:4px solid #8B4513;} .oblock.l-karen{--lc:#C2185B;border-top:4px solid #C2185B;}
@@ -129,6 +130,7 @@
   .olinkv{position:absolute;width:0;border-left:3px dashed var(--ind);z-index:2;pointer-events:none;}
   .otree li:only-child::before,.otree li:only-child::after{display:none;}
   .otree li:only-child{padding-top:0;}
+  .otree li.fdrop:only-child::after{display:block;top:0;left:50%;right:auto;width:0;border:0;border-left:2px solid var(--lc,#b9c6dc);border-radius:0;height:var(--drop);}
   .otree li:first-child::before,.otree li:last-child::after{border:0 none;}
   .otree li:last-child::before{border-right:2px solid var(--lc,#b9c6dc);border-radius:0 6px 0 0;}
   .otree li:first-child::after{border-radius:6px 0 0 0;}
@@ -282,17 +284,18 @@ function peerHtml(key, depth) {
 let EXECIDS = new Set(), EX = {};
 function render() {
   const find = re => NODES.find(n => re.test(n.nombre));
-  EX = { ted: find(/^ted\b/i), karen: find(/^karen\b/i), rod: find(/^rodrigo\b/i) };
+  EX = { ted: find(/^ted\b/i), karen: find(/^karen\b/i), rod: find(/^rodrigo\b/i), reb: find(/^rebecca\b/i) };
   EXECIDS = new Set(Object.values(EX).filter(Boolean).map(e => e.id));
   const { ted, karen, rod } = EX;
   document.getElementById('top').innerHTML = `<div class="keys">
       <span><i style="background:var(--gold)"></i>Board</span><span><i style="background:var(--ted)"></i>Ted (CEO) line</span>
-      <span><i style="background:var(--navy)"></i>Rodrigo line</span><span><i style="background:var(--karen)"></i>Karen line</span>
+      <span><i style="background:var(--navy)"></i>Rodrigo line</span><span><i style="background:var(--karen)"></i>Karen line</span>${EX.reb && KIDS[EX.reb.id].length ? '<span><i style="background:var(--reb)"></i>Rebecca line</span>' : ''}
       <span style="font-weight:700;color:#007a38"><svg width="34" height="8"><line x1="0" y1="4" x2="34" y2="4" stroke="#00B050" stroke-width="3" stroke-dasharray="6,4"/></svg> Dashed = indirect report</span></div>
     <div class="zoomtip"><span class="zt-i">🔍</span><div><b>Click any box with a +</b> to <b>zoom in</b> on that team.<br><b>Zoom out</b> with the big button on top, or press <kbd>Esc</kbd>. When zoomed in, <b>scroll up</b> to see who they report to.</div></div>`;
   const boardBox = `<div class="onode boardbox leaf" data-floor="0"><img class="bd-logo" src="icons/daniels-logo.png" alt="Daniel's Home Center"><div class="peer-h2">Board — Rosenberg family</div>
-    <div class="bnrow"><span class="bn">Dani Rosenberg</span><span class="bn">Rebecca Rosenberg</span>${ted ? `<span class="bn t go" data-chip="ted" onclick="zoomTo('e:${ted.id}', this)">${esc(ted.nombre)} · CEO ＋</span>` : ''}${karen ? `<span class="bn k go" data-chip="karen" onclick="zoomTo('e:${karen.id}', this)">${esc(karen.nombre)} · CMO ＋</span>` : ''}</div></div>`;
-  let tedLi = '', karenLi = '';
+    <div class="bnrow"><span class="bn">Dani Rosenberg</span>${EX.reb && KIDS[EX.reb.id].length ? `<span class="bn rb go" data-chip="reb" onclick="zoomTo('e:${EX.reb.id}', this)">Rebecca Rosenberg ＋</span>` : '<span class="bn">Rebecca Rosenberg</span>'}${ted ? `<span class="bn t go" data-chip="ted" onclick="zoomTo('e:${ted.id}', this)">${esc(ted.nombre)} · CEO ＋</span>` : ''}${karen ? `<span class="bn k go" data-chip="karen" onclick="zoomTo('e:${karen.id}', this)">${esc(karen.nombre)} · CMO ＋</span>` : ''}</div></div>`;
+  let tedLi = '', karenLi = '', rebLi = '';
+  if (EX.reb && KIDS[EX.reb.id].length) rebLi = `<li class="rebli" style="--lc:transparent"><div class="oanchor" data-floor="1" data-anchor="reb"></div>${oUl(oItems('e:' + EX.reb.id, KIDS[EX.reb.id]), '#00838F')}</li>`;
   if (ted) {
     let items = oItems('e:' + ted.id, KIDS[ted.id]);
     // put Rodrigo between the people who also report to him, so the dashed 2nd lines are short and clean
@@ -309,7 +312,7 @@ function render() {
     tedLi = `<li class="tedli" style="--lc:transparent"><div class="oanchor" data-floor="1" data-anchor="ted"></div>${oUl(items, '#8B4513', true)}</li>`;
   }
   if (karen) karenLi = `<li style="--lc:transparent"><div class="oanchor" data-floor="1" data-anchor="karen"></div>${oUl(oItems('e:' + karen.id, KIDS[karen.id]), '#C2185B')}</li>`;
-  const inner = `<ul><li>${boardBox}<ul style="--lc:transparent">${tedLi}${karenLi}</ul></li></ul>`;
+  const inner = `<ul><li>${boardBox}<ul style="--lc:transparent">${rebLi}${tedLi}${karenLi}</ul></li></ul>`;
   const headcount = NODES.filter(n => !/rosenberg/i.test(n.nombre)).length;
   document.getElementById('tree').innerHTML = `<div class="oblock"><div class="hcount"><b>${headcount}</b><span>employees<br>(excl. Board)</span></div><div class="ofit"><div class="otree">${inner}</div></div></div>`;
   fitChart();
@@ -331,9 +334,9 @@ function drawLinks(fit) {
   fit.querySelectorAll('.olink,.olinkv,.olb').forEach(e => e.remove());
   // Ted and Karen stay on the Board box; their reporting lines drop straight from their names
   const bb = fit.querySelector('.boardbox');
-  if (bb) ['ted', 'karen'].forEach(k => {
+  if (bb) ['reb', 'ted', 'karen'].forEach(k => {
     const chip = bb.querySelector(`[data-chip="${k}"]`), an = fit.querySelector(`[data-anchor="${k}"]`); if (!chip || !an) return;
-    const col = k === 'ted' ? '#8B4513' : '#C2185B', pc = posIn(chip, fit), pa = posIn(an, fit), pb = posIn(bb, fit);
+    const col = k === 'ted' ? '#8B4513' : k === 'reb' ? '#00838F' : '#C2185B', pc = posIn(chip, fit), pa = posIn(an, fit), pb = posIn(bb, fit);
     const cx = pc.x + chip.offsetWidth / 2, cy = pc.y + chip.offsetHeight, ax = pa.x + an.offsetWidth / 2, ay = pa.y, my = pb.y + bb.offsetHeight + (ay - pb.y - bb.offsetHeight) / 2;
     const seg = (l, t, w, h) => { const d = document.createElement('div'); d.className = 'olb'; d.style.cssText = `left:${l}px;top:${t}px;width:${w}px;height:${h}px;background:${col}`; fit.appendChild(d); };
     seg(cx - 1, cy, 2, Math.max(0, my - cy)); seg(Math.min(cx, ax) - 1, my - 1, Math.abs(ax - cx) + 2, 2); seg(ax - 1, my, 2, Math.max(0, ay - my));
@@ -343,7 +346,8 @@ function drawLinks(fit) {
   if (!rodBox || !tedUl) return;
   // dashed indirect lines from Rodrigo to Ted's other direct reports (direct reports hang from his box in solid)
   const pr = posIn(rodBox, fit), rMid = pr.y + rodBox.offsetHeight / 2;
-  const targets = [...tedUl.children].map(li => li.querySelector(':scope > .onode[data-id]')).filter(el => el && el !== rodBox && !(EX.karen && (BY[el.dataset.id].also || []).includes(EX.karen.id)));
+  const rebUl = fit.querySelector('li.rebli > ul');
+  const targets = [...tedUl.children, ...(rebUl ? rebUl.children : [])].map(li => li.querySelector(':scope > .onode[data-id]')).filter(el => el && el !== rodBox && !(EX.karen && (BY[el.dataset.id].also || []).includes(EX.karen.id)));
   const sides = { left: [], right: [] };
   targets.forEach(a => {
     const pa = posIn(a, fit); if (pa.y <= rMid) return;
@@ -369,7 +373,7 @@ let _FL = {};
 function floorOf(id) {
   if (_FL[id] != null) return _FL[id];
   const n = BY[id]; let f;
-  if (EX.ted && id === EX.ted.id || EX.karen && id === EX.karen.id) f = 1;
+  if (EX.ted && id === EX.ted.id || EX.karen && id === EX.karen.id || EX.reb && id === EX.reb.id) f = 1;
   else if (EX.rod && id === EX.rod.id) f = 2;
   else {
     const t = (n.puesto || '').toLowerCase();
@@ -384,7 +388,7 @@ function layoutFloors(root) {
   root.querySelectorAll('.oflr').forEach(e => e.remove());
   const boxOf = li => li.querySelector(':scope > [data-floor]');
   const lis = [...root.querySelectorAll('li')].filter(li => boxOf(li));
-  lis.forEach(li => { li.style.paddingTop = ''; li.style.removeProperty('--drop'); });
+  lis.forEach(li => { li.style.paddingTop = ''; li.style.removeProperty('--drop'); li.classList.remove('fdrop'); });
   const floors = [...new Set(lis.map(li => +boxOf(li).dataset.floor))].sort((a, b) => a - b);
   floors.forEach((f, ri) => {
     if (ri === 0) return;
@@ -394,7 +398,7 @@ function layoutFloors(root) {
     const prevBoxes = lis.map(boxOf).filter(b => +b.dataset.floor === floors[ri - 1]);
     const prevBottom = Math.max(...prevBoxes.map(b => posIn(b, root).y + b.offsetHeight));   // a floor always sits below the previous floor
     const rowTop = Math.max(prevBottom + 36, ...row.map(li => parentBottom(li) + 40));
-    row.forEach(li => { const cur = posIn(boxOf(li), root).y; const pad = Math.max(18, rowTop - cur); li.style.paddingTop = pad + 'px'; li.style.setProperty('--drop', pad + 'px'); });
+    row.forEach(li => { const cur = posIn(boxOf(li), root).y; const pad = Math.max(18, rowTop - cur); li.style.paddingTop = pad + 'px'; li.style.setProperty('--drop', pad + 'px'); li.classList.toggle('fdrop', li.matches(':only-child')); });
   });
   floors.filter(f => f !== 1).forEach(f => {
     const boxes = lis.map(boxOf).filter(b => +b.dataset.floor === f);
@@ -453,7 +457,7 @@ function oBox(id, zoom, extra, color) {
 function oNode(id, zoom, kids) {
   const items = oItems(zoom, kids);
   const t = zoom.startsWith('e:') ? kids.reduce((n, k) => n + 1 + total(k), 0) : total(id);
-  const isEx = EXECIDS.has(id), col = isEx ? (id === (EX.rod || {}).id ? '#1B3A6B' : id === (EX.karen || {}).id ? '#C2185B' : '#8B4513') : '';
+  const isEx = EXECIDS.has(id), col = isEx ? (id === (EX.rod || {}).id ? '#1B3A6B' : id === (EX.karen || {}).id ? '#C2185B' : id === (EX.reb || {}).id ? '#00838F' : '#8B4513') : '';
   return oBox(id, kids.length || sharedOf(id).length ? zoom : null, t ? `<span class="oc">${t}</span>` : '', col) + oUl(items, col);
 }
 function oPeer(key) {
@@ -497,7 +501,7 @@ function zoomBody(target) {
   const solo = i => execParent || titleRank(BY[i].puesto) < 3 || (BY[i].indirectos || []).length || leaves.length <= 4;
   const soloIds = leaves.filter(solo).sort(cmp), gridIds = leaves.filter(i => !solo(i)).sort(cmp);
   const items = [...nodes, ...soloIds.map(i => ({ t: 'leaf', id: i }))];
-  const lc = k === 'e' ? (id === (EX.rod || {}).id ? '#1B3A6B' : id === (EX.karen || {}).id ? '#C2185B' : '#8B4513') : '#1B3A6B';
+  const lc = k === 'e' ? (id === (EX.rod || {}).id ? '#1B3A6B' : id === (EX.karen || {}).id ? '#C2185B' : id === (EX.reb || {}).id ? '#00838F' : '#8B4513') : '#1B3A6B';
   let h = `<div class="zwrap"><div class="otree" style="--lc:${lc}"><ul><li><div class="zroot" data-floor="${k === 'p' ? floorOfPg(id) : floorOf(id)}">${rootHtml}</div>${oUl(items, lc)}</li></ul></div>`;
   const ORPH = NODES.filter(n => !n.primary && !n.pgKey && !EXECIDS.has(n.id)).map(n => n.id); // report straight to the owners, no lines
   const gridBlock = (ids, title, flat) => {
