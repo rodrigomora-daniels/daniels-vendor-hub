@@ -318,7 +318,7 @@ function drawLinks(fit) {
   if (!rodBox || !tedUl) return;
   // dashed indirect lines from Rodrigo to Ted's other direct reports (direct reports hang from his box in solid)
   const pr = posIn(rodBox, fit), rMid = pr.y + rodBox.offsetHeight / 2;
-  const targets = [...tedUl.children].map(li => li.querySelector(':scope > .onode[data-id]')).filter(el => el && el !== rodBox);
+  const targets = [...tedUl.children].map(li => li.querySelector(':scope > .onode[data-id]')).filter(el => el && el !== rodBox && !(EX.karen && (BY[el.dataset.id].also || []).includes(EX.karen.id)));
   const sides = { left: [], right: [] };
   targets.forEach(a => {
     const pa = posIn(a, fit); if (pa.y <= rMid) return;
@@ -418,7 +418,7 @@ function oItem(it, low) {
 }
 function oBox(id, zoom, extra, color) {
   const n = BY[id], cls = (n.rol === 'director' ? 'dir ' : '') + (zoom ? '' : 'leaf');
-  const indirectRod = EX.rod && EX.ted && n.primary === EX.ted.id && id !== EX.rod.id;
+  const indirectRod = EX.rod && EX.ted && n.primary === EX.ted.id && id !== EX.rod.id && !(EX.karen && n.also.includes(EX.karen.id)); // Ted + Karen lines (Angel) bypass Rodrigo
   const closedCls = (zoom && !EXECIDS.has(id) && (KIDS[id].length || sharedOf(id).length) ? 'closed ' : '');
   return `<div class="onode ${closedCls}${cls}" data-floor="${floorOf(id)}" ${color ? `style="--lc:${color}"` : ''} ${zoom ? `data-z="${zoom}" onclick="zoomTo('${zoom}', this)"` : ''} data-id="${id}">
     <div class="on">${esc(n.nombre)}</div><div class="ot">${esc(n.puesto)}</div>
