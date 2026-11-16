@@ -35,7 +35,21 @@
   .collapsed > ul.tree{display:none;}
   .arrow{display:inline-block;width:14px;color:var(--navy);font-size:12px;}
   .empty{color:var(--mgray);padding:30px;text-align:center;}
-  .legend{font-size:11px;color:var(--mgray);margin-top:16px;}
+  .legend{font-size:11px;color:var(--mgray);margin-top:16px;line-height:1.6;}
+  .band{margin:14px 0 6px;}
+  .band-h{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mgray);margin:0 0 6px 2px;}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch;}
+  .down{text-align:center;color:#9fb0c8;font-size:18px;line-height:14px;margin:2px 0;}
+  .line-block{background:#fff;border:1px solid #dfe5ef;border-radius:12px;padding:10px 12px;margin:10px 0;}
+  .line-h{font-size:12px;font-weight:800;color:var(--navy);margin-bottom:4px;}
+  .line-h span{font-weight:400;color:var(--mgray);}
+  .lochead{font-size:11px;font-weight:800;color:var(--navy);margin:12px 0 2px -2px;letter-spacing:.03em;}
+  .peer{border:2px dashed #4060a0;border-radius:12px;padding:8px 10px 10px;background:#f7faff;}
+  .peer-h{font-size:10px;font-weight:800;color:#4060a0;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;}
+  .peer .row{align-items:flex-start;}
+  .peer-note{font-size:11px;color:var(--purple);margin:8px 0 2px;font-weight:600;}
+  .legend b{color:var(--navy);}
+
 </style>
 </head>
 <body>
@@ -49,12 +63,21 @@
     <button onclick="setAll(true)">Expand all / Expandir</button>
     <button onclick="setAll(false)">Collapse / Contraer</button>
   </div>
-  <div class="board">
-    <div class="card board-c"><span>👑</span><div><div class="nm">Dani Rosenberg</div><div class="nt">Founder · Board</div></div></div>
-    <div class="card board-c"><span>👑</span><div><div class="nm">Rebecca Rosenberg</div><div class="nt">Founder · Board</div></div></div>
+  <div class="band"><div class="band-h">Board / Consejo</div>
+    <div class="row">
+      <div class="card board-c"><span>👑</span><div><div class="nm">Dani Rosenberg</div><div class="nt">Founder · Board</div></div></div>
+      <div class="card board-c"><span>👑</span><div><div class="nm">Rebecca Rosenberg</div><div class="nt">Founder · Board</div></div></div>
+    </div>
   </div>
+  <div class="down">▼</div>
   <div id="tree"><div class="empty">Loading… / Cargando…</div></div>
-  <div class="legend">Click a name to expand or collapse its team. Purple note = also reports to another leader. / Da clic en un nombre para expandir su equipo. La nota morada = también reporta a otro líder.</div>
+  <div class="legend">
+    <b>How to read this / Cómo leerlo:</b><br>
+    • Levels go top to bottom: Board → Executive → each leader's reporting line → teams by location. / Los niveles van de arriba hacia abajo.<br>
+    • <b>Dashed blue box</b> = leaders at the <b>same level</b> (peers). Their shared team reports to <b>both</b>, depending on shift. / Caja azul punteada = líderes al <b>mismo nivel</b>; su equipo reporta a ambos según el turno.<br>
+    • <b>📍 labels</b> group people by location. / Las etiquetas 📍 agrupan por ubicación.<br>
+    • Purple note = also reports to another leader. Click a name or the ▸ to expand / collapse. / Nota morada = también reporta a otro líder.
+  </div>
 </div>
 <script>
 const SUPABASE_URL = 'https://ecfxeebhtgkbsdeuiueb.supabase.co';
@@ -68,38 +91,100 @@ async function load() {
     if (!res.ok) throw new Error(await res.text());
     NODES = await res.json();
   } catch (err) { document.getElementById('tree').innerHTML = `<div class="empty">Could not load the org chart: ${esc(err.message)}</div>`; return; }
+  NODES = NODES.filter(n => !/prueba|test/i.test(n.puesto || ''));
   BY = {}; KIDS = {};
   NODES.forEach(n => { BY[n.id] = n; KIDS[n.id] = []; });
-  // primary leader: prefer a non-Rosenberg boss (operational line), else the first one
   const isRos = id => /rosenberg/i.test((BY[id] || {}).nombre || '');
+  PG = {}; // peer groups: key -> {bosses:[ids], team:[ids]}
   NODES.forEach(n => {
     const js = (n.jefes || []).filter(j => BY[j]);
-    n.primary = js.find(j => !isRos(j)) || js[0] || null;
+    const ops = js.filter(j => !isRos(j));
+    n.primary = ops[0] || js[0] || null;
     n.also = js.filter(j => j !== n.primary);
-    if (n.primary) KIDS[n.primary].push(n.id);
+    n.pgKey = null;
+    if (ops.length > 1) { // reports to several same-level operating leaders -> shared team
+      n.pgKey = ops.slice().sort().join('|'); n.also = js.filter(j => isRos(j));
+      PG[n.pgKey] = PG[n.pgKey] || { bosses: ops.slice().sort((x, y) => BY[x].nombre.localeCompare(BY[y].nombre)), team: [] };
+      PG[n.pgKey].team.push(n.id);
+    } else if (n.primary) KIDS[n.primary].push(n.id);
   });
-  Object.values(KIDS).forEach(a => a.sort((x, y) => (BY[x].rol === BY[y].rol ? 0 : ({ director: 0, manager: 1, vendedor: 2, staff: 3 }[BY[x].rol] - { director: 0, manager: 1, vendedor: 2, staff: 3 }[BY[y].rol])) || BY[x].nombre.localeCompare(BY[y].nombre)));
+  // members of a peer group share the same slot under their own parent
+  Object.values(KIDS).forEach(a => a.sort(cmp));
+  Object.values(PG).forEach(g => g.team.sort(cmp));
   render();
 }
-function total(id) { return KIDS[id].reduce((s, k) => s + 1 + total(k), 0); }
-function nodeHtml(id, depth) {
-  const n = BY[id], kids = KIDS[id], t = total(id);
-  const cls = n.rol === 'director' ? 'dir' : n.rol === 'manager' ? 'mgr' : n.rol === 'staff' ? 'staff' : '';
-  const icon = /^(ted|karen)/i.test(n.nombre) ? '👔' : n.rol === 'director' ? '⚙️' : n.rol === 'manager' ? '🧭' : n.rol === 'vendedor' ? '🛒' : '👤';
-  const collapsed = kids.length && depth >= 2 ? 'collapsed' : '';
-  return `<li class="${collapsed}" data-id="${id}"><div class="card ${cls} ${kids.length ? 'toggle' : ''}" ${kids.length ? `onclick="toggle(this.parentNode)"` : ''}>
-      <span>${icon}</span><div><div class="nm">${kids.length ? '<span class="arrow">▾</span>' : ''}${esc(n.nombre)}</div><div class="nt">${esc(n.puesto)}</div>
+let PG = {};
+const ORD = { director: 0, manager: 1, vendedor: 2, staff: 3 };
+const cmp = (x, y) => ((ORD[BY[x].rol] ?? 9) - (ORD[BY[y].rol] ?? 9)) || BY[x].nombre.localeCompare(BY[y].nombre);
+const ico = n => /^(ted|karen)/i.test(n.nombre) ? '👔' : n.rol === 'director' ? '⚙️' : n.rol === 'manager' ? '🧭' : n.rol === 'vendedor' ? '🛒' : '👤';
+const clsOf = n => n.rol === 'director' ? 'dir' : n.rol === 'manager' ? 'mgr' : n.rol === 'staff' ? 'staff' : '';
+function memberOf(id) { return Object.entries(PG).find(([k, g]) => g.bosses.includes(id)); }
+function total(id) { return KIDS[id].reduce((s, k) => s + 1 + total(k), 0) + sharedOf(id).reduce((s, t) => s + 1 + total(t), 0); }
+function sharedOf(id) { const m = memberOf(id); return m && m[1].bosses[0] === id ? [...m[1].team, ...m[1].bosses.slice(1).flatMap(b => KIDS[b])] : []; }
+function cardHtml(id, opts) {
+  opts = opts || {};
+  const n = BY[id], kids = KIDS[id].length, t = opts.count != null ? opts.count : total(id);
+  return `<div class="card ${clsOf(n)} ${opts.toggle ? 'toggle' : ''}" ${opts.toggle ? 'onclick="toggle(this.parentNode)"' : ''}>
+      <span>${ico(n)}</span><div><div class="nm">${opts.toggle ? '<span class="arrow">▾</span>' : ''}${esc(n.nombre)}</div><div class="nt">${esc(n.puesto)}</div>
       ${n.ubicacion ? `<span class="loc">${esc(n.ubicacion)}</span>` : ''}${n.also.length ? `<div class="also">also reports to / también reporta a: ${n.also.map(a => esc(BY[a].nombre)).join(', ')}</div>` : ''}</div>
-      ${t ? `<span class="cnt">${t}</span>` : ''}</div>
-    ${kids.length ? `<ul class="tree">${kids.map(k => nodeHtml(k, depth + 1)).join('')}</ul>` : ''}</li>`;
+      ${t && !opts.noCount ? `<span class="cnt">${t}</span>` : ''}</div>`;
+}
+function listHtml(ids, depth) {
+  // group by location when the list spans several locations
+  const locs = [...new Set(ids.map(i => BY[i].ubicacion || ''))];
+  const seenPG = new Set();
+  const itemsFor = arr => arr.map(i => {
+    const m = memberOf(i);
+    if (m) { if (seenPG.has(m[0])) return ''; seenPG.add(m[0]); return peerHtml(m[0], depth); }
+    return nodeHtml(i, depth);
+  }).join('');
+  if (locs.length > 1 && ids.length > 3) {
+    return locs.map(l => { const sub = ids.filter(i => (BY[i].ubicacion || '') === l); return `<li class="lochead">📍 ${esc(l || 'Other')}</li>${itemsFor(sub)}`; }).join('');
+  }
+  return itemsFor(ids);
+}
+function nodeHtml(id, depth) {
+  const kids = KIDS[id];
+  const collapsed = kids.length && (depth >= 2 || kids.length > 8) ? 'collapsed' : '';
+  return `<li class="${collapsed}" data-id="${id}">${cardHtml(id, { toggle: kids.length })}
+    ${kids.length ? `<ul class="tree">${listHtml(kids, depth + 1)}</ul>` : ''}</li>`;
+}
+function peerHtml(key, depth) {
+  const g = PG[key], team = g.team;
+  const own = g.bosses.flatMap(b => KIDS[b]);
+  const all = [...team, ...own].sort(cmp);
+  const collapsed = all.length > 6 ? 'collapsed' : '';
+  const loc = BY[g.bosses[0]].ubicacion;
+  return `<li class="${collapsed}" data-id="${g.bosses[0]}" data-pg="${key}"><div class="peer"><div class="peer-h">Same level · co-leaders / Mismo nivel — co-líderes${loc ? ' · ' + esc(loc) : ''}</div>
+    <div class="row">${g.bosses.map(b => cardHtml(b, { noCount: true })).join('')}</div>
+    ${all.length ? `<div class="peer-note toggle" onclick="toggle(this.closest('li'))"><span class="arrow">▾</span>Shared team / Equipo compartido (${all.length}) — reports to both ${g.bosses.map(b => esc(BY[b].nombre.split(' ')[0])).join(' & ')}, depending on shift / reporta a ambos según el turno</div>` : ''}
+    </div>
+    ${all.length ? `<ul class="tree">${all.map(i => nodeHtml(i, depth + 1)).join('')}</ul>` : ''}</li>`;
 }
 function render() {
-  const roots = NODES.filter(n => !n.primary).map(n => n.id);
-  roots.sort((a, b) => (/ted/i.test(BY[a].nombre) ? 0 : 1) - (/ted/i.test(BY[b].nombre) ? 0 : 1) || BY[a].nombre.localeCompare(BY[b].nombre));
-  document.getElementById('tree').innerHTML = roots.length ? `<ul class="tree root">${roots.map(r => nodeHtml(r, 0)).join('')}</ul>` : '<div class="empty">No data yet.</div>';
+  const find = re => NODES.find(n => re.test(n.nombre));
+  const ted = find(/^ted\b/i), karen = find(/^karen\b/i), rod = find(/^rodrigo\b/i);
+  const exec = [ted, rod, karen].filter(Boolean);
+  const execIds = new Set(exec.map(e => e.id));
+  let h = '';
+  if (exec.length) {
+    h += `<div class="band"><div class="band-h">Executive / Dirección</div><div class="row">${exec.map(e => cardHtml(e.id, { noCount: true })).join('')}</div>
+      <div style="font-size:11px;color:var(--mgray);margin-top:5px">${rod && ted ? 'Rodrigo reports to Ted. / Rodrigo reporta a Ted. ' : ''}Each leader's reporting line is below. / Abajo, la línea de reporte de cada líder.</div></div><div class="down">▼</div>`;
+  }
+  const lines = [];
+  if (rod) lines.push([rod.id, 'Under Rodrigo / Bajo Rodrigo', KIDS[rod.id]]);
+  if (karen) lines.push([karen.id, 'Under Karen / Bajo Karen', KIDS[karen.id]]);
+  if (ted) lines.push([ted.id, 'Reporting directly to Ted / Reportan directo a Ted', KIDS[ted.id].filter(k => !execIds.has(k))]);
+  lines.forEach(([id, title, ids]) => {
+    if (!ids.length) return;
+    h += `<div class="line-block"><div class="line-h">${title} <span>· ${ids.reduce((s, k) => s + 1 + total(k), 0)} / personas</span></div><ul class="tree root">${listHtml(ids, 0)}</ul></div>`;
+  });
+  const orphans = NODES.filter(n => !n.primary && !n.pgKey && !execIds.has(n.id));
+  if (orphans.length) h += `<div class="line-block"><div class="line-h">Other / Otros</div><ul class="tree root">${orphans.map(o => nodeHtml(o.id, 0)).join('')}</ul></div>`;
+  document.getElementById('tree').innerHTML = h || '<div class="empty">No data yet.</div>';
   syncArrows();
 }
-function syncArrows() { document.querySelectorAll('#tree li').forEach(li => { const a = li.querySelector(':scope > .card .arrow'); if (a) a.textContent = li.classList.contains('collapsed') ? '▸' : '▾'; }); }
+function syncArrows() { document.querySelectorAll('#tree li').forEach(li => { const a = li.querySelector(':scope > .card .arrow') || li.querySelector(':scope > .peer .peer-note .arrow'); if (a) a.textContent = li.classList.contains('collapsed') ? '▸' : '▾'; }); }
 function toggle(li) { li.classList.toggle('collapsed'); syncArrows(); }
 function setAll(open) { document.querySelectorAll('#tree li').forEach(li => { if (li.querySelector(':scope > ul')) li.classList.toggle('collapsed', !open); }); syncArrows(); }
 function onSearch() {
@@ -109,7 +194,9 @@ function onSearch() {
   setAll(true);
   let first = null;
   document.querySelectorAll('#tree li').forEach(li => {
+    if (!li.dataset.id) return;
     const n = BY[li.dataset.id];
+    if (li.dataset.pg) { li.querySelectorAll(':scope > .peer .card').forEach(c => { const m = NODES.find(x => c.textContent.includes(x.nombre) && PG[li.dataset.pg].bosses.includes(x.id)); if (m && (m.nombre + ' ' + (m.puesto || '')).toLowerCase().includes(q)) { c.classList.add('sel'); if (!first) first = c; } }); return; }
     if ((n.nombre + ' ' + (n.puesto || '')).toLowerCase().includes(q)) { const c = li.querySelector(':scope > .card'); c.classList.add('sel'); if (!first) first = c; }
   });
   if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
