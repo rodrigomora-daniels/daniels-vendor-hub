@@ -422,7 +422,7 @@ function oBox(id, zoom, extra, color) {
   const closedCls = (zoom && !EXECIDS.has(id) && (KIDS[id].length || sharedOf(id).length) ? 'closed ' : '');
   return `<div class="onode ${closedCls}${cls}" data-floor="${floorOf(id)}" ${color ? `style="--lc:${color}"` : ''} ${zoom ? `data-z="${zoom}" onclick="zoomTo('${zoom}', this)"` : ''} data-id="${id}">
     <div class="on">${esc(n.nombre)}</div><div class="ot">${esc(n.puesto)}</div>
-    ${indirectRod ? '<div class="oa">indirect: Rodrigo</div>' : ''}${n.also.filter(a => !(EX.rod && a === EX.rod.id)).length ? `<div class="oa">2nd line: ${n.also.filter(a => !(EX.rod && a === EX.rod.id)).map(a => esc(BY[a].nombre.split(' ')[0])).join(', ')}</div>` : ''}
+    ${n.also.filter(a => !(EX.rod && a === EX.rod.id)).length ? `<div class="oa">2nd line: ${n.also.filter(a => !(EX.rod && a === EX.rod.id)).map(a => esc(BY[a].nombre.split(' ')[0])).join(', ')}</div>` : ''}
     ${(n.indirectos || []).map(i => `<div class="oi">indirect: ${esc(i.nombre)}${i.nota ? ' · temp.' : ''}</div>`).join('')}${extra || ''}</div>`;
 }
 function oNode(id, zoom, kids) {
