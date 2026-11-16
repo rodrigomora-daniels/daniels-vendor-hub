@@ -12,7 +12,7 @@
   .top-bar h1{color:#fff;font-size:18px;}
   .top-bar .sub{color:var(--ltblue);font-size:12px;margin-top:2px;}
   .btn-back{background:transparent;border:1px solid var(--ltblue);color:var(--ltblue);padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;}
-  .content{padding:18px 16px 40px;max-width:980px;margin:0 auto;}
+  .content{padding:18px 16px 40px;max-width:1280px;margin:0 auto;}
   .tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
   .tools input{flex:1;min-width:180px;padding:9px 12px;border:1px solid #ccd;border-radius:8px;font-size:14px;}
   .tools button{padding:9px 14px;border:1px solid var(--navy);background:#fff;color:var(--navy);border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;}
@@ -45,7 +45,16 @@
   .line-block{background:#fff;border:1px solid #dfe5ef;border-radius:12px;padding:10px 12px;margin:10px 0;}
   .line-h{font-size:12px;font-weight:800;color:var(--navy);margin-bottom:4px;}
   .line-h span{font-weight:400;color:var(--mgray);}
-  .lochead{font-size:11px;font-weight:800;color:var(--navy);margin:12px 0 2px -2px;letter-spacing:.03em;}
+  .lochead{font-size:11px;font-weight:800;color:var(--navy);margin:0 0 6px;letter-spacing:.03em;}
+  ul.tree.cols{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:2px 10px;}
+  ul.tree.cols > li{margin:4px 0;}
+  ul.hrow{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;margin-left:0;border-left:none;padding-left:0;}
+  ul.hrow > li{flex:0 1 270px;min-width:230px;margin:0;border-top:3px solid #c9d3e3;padding-top:8px;}
+  ul.hrow > li.wide{flex:1 1 100%;}
+  ul.hrow > li.roomy,ul.hrow > li.locgroup.roomy{flex:0 1 560px;}
+  ul.tree.cols{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));}
+  ul.hrow > li.locgroup{flex:0 1 340px;border-top-color:var(--navy);}
+  ul.hrow > li.locgroup.big{flex:1 1 100%;}
   .peer{border:2px dashed #4060a0;border-radius:12px;padding:8px 10px 10px;background:#f7faff;}
   .peer-h{font-size:10px;font-weight:800;color:#4060a0;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;}
   .peer .row{align-items:flex-start;}
@@ -138,25 +147,28 @@ function cardHtml(id, opts) {
       ${n.ubicacion ? `<span class="loc">${esc(n.ubicacion)}</span>` : ''}${(n.indirectos || []).map(i => `<div class="ind">indirect: ${esc(i.nombre)}${i.puesto ? ' (' + esc(i.puesto) + ')' : ''}${i.nota ? ' · ' + esc(i.nota) : ''}</div>`).join('')}${n.also.length ? `<div class="also">also reports to: ${n.also.map(a => esc(BY[a].nombre)).join(', ')}</div>` : ''}</div>
       ${t && !opts.noCount ? `<span class="cnt">${t}</span>` : ''}</div>`;
 }
-function listHtml(ids, depth) {
-  // group by location when the list spans several locations
-  const locs = [...new Set(ids.map(i => BY[i].ubicacion || ''))];
+function needsGroup(ids) { return ids.length > 3 && new Set(ids.map(i => BY[i].ubicacion || '')).size > 1; }
+// builds a <ul>: columns (horizontal) when people span several locations or when asked, vertical list otherwise
+function listUl(ids, depth, horizontal) {
   const seenPG = new Set();
   const itemsFor = arr => arr.map(i => {
     const m = memberOf(i);
     if (m) { if (seenPG.has(m[0])) return ''; seenPG.add(m[0]); return peerHtml(m[0], depth); }
     return nodeHtml(i, depth);
   }).join('');
-  if (locs.length > 1 && ids.length > 3) {
-    return locs.map(l => { const sub = ids.filter(i => (BY[i].ubicacion || '') === l); return `<li class="lochead">📍 ${esc(l || 'Other')}</li>${itemsFor(sub)}`; }).join('');
+  if (needsGroup(ids) && !horizontal) {
+    const locs = [...new Set(ids.map(i => BY[i].ubicacion || ''))];
+    return `<ul class="tree hrow">${locs.map(l => { const sub = ids.filter(i => (BY[i].ubicacion || '') === l); const big = sub.length > 4; const roomy = sub.some(i => sharedOf(i).length > 4); return `<li class="locgroup ${big ? 'big' : ''} ${roomy ? 'roomy' : ''}"><div class="lochead">📍 ${esc(l || 'Other')}</div><ul class="tree ${big ? 'hrow' : ''}">${itemsFor(sub)}</ul></li>`; }).join('')}</ul>`;
   }
-  return itemsFor(ids);
+  const leafOnly = !horizontal && ids.length > 4 && ids.every(i => !KIDS[i].length && !memberOf(i));
+  return `<ul class="tree ${horizontal ? 'root hrow' : ''} ${leafOnly ? 'cols' : ''}">${itemsFor(ids)}</ul>`;
 }
 function nodeHtml(id, depth) {
   const kids = KIDS[id];
   const collapsed = kids.length && (depth >= 2 || kids.length > 8) ? 'collapsed' : '';
-  return `<li class="${collapsed}" data-id="${id}">${cardHtml(id, { toggle: kids.length })}
-    ${kids.length ? `<ul class="tree">${listHtml(kids, depth + 1)}</ul>` : ''}</li>`;
+  const wide = needsGroup(kids) ? 'wide' : (kids.length > 6 && kids.every(k => !KIDS[k].length) ? 'roomy' : '');
+  return `<li class="${collapsed} ${wide}" data-id="${id}">${cardHtml(id, { toggle: kids.length })}
+    ${kids.length ? listUl(kids, depth + 1) : ''}</li>`;
 }
 function peerHtml(key, depth) {
   const g = PG[key], team = g.team;
@@ -168,7 +180,7 @@ function peerHtml(key, depth) {
     <div class="row">${g.bosses.map(b => cardHtml(b, { noCount: true })).join('')}</div>
     ${all.length ? `<div class="peer-note toggle" onclick="toggle(this.closest('li'))"><span class="arrow">−</span>Shared team (${all.length}) — reports to both ${g.bosses.map(b => esc(BY[b].nombre.split(' ')[0])).join(' & ')}, depending on shift</div>` : ''}
     </div>
-    ${all.length ? `<ul class="tree">${all.map(i => nodeHtml(i, depth + 1)).join('')}</ul>` : ''}</li>`;
+    ${all.length ? `<ul class="tree ${all.length > 4 && all.every(i => !KIDS[i].length) ? 'cols' : ''}">${all.map(i => nodeHtml(i, depth + 1)).join('')}</ul>` : ''}</li>`;
 }
 function render() {
   const find = re => NODES.find(n => re.test(n.nombre));
@@ -193,7 +205,7 @@ function render() {
   if (karen) lines.push([karen.id, 'l-karen', 'Reports directly to Karen', KIDS[karen.id]]);
   lines.forEach(([id, cls, title, ids]) => {
     if (!ids.length) return;
-    h += `<div class="line-block ${cls}"><div class="line-h">${title} <span>· ${ids.reduce((s, k) => s + 1 + total(k), 0)} people</span></div><ul class="tree root">${listHtml(ids, 0)}</ul></div>`;
+    h += `<div class="line-block ${cls}"><div class="line-h">${title} <span>· ${ids.reduce((s, k) => s + 1 + total(k), 0)} people</span></div>${listUl(ids, 0, true)}</div>`;
   });
   const orphans = NODES.filter(n => !n.primary && !n.pgKey && !execIds.has(n.id));
   if (orphans.length) h += `<div class="line-block"><div class="line-h">Other</div><ul class="tree root">${orphans.map(o => nodeHtml(o.id, 0)).join('')}</ul></div>`;
