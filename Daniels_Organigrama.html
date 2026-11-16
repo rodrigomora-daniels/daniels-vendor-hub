@@ -100,7 +100,8 @@ async function load() {
   const isRos = id => /rosenberg/i.test((BY[id] || {}).nombre || '');
   PG = {}; // peer groups: key -> {bosses:[ids], team:[ids]}
   NODES.forEach(n => {
-    const js = (n.jefes || []).filter(j => BY[j]);
+    // when all bosses are Rosenbergs, Ted (CEO) is the principal line, then Karen
+    const js = (n.jefes || []).filter(j => BY[j]).sort((a, b) => (/^ted\b/i.test(BY[a].nombre) ? 0 : 1) - (/^ted\b/i.test(BY[b].nombre) ? 0 : 1));
     const ops = js.filter(j => !isRos(j));
     n.primary = ops[0] || js[0] || null;
     n.also = js.filter(j => j !== n.primary);
