@@ -72,10 +72,17 @@
   .zbar .crumbs a{color:var(--navy);font-weight:700;cursor:pointer;text-decoration:underline;}
   .zbar button{padding:8px 14px;border:1px solid var(--navy);background:#fff;color:var(--navy);border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;}
   .zbar button.primary{background:var(--navy);color:#fff;}
-  .oblock{background:#fff;border:1px solid #dfe5ef;border-radius:12px;padding:14px 10px 18px;margin:12px 0;overflow-x:auto;}
+  .oblock{background:#fff;border:1px solid #dfe5ef;border-radius:12px;padding:14px 10px 18px;margin:12px 0;overflow:hidden;position:relative;}
+  .ofit{position:relative;transform-origin:top left;width:max-content;}
+  .olink{position:absolute;height:0;border-top:2px dashed var(--purple);z-index:2;pointer-events:none;}
+  .olink span{position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--purple);font-weight:700;background:#fff;padding:0 3px;white-space:nowrap;}
+  .onode.boardbox{border-top-color:var(--gold);background:#fffaf0;max-width:520px;cursor:default;}
+  .onode.boardbox:hover{transform:none;box-shadow:0 1px 4px rgba(0,0,0,.08);}
+  .bn{display:inline-block;margin:2px 3px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#fdf3e3;color:#7a5a12;}
+  .bn.t{background:#f3e6dc;color:var(--ted);} .bn.k{background:#fbe3ec;color:var(--karen);}
   .oblock .line-h{margin:0 0 8px 6px;}
   .oblock.l-rod{--lc:#1B3A6B;border-top:4px solid #1B3A6B;} .oblock.l-ted{--lc:#8B4513;border-top:4px solid #8B4513;} .oblock.l-karen{--lc:#C2185B;border-top:4px solid #C2185B;}
-  .otree{display:flex;justify-content:center;min-width:max-content;margin:0 auto;}
+  .otree{display:flex;justify-content:center;min-width:max-content;}
   .otree ul{display:flex;justify-content:center;padding-top:18px;position:relative;list-style:none;margin:0;}
   .otree li{position:relative;padding:18px 7px 0;text-align:center;list-style:none;margin:0;}
   .otree li::before,.otree li::after{content:'';position:absolute;top:0;right:50%;width:50%;height:18px;border-top:2px solid var(--lc,#b9c6dc);}
@@ -87,7 +94,7 @@
   .otree li:first-child::after{border-radius:6px 0 0 0;}
   .otree ul ul::before{content:'';position:absolute;top:0;left:50%;border-left:2px solid var(--lc,#b9c6dc);height:18px;}
   .otree > ul{padding-top:0;}
-  .onode{display:inline-block;min-width:128px;max-width:176px;background:#fff;border:1px solid #d5dcea;border-top:4px solid var(--lc,#1B3A6B);border-radius:8px;padding:6px 9px;box-shadow:0 1px 4px rgba(0,0,0,.08);cursor:pointer;transition:transform .15s,box-shadow .15s;vertical-align:top;}
+  .onode{display:inline-block;min-width:116px;max-width:170px;background:#fff;border:1px solid #d5dcea;border-top:4px solid var(--lc,#1B3A6B);border-radius:8px;padding:6px 9px;box-shadow:0 1px 4px rgba(0,0,0,.08);cursor:pointer;transition:transform .15s,box-shadow .15s;vertical-align:top;}
   .onode:hover{transform:translateY(-2px);box-shadow:0 5px 12px rgba(0,0,0,.18);}
   .onode.leaf{cursor:default;} .onode.leaf:hover{transform:none;box-shadow:0 1px 4px rgba(0,0,0,.08);}
   .onode.dir{background:var(--ltblue);}
@@ -129,10 +136,10 @@
   </div>
   <div class="legend">
     <b>How to read this:</b><br>
-    • Levels go top to bottom: Board → Managing Director → each leader's reporting line → teams by location.<br>
+    • Levels go top to bottom: Board → CEO and CMO → direct reports → teams. Solid lines are direct reporting lines; <b>dashed purple lines</b> are indirect (second) lines, for example Rodrigo as second line for Misael and Maricela.<br>
     • <b>Dashed blue box</b> = co-leaders who share one team. That team reports to <b>both</b>, depending on shift.<br>
     • <b>📍 labels</b> group people by location. <b>Click any box with a team to zoom in</b>; use <b>Zoom out</b> or press <b>Esc</b> to return to the full chart.<br>
-    • Purple note = also reports to another leader. Gray dashed italic note = indirect, often temporary, reporting line. Click a name with a <b>+</b> / <b>−</b> to expand or collapse its team (no icon = no team).
+    • Purple note = second reporting line (Karen for Angel). Gray italic note = indirect, often temporary, line (Rey for Ana and Letty). Click a name with a <b>+</b> / <b>−</b> to expand or collapse its team (no icon = no team).
   </div>
 </div>
 <script>
@@ -230,27 +237,67 @@ function render() {
   EX = { ted: find(/^ted\b/i), karen: find(/^karen\b/i), rod: find(/^rodrigo\b/i) };
   EXECIDS = new Set(Object.values(EX).filter(Boolean).map(e => e.id));
   const { ted, karen, rod } = EX;
-  const bcard = (ico, nm, role, cls) => `<div class="card board-c ${cls || ''}"><span>${ico}</span><div><div class="nm">${esc(nm)}</div>${role ? `<div class="nt">${esc(role)}</div>` : ''}<span class="badge b-board">BOARD</span></div></div>`;
   document.getElementById('top').innerHTML = `<div class="keys">
-      <span><i style="background:var(--gold)"></i>Board</span><span><i style="background:var(--navy)"></i>Rodrigo direct</span>
-      <span><i style="background:var(--ted)"></i>Ted direct</span><span><i style="background:var(--karen)"></i>Karen direct</span>
-      <span><i style="background:var(--purple)"></i>Also reports to</span></div>
-    <div class="band"><div class="band-h">Board — Rosenberg family</div><div class="row">
-      ${bcard('👑', 'Dani Rosenberg', 'Founder')}${bcard('👑', 'Rebecca Rosenberg', 'Founder')}
-      ${ted ? bcard('👔', ted.nombre, ted.puesto, 'ted') : ''}${karen ? bcard('📣', karen.nombre, karen.puesto, 'karen') : ''}
-    </div></div><div class="down">▼</div><div class="hint">Click a box to zoom into that team. / Esc to zoom out.</div>`;
-  const blocks = [];
-  if (rod) blocks.push(['l-rod', rod.id, KIDS[rod.id], 'Managing Director']);
-  if (ted) blocks.push(['l-ted', ted.id, KIDS[ted.id].filter(k => !EXECIDS.has(k)), 'CEO — direct reports']);
-  if (karen) blocks.push(['l-karen', karen.id, KIDS[karen.id], 'CMO — direct reports']);
-  let h = '';
-  blocks.forEach(([cls, id, kids, label]) => {
-    if (!kids.length) return;
-    h += `<div class="oblock ${cls}"><div class="line-h">${esc(BY[id].nombre)} <span>· ${label}</span></div>
-      <div class="otree"><ul><li>${oNode(id, 'e:' + id, kids)}</li></ul></div></div>`;
-  });
-  document.getElementById('tree').innerHTML = h || '<div class="empty">No data yet.</div>';
+      <span><i style="background:var(--gold)"></i>Board</span><span><i style="background:var(--ted)"></i>Ted (CEO) line</span>
+      <span><i style="background:var(--navy)"></i>Rodrigo line</span><span><i style="background:var(--karen)"></i>Karen line</span>
+      <span><svg width="26" height="8"><line x1="0" y1="4" x2="26" y2="4" stroke="#7B5EA7" stroke-width="2" stroke-dasharray="4,3"/></svg> Indirect (2nd) reporting line</span></div>
+    <div class="hint">Click a box to zoom into that team. Esc to zoom out.</div>`;
+  const boardBox = `<div class="onode boardbox leaf"><div class="peer-h2" style="color:#7a5a12">Board — Rosenberg family</div>
+    <span class="bn">Dani Rosenberg</span><span class="bn">Rebecca Rosenberg</span>${ted ? `<span class="bn t">${esc(ted.nombre)}</span>` : ''}${karen ? `<span class="bn k">${esc(karen.nombre)}</span>` : ''}</div>`;
+  let tedLi = '', karenLi = '';
+  if (ted) {
+    let items = oItems('e:' + ted.id, KIDS[ted.id]);
+    // put Rodrigo between the people who also report to him, so the dashed 2nd lines are short and clean
+    if (rod) {
+      const idOf = it => it.id || it.rep;
+      const rodIt = items.find(it => it.t === 'node' && it.id === rod.id);
+      const sec = items.filter(it => it !== rodIt && it.t === 'node' && BY[it.id].also.includes(rod.id));
+      if (rodIt && sec.length) {
+        const rest = items.filter(it => it !== rodIt && !sec.includes(it));
+        const cut = Math.ceil(sec.length / 2);
+        items = [...sec.slice(0, cut), rodIt, ...sec.slice(cut), ...rest];
+      }
+    }
+    tedLi = `<li style="--lc:#8B4513">${oBox(ted.id, 'e:' + ted.id, `<span class="oc">${KIDS[ted.id].reduce((n, k) => n + 1 + total(k), 0)}</span>`, '#8B4513')}${oUl(items, '#8B4513')}</li>`;
+  }
+  if (karen) karenLi = `<li>${oNode(karen.id, 'e:' + karen.id, KIDS[karen.id])}</li>`;
+  const inner = `<ul><li>${boardBox}<ul style="--lc:#C8922A">${tedLi}${karenLi}</ul></li></ul>`;
+  document.getElementById('tree').innerHTML = `<div class="oblock"><div class="ofit"><div class="otree">${inner}</div></div></div>`;
+  fitChart();
 }
+function fitChart() {
+  const wrap = document.querySelector('#tree .oblock'), fit = wrap && wrap.querySelector('.ofit');
+  if (!fit || !wrap.clientWidth) return;
+  fit.style.transform = 'none'; fit.style.marginLeft = '0';
+  const avail = wrap.clientWidth - 20, w = fit.offsetWidth, h = fit.offsetHeight;
+  const sc = Math.min(1, Math.max(.5, avail / w));
+  fit.style.transform = `scale(${sc})`; fit.style.marginLeft = Math.max(0, (avail - w * sc) / 2) + 'px';
+  wrap.style.height = (h * sc + 36) + 'px';
+  wrap.style.overflowX = sc <= .5 && w * sc > avail ? 'auto' : 'hidden';
+  drawLinks(fit);
+}
+function posIn(el, root) { let x = 0, y = 0; while (el && el !== root) { x += el.offsetLeft; y += el.offsetTop; el = el.offsetParent; } return { x, y }; }
+function drawLinks(fit) {
+  fit.querySelectorAll('.olink').forEach(e => e.remove());
+  NODES.forEach(n => {
+    const a = fit.querySelector(`.onode[data-id="${n.id}"]`);
+    if (!a) return;
+    n.also.forEach(b => {
+      if (/^(ted|karen)\b/i.test(BY[b].nombre)) return; // family bosses are shown with a note, not a line
+      const c = fit.querySelector(`.onode[data-id="${b}"]`);
+      if (!c) return;
+      const pa = posIn(a, fit), pc = posIn(c, fit);
+      if (Math.abs(pa.y - pc.y) > 4) return; // only same-row siblings get a clean horizontal line
+      const left = pa.x < pc.x ? { p: pa, e: a } : { p: pc, e: c }, right = pa.x < pc.x ? { p: pc, e: c } : { p: pa, e: a };
+      const x1 = left.p.x + left.e.offsetWidth, x2 = right.p.x;
+      if (x2 - x1 < 8) return;
+      const d = document.createElement('div'); d.className = 'olink';
+      d.style.left = x1 + 'px'; d.style.width = (x2 - x1) + 'px'; d.style.top = (pa.y + a.offsetHeight / 2) + 'px';
+      d.innerHTML = '<span>indirect</span>'; fit.appendChild(d);
+    });
+  });
+}
+window.addEventListener('resize', () => { if (ZCUR === null) fitChart(); });
 // ---------- overview helpers
 const plural = p => /s$/i.test(p) ? p : p + 's';
 function oItems(parentZoom, ids) {
@@ -272,9 +319,9 @@ function oItems(parentZoom, ids) {
   Object.values(groups).forEach(g => { g.sort(cmp); if (g.length >= 2) items.push({ t: 'team', ids: g, zoom: parentZoom }); else items.push({ t: 'leaf', id: g[0] }); });
   return items;
 }
-function oUl(items) { return items.length ? `<ul>${items.map(oItem).join('')}</ul>` : ''; }
+function oUl(items, lc) { return items.length ? `<ul ${lc ? `style="--lc:${lc}"` : ''}>${items.map(oItem).join('')}</ul>` : ''; }
 function oItem(it) {
-  if (it.t === 'node') return `<li>${oNode(it.id, 'n:' + it.id, KIDS[it.id])}</li>`;
+  if (it.t === 'node') return `<li>${oNode(it.id, (EXECIDS.has(it.id) ? 'e:' : 'n:') + it.id, KIDS[it.id])}</li>`;
   if (it.t === 'pg') return `<li>${oPeer(it.key)}</li>`;
   if (it.t === 'leaf') return `<li>${oBox(it.id, null)}</li>`;
   const puestos = [...new Set(it.ids.map(i => BY[i].puesto))];
@@ -282,17 +329,18 @@ function oItem(it) {
   const loc = BY[it.ids[0]].ubicacion;
   return `<li><div class="onode team" data-z="${it.zoom}" onclick="zoomTo('${it.zoom}', this)"><div class="on">${esc(label)}</div><div class="ot">${loc ? esc(loc) + ' · ' : ''}team</div><span class="oc">${it.ids.length}</span></div></li>`;
 }
-function oBox(id, zoom, extra) {
+function oBox(id, zoom, extra, color) {
   const n = BY[id], cls = (n.rol === 'director' ? 'dir ' : '') + (zoom ? '' : 'leaf');
-  return `<div class="onode ${cls}" ${zoom ? `data-z="${zoom}" onclick="zoomTo('${zoom}', this)"` : ''} data-id="${id}">
+  return `<div class="onode ${cls}" ${color ? `style="--lc:${color}"` : ''} ${zoom ? `data-z="${zoom}" onclick="zoomTo('${zoom}', this)"` : ''} data-id="${id}">
     <div class="on">${esc(n.nombre)}</div><div class="ot">${esc(n.puesto)}</div>
-    ${n.also.length ? `<div class="oa">also: ${n.also.map(a => esc(BY[a].nombre.split(' ')[0])).join(', ')}</div>` : ''}
+    ${n.also.length ? `<div class="oa">2nd line: ${n.also.map(a => esc(BY[a].nombre.split(' ')[0])).join(', ')}</div>` : ''}
     ${(n.indirectos || []).map(i => `<div class="oi">indirect: ${esc(i.nombre)}${i.nota ? ' · temp.' : ''}</div>`).join('')}${extra || ''}</div>`;
 }
 function oNode(id, zoom, kids) {
   const items = oItems(zoom, kids);
   const t = zoom.startsWith('e:') ? kids.reduce((n, k) => n + 1 + total(k), 0) : total(id);
-  return oBox(id, kids.length || sharedOf(id).length ? zoom : null, t ? `<span class="oc">${t}</span>` : '') + oUl(items);
+  const isEx = EXECIDS.has(id), col = isEx ? (id === (EX.rod || {}).id ? '#1B3A6B' : id === (EX.karen || {}).id ? '#C2185B' : '#8B4513') : '';
+  return oBox(id, kids.length || sharedOf(id).length ? zoom : null, t ? `<span class="oc">${t}</span>` : '', col) + oUl(items, col);
 }
 function oPeer(key) {
   const g = PG[key], zoom = 'p:' + key;
@@ -319,7 +367,7 @@ function zoomBody(target) {
   const k = target.slice(0, 1), id = target.slice(2);
   if (k === 'p') return `<ul class="tree root">${peerHtml(id, 0)}</ul>`;
   if (k === 'e') {
-    const ids = id === (EX.ted || {}).id ? KIDS[id].filter(x => !EXECIDS.has(x)) : KIDS[id];
+    const ids = KIDS[id];
     const cls = id === (EX.rod || {}).id ? 'l-rod' : id === (EX.ted || {}).id ? 'l-ted' : 'l-karen';
     return `<div style="margin-bottom:10px">${cardHtml(id, { noCount: true })}</div><div class="line-block ${cls}">${listUl(ids, 0, true)}</div>`;
   }
@@ -361,10 +409,10 @@ function zoomOut() {
   const ov = document.getElementById('overview'), zv = document.getElementById('zoomview');
   const sel = document.getElementById('q'); sel.value = '';
   ZBUSY = true;
-  ov.style.display = 'block'; ov.classList.add('leaving', 'away');
+  ov.style.display = 'block'; ov.classList.add('leaving', 'away'); fitChart();
   void ov.offsetWidth;
   zv.classList.add('enter'); ov.classList.remove('away');
-  setTimeout(() => { zv.style.display = 'none'; zv.classList.remove('enter'); ov.classList.remove('leaving'); ZCUR = null; ZBUSY = false; window.scrollTo(0, ZSCROLL); }, 420);
+  setTimeout(() => { zv.style.display = 'none'; zv.classList.remove('enter'); ov.classList.remove('leaving'); ZCUR = null; ZBUSY = false; fitChart(); window.scrollTo(0, ZSCROLL); }, 420);
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') zoomOut(); });
 function syncArrows() { document.querySelectorAll('#zoomview li').forEach(li => { const a = li.querySelector(':scope > .card .arrow') || li.querySelector(':scope > .peer .peer-note .arrow'); if (a) a.textContent = li.classList.contains('collapsed') ? '+' : '−'; }); }
