@@ -192,7 +192,7 @@ async function load() {
     NODES = await res.json();
   } catch (err) { document.getElementById('tree').innerHTML = `<div class="empty">Could not load the org chart: ${esc(err.message)}</div>`; return; }
   NODES = NODES.filter(n => !/prueba|test/i.test(n.puesto || ''));
-  NODES.forEach(n => { if (/^rodrigo\b/i.test(n.nombre)) n.puesto = 'General Manager / Operations'; });
+  NODES.forEach(n => { if (/^rodrigo\b/i.test(n.nombre)) n.puesto = 'General Manager / COO'; });
   BY = {}; KIDS = {}; _FL = {};
   NODES.forEach(n => { BY[n.id] = n; KIDS[n.id] = []; });
   const isRos = id => /rosenberg/i.test((BY[id] || {}).nombre || '');
