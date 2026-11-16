@@ -88,9 +88,13 @@
   .ofit{position:relative;transform-origin:top left;width:max-content;}
   .olink{position:absolute;height:0;border-top:3px dashed var(--ind);z-index:2;pointer-events:none;}
   .olink span{position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--purple);font-weight:700;background:#fff;padding:0 3px;white-space:nowrap;}
-  .onode.boardbox{border-top-color:var(--gold);background:#fffaf0;max-width:520px;cursor:default;}
+  .onode.boardbox{border-top-color:var(--gold);background:#fffaf0;max-width:760px;cursor:default;}
+  .bnrow{display:flex;flex-wrap:nowrap;justify-content:center;gap:2px;white-space:nowrap;}
   .onode.boardbox:hover{transform:none;box-shadow:0 1px 4px rgba(0,0,0,.08);}
   .bn{display:inline-block;margin:2px 3px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#fdf3e3;color:#7a5a12;}
+  .oanchor{height:2px;width:2px;margin:0 auto;}
+  .bn.go{cursor:pointer;border:1px solid currentColor;} .bn.go:hover{filter:brightness(.92);}
+  .olb{position:absolute;z-index:1;pointer-events:none;}
   .bn.t{background:#f3e6dc;color:var(--ted);} .bn.k{background:#fbe3ec;color:var(--karen);}
   .oblock .line-h{margin:0 0 8px 6px;}
   .oblock.l-rod{--lc:#1B3A6B;border-top:4px solid #1B3A6B;} .oblock.l-ted{--lc:#8B4513;border-top:4px solid #8B4513;} .oblock.l-karen{--lc:#C2185B;border-top:4px solid #C2185B;}
@@ -169,7 +173,7 @@
     <b>How to read this:</b><br>
     • Levels go top to bottom: Board → CEO and CMO → direct reports → teams. Solid lines are direct reporting lines; <b>dashed green lines</b> are indirect reports (Rodrigo for the areas that report to Ted).<br>
     • <b>Dashed blue box</b> = co-leaders who share one team. That team reports to <b>both</b>, depending on shift.<br>
-    • <b>Floors</b> (labels on the left) put the same level on the same row: area managers and buyers, then store managers and supervisors, then associates and staff. <b>Boxes with a + have a team: click to zoom in one level</b>; use <b>Zoom out</b> or press <b>Esc</b> to go back. When zoomed in, <b>scroll up</b> to see the reporting line above.<br>
+    • <b>Ted and Karen sit on the Board; their reporting lines drop straight from their names.</b> <b>Floors</b> (labels on the left) put the same level on the same row: area managers and buyers, then store managers and supervisors, then associates and staff. <b>Boxes with a + have a team: click to zoom in one level</b>; use <b>Zoom out</b> or press <b>Esc</b> to go back. When zoomed in, <b>scroll up</b> to see the reporting line above.<br>
     • Purple note = second reporting line (Karen for Angel). Gray italic note = indirect, often temporary, line (Rey for Ana and Letty). A <b>+</b> in a corner means that box has a team inside.
   </div>
 </div>
@@ -276,7 +280,7 @@ function render() {
       <span style="font-weight:700;color:#007a38"><svg width="34" height="8"><line x1="0" y1="4" x2="34" y2="4" stroke="#00B050" stroke-width="3" stroke-dasharray="6,4"/></svg> Dashed = indirect report</span></div>
     <div class="zoomtip"><span class="zt-i">🔍</span><div><b>Click any box with a +</b> to <b>zoom in</b> on that team.<br><b>Zoom out</b> with the big button on top, or press <kbd>Esc</kbd>. When zoomed in, <b>scroll up</b> to see who they report to.</div></div>`;
   const boardBox = `<div class="onode boardbox leaf" data-floor="0"><div class="peer-h2" style="color:#7a5a12">Board — Rosenberg family</div>
-    <span class="bn">Dani Rosenberg</span><span class="bn">Rebecca Rosenberg</span>${ted ? `<span class="bn t">${esc(ted.nombre)}</span>` : ''}${karen ? `<span class="bn k">${esc(karen.nombre)}</span>` : ''}</div>`;
+    <div class="bnrow"><span class="bn">Dani Rosenberg</span><span class="bn">Rebecca Rosenberg</span>${ted ? `<span class="bn t go" data-chip="ted" onclick="zoomTo('e:${ted.id}', this)">${esc(ted.nombre)} · CEO ＋</span>` : ''}${karen ? `<span class="bn k go" data-chip="karen" onclick="zoomTo('e:${karen.id}', this)">${esc(karen.nombre)} · CMO ＋</span>` : ''}</div></div>`;
   let tedLi = '', karenLi = '';
   if (ted) {
     let items = oItems('e:' + ted.id, KIDS[ted.id]);
@@ -291,10 +295,10 @@ function render() {
         items = [...sec.slice(0, cut), rodIt, ...sec.slice(cut), ...rest];
       }
     }
-    tedLi = `<li class="tedli" style="--lc:#8B4513">${oBox(ted.id, 'e:' + ted.id, `<span class="oc">${KIDS[ted.id].reduce((n, k) => n + 1 + total(k), 0)}</span>`, '#8B4513')}${oUl(items, '#8B4513', true)}</li>`;
+    tedLi = `<li class="tedli" style="--lc:transparent"><div class="oanchor" data-floor="1" data-anchor="ted"></div>${oUl(items, '#8B4513', true)}</li>`;
   }
-  if (karen) karenLi = `<li>${oNode(karen.id, 'e:' + karen.id, KIDS[karen.id])}</li>`;
-  const inner = `<ul><li>${boardBox}<ul style="--lc:#C8922A">${tedLi}${karenLi}</ul></li></ul>`;
+  if (karen) karenLi = `<li style="--lc:transparent"><div class="oanchor" data-floor="1" data-anchor="karen"></div>${oUl(oItems('e:' + karen.id, KIDS[karen.id]), '#C2185B')}</li>`;
+  const inner = `<ul><li>${boardBox}<ul style="--lc:transparent">${tedLi}${karenLi}</ul></li></ul>`;
   document.getElementById('tree').innerHTML = `<div class="oblock"><div class="ofit"><div class="otree">${inner}</div></div></div>`;
   fitChart();
 }
@@ -312,7 +316,16 @@ function fitChart() {
 }
 function posIn(el, root) { let x = 0, y = 0; while (el && el !== root) { x += el.offsetLeft; y += el.offsetTop; el = el.offsetParent; } return { x, y }; }
 function drawLinks(fit) {
-  fit.querySelectorAll('.olink,.olinkv').forEach(e => e.remove());
+  fit.querySelectorAll('.olink,.olinkv,.olb').forEach(e => e.remove());
+  // Ted and Karen stay on the Board box; their reporting lines drop straight from their names
+  const bb = fit.querySelector('.boardbox');
+  if (bb) ['ted', 'karen'].forEach(k => {
+    const chip = bb.querySelector(`[data-chip="${k}"]`), an = fit.querySelector(`[data-anchor="${k}"]`); if (!chip || !an) return;
+    const col = k === 'ted' ? '#8B4513' : '#C2185B', pc = posIn(chip, fit), pa = posIn(an, fit), pb = posIn(bb, fit);
+    const cx = pc.x + chip.offsetWidth / 2, cy = pc.y + chip.offsetHeight, ax = pa.x + an.offsetWidth / 2, ay = pa.y, my = pb.y + bb.offsetHeight + (ay - pb.y - bb.offsetHeight) / 2;
+    const seg = (l, t, w, h) => { const d = document.createElement('div'); d.className = 'olb'; d.style.cssText = `left:${l}px;top:${t}px;width:${w}px;height:${h}px;background:${col}`; fit.appendChild(d); };
+    seg(cx - 1, cy, 2, Math.max(0, my - cy)); seg(Math.min(cx, ax) - 1, my - 1, Math.abs(ax - cx) + 2, 2); seg(ax - 1, my, 2, Math.max(0, ay - my));
+  });
   const rodBox = EX.rod && fit.querySelector(`.onode[data-id="${EX.rod.id}"]`);
   const tedUl = fit.querySelector('li.tedli > ul');
   if (!rodBox || !tedUl) return;
@@ -339,7 +352,7 @@ function drawLinks(fit) {
 window.addEventListener('resize', () => { if (ZCUR === null) fitChart(); });
 
 // ---------- floors: managers/buyers on one floor, supervisors on another, associates on another
-const FLOOR_LABELS = { 0: 'Board', 1: 'CEO · CMO', 2: 'Managing Director', 3: 'Area managers & buyers', 4: 'Store managers · supervisors', 5: 'Associates & staff' };
+const FLOOR_LABELS = { 0: 'Board', 1: '', 2: 'Managing Director', 3: 'Area managers & buyers', 4: 'Store managers · supervisors', 5: 'Associates & staff' };
 let _FL = {};
 function floorOf(id) {
   if (_FL[id] != null) return _FL[id];
@@ -371,7 +384,7 @@ function layoutFloors(root) {
     const rowTop = Math.max(prevBottom + 36, ...row.map(li => parentBottom(li) + 40));
     row.forEach(li => { const cur = posIn(boxOf(li), root).y; const pad = Math.max(18, rowTop - cur); li.style.paddingTop = pad + 'px'; li.style.setProperty('--drop', pad + 'px'); });
   });
-  floors.forEach(f => {
+  floors.filter(f => f !== 1).forEach(f => {
     const boxes = lis.map(boxOf).filter(b => +b.dataset.floor === f);
     const top = Math.min(...boxes.map(b => posIn(b, root).y)), bot = Math.max(...boxes.map(b => posIn(b, root).y + b.offsetHeight));
     const d = document.createElement('div'); d.className = 'oflr';
