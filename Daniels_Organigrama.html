@@ -92,6 +92,9 @@
   .bnrow{display:flex;flex-wrap:nowrap;justify-content:center;gap:2px;white-space:nowrap;}
   .onode.boardbox:hover{transform:none;box-shadow:0 1px 4px rgba(0,0,0,.08);}
   .bn{display:inline-block;margin:2px 3px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#fdf3e3;color:#7a5a12;}
+  .hcount{position:absolute;top:10px;right:14px;z-index:5;text-align:center;background:#fff;border:2px solid var(--navy);border-radius:14px;padding:6px 16px;box-shadow:0 2px 8px rgba(0,0,0,.12);}
+  .hcount b{display:block;font-size:44px;line-height:1;color:var(--navy);font-weight:800;}
+  .hcount span{display:block;font-size:11px;font-weight:700;color:var(--mgray);line-height:1.2;margin-top:2px;}
   .oanchor{height:2px;width:2px;margin:0 auto;}
   .bn.go{cursor:pointer;border:1px solid currentColor;} .bn.go:hover{filter:brightness(.92);}
   .olb{position:absolute;z-index:1;pointer-events:none;}
@@ -299,7 +302,8 @@ function render() {
   }
   if (karen) karenLi = `<li style="--lc:transparent"><div class="oanchor" data-floor="1" data-anchor="karen"></div>${oUl(oItems('e:' + karen.id, KIDS[karen.id]), '#C2185B')}</li>`;
   const inner = `<ul><li>${boardBox}<ul style="--lc:transparent">${tedLi}${karenLi}</ul></li></ul>`;
-  document.getElementById('tree').innerHTML = `<div class="oblock"><div class="ofit"><div class="otree">${inner}</div></div></div>`;
+  const headcount = NODES.filter(n => !/rosenberg/i.test(n.nombre)).length;
+  document.getElementById('tree').innerHTML = `<div class="oblock"><div class="hcount"><b>${headcount}</b><span>employees<br>(excl. Board)</span></div><div class="ofit"><div class="otree">${inner}</div></div></div>`;
   fitChart();
 }
 function fitChart() {
