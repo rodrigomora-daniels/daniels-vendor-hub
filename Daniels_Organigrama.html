@@ -27,6 +27,7 @@
   .nt{font-size:12px;color:var(--mgray);margin-top:1px;}
   .loc{display:inline-block;margin-top:3px;padding:1px 7px;border-radius:8px;background:#edf2fb;color:var(--navy);font-size:10px;font-weight:700;}
   .also{font-size:11px;color:var(--purple);margin-top:2px;}
+  .ind{font-size:11px;color:#8a8a8a;margin-top:2px;font-style:italic;border-top:1px dashed #c4c4c4;padding-top:2px;}
   .cnt{margin-left:auto;background:var(--navy);color:#fff;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap;}
   ul.tree{list-style:none;margin-left:22px;border-left:2px solid #c9d3e3;padding-left:14px;}
   ul.tree.root{margin-left:0;border-left:none;padding-left:0;}
@@ -80,7 +81,7 @@
     • Levels go top to bottom: Board → Managing Director → each leader's reporting line → teams by location.<br>
     • <b>Dashed blue box</b> = co-leaders who share one team. That team reports to <b>both</b>, depending on shift.<br>
     • <b>📍 labels</b> group people by location.<br>
-    • Purple note = also reports to another leader. Click a name with a <b>+</b> / <b>−</b> to expand or collapse its team (no icon = no team).
+    • Purple note = also reports to another leader. Gray dashed italic note = indirect, often temporary, reporting line. Click a name with a <b>+</b> / <b>−</b> to expand or collapse its team (no icon = no team).
   </div>
 </div>
 <script>
@@ -134,7 +135,7 @@ function cardHtml(id, opts) {
   const n = BY[id], kids = KIDS[id].length, t = opts.count != null ? opts.count : total(id);
   return `<div class="card ${clsOf(n)} ${opts.toggle ? 'toggle' : ''}" ${opts.toggle ? 'onclick="toggle(this.parentNode)"' : ''}>
       <span>${ico(n)}</span><div><div class="nm">${opts.toggle ? '<span class="arrow">−</span>' : ''}${esc(n.nombre)}</div><div class="nt">${esc(n.puesto)}</div>
-      ${n.ubicacion ? `<span class="loc">${esc(n.ubicacion)}</span>` : ''}${n.also.length ? `<div class="also">also reports to: ${n.also.map(a => esc(BY[a].nombre)).join(', ')}</div>` : ''}</div>
+      ${n.ubicacion ? `<span class="loc">${esc(n.ubicacion)}</span>` : ''}${(n.indirectos || []).map(i => `<div class="ind">indirect: ${esc(i.nombre)}${i.puesto ? ' (' + esc(i.puesto) + ')' : ''}${i.nota ? ' · ' + esc(i.nota) : ''}</div>`).join('')}${n.also.length ? `<div class="also">also reports to: ${n.also.map(a => esc(BY[a].nombre)).join(', ')}</div>` : ''}</div>
       ${t && !opts.noCount ? `<span class="cnt">${t}</span>` : ''}</div>`;
 }
 function listHtml(ids, depth) {
