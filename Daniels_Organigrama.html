@@ -114,7 +114,7 @@ async function load() {
     // when all bosses are Rosenbergs, Ted (CEO) is the principal line, then Karen
     const js = (n.jefes || []).filter(j => BY[j]).sort((a, b) => (/^ted\b/i.test(BY[a].nombre) ? 0 : 1) - (/^ted\b/i.test(BY[b].nombre) ? 0 : 1));
     const ops = js.filter(j => !isRos(j));
-    n.primary = ops[0] || js[0] || null;
+    n.primary = (n.jefe_principal && js.includes(n.jefe_principal)) ? n.jefe_principal : (ops[0] || js[0] || null);
     n.also = js.filter(j => j !== n.primary);
     n.pgKey = null;
     if (ops.length > 1) { // reports to several same-level operating leaders -> shared team
