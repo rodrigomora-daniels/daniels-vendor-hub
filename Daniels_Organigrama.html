@@ -33,7 +33,8 @@
   ul.tree li{margin:7px 0;}
   .toggle{cursor:pointer;user-select:none;}
   .collapsed > ul.tree{display:none;}
-  .arrow{display:inline-block;width:14px;color:var(--navy);font-size:12px;}
+  .arrow{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-right:6px;border:1.5px solid var(--navy);border-radius:50%;color:var(--navy);font-size:14px;font-weight:700;line-height:1;vertical-align:1px;background:#fff;}
+  .toggle:hover .arrow{background:var(--navy);color:#fff;}
   .empty{color:var(--mgray);padding:30px;text-align:center;}
   .legend{font-size:11px;color:var(--mgray);margin-top:16px;line-height:1.6;}
   .band{margin:14px 0 6px;}
@@ -77,9 +78,9 @@
   <div class="legend">
     <b>How to read this:</b><br>
     • Levels go top to bottom: Board → Managing Director → each leader's reporting line → teams by location.<br>
-    • <b>Dashed blue box</b> = leaders at the <b>same level</b> (peers). Their shared team reports to <b>both</b>, depending on shift.<br>
+    • <b>Dashed blue box</b> = co-leaders who share one team. That team reports to <b>both</b>, depending on shift.<br>
     • <b>📍 labels</b> group people by location.<br>
-    • Purple note = also reports to another leader. Click a name or the ▸ to expand or collapse its team.
+    • Purple note = also reports to another leader. Click a name with a <b>+</b> / <b>−</b> to expand or collapse its team (no icon = no team).
   </div>
 </div>
 <script>
@@ -108,7 +109,7 @@ async function load() {
     n.pgKey = null;
     if (ops.length > 1) { // reports to several same-level operating leaders -> shared team
       n.pgKey = ops.slice().sort().join('|'); n.also = js.filter(j => isRos(j));
-      PG[n.pgKey] = PG[n.pgKey] || { bosses: ops.slice().sort((x, y) => BY[x].nombre.localeCompare(BY[y].nombre)), team: [] };
+      PG[n.pgKey] = PG[n.pgKey] || { bosses: ops.slice().sort(cmp), team: [] };
       PG[n.pgKey].team.push(n.id);
     } else if (n.primary) KIDS[n.primary].push(n.id);
   });
@@ -119,7 +120,10 @@ async function load() {
 }
 let PG = {};
 const ORD = { director: 0, manager: 1, vendedor: 2, staff: 3 };
-const cmp = (x, y) => ((ORD[BY[x].rol] ?? 9) - (ORD[BY[y].rol] ?? 9)) || BY[x].nombre.localeCompare(BY[y].nombre);
+// seniority inside a team: role level first, then title (manager > assistant > supervisor/lead > rest), then name
+const titleRank = p => { p = (p || '').toLowerCase(); return /assistant|asst/.test(p) ? 1 : /manager|director|chief|ceo|coo|cfo|cmo/.test(p) ? 0 : /supervisor|lead|senior/.test(p) ? 2 : 3; };
+const cmp = (x, y) => ((ORD[BY[x].rol] ?? 9) - (ORD[BY[y].rol] ?? 9)) || (titleRank(BY[x].puesto) - titleRank(BY[y].puesto)) || BY[x].nombre.localeCompare(BY[y].nombre);
+
 const ico = n => /^(ted|karen)/i.test(n.nombre) ? '👔' : n.rol === 'director' ? '⚙️' : n.rol === 'manager' ? '🧭' : n.rol === 'vendedor' ? '🛒' : '👤';
 const clsOf = n => n.rol === 'director' ? 'dir' : n.rol === 'manager' ? 'mgr' : n.rol === 'staff' ? 'staff' : '';
 function memberOf(id) { return Object.entries(PG).find(([k, g]) => g.bosses.includes(id)); }
@@ -129,7 +133,7 @@ function cardHtml(id, opts) {
   opts = opts || {};
   const n = BY[id], kids = KIDS[id].length, t = opts.count != null ? opts.count : total(id);
   return `<div class="card ${clsOf(n)} ${opts.toggle ? 'toggle' : ''}" ${opts.toggle ? 'onclick="toggle(this.parentNode)"' : ''}>
-      <span>${ico(n)}</span><div><div class="nm">${opts.toggle ? '<span class="arrow">▾</span>' : ''}${esc(n.nombre)}</div><div class="nt">${esc(n.puesto)}</div>
+      <span>${ico(n)}</span><div><div class="nm">${opts.toggle ? '<span class="arrow">−</span>' : ''}${esc(n.nombre)}</div><div class="nt">${esc(n.puesto)}</div>
       ${n.ubicacion ? `<span class="loc">${esc(n.ubicacion)}</span>` : ''}${n.also.length ? `<div class="also">also reports to: ${n.also.map(a => esc(BY[a].nombre)).join(', ')}</div>` : ''}</div>
       ${t && !opts.noCount ? `<span class="cnt">${t}</span>` : ''}</div>`;
 }
@@ -159,9 +163,9 @@ function peerHtml(key, depth) {
   const all = [...team, ...own].sort(cmp);
   const collapsed = all.length > 6 ? 'collapsed' : '';
   const loc = BY[g.bosses[0]].ubicacion;
-  return `<li class="${collapsed}" data-id="${g.bosses[0]}" data-pg="${key}"><div class="peer"><div class="peer-h">Same level · co-leaders${loc ? ' · ' + esc(loc) : ''}</div>
+  return `<li class="${collapsed}" data-id="${g.bosses[0]}" data-pg="${key}"><div class="peer"><div class="peer-h">Co-leaders${loc ? ' · ' + esc(loc) : ''}</div>
     <div class="row">${g.bosses.map(b => cardHtml(b, { noCount: true })).join('')}</div>
-    ${all.length ? `<div class="peer-note toggle" onclick="toggle(this.closest('li'))"><span class="arrow">▾</span>Shared team (${all.length}) — reports to both ${g.bosses.map(b => esc(BY[b].nombre.split(' ')[0])).join(' & ')}, depending on shift</div>` : ''}
+    ${all.length ? `<div class="peer-note toggle" onclick="toggle(this.closest('li'))"><span class="arrow">−</span>Shared team (${all.length}) — reports to both ${g.bosses.map(b => esc(BY[b].nombre.split(' ')[0])).join(' & ')}, depending on shift</div>` : ''}
     </div>
     ${all.length ? `<ul class="tree">${all.map(i => nodeHtml(i, depth + 1)).join('')}</ul>` : ''}</li>`;
 }
@@ -195,7 +199,7 @@ function render() {
   document.getElementById('tree').innerHTML = h || '<div class="empty">No data yet.</div>';
   syncArrows();
 }
-function syncArrows() { document.querySelectorAll('#tree li').forEach(li => { const a = li.querySelector(':scope > .card .arrow') || li.querySelector(':scope > .peer .peer-note .arrow'); if (a) a.textContent = li.classList.contains('collapsed') ? '▸' : '▾'; }); }
+function syncArrows() { document.querySelectorAll('#tree li').forEach(li => { const a = li.querySelector(':scope > .card .arrow') || li.querySelector(':scope > .peer .peer-note .arrow'); if (a) a.textContent = li.classList.contains('collapsed') ? '+' : '−'; }); }
 function toggle(li) { li.classList.toggle('collapsed'); syncArrows(); }
 function setAll(open) { document.querySelectorAll('#tree li').forEach(li => { if (li.querySelector(':scope > ul')) li.classList.toggle('collapsed', !open); }); syncArrows(); }
 function onSearch() {
