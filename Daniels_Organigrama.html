@@ -67,7 +67,19 @@
   #overview.leaving{position:absolute;top:0;left:0;right:0;}
   #zoomview{display:none;transition:transform .4s cubic-bezier(.2,.7,.2,1),opacity .4s ease;}
   #zoomview.enter{transform:scale(.35);opacity:0;}
-  .zbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;}
+  .zbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px;position:sticky;top:0;z-index:20;background:#e8f0fb;border:2px solid var(--navy);border-radius:12px;padding:10px 14px;}
+  .zbar .zin{flex:1 0 100%;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--navy);}
+  .zbar .crumbs{font-size:15px !important;}
+  .zbar button.primary{font-size:16px !important;padding:12px 24px !important;}
+  .zbar .esc{font-size:12px;color:#556;}
+  .zchain{display:flex;flex-direction:column;align-items:center;margin-bottom:6px;}
+  .zchain .zlbl{font-size:12px;font-weight:700;color:var(--mgray);margin-bottom:8px;}
+  .zanc{border:2px solid #b8c4d8;background:#f4f7fc;border-radius:10px;padding:7px 18px;text-align:center;min-width:200px;cursor:pointer;opacity:.9;}
+  .zanc:hover{border-color:var(--navy);opacity:1;}
+  .zanc .on{font-weight:700;font-size:13px;color:var(--navy);} .zanc .ot{font-size:11px;color:var(--mgray);}
+  .zanc.board{background:#fdf3e3;border-color:#d9b25a;cursor:default;}
+  .zconn{width:2px;height:22px;background:#9aa8c0;position:relative;}
+  .zconn:after{content:"";position:absolute;bottom:-1px;left:-4px;border:5px solid transparent;border-top:7px solid #9aa8c0;border-bottom:0;}
   .zbar .crumbs{flex:1;min-width:200px;font-size:13px;color:var(--mgray);}
   .zbar .crumbs a{color:var(--navy);font-weight:700;cursor:pointer;text-decoration:underline;}
   .zbar button{padding:8px 14px;border:1px solid var(--navy);background:#fff;color:var(--navy);border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;}
@@ -123,6 +135,10 @@
   .onode .oa{font-size:9.5px;color:var(--purple);margin-top:2px;}
   .onode .peer-h2{font-size:9px;font-weight:800;color:#4060a0;letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px;}
   .hint{font-size:11px;color:var(--mgray);margin:0 0 6px 2px;}
+  .zoomtip{display:flex;gap:12px;align-items:center;background:#e8f0fb;border:2px solid var(--navy);border-radius:12px;padding:12px 16px;margin:6px 0 12px;font-size:15px;line-height:1.45;color:#1a2a44;}
+  .zoomtip .zt-i{font-size:28px;}
+  .zoomtip b{color:var(--navy);}
+  kbd{background:#fff;border:1px solid #888;border-bottom-width:2px;border-radius:4px;padding:0 6px;font-size:13px;font-weight:700;}
 
   .card.ted{border-left-color:var(--ted);background:#fdf8f5;}
   .card.karen{border-left-color:var(--karen);background:#fdf5f8;}
@@ -153,7 +169,7 @@
     <b>How to read this:</b><br>
     • Levels go top to bottom: Board → CEO and CMO → direct reports → teams. Solid lines are direct reporting lines; <b>dashed purple lines</b> are indirect lines (Rodrigo for the areas that report to Ted).<br>
     • <b>Dashed blue box</b> = co-leaders who share one team. That team reports to <b>both</b>, depending on shift.<br>
-    • <b>Floors</b> (labels on the left) put the same level on the same row: area managers and buyers, then store managers and supervisors, then associates and staff. <b>Boxes with a + have a team: click to zoom in one level</b>; use <b>Zoom out</b> or press <b>Esc</b> to go back.<br>
+    • <b>Floors</b> (labels on the left) put the same level on the same row: area managers and buyers, then store managers and supervisors, then associates and staff. <b>Boxes with a + have a team: click to zoom in one level</b>; use <b>Zoom out</b> or press <b>Esc</b> to go back. When zoomed in, <b>scroll up</b> to see the reporting line above.<br>
     • Purple note = second reporting line (Karen for Angel). Gray italic note = indirect, often temporary, line (Rey for Ana and Letty). A <b>+</b> in a corner means that box has a team inside.
   </div>
 </div>
@@ -177,7 +193,9 @@ async function load() {
   NODES.forEach(n => {
     // when all bosses are Rosenbergs, Ted (CEO) is the principal line, then Karen
     const js = (n.jefes || []).filter(j => BY[j]).sort((a, b) => (/^ted\b/i.test(BY[a].nombre) ? 0 : 1) - (/^ted\b/i.test(BY[b].nombre) ? 0 : 1));
-    const ops = js.filter(j => !isRos(j));
+    // a boss who is himself the boss of another boss is a superior (2nd line), not a co-leader
+    const ops0 = js.filter(j => !isRos(j));
+    const ops = ops0.filter(o => !ops0.some(x => x !== o && ((BY[x].jefes || []).includes(o))));
     n.primary = (n.jefe_principal && js.includes(n.jefe_principal)) ? n.jefe_principal : (ops[0] || js[0] || null);
     n.also = js.filter(j => j !== n.primary);
     n.pgKey = null;
@@ -256,7 +274,7 @@ function render() {
       <span><i style="background:var(--gold)"></i>Board</span><span><i style="background:var(--ted)"></i>Ted (CEO) line</span>
       <span><i style="background:var(--navy)"></i>Rodrigo line</span><span><i style="background:var(--karen)"></i>Karen line</span>
       <span><svg width="26" height="8"><line x1="0" y1="4" x2="26" y2="4" stroke="#7B5EA7" stroke-width="2" stroke-dasharray="4,3"/></svg> Indirect reporting line</span></div>
-    <div class="hint">Boxes with a <b>+</b> have a team: click to zoom in one level. Esc or Zoom out to go back.</div>`;
+    <div class="zoomtip"><span class="zt-i">🔍</span><div><b>Click any box with a +</b> to <b>zoom in</b> on that team.<br><b>Zoom out</b> with the big button on top, or press <kbd>Esc</kbd>. When zoomed in, <b>scroll up</b> to see who they report to.</div></div>`;
   const boardBox = `<div class="onode boardbox leaf" data-floor="0"><div class="peer-h2" style="color:#7a5a12">Board — Rosenberg family</div>
     <span class="bn">Dani Rosenberg</span><span class="bn">Rebecca Rosenberg</span>${ted ? `<span class="bn t">${esc(ted.nombre)}</span>` : ''}${karen ? `<span class="bn k">${esc(karen.nombre)}</span>` : ''}</div>`;
   let tedLi = '', karenLi = '';
@@ -462,10 +480,29 @@ function zoomBody(target) {
   }
   return h + '</div>';
 }
+function ancestorsFor(target) {
+  const k = target.slice(0, 1), id = target.slice(2);
+  let cur = k === 'p' ? (BY[PG[id].bosses[0]].primary || null) : BY[id].primary;
+  const chain = [];
+  while (cur) { chain.unshift(cur); if (EXECIDS.has(cur) && cur !== (EX.rod || {}).id) break; cur = BY[cur].primary; }
+  return chain;
+}
+function chainHtml(target) {
+  const anc = ancestorsFor(target);
+  const board = `<div class="zanc board"><div class="on">Board</div><div class="ot">Dani · Rebecca · Ted · Karen Rosenberg</div></div>`;
+  return `<div class="zchain"><div class="zlbl">↑ Reporting line above (click to jump)</div>${board}` +
+    anc.map(c => `<div class="zconn"></div><div class="zanc" onclick="zoomTo('${EXECIDS.has(c) ? 'e:' : 'n:'}${c}')"><div class="on">${esc(BY[c].nombre)}</div><div class="ot">${esc(BY[c].puesto)}</div></div>`).join('') +
+    `<div class="zconn"></div></div>`;
+}
+function scrollToRoot() {
+  const r = document.querySelector('#zoomview .zroot'); if (!r) return;
+  const bar = document.querySelector('#zoomview .zbar');
+  window.scrollTo(0, Math.max(0, r.getBoundingClientRect().top + window.scrollY - (bar ? bar.offsetHeight : 0) - 24));
+}
 function renderZoom(target) {
   const zv = document.getElementById('zoomview');
-  zv.innerHTML = `<div class="zbar"><div class="crumbs">${crumbsFor(target)}</div>
-    <button class="primary" onclick="zoomOut()">⤢ Zoom out</button></div><div id="zbody">${zoomBody(target)}</div>`;
+  zv.innerHTML = `<div class="zbar"><div class="zin">🔍 Zoomed in</div><div class="crumbs">${crumbsFor(target)}</div>
+    <button class="primary" onclick="zoomOut()">⤢ Zoom out</button><span class="esc">or press <kbd>Esc</kbd></span></div>${chainHtml(target)}<div id="zbody">${zoomBody(target)}</div>`;
 }
 function layoutZoom() { const w = document.querySelector('#zoomview .zwrap'); if (w) layoutFloors(w); }
 function originFor(el, box) {
@@ -480,7 +517,7 @@ function zoomTo(target, el) {
   if (!wasZoomed) ZSCROLL = window.scrollY;
   renderZoom(target); ZCUR = target;
   if (wasZoomed) { // drilling between zoomed views: quick cross-fade
-    layoutZoom(); zv.classList.add('enter'); void zv.offsetWidth; zv.classList.remove('enter'); window.scrollTo(0, 0); return;
+    layoutZoom(); zv.classList.add('enter'); void zv.offsetWidth; zv.classList.remove('enter'); scrollToRoot(); return;
   }
   ZBUSY = true;
   const o = originFor(el, ov);
@@ -489,7 +526,7 @@ function zoomTo(target, el) {
   ov.classList.add('leaving');
   void zv.offsetWidth;
   ov.classList.add('away'); zv.classList.remove('enter');
-  window.scrollTo(0, 0);
+  scrollToRoot();
   setTimeout(() => { ov.style.display = 'none'; ZBUSY = false; }, 420);
 }
 function zoomOut() {
