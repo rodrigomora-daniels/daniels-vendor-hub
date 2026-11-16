@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Daniels Workspace — Org Chart</title>
 <style>
-  :root{--navy:#1B3A6B;--gold:#C8922A;--ltblue:#D6E4F7;--green:#27AE60;--mgray:#6B6B6B;--purple:#7B5EA7;--ted:#8B4513;--karen:#C2185B;}
+  :root{--navy:#1B3A6B;--gold:#C8922A;--ltblue:#D6E4F7;--green:#27AE60;--mgray:#6B6B6B;--purple:#7B5EA7;--ind:#00B050;--ted:#8B4513;--karen:#C2185B;}
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:Arial,sans-serif;background:#f0f2f5;min-height:100vh;}
   .top-bar{background:var(--navy);border-bottom:4px solid var(--gold);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;}
@@ -86,7 +86,7 @@
   .zbar button.primary{background:var(--navy);color:#fff;}
   .oblock{background:#fff;border:1px solid #dfe5ef;border-radius:12px;padding:14px 10px 18px;margin:12px 0;overflow:hidden;position:relative;}
   .ofit{position:relative;transform-origin:top left;width:max-content;}
-  .olink{position:absolute;height:0;border-top:2px dashed var(--purple);z-index:2;pointer-events:none;}
+  .olink{position:absolute;height:0;border-top:3px dashed var(--ind);z-index:2;pointer-events:none;}
   .olink span{position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--purple);font-weight:700;background:#fff;padding:0 3px;white-space:nowrap;}
   .onode.boardbox{border-top-color:var(--gold);background:#fffaf0;max-width:520px;cursor:default;}
   .onode.boardbox:hover{transform:none;box-shadow:0 1px 4px rgba(0,0,0,.08);}
@@ -113,7 +113,7 @@
   .zgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;}
   .zloc{grid-column:1/-1;font-size:11px;font-weight:800;color:var(--navy);margin-top:6px;}
   .zwrap{background:#fff;border:1px solid #dfe5ef;border-radius:12px;padding:14px 10px 18px;overflow-x:auto;position:relative;}
-  .olinkv{position:absolute;width:0;border-left:2px dashed var(--purple);z-index:2;pointer-events:none;}
+  .olinkv{position:absolute;width:0;border-left:3px dashed var(--ind);z-index:2;pointer-events:none;}
   .otree li:only-child::before,.otree li:only-child::after{display:none;}
   .otree li:only-child{padding-top:0;}
   .otree li:first-child::before,.otree li:last-child::after{border:0 none;}
@@ -167,7 +167,7 @@
   </div>
   <div class="legend">
     <b>How to read this:</b><br>
-    • Levels go top to bottom: Board → CEO and CMO → direct reports → teams. Solid lines are direct reporting lines; <b>dashed purple lines</b> are indirect lines (Rodrigo for the areas that report to Ted).<br>
+    • Levels go top to bottom: Board → CEO and CMO → direct reports → teams. Solid lines are direct reporting lines; <b>dashed green lines</b> are indirect reports (Rodrigo for the areas that report to Ted).<br>
     • <b>Dashed blue box</b> = co-leaders who share one team. That team reports to <b>both</b>, depending on shift.<br>
     • <b>Floors</b> (labels on the left) put the same level on the same row: area managers and buyers, then store managers and supervisors, then associates and staff. <b>Boxes with a + have a team: click to zoom in one level</b>; use <b>Zoom out</b> or press <b>Esc</b> to go back. When zoomed in, <b>scroll up</b> to see the reporting line above.<br>
     • Purple note = second reporting line (Karen for Angel). Gray italic note = indirect, often temporary, line (Rey for Ana and Letty). A <b>+</b> in a corner means that box has a team inside.
@@ -273,7 +273,7 @@ function render() {
   document.getElementById('top').innerHTML = `<div class="keys">
       <span><i style="background:var(--gold)"></i>Board</span><span><i style="background:var(--ted)"></i>Ted (CEO) line</span>
       <span><i style="background:var(--navy)"></i>Rodrigo line</span><span><i style="background:var(--karen)"></i>Karen line</span>
-      <span><svg width="26" height="8"><line x1="0" y1="4" x2="26" y2="4" stroke="#7B5EA7" stroke-width="2" stroke-dasharray="4,3"/></svg> Indirect reporting line</span></div>
+      <span style="font-weight:700;color:#007a38"><svg width="34" height="8"><line x1="0" y1="4" x2="34" y2="4" stroke="#00B050" stroke-width="3" stroke-dasharray="6,4"/></svg> Dashed = indirect report</span></div>
     <div class="zoomtip"><span class="zt-i">🔍</span><div><b>Click any box with a +</b> to <b>zoom in</b> on that team.<br><b>Zoom out</b> with the big button on top, or press <kbd>Esc</kbd>. When zoomed in, <b>scroll up</b> to see who they report to.</div></div>`;
   const boardBox = `<div class="onode boardbox leaf" data-floor="0"><div class="peer-h2" style="color:#7a5a12">Board — Rosenberg family</div>
     <span class="bn">Dani Rosenberg</span><span class="bn">Rebecca Rosenberg</span>${ted ? `<span class="bn t">${esc(ted.nombre)}</span>` : ''}${karen ? `<span class="bn k">${esc(karen.nombre)}</span>` : ''}</div>`;
@@ -332,7 +332,7 @@ function drawLinks(fit) {
     const far = list.reduce((m, o) => Math.abs(o.xv - o.xs) > Math.abs(m.xv - m.xs) ? o : m, list[0]);
     const h = document.createElement('div'); h.className = 'olink';           // one shared horizontal "bus" per side
     h.style.left = Math.min(far.xs, far.xv) + 'px'; h.style.width = Math.abs(far.xs - far.xv) + 'px'; h.style.top = rMid + 'px';
-    h.innerHTML = '<span>indirect</span>'; fit.appendChild(h);
+    fit.appendChild(h);
     list.forEach(o => { const v = document.createElement('div'); v.className = 'olinkv'; v.style.left = o.xv + 'px'; v.style.top = rMid + 'px'; v.style.height = Math.max(0, o.top - rMid) + 'px'; fit.appendChild(v); });
   });
 }
