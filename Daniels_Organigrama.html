@@ -95,7 +95,10 @@
   .hcount{position:absolute;top:10px;right:14px;z-index:5;text-align:center;background:#fff;border:2px solid var(--navy);border-radius:14px;padding:6px 16px;box-shadow:0 2px 8px rgba(0,0,0,.12);}
   .hcount b{display:block;font-size:44px;line-height:1;color:var(--navy);font-weight:800;}
   .hcount span{display:block;font-size:11px;font-weight:700;color:var(--mgray);line-height:1.2;margin-top:2px;}
-  .onode.boardbox{max-width:880px;padding:12px 16px;}
+  .onode.boardbox{max-width:880px;padding:12px 18px 10px;background:#fff;border:2px solid #0054A4;border-top:6px solid #F3B120;}
+  .onode.boardbox .bd-logo{display:block;height:46px;margin:0 auto 6px;}
+  .onode.boardbox .peer-h2{color:#0054A4 !important;letter-spacing:.08em;}
+  .onode.boardbox .bn:not(.t):not(.k){background:#e6effa;color:#0054A4;}
   .onode.boardbox .peer-h2{font-size:11px;margin-bottom:6px;}
   .onode.boardbox .bn{font-size:14px;padding:4px 12px;margin:3px 4px;}
   .oanchor{height:2px;width:2px;margin:0 auto;}
@@ -287,7 +290,7 @@ function render() {
       <span><i style="background:var(--navy)"></i>Rodrigo line</span><span><i style="background:var(--karen)"></i>Karen line</span>
       <span style="font-weight:700;color:#007a38"><svg width="34" height="8"><line x1="0" y1="4" x2="34" y2="4" stroke="#00B050" stroke-width="3" stroke-dasharray="6,4"/></svg> Dashed = indirect report</span></div>
     <div class="zoomtip"><span class="zt-i">🔍</span><div><b>Click any box with a +</b> to <b>zoom in</b> on that team.<br><b>Zoom out</b> with the big button on top, or press <kbd>Esc</kbd>. When zoomed in, <b>scroll up</b> to see who they report to.</div></div>`;
-  const boardBox = `<div class="onode boardbox leaf" data-floor="0"><div class="peer-h2" style="color:#7a5a12">Board — Rosenberg family</div>
+  const boardBox = `<div class="onode boardbox leaf" data-floor="0"><img class="bd-logo" src="icons/daniels-logo.png" alt="Daniel's Home Center"><div class="peer-h2">Board — Rosenberg family</div>
     <div class="bnrow"><span class="bn">Dani Rosenberg</span><span class="bn">Rebecca Rosenberg</span>${ted ? `<span class="bn t go" data-chip="ted" onclick="zoomTo('e:${ted.id}', this)">${esc(ted.nombre)} · CEO ＋</span>` : ''}${karen ? `<span class="bn k go" data-chip="karen" onclick="zoomTo('e:${karen.id}', this)">${esc(karen.nombre)} · CMO ＋</span>` : ''}</div></div>`;
   let tedLi = '', karenLi = '';
   if (ted) {
