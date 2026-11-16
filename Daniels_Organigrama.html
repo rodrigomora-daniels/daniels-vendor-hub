@@ -365,7 +365,7 @@ function floorOf(id) {
   else if (EX.rod && id === EX.rod.id) f = 2;
   else {
     const t = (n.puesto || '').toLowerCase();
-    const rank = /store support/.test(t) ? 6 : /assistant|asst|supervisor/.test(t) ? 4 : (n.rol === 'manager' || n.rol === 'director') ? 3 : 5;
+    const rank = /store support|facilities/.test(t) ? 6 : /assistant|asst|supervisor/.test(t) ? 4 : (n.rol === 'manager' || n.rol === 'director') ? 3 : 5;
     f = Math.max(rank, n.primary ? floorOf(n.primary) + 1 : rank);
   }
   return (_FL[id] = f);
@@ -498,7 +498,7 @@ function zoomBody(target) {
     if (flat) return `<div class="zgrid-h">${title} (${ids.length})</div><div class="zgrid">${ids.map(i => cardHtml(i, { noCount: true, note: ORPH.includes(i) ? 'Reports to the owners · not evaluated' : '' })).join('')}</div>`;
     return `<div class="zgrid-h">${title} (${ids.length})</div><div class="zgrid">${locs.length > 1 ? locs.map(l => `<div class="zloc">📍 ${esc(l || 'Other')}</div>` + ids.filter(i => (BY[i].ubicacion || '') === l).map(i => cardHtml(i, { noCount: true })).join('')).join('') : ids.map(i => cardHtml(i, { noCount: true })).join('')}</div>`;
   };
-  const isSup = i => /store support/i.test(BY[i].puesto || '');
+  const isSup = i => /store support|facilities/i.test(BY[i].puesto || '');
   h += gridBlock(gridIds.filter(i => !isSup(i)), 'Team members');
   const supIds = gridIds.filter(isSup);
   h += gridBlock(supIds.length ? [...supIds, ...ORPH.filter(i => isSup(i))] : [], 'Store support — clerks who move, assemble and handle pick-ups', true);
