@@ -192,7 +192,7 @@ async function load() {
     NODES = await res.json();
   } catch (err) { document.getElementById('tree').innerHTML = `<div class="empty">Could not load the org chart: ${esc(err.message)}</div>`; return; }
   NODES = NODES.filter(n => !/prueba|test/i.test(n.puesto || ''));
-  NODES.forEach(n => { if (/^rodrigo\b/i.test(n.nombre)) n.puesto = 'Managing Director'; }); // chart shows his role, not COO/CFO
+  NODES.forEach(n => { if (/^rodrigo\b/i.test(n.nombre)) n.puesto = 'General Manager / Operations'; });
   BY = {}; KIDS = {}; _FL = {};
   NODES.forEach(n => { BY[n.id] = n; KIDS[n.id] = []; });
   const isRos = id => /rosenberg/i.test((BY[id] || {}).nombre || '');
@@ -356,7 +356,7 @@ function drawLinks(fit) {
 window.addEventListener('resize', () => { if (ZCUR === null) fitChart(); });
 
 // ---------- floors: managers/buyers on one floor, supervisors on another, associates on another
-const FLOOR_LABELS = { 0: 'Board', 1: '', 2: 'Managing Director', 3: 'Area managers & buyers', 4: 'Store managers · supervisors', 5: 'Associates & staff', 6: 'Store support' };
+const FLOOR_LABELS = { 0: 'Board', 1: '', 2: 'General Manager', 3: 'Area managers & buyers', 4: 'Store managers · supervisors', 5: 'Associates & staff', 6: 'Store support' };
 let _FL = {};
 function floorOf(id) {
   if (_FL[id] != null) return _FL[id];
