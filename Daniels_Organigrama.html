@@ -60,6 +60,48 @@
   .peer .row{align-items:flex-start;}
   .peer-note{font-size:11px;color:var(--purple);margin:8px 0 2px;font-weight:600;}
   .legend b{color:var(--navy);}
+  /* ===== overview (traditional chart) + zoom ===== */
+  .stage{position:relative;}
+  #overview{transition:transform .4s cubic-bezier(.2,.7,.2,1),opacity .4s ease;}
+  #overview.away{transform:scale(1.5);opacity:0;pointer-events:none;}
+  #overview.leaving{position:absolute;top:0;left:0;right:0;}
+  #zoomview{display:none;transition:transform .4s cubic-bezier(.2,.7,.2,1),opacity .4s ease;}
+  #zoomview.enter{transform:scale(.35);opacity:0;}
+  .zbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;}
+  .zbar .crumbs{flex:1;min-width:200px;font-size:13px;color:var(--mgray);}
+  .zbar .crumbs a{color:var(--navy);font-weight:700;cursor:pointer;text-decoration:underline;}
+  .zbar button{padding:8px 14px;border:1px solid var(--navy);background:#fff;color:var(--navy);border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;}
+  .zbar button.primary{background:var(--navy);color:#fff;}
+  .oblock{background:#fff;border:1px solid #dfe5ef;border-radius:12px;padding:14px 10px 18px;margin:12px 0;overflow-x:auto;}
+  .oblock .line-h{margin:0 0 8px 6px;}
+  .oblock.l-rod{--lc:#1B3A6B;border-top:4px solid #1B3A6B;} .oblock.l-ted{--lc:#8B4513;border-top:4px solid #8B4513;} .oblock.l-karen{--lc:#C2185B;border-top:4px solid #C2185B;}
+  .otree{display:flex;justify-content:center;min-width:max-content;margin:0 auto;}
+  .otree ul{display:flex;justify-content:center;padding-top:18px;position:relative;list-style:none;margin:0;}
+  .otree li{position:relative;padding:18px 7px 0;text-align:center;list-style:none;margin:0;}
+  .otree li::before,.otree li::after{content:'';position:absolute;top:0;right:50%;width:50%;height:18px;border-top:2px solid var(--lc,#b9c6dc);}
+  .otree li::after{right:auto;left:50%;border-left:2px solid var(--lc,#b9c6dc);}
+  .otree li:only-child::before,.otree li:only-child::after{display:none;}
+  .otree li:only-child{padding-top:0;}
+  .otree li:first-child::before,.otree li:last-child::after{border:0 none;}
+  .otree li:last-child::before{border-right:2px solid var(--lc,#b9c6dc);border-radius:0 6px 0 0;}
+  .otree li:first-child::after{border-radius:6px 0 0 0;}
+  .otree ul ul::before{content:'';position:absolute;top:0;left:50%;border-left:2px solid var(--lc,#b9c6dc);height:18px;}
+  .otree > ul{padding-top:0;}
+  .onode{display:inline-block;min-width:128px;max-width:176px;background:#fff;border:1px solid #d5dcea;border-top:4px solid var(--lc,#1B3A6B);border-radius:8px;padding:6px 9px;box-shadow:0 1px 4px rgba(0,0,0,.08);cursor:pointer;transition:transform .15s,box-shadow .15s;vertical-align:top;}
+  .onode:hover{transform:translateY(-2px);box-shadow:0 5px 12px rgba(0,0,0,.18);}
+  .onode.leaf{cursor:default;} .onode.leaf:hover{transform:none;box-shadow:0 1px 4px rgba(0,0,0,.08);}
+  .onode.dir{background:var(--ltblue);}
+  .onode.team{background:#f4f7fc;border-style:dashed;border-top-style:solid;}
+  .onode.peer{border:2px dashed #4060a0;border-top:4px solid #4060a0;background:#f7faff;max-width:230px;}
+  .onode.sel{outline:3px solid var(--gold);}
+  .onode .on{font-weight:700;color:var(--navy);font-size:12px;line-height:1.25;}
+  .onode .ot{font-size:10px;color:var(--mgray);margin-top:1px;line-height:1.25;}
+  .onode .oc{display:inline-block;margin-top:3px;background:var(--navy);color:#fff;border-radius:9px;padding:0 7px;font-size:10px;font-weight:700;}
+  .onode .oi{font-size:9.5px;color:#8a8a8a;font-style:italic;margin-top:3px;border-top:1px dashed #c4c4c4;padding-top:2px;}
+  .onode .oa{font-size:9.5px;color:var(--purple);margin-top:2px;}
+  .onode .peer-h2{font-size:9px;font-weight:800;color:#4060a0;letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px;}
+  .hint{font-size:11px;color:var(--mgray);margin:0 0 6px 2px;}
+
   .card.ted{border-left-color:var(--ted);background:#fdf8f5;}
   .card.karen{border-left-color:var(--karen);background:#fdf5f8;}
   .badge{display:inline-block;margin-top:3px;padding:1px 7px;border-radius:6px;font-size:9px;font-weight:800;letter-spacing:.04em;}
@@ -80,16 +122,16 @@
 <div class="content">
   <div class="tools">
     <input id="q" placeholder="Search a person or position…" oninput="onSearch()">
-    <button onclick="setAll(true)">Expand all</button>
-    <button onclick="setAll(false)">Collapse all</button>
   </div>
-  <div id="top"></div>
-  <div id="tree"><div class="empty">Loading…</div></div>
+  <div class="stage">
+    <div id="overview"><div id="top"></div><div id="tree"><div class="empty">Loading…</div></div></div>
+    <div id="zoomview"></div>
+  </div>
   <div class="legend">
     <b>How to read this:</b><br>
     • Levels go top to bottom: Board → Managing Director → each leader's reporting line → teams by location.<br>
     • <b>Dashed blue box</b> = co-leaders who share one team. That team reports to <b>both</b>, depending on shift.<br>
-    • <b>📍 labels</b> group people by location.<br>
+    • <b>📍 labels</b> group people by location. <b>Click any box with a team to zoom in</b>; use <b>Zoom out</b> or press <b>Esc</b> to return to the full chart.<br>
     • Purple note = also reports to another leader. Gray dashed italic note = indirect, often temporary, reporting line. Click a name with a <b>+</b> / <b>−</b> to expand or collapse its team (no icon = no team).
   </div>
 </div>
@@ -182,52 +224,170 @@ function peerHtml(key, depth) {
     </div>
     ${all.length ? `<ul class="tree ${all.length > 4 && all.every(i => !KIDS[i].length) ? 'cols' : ''}">${all.map(i => nodeHtml(i, depth + 1)).join('')}</ul>` : ''}</li>`;
 }
+let EXECIDS = new Set(), EX = {};
 function render() {
   const find = re => NODES.find(n => re.test(n.nombre));
-  const ted = find(/^ted\b/i), karen = find(/^karen\b/i), rod = find(/^rodrigo\b/i);
-  const execIds = new Set([ted, karen, rod].filter(Boolean).map(e => e.id));
+  EX = { ted: find(/^ted\b/i), karen: find(/^karen\b/i), rod: find(/^rodrigo\b/i) };
+  EXECIDS = new Set(Object.values(EX).filter(Boolean).map(e => e.id));
+  const { ted, karen, rod } = EX;
   const bcard = (ico, nm, role, cls) => `<div class="card board-c ${cls || ''}"><span>${ico}</span><div><div class="nm">${esc(nm)}</div>${role ? `<div class="nt">${esc(role)}</div>` : ''}<span class="badge b-board">BOARD</span></div></div>`;
-  let top = `<div class="keys">
+  document.getElementById('top').innerHTML = `<div class="keys">
       <span><i style="background:var(--gold)"></i>Board</span><span><i style="background:var(--navy)"></i>Rodrigo direct</span>
       <span><i style="background:var(--ted)"></i>Ted direct</span><span><i style="background:var(--karen)"></i>Karen direct</span>
       <span><i style="background:var(--purple)"></i>Also reports to</span></div>
     <div class="band"><div class="band-h">Board — Rosenberg family</div><div class="row">
       ${bcard('👑', 'Dani Rosenberg', 'Founder')}${bcard('👑', 'Rebecca Rosenberg', 'Founder')}
       ${ted ? bcard('👔', ted.nombre, ted.puesto, 'ted') : ''}${karen ? bcard('📣', karen.nombre, karen.puesto, 'karen') : ''}
-    </div></div>`;
-  if (rod) top += `<div class="down">▼</div><div class="conn">The Managing Director reports to the Board, and day to day to Ted (CEO)</div>
-    <div class="rod-wrap"><div class="card dir"><span>⚙️</span><div><div class="nm">${esc(rod.nombre)}</div><div class="nt">Managing Director · ${esc(rod.puesto)}</div><span class="badge b-md">MANAGING DIR.</span></div></div></div><div class="down">▼</div>`;
-  document.getElementById('top').innerHTML = top;
+    </div></div><div class="down">▼</div><div class="hint">Click a box to zoom into that team. / Esc to zoom out.</div>`;
+  const blocks = [];
+  if (rod) blocks.push(['l-rod', rod.id, KIDS[rod.id], 'Managing Director']);
+  if (ted) blocks.push(['l-ted', ted.id, KIDS[ted.id].filter(k => !EXECIDS.has(k)), 'CEO — direct reports']);
+  if (karen) blocks.push(['l-karen', karen.id, KIDS[karen.id], 'CMO — direct reports']);
   let h = '';
-  const lines = [];
-  if (rod) lines.push([rod.id, 'l-rod', 'Reports to Rodrigo', KIDS[rod.id]]);
-  if (ted) lines.push([ted.id, 'l-ted', 'Reports directly to Ted', KIDS[ted.id].filter(k => !execIds.has(k))]);
-  if (karen) lines.push([karen.id, 'l-karen', 'Reports directly to Karen', KIDS[karen.id]]);
-  lines.forEach(([id, cls, title, ids]) => {
-    if (!ids.length) return;
-    h += `<div class="line-block ${cls}"><div class="line-h">${title} <span>· ${ids.reduce((s, k) => s + 1 + total(k), 0)} people</span></div>${listUl(ids, 0, true)}</div>`;
+  blocks.forEach(([cls, id, kids, label]) => {
+    if (!kids.length) return;
+    h += `<div class="oblock ${cls}"><div class="line-h">${esc(BY[id].nombre)} <span>· ${label}</span></div>
+      <div class="otree"><ul><li>${oNode(id, 'e:' + id, kids)}</li></ul></div></div>`;
   });
-  const orphans = NODES.filter(n => !n.primary && !n.pgKey && !execIds.has(n.id));
-  if (orphans.length) h += `<div class="line-block"><div class="line-h">Other</div><ul class="tree root">${orphans.map(o => nodeHtml(o.id, 0)).join('')}</ul></div>`;
   document.getElementById('tree').innerHTML = h || '<div class="empty">No data yet.</div>';
-  syncArrows();
 }
-function syncArrows() { document.querySelectorAll('#tree li').forEach(li => { const a = li.querySelector(':scope > .card .arrow') || li.querySelector(':scope > .peer .peer-note .arrow'); if (a) a.textContent = li.classList.contains('collapsed') ? '+' : '−'; }); }
+// ---------- overview helpers
+const plural = p => /s$/i.test(p) ? p : p + 's';
+function oItems(parentZoom, ids) {
+  const nodes = [], leaves = [], seen = new Set();
+  ids.forEach(i => {
+    const m = memberOf(i);
+    if (m) { if (!seen.has(m[0])) { seen.add(m[0]); nodes.push({ t: 'pg', key: m[0], rep: m[1].bosses[0] }); } }
+    else if (KIDS[i].length) nodes.push({ t: 'node', id: i, rep: i });
+    else leaves.push(i);
+  });
+  nodes.sort((a, b) => cmp(a.rep, b.rep));
+  // direct reports of an executive, and anyone with an indirect line, always show as their own box
+  const solo = i => parentZoom.startsWith('e:') || titleRank(BY[i].puesto) < 3 || (BY[i].indirectos || []).length;
+  const senior = leaves.filter(solo).sort(cmp);
+  const rest = leaves.filter(i => !solo(i));
+  const items = [...nodes, ...senior.map(i => ({ t: 'leaf', id: i }))];
+  const groups = {};
+  rest.forEach(i => { const k = BY[i].ubicacion || ''; (groups[k] = groups[k] || []).push(i); });
+  Object.values(groups).forEach(g => { g.sort(cmp); if (g.length >= 2) items.push({ t: 'team', ids: g, zoom: parentZoom }); else items.push({ t: 'leaf', id: g[0] }); });
+  return items;
+}
+function oUl(items) { return items.length ? `<ul>${items.map(oItem).join('')}</ul>` : ''; }
+function oItem(it) {
+  if (it.t === 'node') return `<li>${oNode(it.id, 'n:' + it.id, KIDS[it.id])}</li>`;
+  if (it.t === 'pg') return `<li>${oPeer(it.key)}</li>`;
+  if (it.t === 'leaf') return `<li>${oBox(it.id, null)}</li>`;
+  const puestos = [...new Set(it.ids.map(i => BY[i].puesto))];
+  const label = puestos.length === 1 ? plural(puestos[0]) : 'Team';
+  const loc = BY[it.ids[0]].ubicacion;
+  return `<li><div class="onode team" data-z="${it.zoom}" onclick="zoomTo('${it.zoom}', this)"><div class="on">${esc(label)}</div><div class="ot">${loc ? esc(loc) + ' · ' : ''}team</div><span class="oc">${it.ids.length}</span></div></li>`;
+}
+function oBox(id, zoom, extra) {
+  const n = BY[id], cls = (n.rol === 'director' ? 'dir ' : '') + (zoom ? '' : 'leaf');
+  return `<div class="onode ${cls}" ${zoom ? `data-z="${zoom}" onclick="zoomTo('${zoom}', this)"` : ''} data-id="${id}">
+    <div class="on">${esc(n.nombre)}</div><div class="ot">${esc(n.puesto)}</div>
+    ${n.also.length ? `<div class="oa">also: ${n.also.map(a => esc(BY[a].nombre.split(' ')[0])).join(', ')}</div>` : ''}
+    ${(n.indirectos || []).map(i => `<div class="oi">indirect: ${esc(i.nombre)}${i.nota ? ' · temp.' : ''}</div>`).join('')}${extra || ''}</div>`;
+}
+function oNode(id, zoom, kids) {
+  const items = oItems(zoom, kids);
+  const t = zoom.startsWith('e:') ? kids.reduce((n, k) => n + 1 + total(k), 0) : total(id);
+  return oBox(id, kids.length || sharedOf(id).length ? zoom : null, t ? `<span class="oc">${t}</span>` : '') + oUl(items);
+}
+function oPeer(key) {
+  const g = PG[key], zoom = 'p:' + key;
+  const all = [...g.team, ...g.bosses.flatMap(b => KIDS[b])].sort(cmp);
+  return `<div class="onode peer" data-z="${zoom}" onclick="zoomTo('${zoom}', this)"><div class="peer-h2">Co-leaders · shared team</div>
+    ${g.bosses.map(b => `<div class="on">${esc(BY[b].nombre)}</div><div class="ot">${esc(BY[b].puesto)}</div>`).join('')}<span class="oc">${all.length}</span></div>` + oUl(oItems(zoom, all));
+}
+// ---------- zoom
+let ZSCROLL = 0, ZBUSY = false, ZCUR = null;
+function crumbsFor(target) {
+  const [k, id] = [target.slice(0, 1), target.slice(2)];
+  const first = k === 'p' ? PG[id].bosses[0] : id;
+  const chain = []; let cur = first;
+  while (cur) { chain.unshift(cur); if (EXECIDS.has(cur)) break; cur = BY[cur].primary; }
+  const parts = chain.map((c, i) => {
+    const isLast = i === chain.length - 1 && k !== 'p';
+    const name = esc(BY[c].nombre);
+    return isLast ? `<b>${name}</b>` : `<a onclick="zoomTo('${EXECIDS.has(c) ? 'e:' : 'n:'}${c}')">${name}</a>`;
+  });
+  if (k === 'p') parts[parts.length - 1] = `<a onclick="zoomTo('${EXECIDS.has(first) ? 'e:' : 'n:'}${first}')">${esc(BY[first].nombre)}</a>`, parts.push(`<b>${PG[id].bosses.map(b => esc(BY[b].nombre.split(' ')[0])).join(' &amp; ')} (co-leaders)</b>`);
+  return `<a onclick="zoomOut()">Company</a> › ` + parts.join(' › ');
+}
+function zoomBody(target) {
+  const k = target.slice(0, 1), id = target.slice(2);
+  if (k === 'p') return `<ul class="tree root">${peerHtml(id, 0)}</ul>`;
+  if (k === 'e') {
+    const ids = id === (EX.ted || {}).id ? KIDS[id].filter(x => !EXECIDS.has(x)) : KIDS[id];
+    const cls = id === (EX.rod || {}).id ? 'l-rod' : id === (EX.ted || {}).id ? 'l-ted' : 'l-karen';
+    return `<div style="margin-bottom:10px">${cardHtml(id, { noCount: true })}</div><div class="line-block ${cls}">${listUl(ids, 0, true)}</div>`;
+  }
+  return `<ul class="tree root">${nodeHtml(id, 0)}</ul>`;
+}
+function renderZoom(target) {
+  const zv = document.getElementById('zoomview');
+  zv.innerHTML = `<div class="zbar"><div class="crumbs">${crumbsFor(target)}</div>
+    <button onclick="setAll(true)">Expand all</button><button onclick="setAll(false)">Collapse all</button>
+    <button class="primary" onclick="zoomOut()">⤢ Zoom out</button></div><div id="zbody">${zoomBody(target)}</div>`;
+  setAll(true);
+}
+function originFor(el, box) {
+  if (!el) return '50% 0%';
+  const r = el.getBoundingClientRect(), b = box.getBoundingClientRect();
+  return `${r.left + r.width / 2 - b.left}px ${r.top + r.height / 2 - b.top}px`;
+}
+function zoomTo(target, el) {
+  const ov = document.getElementById('overview'), zv = document.getElementById('zoomview');
+  if (ZBUSY) return;
+  const wasZoomed = ZCUR !== null;
+  if (!wasZoomed) ZSCROLL = window.scrollY;
+  renderZoom(target); ZCUR = target;
+  if (wasZoomed) { // drilling between zoomed views: quick cross-fade
+    zv.classList.add('enter'); void zv.offsetWidth; zv.classList.remove('enter'); window.scrollTo(0, 0); return;
+  }
+  ZBUSY = true;
+  const o = originFor(el, ov);
+  ov.style.transformOrigin = o; zv.style.transformOrigin = '50% 0%';
+  zv.style.display = 'block'; zv.classList.add('enter');
+  ov.classList.add('leaving');
+  void zv.offsetWidth;
+  ov.classList.add('away'); zv.classList.remove('enter');
+  window.scrollTo(0, 0);
+  setTimeout(() => { ov.style.display = 'none'; ZBUSY = false; }, 420);
+}
+function zoomOut() {
+  if (ZCUR === null || ZBUSY) return;
+  const ov = document.getElementById('overview'), zv = document.getElementById('zoomview');
+  const sel = document.getElementById('q'); sel.value = '';
+  ZBUSY = true;
+  ov.style.display = 'block'; ov.classList.add('leaving', 'away');
+  void ov.offsetWidth;
+  zv.classList.add('enter'); ov.classList.remove('away');
+  setTimeout(() => { zv.style.display = 'none'; zv.classList.remove('enter'); ov.classList.remove('leaving'); ZCUR = null; ZBUSY = false; window.scrollTo(0, ZSCROLL); }, 420);
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') zoomOut(); });
+function syncArrows() { document.querySelectorAll('#zoomview li').forEach(li => { const a = li.querySelector(':scope > .card .arrow') || li.querySelector(':scope > .peer .peer-note .arrow'); if (a) a.textContent = li.classList.contains('collapsed') ? '+' : '−'; }); }
 function toggle(li) { li.classList.toggle('collapsed'); syncArrows(); }
-function setAll(open) { document.querySelectorAll('#tree li').forEach(li => { if (li.querySelector(':scope > ul')) li.classList.toggle('collapsed', !open); }); syncArrows(); }
+function setAll(open) { document.querySelectorAll('#zoomview li').forEach(li => { if (li.querySelector(':scope > ul')) li.classList.toggle('collapsed', !open); }); syncArrows(); }
 function onSearch() {
   const q = document.getElementById('q').value.trim().toLowerCase();
-  document.querySelectorAll('#tree .card').forEach(c => c.classList.remove('sel'));
-  if (!q) { render(); return; }
-  setAll(true);
-  let first = null;
-  document.querySelectorAll('#tree li').forEach(li => {
-    if (!li.dataset.id) return;
-    const n = BY[li.dataset.id];
-    if (li.dataset.pg) { li.querySelectorAll(':scope > .peer .card').forEach(c => { const m = NODES.find(x => c.textContent.includes(x.nombre) && PG[li.dataset.pg].bosses.includes(x.id)); if (m && (m.nombre + ' ' + (m.puesto || '')).toLowerCase().includes(q)) { c.classList.add('sel'); if (!first) first = c; } }); return; }
-    if ((n.nombre + ' ' + (n.puesto || '')).toLowerCase().includes(q)) { const c = li.querySelector(':scope > .card'); c.classList.add('sel'); if (!first) first = c; }
-  });
-  if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  document.querySelectorAll('.card.sel,.onode.sel').forEach(c => c.classList.remove('sel'));
+  if (!q) { if (ZCUR !== null) zoomOut(); return; }
+  const hit = NODES.find(n => (n.nombre + ' ' + (n.puesto || '')).toLowerCase().includes(q));
+  if (!hit) return;
+  // zoom to the smallest view that shows this person with their team context
+  let target;
+  if (EXECIDS.has(hit.id)) target = 'e:' + hit.id;
+  else if (hit.pgKey) target = 'p:' + hit.pgKey;
+  else if (hit.primary) target = EXECIDS.has(hit.primary) && !KIDS[hit.id].length ? 'e:' + hit.primary : (memberOf(hit.primary) ? 'p:' + memberOf(hit.primary)[0] : 'n:' + hit.primary);
+  else target = 'n:' + hit.id;
+  const mark = () => {
+    const el = [...document.querySelectorAll('#zbody .card')].find(c => c.querySelector('.nm') && c.querySelector('.nm').textContent.replace(/^[+−]/, '').trim() === hit.nombre);
+    if (el) { el.classList.add('sel'); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  };
+  if (ZCUR === null) { zoomTo(target, document.querySelector('#overview .onode')); setTimeout(mark, 450); }
+  else { zoomTo(target); setTimeout(mark, 60); }
 }
 load();
 </script>
