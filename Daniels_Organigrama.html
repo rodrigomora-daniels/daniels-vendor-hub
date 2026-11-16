@@ -233,7 +233,7 @@ function cardHtml(id, opts) {
   const n = BY[id], kids = KIDS[id].length, t = opts.count != null ? opts.count : total(id);
   return `<div class="card ${clsOf(n)} ${opts.toggle ? 'toggle' : ''}" data-pid="${id}" ${opts.toggle ? 'onclick="toggle(this.parentNode)"' : ''}>
       <span>${ico(n)}</span><div><div class="nm">${opts.toggle ? '<span class="arrow">−</span>' : ''}${esc(n.nombre)}</div><div class="nt">${esc(n.puesto)}</div>
-      ${n.ubicacion ? `<span class="loc">${esc(n.ubicacion)}</span>` : ''}${(n.indirectos || []).map(i => `<div class="ind">indirect: ${esc(i.nombre)}${i.puesto ? ' (' + esc(i.puesto) + ')' : ''}${i.nota ? ' · ' + esc(i.nota) : ''}</div>`).join('')}${n.also.length ? `<div class="also">also reports to: ${n.also.map(a => esc(BY[a].nombre)).join(', ')}</div>` : ''}</div>
+      ${n.ubicacion ? `<span class="loc">${esc(n.ubicacion)}</span>` : ''}${(n.indirectos || []).map(i => `<div class="ind">indirect: ${esc(i.nombre)}${i.puesto ? ' (' + esc(i.puesto) + ')' : ''}${i.nota ? ' · ' + esc(i.nota) : ''}</div>`).join('')}${n.also.length ? `<div class="also">also reports to: ${n.also.map(a => esc(BY[a].nombre)).join(', ')}</div>` : ''}${opts.note ? `<div class="also">${esc(opts.note)}</div>` : ''}</div>
       ${t && !opts.noCount ? `<span class="cnt">${t}</span>` : ''}</div>`;
 }
 function needsGroup(ids) { return ids.length > 3 && new Set(ids.map(i => BY[i].ubicacion || '')).size > 1; }
@@ -491,14 +491,17 @@ function zoomBody(target) {
   const items = [...nodes, ...soloIds.map(i => ({ t: 'leaf', id: i }))];
   const lc = k === 'e' ? (id === (EX.rod || {}).id ? '#1B3A6B' : id === (EX.karen || {}).id ? '#C2185B' : '#8B4513') : '#1B3A6B';
   let h = `<div class="zwrap"><div class="otree" style="--lc:${lc}"><ul><li><div class="zroot" data-floor="${k === 'p' ? floorOfPg(id) : floorOf(id)}">${rootHtml}</div>${oUl(items, lc)}</li></ul></div>`;
-  const gridBlock = (ids, title) => {
+  const ORPH = NODES.filter(n => !n.primary && !n.pgKey && !EXECIDS.has(n.id)).map(n => n.id); // report straight to the owners, no lines
+  const gridBlock = (ids, title, flat) => {
     if (!ids.length) return '';
-    const locs = [...new Set(ids.map(i => BY[i].ubicacion || ''))];
+    const locs = flat ? [''] : [...new Set(ids.map(i => BY[i].ubicacion || ''))];
+    if (flat) return `<div class="zgrid-h">${title} (${ids.length})</div><div class="zgrid">${ids.map(i => cardHtml(i, { noCount: true, note: ORPH.includes(i) ? 'Reports to the owners · not evaluated' : '' })).join('')}</div>`;
     return `<div class="zgrid-h">${title} (${ids.length})</div><div class="zgrid">${locs.length > 1 ? locs.map(l => `<div class="zloc">📍 ${esc(l || 'Other')}</div>` + ids.filter(i => (BY[i].ubicacion || '') === l).map(i => cardHtml(i, { noCount: true })).join('')).join('') : ids.map(i => cardHtml(i, { noCount: true })).join('')}</div>`;
   };
   const isSup = i => /store support/i.test(BY[i].puesto || '');
   h += gridBlock(gridIds.filter(i => !isSup(i)), 'Team members');
-  h += gridBlock(gridIds.filter(isSup), 'Store support — clerks who move, assemble and handle pick-ups');
+  const supIds = gridIds.filter(isSup);
+  h += gridBlock(supIds.length ? [...supIds, ...ORPH.filter(i => isSup(i))] : [], 'Store support — clerks who move, assemble and handle pick-ups', true);
   return h + '</div>';
 }
 function ancestorsFor(target) {
