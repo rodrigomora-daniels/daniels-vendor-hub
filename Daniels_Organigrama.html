@@ -84,9 +84,19 @@
   .oblock.l-rod{--lc:#1B3A6B;border-top:4px solid #1B3A6B;} .oblock.l-ted{--lc:#8B4513;border-top:4px solid #8B4513;} .oblock.l-karen{--lc:#C2185B;border-top:4px solid #C2185B;}
   .otree{display:flex;justify-content:center;min-width:max-content;}
   .otree ul{display:flex;justify-content:center;padding-top:18px;position:relative;list-style:none;margin:0;}
-  .otree li{position:relative;padding:18px 7px 0;text-align:center;list-style:none;margin:0;}
-  .otree li::before,.otree li::after{content:'';position:absolute;top:0;right:50%;width:50%;height:18px;border-top:2px solid var(--lc,#b9c6dc);}
+  .otree li{--drop:18px;position:relative;padding:var(--drop) 7px 0;text-align:center;list-style:none;margin:0;}
+  .otree li.lowered{--drop:70px;}
+  .otree li::before,.otree li::after{content:'';position:absolute;top:0;right:50%;width:50%;height:var(--drop);border-top:2px solid var(--lc,#b9c6dc);}
   .otree li::after{right:auto;left:50%;border-left:2px solid var(--lc,#b9c6dc);}
+  .onode.closed{padding-right:20px;}
+  .onode.closed::after{content:'+';position:absolute;right:5px;top:3px;font-size:12px;font-weight:800;color:var(--navy);}
+  .onode{position:relative;}
+  .zroot{display:inline-block;margin:0 0 2px;}
+  .zgrid-h{font-size:12px;font-weight:800;color:var(--navy);margin:16px 0 6px 2px;}
+  .zgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;}
+  .zloc{grid-column:1/-1;font-size:11px;font-weight:800;color:var(--navy);margin-top:6px;}
+  .zwrap{background:#fff;border:1px solid #dfe5ef;border-radius:12px;padding:14px 10px 18px;overflow-x:auto;}
+  .olinkv{position:absolute;width:0;border-left:2px dashed var(--purple);z-index:2;pointer-events:none;}
   .otree li:only-child::before,.otree li:only-child::after{display:none;}
   .otree li:only-child{padding-top:0;}
   .otree li:first-child::before,.otree li:last-child::after{border:0 none;}
@@ -138,8 +148,8 @@
     <b>How to read this:</b><br>
     • Levels go top to bottom: Board → CEO and CMO → direct reports → teams. Solid lines are direct reporting lines; <b>dashed purple lines</b> are indirect (second) lines, for example Rodrigo as second line for Misael and Maricela.<br>
     • <b>Dashed blue box</b> = co-leaders who share one team. That team reports to <b>both</b>, depending on shift.<br>
-    • <b>📍 labels</b> group people by location. <b>Click any box with a team to zoom in</b>; use <b>Zoom out</b> or press <b>Esc</b> to return to the full chart.<br>
-    • Purple note = second reporting line (Karen for Angel). Gray italic note = indirect, often temporary, line (Rey for Ana and Letty). Click a name with a <b>+</b> / <b>−</b> to expand or collapse its team (no icon = no team).
+    • <b>📍 labels</b> group people by location. <b>Boxes with a + have a team: click to zoom in one level</b>; use <b>Zoom out</b> or press <b>Esc</b> to go back.<br>
+    • Purple note = second reporting line (Karen for Angel). Gray italic note = indirect, often temporary, line (Rey for Ana and Letty). A <b>+</b> in a corner means that box has a team inside.
   </div>
 </div>
 <script>
@@ -191,7 +201,7 @@ function sharedOf(id) { const m = memberOf(id); return m && m[1].bosses[0] === i
 function cardHtml(id, opts) {
   opts = opts || {};
   const n = BY[id], kids = KIDS[id].length, t = opts.count != null ? opts.count : total(id);
-  return `<div class="card ${clsOf(n)} ${opts.toggle ? 'toggle' : ''}" ${opts.toggle ? 'onclick="toggle(this.parentNode)"' : ''}>
+  return `<div class="card ${clsOf(n)} ${opts.toggle ? 'toggle' : ''}" data-pid="${id}" ${opts.toggle ? 'onclick="toggle(this.parentNode)"' : ''}>
       <span>${ico(n)}</span><div><div class="nm">${opts.toggle ? '<span class="arrow">−</span>' : ''}${esc(n.nombre)}</div><div class="nt">${esc(n.puesto)}</div>
       ${n.ubicacion ? `<span class="loc">${esc(n.ubicacion)}</span>` : ''}${(n.indirectos || []).map(i => `<div class="ind">indirect: ${esc(i.nombre)}${i.puesto ? ' (' + esc(i.puesto) + ')' : ''}${i.nota ? ' · ' + esc(i.nota) : ''}</div>`).join('')}${n.also.length ? `<div class="also">also reports to: ${n.also.map(a => esc(BY[a].nombre)).join(', ')}</div>` : ''}</div>
       ${t && !opts.noCount ? `<span class="cnt">${t}</span>` : ''}</div>`;
@@ -241,7 +251,7 @@ function render() {
       <span><i style="background:var(--gold)"></i>Board</span><span><i style="background:var(--ted)"></i>Ted (CEO) line</span>
       <span><i style="background:var(--navy)"></i>Rodrigo line</span><span><i style="background:var(--karen)"></i>Karen line</span>
       <span><svg width="26" height="8"><line x1="0" y1="4" x2="26" y2="4" stroke="#7B5EA7" stroke-width="2" stroke-dasharray="4,3"/></svg> Indirect (2nd) reporting line</span></div>
-    <div class="hint">Click a box to zoom into that team. Esc to zoom out.</div>`;
+    <div class="hint">Boxes with a <b>+</b> have a team: click to zoom in one level. Esc or Zoom out to go back.</div>`;
   const boardBox = `<div class="onode boardbox leaf"><div class="peer-h2" style="color:#7a5a12">Board — Rosenberg family</div>
     <span class="bn">Dani Rosenberg</span><span class="bn">Rebecca Rosenberg</span>${ted ? `<span class="bn t">${esc(ted.nombre)}</span>` : ''}${karen ? `<span class="bn k">${esc(karen.nombre)}</span>` : ''}</div>`;
   let tedLi = '', karenLi = '';
@@ -258,7 +268,7 @@ function render() {
         items = [...sec.slice(0, cut), rodIt, ...sec.slice(cut), ...rest];
       }
     }
-    tedLi = `<li style="--lc:#8B4513">${oBox(ted.id, 'e:' + ted.id, `<span class="oc">${KIDS[ted.id].reduce((n, k) => n + 1 + total(k), 0)}</span>`, '#8B4513')}${oUl(items, '#8B4513')}</li>`;
+    tedLi = `<li style="--lc:#8B4513">${oBox(ted.id, 'e:' + ted.id, `<span class="oc">${KIDS[ted.id].reduce((n, k) => n + 1 + total(k), 0)}</span>`, '#8B4513')}${oUl(items, '#8B4513', true)}</li>`;
   }
   if (karen) karenLi = `<li>${oNode(karen.id, 'e:' + karen.id, KIDS[karen.id])}</li>`;
   const inner = `<ul><li>${boardBox}<ul style="--lc:#C8922A">${tedLi}${karenLi}</ul></li></ul>`;
@@ -278,7 +288,7 @@ function fitChart() {
 }
 function posIn(el, root) { let x = 0, y = 0; while (el && el !== root) { x += el.offsetLeft; y += el.offsetTop; el = el.offsetParent; } return { x, y }; }
 function drawLinks(fit) {
-  fit.querySelectorAll('.olink').forEach(e => e.remove());
+  fit.querySelectorAll('.olink,.olinkv').forEach(e => e.remove());
   NODES.forEach(n => {
     const a = fit.querySelector(`.onode[data-id="${n.id}"]`);
     if (!a) return;
@@ -287,13 +297,17 @@ function drawLinks(fit) {
       const c = fit.querySelector(`.onode[data-id="${b}"]`);
       if (!c) return;
       const pa = posIn(a, fit), pc = posIn(c, fit);
-      if (Math.abs(pa.y - pc.y) > 4) return; // only same-row siblings get a clean horizontal line
-      const left = pa.x < pc.x ? { p: pa, e: a } : { p: pc, e: c }, right = pa.x < pc.x ? { p: pc, e: c } : { p: pa, e: a };
-      const x1 = left.p.x + left.e.offsetWidth, x2 = right.p.x;
-      if (x2 - x1 < 8) return;
-      const d = document.createElement('div'); d.className = 'olink';
-      d.style.left = x1 + 'px'; d.style.width = (x2 - x1) + 'px'; d.style.top = (pa.y + a.offsetHeight / 2) + 'px';
-      d.innerHTML = '<span>indirect</span>'; fit.appendChild(d);
+      const cMid = pc.y + c.offsetHeight / 2;
+      if (pa.y <= cMid) return; // the person must sit below the 2nd-line boss
+      const left = pa.x + a.offsetWidth / 2 < pc.x + c.offsetWidth / 2;
+      const xs = left ? pc.x : pc.x + c.offsetWidth;                 // leave from the side of the boss' box
+      const xv = left ? pa.x + a.offsetWidth * .72 : pa.x + a.offsetWidth * .28; // drop into the top of the person's box
+      const h = document.createElement('div'); h.className = 'olink';
+      h.style.left = Math.min(xs, xv) + 'px'; h.style.width = Math.abs(xs - xv) + 'px'; h.style.top = cMid + 'px';
+      h.innerHTML = '<span>2nd line</span>';
+      const v = document.createElement('div'); v.className = 'olinkv';
+      v.style.left = xv + 'px'; v.style.top = cMid + 'px'; v.style.height = Math.max(0, pa.y - cMid) + 'px';
+      fit.appendChild(h); fit.appendChild(v);
     });
   });
 }
@@ -319,19 +333,25 @@ function oItems(parentZoom, ids) {
   Object.values(groups).forEach(g => { g.sort(cmp); if (g.length >= 2) items.push({ t: 'team', ids: g, zoom: parentZoom }); else items.push({ t: 'leaf', id: g[0] }); });
   return items;
 }
-function oUl(items, lc) { return items.length ? `<ul ${lc ? `style="--lc:${lc}"` : ''}>${items.map(oItem).join('')}</ul>` : ''; }
-function oItem(it) {
-  if (it.t === 'node') return `<li>${oNode(it.id, (EXECIDS.has(it.id) ? 'e:' : 'n:') + it.id, KIDS[it.id])}</li>`;
-  if (it.t === 'pg') return `<li>${oPeer(it.key)}</li>`;
-  if (it.t === 'leaf') return `<li>${oBox(it.id, null)}</li>`;
+function oUl(items, lc, low) { return items.length ? `<ul ${lc ? `style="--lc:${lc}"` : ''}>${items.map(it => oItem(it, low)).join('')}</ul>` : ''; }
+function oItem(it, low) {
+  const lw = low ? ' class="lowered"' : '';
+  if (it.t === 'node') {
+    if (EXECIDS.has(it.id)) return `<li>${oNode(it.id, 'e:' + it.id, KIDS[it.id])}</li>`; // an executive's line opens one more level
+    const t = total(it.id);
+    return `<li${lw}>${oBox(it.id, 'n:' + it.id, t ? `<span class="oc">${t}</span>` : '')}</li>`; // everything else stays closed until you zoom in
+  }
+  if (it.t === 'pg') return `<li${lw}>${oPeer(it.key)}</li>`;
+  if (it.t === 'leaf') return `<li${lw}>${oBox(it.id, null)}</li>`;
   const puestos = [...new Set(it.ids.map(i => BY[i].puesto))];
   const label = puestos.length === 1 ? plural(puestos[0]) : 'Team';
   const loc = BY[it.ids[0]].ubicacion;
-  return `<li><div class="onode team" data-z="${it.zoom}" onclick="zoomTo('${it.zoom}', this)"><div class="on">${esc(label)}</div><div class="ot">${loc ? esc(loc) + ' · ' : ''}team</div><span class="oc">${it.ids.length}</span></div></li>`;
+  return `<li${lw}><div class="onode team" data-z="${it.zoom}" onclick="zoomTo('${it.zoom}', this)"><div class="on">${esc(label)}</div><div class="ot">${loc ? esc(loc) + ' · ' : ''}team</div><span class="oc">${it.ids.length}</span></div></li>`;
 }
 function oBox(id, zoom, extra, color) {
   const n = BY[id], cls = (n.rol === 'director' ? 'dir ' : '') + (zoom ? '' : 'leaf');
-  return `<div class="onode ${cls}" ${color ? `style="--lc:${color}"` : ''} ${zoom ? `data-z="${zoom}" onclick="zoomTo('${zoom}', this)"` : ''} data-id="${id}">
+  const closedCls = zoom && !EXECIDS.has(id) && (KIDS[id].length || sharedOf(id).length) ? 'closed ' : '';
+  return `<div class="onode ${closedCls}${cls}" ${color ? `style="--lc:${color}"` : ''} ${zoom ? `data-z="${zoom}" onclick="zoomTo('${zoom}', this)"` : ''} data-id="${id}">
     <div class="on">${esc(n.nombre)}</div><div class="ot">${esc(n.puesto)}</div>
     ${n.also.length ? `<div class="oa">2nd line: ${n.also.map(a => esc(BY[a].nombre.split(' ')[0])).join(', ')}</div>` : ''}
     ${(n.indirectos || []).map(i => `<div class="oi">indirect: ${esc(i.nombre)}${i.nota ? ' · temp.' : ''}</div>`).join('')}${extra || ''}</div>`;
@@ -346,13 +366,13 @@ function oPeer(key) {
   const g = PG[key], zoom = 'p:' + key;
   const all = [...g.team, ...g.bosses.flatMap(b => KIDS[b])].sort(cmp);
   return `<div class="onode peer" data-z="${zoom}" onclick="zoomTo('${zoom}', this)"><div class="peer-h2">Co-leaders · shared team</div>
-    ${g.bosses.map(b => `<div class="on">${esc(BY[b].nombre)}</div><div class="ot">${esc(BY[b].puesto)}</div>`).join('')}<span class="oc">${all.length}</span></div>` + oUl(oItems(zoom, all));
+    ${g.bosses.map(b => `<div class="on">${esc(BY[b].nombre)}</div><div class="ot">${esc(BY[b].puesto)}</div>`).join('')}<span class="oc">${all.length}</span></div>`;
 }
 // ---------- zoom
 let ZSCROLL = 0, ZBUSY = false, ZCUR = null;
 function crumbsFor(target) {
   const [k, id] = [target.slice(0, 1), target.slice(2)];
-  const first = k === 'p' ? PG[id].bosses[0] : id;
+  const first = k === 'p' ? (BY[PG[id].bosses[0]].primary || PG[id].bosses[0]) : id;
   const chain = []; let cur = first;
   while (cur) { chain.unshift(cur); if (EXECIDS.has(cur)) break; cur = BY[cur].primary; }
   const parts = chain.map((c, i) => {
@@ -365,20 +385,36 @@ function crumbsFor(target) {
 }
 function zoomBody(target) {
   const k = target.slice(0, 1), id = target.slice(2);
-  if (k === 'p') return `<ul class="tree root">${peerHtml(id, 0)}</ul>`;
-  if (k === 'e') {
-    const ids = KIDS[id];
-    const cls = id === (EX.rod || {}).id ? 'l-rod' : id === (EX.ted || {}).id ? 'l-ted' : 'l-karen';
-    return `<div style="margin-bottom:10px">${cardHtml(id, { noCount: true })}</div><div class="line-block ${cls}">${listUl(ids, 0, true)}</div>`;
+  let rootHtml, kidIds;
+  if (k === 'p') {
+    const g = PG[id];
+    rootHtml = `<div class="peer"><div class="peer-h">Co-leaders · shared team</div><div class="row">${g.bosses.map(b => cardHtml(b, { noCount: true })).join('')}</div></div>`;
+    kidIds = [...g.team, ...g.bosses.flatMap(b => KIDS[b])].sort(cmp);
+  } else { rootHtml = cardHtml(id, { noCount: true }); kidIds = KIDS[id]; }
+  const execParent = k === 'e';
+  const nodes = [], leaves = [], seen = new Set();
+  kidIds.forEach(i => {
+    const m = memberOf(i);
+    if (m) { if (!seen.has(m[0])) { seen.add(m[0]); nodes.push({ t: 'pg', key: m[0], rep: m[1].bosses[0] }); } }
+    else if (KIDS[i].length) nodes.push({ t: 'node', id: i, rep: i });
+    else leaves.push(i);
+  });
+  nodes.sort((x, y) => cmp(x.rep, y.rep));
+  const solo = i => execParent || titleRank(BY[i].puesto) < 3 || (BY[i].indirectos || []).length || leaves.length <= 4;
+  const soloIds = leaves.filter(solo).sort(cmp), gridIds = leaves.filter(i => !solo(i)).sort(cmp);
+  const items = [...nodes, ...soloIds.map(i => ({ t: 'leaf', id: i }))];
+  const lc = k === 'e' ? (id === (EX.rod || {}).id ? '#1B3A6B' : id === (EX.karen || {}).id ? '#C2185B' : '#8B4513') : '#1B3A6B';
+  let h = `<div class="zwrap"><div class="otree" style="--lc:${lc}"><ul><li><div class="zroot">${rootHtml}</div>${oUl(items, lc)}</li></ul></div>`;
+  if (gridIds.length) {
+    const locs = [...new Set(gridIds.map(i => BY[i].ubicacion || ''))];
+    h += `<div class="zgrid-h">Team members (${gridIds.length})</div><div class="zgrid">${locs.length > 1 ? locs.map(l => `<div class="zloc">📍 ${esc(l || 'Other')}</div>` + gridIds.filter(i => (BY[i].ubicacion || '') === l).map(i => cardHtml(i, { noCount: true })).join('')).join('') : gridIds.map(i => cardHtml(i, { noCount: true })).join('')}</div>`;
   }
-  return `<ul class="tree root">${nodeHtml(id, 0)}</ul>`;
+  return h + '</div>';
 }
 function renderZoom(target) {
   const zv = document.getElementById('zoomview');
   zv.innerHTML = `<div class="zbar"><div class="crumbs">${crumbsFor(target)}</div>
-    <button onclick="setAll(true)">Expand all</button><button onclick="setAll(false)">Collapse all</button>
     <button class="primary" onclick="zoomOut()">⤢ Zoom out</button></div><div id="zbody">${zoomBody(target)}</div>`;
-  setAll(true);
 }
 function originFor(el, box) {
   if (!el) return '50% 0%';
@@ -431,7 +467,7 @@ function onSearch() {
   else if (hit.primary) target = EXECIDS.has(hit.primary) && !KIDS[hit.id].length ? 'e:' + hit.primary : (memberOf(hit.primary) ? 'p:' + memberOf(hit.primary)[0] : 'n:' + hit.primary);
   else target = 'n:' + hit.id;
   const mark = () => {
-    const el = [...document.querySelectorAll('#zbody .card')].find(c => c.querySelector('.nm') && c.querySelector('.nm').textContent.replace(/^[+−]/, '').trim() === hit.nombre);
+    const el = document.querySelector(`#zbody [data-id="${hit.id}"], #zbody [data-pid="${hit.id}"]`);
     if (el) { el.classList.add('sel'); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
   };
   if (ZCUR === null) { zoomTo(target, document.querySelector('#overview .onode')); setTimeout(mark, 450); }
