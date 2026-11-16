@@ -49,34 +49,37 @@
   .peer .row{align-items:flex-start;}
   .peer-note{font-size:11px;color:var(--purple);margin:8px 0 2px;font-weight:600;}
   .legend b{color:var(--navy);}
+  .card.ted{border-left-color:var(--ted);background:#fdf8f5;}
+  .card.karen{border-left-color:var(--karen);background:#fdf5f8;}
+  .badge{display:inline-block;margin-top:3px;padding:1px 7px;border-radius:6px;font-size:9px;font-weight:800;letter-spacing:.04em;}
+  .b-board{background:#fdf3e3;color:var(--gold);} .b-md{background:var(--navy);color:#fff;}
+  .keys{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--mgray);margin:2px 0 10px;}
+  .keys i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px;}
+  .rod-wrap{display:flex;justify-content:center;}
+  .conn{text-align:center;font-size:11px;color:var(--mgray);margin:4px 0;}
+  .line-block.l-rod{border-top:4px solid var(--navy);} .line-block.l-ted{border-top:4px solid var(--ted);} .line-block.l-karen{border-top:4px solid var(--karen);}
 
 </style>
 </head>
 <body>
 <div class="top-bar">
-  <div><h1>🏢 Org Chart / Organigrama</h1><div class="sub">Daniels Home Center — live from the company hierarchy</div></div>
+  <div><h1>🏢 Org Chart</h1><div class="sub">Daniels Home Center — live from the company hierarchy</div></div>
   <button class="btn-back" onclick="window.location.href='index.html'">← Back</button>
 </div>
 <div class="content">
   <div class="tools">
-    <input id="q" placeholder="Search a person or position / Buscar persona o puesto…" oninput="onSearch()">
-    <button onclick="setAll(true)">Expand all / Expandir</button>
-    <button onclick="setAll(false)">Collapse / Contraer</button>
+    <input id="q" placeholder="Search a person or position…" oninput="onSearch()">
+    <button onclick="setAll(true)">Expand all</button>
+    <button onclick="setAll(false)">Collapse all</button>
   </div>
-  <div class="band"><div class="band-h">Board / Consejo</div>
-    <div class="row">
-      <div class="card board-c"><span>👑</span><div><div class="nm">Dani Rosenberg</div><div class="nt">Founder · Board</div></div></div>
-      <div class="card board-c"><span>👑</span><div><div class="nm">Rebecca Rosenberg</div><div class="nt">Founder · Board</div></div></div>
-    </div>
-  </div>
-  <div class="down">▼</div>
-  <div id="tree"><div class="empty">Loading… / Cargando…</div></div>
+  <div id="top"></div>
+  <div id="tree"><div class="empty">Loading…</div></div>
   <div class="legend">
-    <b>How to read this / Cómo leerlo:</b><br>
-    • Levels go top to bottom: Board → Executive → each leader's reporting line → teams by location. / Los niveles van de arriba hacia abajo.<br>
-    • <b>Dashed blue box</b> = leaders at the <b>same level</b> (peers). Their shared team reports to <b>both</b>, depending on shift. / Caja azul punteada = líderes al <b>mismo nivel</b>; su equipo reporta a ambos según el turno.<br>
-    • <b>📍 labels</b> group people by location. / Las etiquetas 📍 agrupan por ubicación.<br>
-    • Purple note = also reports to another leader. Click a name or the ▸ to expand / collapse. / Nota morada = también reporta a otro líder.
+    <b>How to read this:</b><br>
+    • Levels go top to bottom: Board → Managing Director → each leader's reporting line → teams by location.<br>
+    • <b>Dashed blue box</b> = leaders at the <b>same level</b> (peers). Their shared team reports to <b>both</b>, depending on shift.<br>
+    • <b>📍 labels</b> group people by location.<br>
+    • Purple note = also reports to another leader. Click a name or the ▸ to expand or collapse its team.
   </div>
 </div>
 <script>
@@ -126,7 +129,7 @@ function cardHtml(id, opts) {
   const n = BY[id], kids = KIDS[id].length, t = opts.count != null ? opts.count : total(id);
   return `<div class="card ${clsOf(n)} ${opts.toggle ? 'toggle' : ''}" ${opts.toggle ? 'onclick="toggle(this.parentNode)"' : ''}>
       <span>${ico(n)}</span><div><div class="nm">${opts.toggle ? '<span class="arrow">▾</span>' : ''}${esc(n.nombre)}</div><div class="nt">${esc(n.puesto)}</div>
-      ${n.ubicacion ? `<span class="loc">${esc(n.ubicacion)}</span>` : ''}${n.also.length ? `<div class="also">also reports to / también reporta a: ${n.also.map(a => esc(BY[a].nombre)).join(', ')}</div>` : ''}</div>
+      ${n.ubicacion ? `<span class="loc">${esc(n.ubicacion)}</span>` : ''}${n.also.length ? `<div class="also">also reports to: ${n.also.map(a => esc(BY[a].nombre)).join(', ')}</div>` : ''}</div>
       ${t && !opts.noCount ? `<span class="cnt">${t}</span>` : ''}</div>`;
 }
 function listHtml(ids, depth) {
@@ -155,32 +158,39 @@ function peerHtml(key, depth) {
   const all = [...team, ...own].sort(cmp);
   const collapsed = all.length > 6 ? 'collapsed' : '';
   const loc = BY[g.bosses[0]].ubicacion;
-  return `<li class="${collapsed}" data-id="${g.bosses[0]}" data-pg="${key}"><div class="peer"><div class="peer-h">Same level · co-leaders / Mismo nivel — co-líderes${loc ? ' · ' + esc(loc) : ''}</div>
+  return `<li class="${collapsed}" data-id="${g.bosses[0]}" data-pg="${key}"><div class="peer"><div class="peer-h">Same level · co-leaders${loc ? ' · ' + esc(loc) : ''}</div>
     <div class="row">${g.bosses.map(b => cardHtml(b, { noCount: true })).join('')}</div>
-    ${all.length ? `<div class="peer-note toggle" onclick="toggle(this.closest('li'))"><span class="arrow">▾</span>Shared team / Equipo compartido (${all.length}) — reports to both ${g.bosses.map(b => esc(BY[b].nombre.split(' ')[0])).join(' & ')}, depending on shift / reporta a ambos según el turno</div>` : ''}
+    ${all.length ? `<div class="peer-note toggle" onclick="toggle(this.closest('li'))"><span class="arrow">▾</span>Shared team (${all.length}) — reports to both ${g.bosses.map(b => esc(BY[b].nombre.split(' ')[0])).join(' & ')}, depending on shift</div>` : ''}
     </div>
     ${all.length ? `<ul class="tree">${all.map(i => nodeHtml(i, depth + 1)).join('')}</ul>` : ''}</li>`;
 }
 function render() {
   const find = re => NODES.find(n => re.test(n.nombre));
   const ted = find(/^ted\b/i), karen = find(/^karen\b/i), rod = find(/^rodrigo\b/i);
-  const exec = [ted, rod, karen].filter(Boolean);
-  const execIds = new Set(exec.map(e => e.id));
+  const execIds = new Set([ted, karen, rod].filter(Boolean).map(e => e.id));
+  const bcard = (ico, nm, role, cls) => `<div class="card board-c ${cls || ''}"><span>${ico}</span><div><div class="nm">${esc(nm)}</div>${role ? `<div class="nt">${esc(role)}</div>` : ''}<span class="badge b-board">BOARD</span></div></div>`;
+  let top = `<div class="keys">
+      <span><i style="background:var(--gold)"></i>Board</span><span><i style="background:var(--navy)"></i>Rodrigo direct</span>
+      <span><i style="background:var(--ted)"></i>Ted direct</span><span><i style="background:var(--karen)"></i>Karen direct</span>
+      <span><i style="background:var(--purple)"></i>Also reports to</span></div>
+    <div class="band"><div class="band-h">Board — Rosenberg family</div><div class="row">
+      ${bcard('👑', 'Dani Rosenberg', 'Founder')}${bcard('👑', 'Rebecca Rosenberg', 'Founder')}
+      ${ted ? bcard('👔', ted.nombre, ted.puesto, 'ted') : ''}${karen ? bcard('📣', karen.nombre, karen.puesto, 'karen') : ''}
+    </div></div>`;
+  if (rod) top += `<div class="down">▼</div><div class="conn">The Managing Director reports to the Board, and day to day to Ted (CEO)</div>
+    <div class="rod-wrap"><div class="card dir"><span>⚙️</span><div><div class="nm">${esc(rod.nombre)}</div><div class="nt">Managing Director · ${esc(rod.puesto)}</div><span class="badge b-md">MANAGING DIR.</span></div></div></div><div class="down">▼</div>`;
+  document.getElementById('top').innerHTML = top;
   let h = '';
-  if (exec.length) {
-    h += `<div class="band"><div class="band-h">Executive / Dirección</div><div class="row">${exec.map(e => cardHtml(e.id, { noCount: true })).join('')}</div>
-      <div style="font-size:11px;color:var(--mgray);margin-top:5px">${rod && ted ? 'Rodrigo reports to Ted. / Rodrigo reporta a Ted. ' : ''}Each leader's reporting line is below. / Abajo, la línea de reporte de cada líder.</div></div><div class="down">▼</div>`;
-  }
   const lines = [];
-  if (rod) lines.push([rod.id, 'Under Rodrigo / Bajo Rodrigo', KIDS[rod.id]]);
-  if (karen) lines.push([karen.id, 'Under Karen / Bajo Karen', KIDS[karen.id]]);
-  if (ted) lines.push([ted.id, 'Reporting directly to Ted / Reportan directo a Ted', KIDS[ted.id].filter(k => !execIds.has(k))]);
-  lines.forEach(([id, title, ids]) => {
+  if (rod) lines.push([rod.id, 'l-rod', 'Reports to Rodrigo', KIDS[rod.id]]);
+  if (ted) lines.push([ted.id, 'l-ted', 'Reports directly to Ted', KIDS[ted.id].filter(k => !execIds.has(k))]);
+  if (karen) lines.push([karen.id, 'l-karen', 'Reports directly to Karen', KIDS[karen.id]]);
+  lines.forEach(([id, cls, title, ids]) => {
     if (!ids.length) return;
-    h += `<div class="line-block"><div class="line-h">${title} <span>· ${ids.reduce((s, k) => s + 1 + total(k), 0)} / personas</span></div><ul class="tree root">${listHtml(ids, 0)}</ul></div>`;
+    h += `<div class="line-block ${cls}"><div class="line-h">${title} <span>· ${ids.reduce((s, k) => s + 1 + total(k), 0)} people</span></div><ul class="tree root">${listHtml(ids, 0)}</ul></div>`;
   });
   const orphans = NODES.filter(n => !n.primary && !n.pgKey && !execIds.has(n.id));
-  if (orphans.length) h += `<div class="line-block"><div class="line-h">Other / Otros</div><ul class="tree root">${orphans.map(o => nodeHtml(o.id, 0)).join('')}</ul></div>`;
+  if (orphans.length) h += `<div class="line-block"><div class="line-h">Other</div><ul class="tree root">${orphans.map(o => nodeHtml(o.id, 0)).join('')}</ul></div>`;
   document.getElementById('tree').innerHTML = h || '<div class="empty">No data yet.</div>';
   syncArrows();
 }
