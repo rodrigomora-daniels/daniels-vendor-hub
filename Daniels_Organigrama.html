@@ -88,6 +88,13 @@
   .otree li.lowered{--drop:70px;}
   .otree li::before,.otree li::after{content:'';position:absolute;top:0;right:50%;width:50%;height:var(--drop);border-top:2px solid var(--lc,#b9c6dc);}
   .otree li::after{right:auto;left:50%;border-left:2px solid var(--lc,#b9c6dc);}
+  .onode{z-index:1;}
+  .onode.md,.onode.md.dir{background:var(--navy);border:1px solid var(--navy);border-top:4px solid var(--gold);box-shadow:0 0 0 3px rgba(200,146,42,.35),0 4px 10px rgba(0,0,0,.2);}
+  .onode.md .on{color:#fff;font-size:13px;} .onode.md .ot{color:#cfe0f7;} .onode.md .oc{background:var(--gold);color:var(--navy);}
+  .md-tag{display:inline-block;margin-top:3px;background:var(--gold);color:var(--navy);font-size:9px;font-weight:800;letter-spacing:.05em;padding:1px 7px;border-radius:8px;}
+  .oband{position:absolute;border:2px dashed rgba(27,58,107,.5);background:rgba(27,58,107,.055);border-radius:18px;z-index:0;pointer-events:none;}
+  .oband-l{position:absolute;bottom:-12px;left:18px;background:var(--navy);color:#fff;font-size:10px;font-weight:800;letter-spacing:.04em;padding:3px 12px;border-radius:10px;white-space:nowrap;}
+  .auth-banner{background:#eef3fb;border:1px solid #c9d6ea;border-left:5px solid var(--navy);border-radius:8px;padding:7px 12px;font-size:12px;color:var(--navy);margin:0 0 10px;}
   .onode.closed{padding-right:20px;}
   .onode.closed::after{content:'+';position:absolute;right:5px;top:3px;font-size:12px;font-weight:800;color:var(--navy);}
   .onode{position:relative;}
@@ -250,7 +257,8 @@ function render() {
   document.getElementById('top').innerHTML = `<div class="keys">
       <span><i style="background:var(--gold)"></i>Board</span><span><i style="background:var(--ted)"></i>Ted (CEO) line</span>
       <span><i style="background:var(--navy)"></i>Rodrigo line</span><span><i style="background:var(--karen)"></i>Karen line</span>
-      <span><svg width="26" height="8"><line x1="0" y1="4" x2="26" y2="4" stroke="#7B5EA7" stroke-width="2" stroke-dasharray="4,3"/></svg> Indirect (2nd) reporting line</span></div>
+      <span><svg width="26" height="8"><line x1="0" y1="4" x2="26" y2="4" stroke="#7B5EA7" stroke-width="2" stroke-dasharray="4,3"/></svg> Indirect reporting to Rodrigo</span>
+      <span><i style="background:rgba(27,58,107,.25);border:1px dashed #1B3A6B"></i>Rodrigo's authority: everyone except Ted and Karen</span></div>
     <div class="hint">Boxes with a <b>+</b> have a team: click to zoom in one level. Esc or Zoom out to go back.</div>`;
   const boardBox = `<div class="onode boardbox leaf"><div class="peer-h2" style="color:#7a5a12">Board — Rosenberg family</div>
     <span class="bn">Dani Rosenberg</span><span class="bn">Rebecca Rosenberg</span>${ted ? `<span class="bn t">${esc(ted.nombre)}</span>` : ''}${karen ? `<span class="bn k">${esc(karen.nombre)}</span>` : ''}</div>`;
@@ -268,7 +276,7 @@ function render() {
         items = [...sec.slice(0, cut), rodIt, ...sec.slice(cut), ...rest];
       }
     }
-    tedLi = `<li style="--lc:#8B4513">${oBox(ted.id, 'e:' + ted.id, `<span class="oc">${KIDS[ted.id].reduce((n, k) => n + 1 + total(k), 0)}</span>`, '#8B4513')}${oUl(items, '#8B4513', true)}</li>`;
+    tedLi = `<li class="tedli" style="--lc:#8B4513">${oBox(ted.id, 'e:' + ted.id, `<span class="oc">${KIDS[ted.id].reduce((n, k) => n + 1 + total(k), 0)}</span>`, '#8B4513')}${oUl(items, '#8B4513', true)}</li>`;
   }
   if (karen) karenLi = `<li>${oNode(karen.id, 'e:' + karen.id, KIDS[karen.id])}</li>`;
   const inner = `<ul><li>${boardBox}<ul style="--lc:#C8922A">${tedLi}${karenLi}</ul></li></ul>`;
@@ -288,27 +296,34 @@ function fitChart() {
 }
 function posIn(el, root) { let x = 0, y = 0; while (el && el !== root) { x += el.offsetLeft; y += el.offsetTop; el = el.offsetParent; } return { x, y }; }
 function drawLinks(fit) {
-  fit.querySelectorAll('.olink,.olinkv').forEach(e => e.remove());
-  NODES.forEach(n => {
-    const a = fit.querySelector(`.onode[data-id="${n.id}"]`);
-    if (!a) return;
-    n.also.forEach(b => {
-      if (/^(ted|karen)\b/i.test(BY[b].nombre)) return; // family bosses are shown with a note, not a line
-      const c = fit.querySelector(`.onode[data-id="${b}"]`);
-      if (!c) return;
-      const pa = posIn(a, fit), pc = posIn(c, fit);
-      const cMid = pc.y + c.offsetHeight / 2;
-      if (pa.y <= cMid) return; // the person must sit below the 2nd-line boss
-      const left = pa.x + a.offsetWidth / 2 < pc.x + c.offsetWidth / 2;
-      const xs = left ? pc.x : pc.x + c.offsetWidth;                 // leave from the side of the boss' box
-      const xv = left ? pa.x + a.offsetWidth * .72 : pa.x + a.offsetWidth * .28; // drop into the top of the person's box
-      const h = document.createElement('div'); h.className = 'olink';
-      h.style.left = Math.min(xs, xv) + 'px'; h.style.width = Math.abs(xs - xv) + 'px'; h.style.top = cMid + 'px';
-      h.innerHTML = '<span>2nd line</span>';
-      const v = document.createElement('div'); v.className = 'olinkv';
-      v.style.left = xv + 'px'; v.style.top = cMid + 'px'; v.style.height = Math.max(0, pa.y - cMid) + 'px';
-      fit.appendChild(h); fit.appendChild(v);
-    });
+  fit.querySelectorAll('.olink,.olinkv,.oband').forEach(e => e.remove());
+  const rodBox = EX.rod && fit.querySelector(`.onode[data-id="${EX.rod.id}"]`);
+  const tedUl = fit.querySelector('li.tedli > ul');
+  if (!rodBox || !tedUl) return;
+  // 1) authority band: everything under Ted sits inside Rodrigo's authority
+  const pu = posIn(tedUl, fit), band = document.createElement('div'); band.className = 'oband';
+  band.style.left = (pu.x - 6) + 'px'; band.style.top = (pu.y + 8) + 'px';
+  band.style.width = (tedUl.offsetWidth + 12) + 'px'; band.style.height = (tedUl.offsetHeight - 2) + 'px';
+  band.innerHTML = '<div class="oband-l">RODRIGO MORA · AUTHORITY ACROSS THE COMPANY (everyone except Ted and Karen)</div>';
+  fit.insertBefore(band, fit.firstChild);
+  // 2) dashed indirect lines from Rodrigo to Ted's other direct reports (direct reports hang from his box in solid)
+  const pr = posIn(rodBox, fit), rMid = pr.y + rodBox.offsetHeight / 2;
+  const targets = [...tedUl.children].map(li => li.querySelector(':scope > .onode[data-id]')).filter(el => el && el !== rodBox);
+  const sides = { left: [], right: [] };
+  targets.forEach(a => {
+    const pa = posIn(a, fit); if (pa.y <= rMid) return;
+    const isLeft = pa.x + a.offsetWidth / 2 < pr.x + rodBox.offsetWidth / 2;
+    const xs = isLeft ? pr.x : pr.x + rodBox.offsetWidth;
+    const xv = isLeft ? pa.x + a.offsetWidth * .72 : pa.x + a.offsetWidth * .28;
+    sides[isLeft ? 'left' : 'right'].push({ xs, xv, top: pa.y });
+  });
+  Object.values(sides).forEach(list => {
+    if (!list.length) return;
+    const far = list.reduce((m, o) => Math.abs(o.xv - o.xs) > Math.abs(m.xv - m.xs) ? o : m, list[0]);
+    const h = document.createElement('div'); h.className = 'olink';           // one shared horizontal "bus" per side
+    h.style.left = Math.min(far.xs, far.xv) + 'px'; h.style.width = Math.abs(far.xs - far.xv) + 'px'; h.style.top = rMid + 'px';
+    h.innerHTML = '<span>indirect</span>'; fit.appendChild(h);
+    list.forEach(o => { const v = document.createElement('div'); v.className = 'olinkv'; v.style.left = o.xv + 'px'; v.style.top = rMid + 'px'; v.style.height = Math.max(0, o.top - rMid) + 'px'; fit.appendChild(v); });
   });
 }
 window.addEventListener('resize', () => { if (ZCUR === null) fitChart(); });
@@ -350,10 +365,12 @@ function oItem(it, low) {
 }
 function oBox(id, zoom, extra, color) {
   const n = BY[id], cls = (n.rol === 'director' ? 'dir ' : '') + (zoom ? '' : 'leaf');
-  const closedCls = zoom && !EXECIDS.has(id) && (KIDS[id].length || sharedOf(id).length) ? 'closed ' : '';
+  const isMd = EX.rod && id === EX.rod.id;
+  const indirectRod = EX.rod && EX.ted && n.primary === EX.ted.id && id !== EX.rod.id;
+  const closedCls = (isMd ? 'md ' : '') + (zoom && !EXECIDS.has(id) && (KIDS[id].length || sharedOf(id).length) ? 'closed ' : '');
   return `<div class="onode ${closedCls}${cls}" ${color ? `style="--lc:${color}"` : ''} ${zoom ? `data-z="${zoom}" onclick="zoomTo('${zoom}', this)"` : ''} data-id="${id}">
-    <div class="on">${esc(n.nombre)}</div><div class="ot">${esc(n.puesto)}</div>
-    ${n.also.length ? `<div class="oa">2nd line: ${n.also.map(a => esc(BY[a].nombre.split(' ')[0])).join(', ')}</div>` : ''}
+    <div class="on">${esc(n.nombre)}</div><div class="ot">${esc(n.puesto)}</div>${isMd ? '<span class="md-tag">MANAGING DIRECTOR</span>' : ''}
+    ${indirectRod ? '<div class="oa">indirect: Rodrigo</div>' : ''}${n.also.filter(a => !(EX.rod && a === EX.rod.id)).length ? `<div class="oa">2nd line: ${n.also.filter(a => !(EX.rod && a === EX.rod.id)).map(a => esc(BY[a].nombre.split(' ')[0])).join(', ')}</div>` : ''}
     ${(n.indirectos || []).map(i => `<div class="oi">indirect: ${esc(i.nombre)}${i.nota ? ' · temp.' : ''}</div>`).join('')}${extra || ''}</div>`;
 }
 function oNode(id, zoom, kids) {
@@ -413,7 +430,11 @@ function zoomBody(target) {
 }
 function renderZoom(target) {
   const zv = document.getElementById('zoomview');
-  zv.innerHTML = `<div class="zbar"><div class="crumbs">${crumbsFor(target)}</div>
+  const kk = target.slice(0, 1), idd = target.slice(2), firstId = kk === 'p' ? PG[idd].bosses[0] : idd;
+  let cur = firstId, root = firstId; while (cur) { root = cur; if (EXECIDS.has(cur)) break; cur = BY[cur].primary; }
+  const underRod = EX.rod && !(EX.karen && root === EX.karen.id) && !(EX.ted && target === 'e:' + EX.ted.id);
+  const banner = underRod ? `<div class="auth-banner"><b>Within Rodrigo Mora's authority</b> — Managing Director across the company (direct for operations, indirect for the other areas). Only Ted and Karen are outside it.</div>` : '';
+  zv.innerHTML = `${banner}<div class="zbar"><div class="crumbs">${crumbsFor(target)}</div>
     <button class="primary" onclick="zoomOut()">⤢ Zoom out</button></div><div id="zbody">${zoomBody(target)}</div>`;
 }
 function originFor(el, box) {
