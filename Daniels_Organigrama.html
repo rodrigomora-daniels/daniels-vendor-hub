@@ -173,7 +173,7 @@
     <b>How to read this:</b><br>
     • Levels go top to bottom: Board → CEO and CMO → direct reports → teams. Solid lines are direct reporting lines; <b>dashed green lines</b> are indirect reports (Rodrigo for the areas that report to Ted).<br>
     • <b>Dashed blue box</b> = co-leaders who share one team. That team reports to <b>both</b>, depending on shift.<br>
-    • <b>Ted and Karen sit on the Board; their reporting lines drop straight from their names.</b> <b>Floors</b> (labels on the left) put the same level on the same row: area managers and buyers, then store managers and supervisors, then associates and staff. <b>Boxes with a + have a team: click to zoom in one level</b>; use <b>Zoom out</b> or press <b>Esc</b> to go back. When zoomed in, <b>scroll up</b> to see the reporting line above.<br>
+    • <b>Ted and Karen sit on the Board; their reporting lines drop straight from their names.</b> <b>Floors</b> (labels on the left) put the same level on the same row: area managers and buyers, then store managers and supervisors, then associates and staff, then store support (clerks who move, assemble and handle pick-ups). <b>Boxes with a + have a team: click to zoom in one level</b>; use <b>Zoom out</b> or press <b>Esc</b> to go back. When zoomed in, <b>scroll up</b> to see the reporting line above.<br>
     • Purple note = second reporting line (Karen for Angel). Gray italic note = indirect, often temporary, line (Rey for Ana and Letty). A <b>+</b> in a corner means that box has a team inside.
   </div>
 </div>
@@ -352,7 +352,7 @@ function drawLinks(fit) {
 window.addEventListener('resize', () => { if (ZCUR === null) fitChart(); });
 
 // ---------- floors: managers/buyers on one floor, supervisors on another, associates on another
-const FLOOR_LABELS = { 0: 'Board', 1: '', 2: 'Managing Director', 3: 'Area managers & buyers', 4: 'Store managers · supervisors', 5: 'Associates & staff' };
+const FLOOR_LABELS = { 0: 'Board', 1: '', 2: 'Managing Director', 3: 'Area managers & buyers', 4: 'Store managers · supervisors', 5: 'Associates & staff', 6: 'Store support' };
 let _FL = {};
 function floorOf(id) {
   if (_FL[id] != null) return _FL[id];
@@ -361,7 +361,7 @@ function floorOf(id) {
   else if (EX.rod && id === EX.rod.id) f = 2;
   else {
     const t = (n.puesto || '').toLowerCase();
-    const rank = /assistant|asst|supervisor/.test(t) ? 4 : (n.rol === 'manager' || n.rol === 'director') ? 3 : 5;
+    const rank = /store support/.test(t) ? 6 : /assistant|asst|supervisor/.test(t) ? 4 : (n.rol === 'manager' || n.rol === 'director') ? 3 : 5;
     f = Math.max(rank, n.primary ? floorOf(n.primary) + 1 : rank);
   }
   return (_FL[id] = f);
@@ -487,10 +487,14 @@ function zoomBody(target) {
   const items = [...nodes, ...soloIds.map(i => ({ t: 'leaf', id: i }))];
   const lc = k === 'e' ? (id === (EX.rod || {}).id ? '#1B3A6B' : id === (EX.karen || {}).id ? '#C2185B' : '#8B4513') : '#1B3A6B';
   let h = `<div class="zwrap"><div class="otree" style="--lc:${lc}"><ul><li><div class="zroot" data-floor="${k === 'p' ? floorOfPg(id) : floorOf(id)}">${rootHtml}</div>${oUl(items, lc)}</li></ul></div>`;
-  if (gridIds.length) {
-    const locs = [...new Set(gridIds.map(i => BY[i].ubicacion || ''))];
-    h += `<div class="zgrid-h">Team members (${gridIds.length})</div><div class="zgrid">${locs.length > 1 ? locs.map(l => `<div class="zloc">📍 ${esc(l || 'Other')}</div>` + gridIds.filter(i => (BY[i].ubicacion || '') === l).map(i => cardHtml(i, { noCount: true })).join('')).join('') : gridIds.map(i => cardHtml(i, { noCount: true })).join('')}</div>`;
-  }
+  const gridBlock = (ids, title) => {
+    if (!ids.length) return '';
+    const locs = [...new Set(ids.map(i => BY[i].ubicacion || ''))];
+    return `<div class="zgrid-h">${title} (${ids.length})</div><div class="zgrid">${locs.length > 1 ? locs.map(l => `<div class="zloc">📍 ${esc(l || 'Other')}</div>` + ids.filter(i => (BY[i].ubicacion || '') === l).map(i => cardHtml(i, { noCount: true })).join('')).join('') : ids.map(i => cardHtml(i, { noCount: true })).join('')}</div>`;
+  };
+  const isSup = i => /store support/i.test(BY[i].puesto || '');
+  h += gridBlock(gridIds.filter(i => !isSup(i)), 'Team members');
+  h += gridBlock(gridIds.filter(isSup), 'Store support — clerks who move, assemble and handle pick-ups');
   return h + '</div>';
 }
 function ancestorsFor(target) {
