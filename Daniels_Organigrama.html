@@ -95,6 +95,8 @@
   .hcount{position:absolute;top:10px;right:14px;z-index:5;text-align:center;background:#fff;border:2px solid var(--navy);border-radius:14px;padding:6px 16px;box-shadow:0 2px 8px rgba(0,0,0,.12);}
   .hcount b{display:block;font-size:44px;line-height:1;color:var(--navy);font-weight:800;}
   .hcount span{display:block;font-size:11px;font-weight:700;color:var(--mgray);line-height:1.2;margin-top:2px;}
+  .onode:has(.oauth){box-shadow:0 0 0 3px var(--gold),0 2px 8px rgba(0,0,0,.15);}
+  .oauth{font-size:9.5px;font-weight:800;color:#8a6410;letter-spacing:.03em;margin-top:4px;text-transform:uppercase;}
   .oanchor{height:2px;width:2px;margin:0 auto;}
   .bn.go{cursor:pointer;border:1px solid currentColor;} .bn.go:hover{filter:brightness(.92);}
   .olb{position:absolute;z-index:1;pointer-events:none;}
@@ -446,7 +448,8 @@ function oNode(id, zoom, kids) {
   const items = oItems(zoom, kids);
   const t = zoom.startsWith('e:') ? kids.reduce((n, k) => n + 1 + total(k), 0) : total(id);
   const isEx = EXECIDS.has(id), col = isEx ? (id === (EX.rod || {}).id ? '#1B3A6B' : id === (EX.karen || {}).id ? '#C2185B' : '#8B4513') : '';
-  return oBox(id, kids.length || sharedOf(id).length ? zoom : null, t ? `<span class="oc">${t}</span>` : '', col) + oUl(items, col);
+  const auth = EX.rod && id === EX.rod.id ? '<div class="oauth">★ Company-wide authority</div>' : '';
+  return oBox(id, kids.length || sharedOf(id).length ? zoom : null, (t ? `<span class="oc">${t}</span>` : '') + auth, col) + oUl(items, col);
 }
 function oPeer(key) {
   const g = PG[key], zoom = 'p:' + key;
