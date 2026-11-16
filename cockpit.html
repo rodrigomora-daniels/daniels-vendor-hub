@@ -49,6 +49,13 @@
   .section{background:var(--white);border-radius:14px;padding:22px;box-shadow:0 2px 10px rgba(0,0,0,.06);margin-bottom:24px;}
   .section-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
   .section-hdr h2{color:var(--navy);font-size:16px;}
+  .section-hdr{cursor:pointer;user-select:none;}
+  .section-hdr .chev{display:inline-block;width:22px;color:var(--gold);font-size:14px;transition:transform .15s;}
+  .section.open .section-hdr .chev{transform:rotate(90deg);}
+  .section:not(.open) .section-hdr{margin-bottom:0;}
+  .sec-body{display:none;} .section.open > .sec-body{display:block;}
+  .sec-tools{display:flex;gap:8px;justify-content:flex-end;margin:0 0 12px;}
+  .sec-tools button{padding:7px 14px;border:1px solid var(--navy);background:#fff;color:var(--navy);border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;}
   table{width:100%;border-collapse:collapse;font-size:13px;}
   th{text-align:left;background:var(--gray);padding:9px 12px;color:var(--navy);font-weight:700;border-bottom:2px solid #e0ddd6;}
   td{padding:9px 12px;border-bottom:1px solid #f0ece2;vertical-align:middle;}
@@ -1752,6 +1759,31 @@ document.addEventListener('DOMContentLoaded', () => {
   btn.onclick = openPlantModal;
   document.getElementById('screen-cockpit').appendChild(btn);
 });
+</script>
+<script>
+/* Admin modules: collapsed by default, click a header to expand */
+(function(){
+  function setup(){
+    const secs=[...document.querySelectorAll('.section')];
+    secs.forEach(sec=>{
+      const hdr=sec.querySelector(':scope > .section-hdr'); if(!hdr||sec.dataset.collapsible) return;
+      sec.dataset.collapsible='1';
+      const body=document.createElement('div'); body.className='sec-body';
+      [...sec.childNodes].forEach(n=>{ if(n!==hdr) body.appendChild(n); });
+      sec.appendChild(body);
+      const h2=hdr.querySelector('h2'); if(h2) h2.insertAdjacentHTML('afterbegin','<span class="chev">▸</span>');
+      hdr.addEventListener('click',e=>{ if(e.target.closest('button,input,select,a,label')) return; sec.classList.toggle('open'); });
+    });
+    const first=secs[0];
+    if(first && !document.getElementById('sec-tools')){
+      const t=document.createElement('div'); t.className='sec-tools'; t.id='sec-tools';
+      t.innerHTML='<button onclick="document.querySelectorAll(\'.section\').forEach(s=>s.classList.add(\'open\'))">Expand all</button><button onclick="document.querySelectorAll(\'.section\').forEach(s=>s.classList.remove(\'open\'))">Collapse all</button>';
+      first.parentNode.insertBefore(t,first);
+    }
+    const h=(location.hash||'').slice(1); const tgt=h&&document.getElementById(h); if(tgt&&tgt.classList.contains('section')) tgt.classList.add('open');
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',setup); else setup();
+})();
 </script>
 </body>
 </html>
