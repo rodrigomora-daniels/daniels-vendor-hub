@@ -187,6 +187,9 @@ let currentDimIdx = 0;
 let responses = {};
 let evalMode = null;        // 'self' | 'supervisor'
 let selectedEvaluado = null; // employee being evaluated, in supervisor mode
+// Forms engine: question set comes from the database (per area, editable in editor.html). If anything fails, the built-in sets below are used.
+const USE_DB_FORMS = true;
+let dbForm = null;
 let quotaData = { metrics: [], pct_promedio: null };
 
 /* ════════════════════════════════════════════════════════════
@@ -886,6 +889,13 @@ function renderSupervisorResults(query) {
 async function selectEvaluado(empId) {
   selectedEvaluado = (allEmployeesForSearch || []).find(e => e.id === empId);
   if (!selectedEvaluado) return;
+  dbForm = null;
+  if (USE_DB_FORMS) {
+    try {
+      const f = await DH.rpc('formulario_para', { p_evaluado_id: empId });
+      if (f && !f.error && Array.isArray(f.dims) && f.dims.length >= 3 && f.dims.every(d => d.key && Array.isArray(d.opts) && d.opts.length === 5)) dbForm = f;
+    } catch (err) { console.warn('db form unavailable, using built-in set', err); }
+  }
 
   // Check for an existing supervisor evaluation of this person, this cycle, by this evaluator
   let existing = [];
@@ -1170,6 +1180,7 @@ async function confirmQuota() {
 function isRatedMode() { return evalMode === 'supervisor' || evalMode === 'peer'; }
 function currentDimSet() {
   if (evalMode === 'peer') return PEER_DIMENSIONS;
+  if (evalMode === 'supervisor' && dbForm) return dbForm.dims;
   if (evalMode === 'supervisor') { const rr = evalRoleOf(selectedEvaluado); return rr === 'vendedor' ? SUPERVISOR_DIMENSIONS : rr === 'staff' ? STAFF_DIMENSIONS : MANAGER_BOSS_DIMENSIONS; }
   return VALUES_QUESTIONS;
 }
@@ -1370,7 +1381,13 @@ async function submitEvaluation() {
     };
     if (isSupervisor) {
       const scores = dims.map(d => responses[d.key]);
-      const conductual = Math.round(((scores.reduce((a, b) => a + b, 0) / scores.length) - 1) / 4 * 100);
+      let conductual = Math.round(((scores.reduce((a, b) => a + b, 0) / scores.length) - 1) / 4 * 100);
+      if (dbForm) {
+        // weighted by the form's own weights (peso_pct); the server recomputes this value and is the one that counts
+        const tw = dims.reduce((a, d) => a + (+d.peso_pct || 1), 0);
+        conductual = Math.round(dims.reduce((a, d) => a + (+d.peso_pct || 1) * ((responses[d.key] - 1) / 4 * 100), 0) / tw);
+        evalPayload.usa_form = true;
+      }
       const cuota = quotaData.skipped ? null : Math.round(Math.min(quotaData.pct_promedio, 100));
       evalPayload.pct_promedio_cuota = quotaData.skipped ? null : quotaData.pct_promedio;
       evalPayload.reco_tipo = recoData.tipo || 'none';
@@ -1382,6 +1399,7 @@ async function submitEvaluation() {
       evalPayload.score_cuota = cuota;
       const w = evalWeights(evalRoleOf(selectedEvaluado));
       const wsum = (w.kpi || 0) + (w.conducta || 0);
+      evalPayload.w_kpi = w.kpi || 0; evalPayload.w_conducta = w.conducta || 0;
       evalPayload.score_final = cuota === null ? conductual : (wsum > 0 ? Math.round(((w.kpi || 0) * cuota + (w.conducta || 0) * conductual) / wsum) : Math.round(0.5 * cuota + 0.5 * conductual));
     } else if (isPeer) {
       const scores = dims.map(d => responses[d.key]);
