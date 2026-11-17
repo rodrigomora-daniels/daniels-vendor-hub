@@ -37,8 +37,8 @@
   <div id="list"></div>
   <div id="edit" class="card hide"></div>
 </main>
-<script src="dh-session.js"></script>
-<script src="jszip.min.js"></script>
+<script src="dh-session.js?v=4"></script>
+<script src="jszip.min.js?v=4"></script>
 <script>
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -107,8 +107,9 @@ function bulk(){
    <label>Who sees them / Quién los ve</label>
    <div class="row"><label style="font-weight:400"><input type="checkbox" id="b-all" checked style="width:auto"> Everyone / Todos</label>
    ${['vendedor','staff','manager','director'].map(x=>`<label style="font-weight:400"><input type="checkbox" class="b-r" value="${x}" style="width:auto"> ${x}</label>`).join('')}</div>
-   <div id="b-drop" style="margin-top:12px;border:2px dashed #aab;border-radius:10px;padding:18px;text-align:center;background:#fafbff;cursor:pointer" onclick="$('b-f').click()">Drop files or a .zip here, or tap to choose / Suelta archivos o un .zip aquí, o toca para elegir</div>
-   <input id="b-f" type="file" multiple accept="application/pdf,image/jpeg,image/png,image/webp,.zip,application/zip" class="hide" onchange="bulkPick(this.files)">
+   <label id="b-drop" for="b-f" style="display:block;margin-top:12px;border:2px dashed #aab;border-radius:10px;padding:18px;text-align:center;background:#fafbff;cursor:pointer">📎 Drop files or a .zip here, or tap to choose / Suelta archivos o un .zip aquí, o toca para elegir
+   <input id="b-f" type="file" multiple style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden" onchange="bulkPick(this.files).catch(x=>err('Error: '+(x&&x.message||x)));this.value=''"></label>
+   <div id="b-status" style="font-size:12px;color:var(--gray);margin-top:6px"></div>
    <div id="b-list" style="margin-top:10px"></div>
    <div style="margin-top:12px"><button class="btn" id="b-go" onclick="bulkGo()" disabled>Upload all / Subir todo</button> <button class="btn ghost" onclick="$('edit').classList.add('hide')">Close / Cerrar</button></div>`;
   const dz=$('b-drop');
@@ -129,6 +130,7 @@ async function expandZip(f){
   return out;
 }
 async function bulkPick(files){
+  files=[...files]; $('b-status').textContent=files.length?('Reading '+files.length+' file(s)… / Leyendo…'):'No file selected / Ningún archivo';
   const have=new Set(D.items.map(i=>i.titulo.toLowerCase()));
   let list=[];
   for(const f of [...files]){
@@ -143,6 +145,7 @@ async function bulkPick(files){
     BULK.push({file:f,title:t,cat,idioma:guessLang(f.name),state:'pending',msg:have.has(t.toLowerCase())?'A resource with this title already exists / Ya existe un recurso con este título':''});
   });
   bulkRender();
+  $('b-status').textContent=BULK.length+' file(s) ready / archivo(s) listos';
 }
 function bulkRender(){
   $('b-list').innerHTML=BULK.map((r,i)=>`<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #eee;flex-wrap:wrap">
@@ -155,6 +158,10 @@ function bulkRender(){
   $('b-go').disabled=!BULK.some(r=>r.state==='pending'||r.state==='failed');
 }
 async function bulkGo(){
+  try{ await bulkGo2(); }catch(x){ err('Error: '+(x&&x.message||x)); $('b-go').disabled=false; }
+}
+async function bulkGo2(){
+  if(!(window.DH&&DH.files&&DH.files.upload)){err('Old version of the page is cached — reload (pull down / Ctrl+Shift+R). / Versión vieja en caché: recarga la página.');return;}
   const cat0=$('b-c').value.trim(); if(BULK.some(r=>(r.state==='pending'||r.state==='failed')&&!(r.cat||'').trim()&&!cat0)){err('Every file needs a category (fill the default above). / Cada archivo necesita categoría (llena la de arriba).');return;}
   const sel=[...document.querySelectorAll('.b-r:checked')].map(x=>x.value); const roles=$('b-all').checked||!sel.length?null:sel;
   $('msg').classList.add('hide'); $('b-go').disabled=true; let n=0;
