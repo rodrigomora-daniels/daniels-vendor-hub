@@ -38,6 +38,7 @@
   <div id="edit" class="card hide"></div>
 </main>
 <script src="dh-session.js"></script>
+<script src="jszip.min.js"></script>
 <script>
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -101,13 +102,13 @@ function guessLang(n){const b=n.replace(/\.[^.]+$/,'');return /(^|[_\s-])ES([_\s
 function bulk(){
   BULK=[]; const e=$('edit'); e.classList.remove('hide');
   e.innerHTML=`<h2 style="color:var(--navy);font-size:16px">Bulk upload / Subida masiva</h2>
-   <p style="font-size:12px;color:var(--gray);margin:6px 0">PDF or images, up to 20 MB each. Titles and language are guessed from the file names; you can edit them before uploading. / PDF o imágenes, hasta 20 MB c/u. El título y el idioma se deducen del nombre del archivo; los puedes editar antes de subir.</p>
+   <p style="font-size:12px;color:var(--gray);margin:6px 0">PDF or images, up to 20 MB each (a .zip works too: folder names become the category). Titles and language are guessed from the file names; you can edit them before uploading. / PDF o imágenes, hasta 20 MB c/u (también un .zip: el nombre de la carpeta será la categoría). El título y el idioma se deducen del nombre del archivo; los puedes editar antes de subir.</p>
    <div class="row"><div><label>Category / Categoría</label><input id="b-c" list="cats2" placeholder="e.g. Credit / Crédito"><datalist id="cats2">${[...new Set(D.items.map(i=>i.categoria))].map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div></div>
    <label>Who sees them / Quién los ve</label>
    <div class="row"><label style="font-weight:400"><input type="checkbox" id="b-all" checked style="width:auto"> Everyone / Todos</label>
    ${['vendedor','staff','manager','director'].map(x=>`<label style="font-weight:400"><input type="checkbox" class="b-r" value="${x}" style="width:auto"> ${x}</label>`).join('')}</div>
-   <div id="b-drop" style="margin-top:12px;border:2px dashed #aab;border-radius:10px;padding:18px;text-align:center;background:#fafbff;cursor:pointer" onclick="$('b-f').click()">Drop files here or tap to choose / Suelta archivos aquí o toca para elegir</div>
-   <input id="b-f" type="file" multiple accept="application/pdf,image/jpeg,image/png,image/webp" class="hide" onchange="bulkPick(this.files)">
+   <div id="b-drop" style="margin-top:12px;border:2px dashed #aab;border-radius:10px;padding:18px;text-align:center;background:#fafbff;cursor:pointer" onclick="$('b-f').click()">Drop files or a .zip here, or tap to choose / Suelta archivos o un .zip aquí, o toca para elegir</div>
+   <input id="b-f" type="file" multiple accept="application/pdf,image/jpeg,image/png,image/webp,.zip,application/zip" class="hide" onchange="bulkPick(this.files)">
    <div id="b-list" style="margin-top:10px"></div>
    <div style="margin-top:12px"><button class="btn" id="b-go" onclick="bulkGo()" disabled>Upload all / Subir todo</button> <button class="btn ghost" onclick="$('edit').classList.add('hide')">Close / Cerrar</button></div>`;
   const dz=$('b-drop');
@@ -116,13 +117,30 @@ function bulk(){
   dz.addEventListener('drop',x=>bulkPick(x.dataTransfer.files));
   e.scrollIntoView({behavior:'smooth'});
 }
-function bulkPick(files){
+const MIME={pdf:'application/pdf',jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp'};
+async function expandZip(f){
+  const out=[]; const z=await JSZip.loadAsync(f);
+  for(const name of Object.keys(z.files)){
+    const e=z.files[name]; if(e.dir||/(^|\/)(__MACOSX|\.)/.test(name)||/\/\.[^/]*$/.test(name))continue;
+    const base=name.split('/').pop(), ext=(base.split('.').pop()||'').toLowerCase(); if(!MIME[ext])continue;
+    const parts=name.split('/'); const cat=parts.length>1?parts[parts.length-2].replace(/[_]+/g,' ').trim():'';
+    out.push({file:new File([await e.async('blob')],base,{type:MIME[ext]}),cat});
+  }
+  return out;
+}
+async function bulkPick(files){
   const have=new Set(D.items.map(i=>i.titulo.toLowerCase()));
-  [...files].forEach(f=>{
-    if(!/^(application\/pdf|image\/(jpeg|png|webp))$/.test(f.type)){BULK.push({file:f,title:f.name,idioma:'EN',state:'error',msg:'Type not allowed / Tipo no permitido'});return;}
-    if(f.size>20*1024*1024){BULK.push({file:f,title:f.name,idioma:'EN',state:'error',msg:'Over 20 MB / Más de 20 MB'});return;}
+  let list=[];
+  for(const f of [...files]){
+    if(/\.zip$/i.test(f.name)||f.type==='application/zip'||f.type==='application/x-zip-compressed'){
+      try{list.push(...await expandZip(f));}catch(e){BULK.push({file:f,title:f.name,cat:'',idioma:'EN',state:'error',msg:'Could not read the zip / No se pudo leer el zip'});}
+    }else list.push({file:f,cat:''});
+  }
+  list.forEach(({file:f,cat})=>{
+    if(!/^(application\/pdf|image\/(jpeg|png|webp))$/.test(f.type)){BULK.push({file:f,title:f.name,cat,idioma:'EN',state:'error',msg:'Type not allowed / Tipo no permitido'});return;}
+    if(f.size>20*1024*1024){BULK.push({file:f,title:f.name,cat,idioma:'EN',state:'error',msg:'Over 20 MB / Más de 20 MB'});return;}
     const t=guessTitle(f.name);
-    BULK.push({file:f,title:t,idioma:guessLang(f.name),state:'pending',msg:have.has(t.toLowerCase())?'A resource with this title already exists / Ya existe un recurso con este título':''});
+    BULK.push({file:f,title:t,cat,idioma:guessLang(f.name),state:'pending',msg:have.has(t.toLowerCase())?'A resource with this title already exists / Ya existe un recurso con este título':''});
   });
   bulkRender();
 }
@@ -130,22 +148,23 @@ function bulkRender(){
   $('b-list').innerHTML=BULK.map((r,i)=>`<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #eee;flex-wrap:wrap">
     <span style="width:22px">${r.state==='ok'?'✅':(r.state==='error'||r.state==='failed')?'❌':r.state==='uploading'?'⏳':'📄'}</span>
     <input style="flex:3;min-width:200px" value="${esc(r.title)}" ${(r.state==='pending'||r.state==='failed')?'':'disabled'} oninput="BULK[${i}].title=this.value">
+    <input style="flex:2;min-width:140px" placeholder="Category (default above)" value="${esc(r.cat||'')}" ${(r.state==='pending'||r.state==='failed')?'':'disabled'} oninput="BULK[${i}].cat=this.value">
     <select style="flex:0 0 90px" ${(r.state==='pending'||r.state==='failed')?'':'disabled'} onchange="BULK[${i}].idioma=this.value">${['EN','ES','EN/ES'].map(l=>`<option ${l===r.idioma?'selected':''}>${l}</option>`).join('')}</select>
     ${(r.state==='pending'||r.state==='failed')?`<button class="btn ghost sm" onclick="BULK.splice(${i},1);bulkRender()">✕</button>`:''}
     <small style="flex-basis:100%;color:${(r.state==='error'||r.state==='failed')?'var(--red)':'var(--gray)'}">${esc(r.file.name)} · ${(r.file.size/1048576).toFixed(1)} MB ${r.msg?'· '+esc(r.msg):''}</small></div>`).join('');
   $('b-go').disabled=!BULK.some(r=>r.state==='pending'||r.state==='failed');
 }
 async function bulkGo(){
-  const cat=$('b-c').value.trim(); if(!cat){err('Category is required. / Falta la categoría.');return;}
+  const cat0=$('b-c').value.trim(); if(BULK.some(r=>(r.state==='pending'||r.state==='failed')&&!(r.cat||'').trim()&&!cat0)){err('Every file needs a category (fill the default above). / Cada archivo necesita categoría (llena la de arriba).');return;}
   const sel=[...document.querySelectorAll('.b-r:checked')].map(x=>x.value); const roles=$('b-all').checked||!sel.length?null:sel;
-  $('msg').classList.add('hide'); $('b-go').disabled=true; let n=0, base=100+D.items.filter(i=>i.categoria===cat).length*10;
+  $('msg').classList.add('hide'); $('b-go').disabled=true; let n=0;
   for(const r of BULK){
     if(r.state!=='pending'&&r.state!=='failed')continue;
     if(!r.title.trim()){r.state='error';r.msg='Title is empty / Título vacío';bulkRender();continue;}
     r.state='uploading';r.msg='';bulkRender();
     try{
       const archivo=await DH.files.upload('recurso',r.file);
-      const res=await DH.rpc('admin_recurso_guardar',{p_archivo_id:archivo,p_id:null,p_titulo:r.title,p_categoria:cat,p_idioma:r.idioma,p_url:'',p_descripcion:null,p_roles:roles,p_orden:base+n*10,p_activo:true});
+      const res=await DH.rpc('admin_recurso_guardar',{p_archivo_id:archivo,p_id:null,p_titulo:r.title,p_categoria:((r.cat||'').trim()||cat0),p_idioma:r.idioma,p_url:'',p_descripcion:null,p_roles:roles,p_orden:100+D.items.filter(i=>i.categoria===((r.cat||'').trim()||cat0)).length*10+n,p_activo:true});
       if(res.error)throw new Error(res.detalle||res.error);
       r.state='ok';r.msg='Uploaded / Subido';n++;
     }catch(e){r.state='failed';r.msg=e.message||'Failed / Falló';}
