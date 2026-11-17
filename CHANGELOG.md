@@ -85,3 +85,5 @@ Cierre Fase 4 (verificado como rol anon): 0 filas en empleados y evaluaciones; `
 - Left English-only by decision: Org Chart (user request), Admin Cockpit (admin tool), certificate text.
 - New `admin_eval_distribucion` RPC (token + id overloads; id overload not executable by anon; returns [] for non-leadership) and cockpit section "Rating Distribution by Evaluator": n, average, min–max, spread, % ≥90, % raise/promotion, flag "Review leniency" (avg ≥ 88 or spread < 5 with 3+ evals).
 - Verified: exam size is 28 per attempt (static "38" in HTML is overwritten at render).
+
+- Welcome popup now shows on EVERY visit during the registration period (`ALWAYS_SHOW=true` in index.html). Set to false to return to first-visit-only.

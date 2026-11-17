@@ -1101,7 +1101,8 @@ document.getElementById('login-password').addEventListener('keypress', (e) => {
 <script>
 (function(){
   var KEY='dh_welcome_v1';
-  function seen(){ try { return localStorage.getItem(KEY)==='1'; } catch(e){ return false; } }
+  var ALWAYS_SHOW=true; // TEMPORARY (registration period): show on every visit. Set to false to go back to first visit only.
+  function seen(){ if(ALWAYS_SHOW) return false; try { return localStorage.getItem(KEY)==='1'; } catch(e){ return false; } }
   window.closeWelcome=function(){
     var p=document.getElementById('welcome-pop'); if(p) p.classList.remove('show');
     try { localStorage.setItem(KEY,'1'); } catch(e){}
