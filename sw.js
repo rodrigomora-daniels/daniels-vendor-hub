@@ -1,4 +1,4 @@
-/* My Daniels Workspace — minimal service worker.
+/* My Workspace — minimal service worker.
    - Makes the app installable (PWA).
    - NETWORK-FIRST for our own pages: users always get the latest deploy when online;
      the cached copy is only a fallback when the connection drops.
