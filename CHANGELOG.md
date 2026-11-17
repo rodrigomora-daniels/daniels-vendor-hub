@@ -36,6 +36,12 @@ Creado hoy: `kpi_perfiles`, `kpi_plantilla`, `cert_requeridas`, `codigos_invitac
 
 Cierre Fase 4 (verificado como rol anon): 0 filas en empleados y evaluaciones; `verificar_login` y funciones por id denegadas; login, registro, config pública y Lead Source siguen funcionando. Quedan abiertas solo: INSERT en `customer_source_log` y `prescreen_widget_log`, y las funciones públicas `evaluacion_config_get`, `evaluacion_no_elegibles_get`, `evaluacion_metricas_pct`, `organigrama_publico`, `codigo_reset_info`, `codigo_signup_info`, `registrar_empleado`, `iniciar_sesion`.
 
+## Incidente post-cutover (16 nov, 17:28)
+- Síntoma: el módulo de Evaluación decía "no hay ciclo activo" aunque el ciclo "Year-End 2026" sí está activo.
+- Causa: 9 funciones nuevas de lectura estaban marcadas STABLE y la API rechaza POST sobre ellas (error 405): `evaluacion_ciclo_activo`, `feedback_puede_detalle`, `admin_ciclos_listar`, `admin_organigrama_listar`, `admin_lead_source_listar`, `admin_audit_listar`, y de forma preventiva `eval_registros`, `feedback_resumen_mi`, `kpi_plantilla_para`. Mi prueba con backend simulado no lo detectó.
+- Arreglo: las 9 pasaron a VOLATILE (`alter function ... volatile`). Ninguna función con token queda STABLE. Regla: toda RPC nueva llamada por POST debe ser VOLATILE.
+- Los registros de la API no muestran ningún otro error 4xx desde las 22:00 UTC.
+
 ## Cómo revertir
 - **Páginas:** copiar `backup_pre_phase4/*` a la raíz (incluye `Daniels_Manager_Cert.html`, huérfana) y volver a `sw.js` cache `dhc-v1`; o `git revert 3ebff90`. Ojo: las páginas viejas dependen de las políticas/funciones antiguas, hay que revertir también la base.
 - **Base de datos:** SQL de rollback de políticas en `security/06_phase4_lockdown.sql`; funciones: `grant execute on function ... to anon` por firma. Revertir páginas y base juntas o ninguna.

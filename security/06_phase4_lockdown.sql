@@ -18,3 +18,5 @@ alter policy anon_eval_select on public.evaluaciones using (true);
 alter policy anon_resp_select on public.evaluacion_respuestas using (true);
 -- INSERT policies set to with check (false): anon_eval_insert, anon_resp_insert, "permitir guardar resultado de examen", "permitir insertar audit log" (restore with check (true)).
 -- Old pages: backup_pre_phase4/ (restore by copying back). Old function grants: grant execute ... to anon.
+
+-- 2026-11-16: these functions were switched to VOLATILE after a 405 from the API (STABLE not callable via POST): evaluacion_ciclo_activo, feedback_puede_detalle, feedback_resumen_mi, eval_registros, kpi_plantilla_para, admin_ciclos_listar, admin_organigrama_listar, admin_lead_source_listar, admin_audit_listar. Always create new token RPCs as VOLATILE.
