@@ -71,3 +71,11 @@ Cierre Fase 4 (verificado como rol anon): 0 filas en empleados y evaluaciones; `
 5. Rosario Rubi (part-time Cerritos) no está en el roster.
 6. Certificados aún dicen "My Daniels Workspace".
 7. Pesos nuevos y esquema de puntos de certificación: propuestas de Claude, sin ratificar.
+
+## 2026-11-16 (tarde) — Appraisal traits integrated into the evaluation module
+- Staff/warehouse behavior set is now 9 anchored 1–5 bilingual dimensions, ordered like the company's existing Performance Appraisal: Knowledge of work, Quantity, Quality, Ability to learn, Initiative, Cooperation, Judgment & common sense, Attendance/compliance, Service. New: conocimiento, volumen, aprendizaje, juicio (Supervisory Ability maps to existing `talento`).
+- KPIs optional for profiles with no data source: `kpi_perfiles.kpi_opcional` = true for all except vendedor, sales_sup, store_mgr. `kpi_plantilla_para` returns `kpi_opcional`; UI shows "No KPI data yet: skip KPIs"; score_final falls back to conduct only; no metricas_guardar when skipped.
+- Confidential "Recommendation & Comments" step (supervisor evaluations only): none/raise/promotion/transfer/termination, proposed $, strengths, areas to improve, comments (termination requires a written explanation). Columns on `evaluaciones`: reco_tipo, reco_aumento, fortalezas, debilidades, comentarios. `evaluacion_guardar` stores them only for tipo supervisor; `eval_registros` returns them only to the evaluator and eval_ve_todo users, never to the evaluee.
+- Tested in rolled-back DB test: admin sees recommendation, evaluee does not.
+- Rollback: restore previous Daniels_Evaluacion_Ventas.html from git (commit before this one); DB columns are additive and harmless.
+- Pending: score-distribution view per evaluator (anti-leniency), Rey visibility decisions.

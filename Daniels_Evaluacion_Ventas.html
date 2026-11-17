@@ -419,6 +419,7 @@ async function showRecords() {
       <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;"><strong>${e(r.evaluado)}</strong><span style="color:var(--mgray);font-size:12px;">${e(r.ciclo)} · ${(r.fecha || '').slice(0, 10)}</span></div>
       <div style="font-size:12px;color:var(--mgray);margin:2px 0 8px;">Evaluator / Evaluador: ${e(r.evaluador)} · Final: <strong style="color:var(--navy);">${r.score_final ?? '—'}</strong> · KPI: ${r.kpi_pct ?? '—'}% · Behavior / Conducta: ${r.score_conducta ?? '—'}</div>
       ${(r.kpis || []).map(k => `<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>${e(k.nombre)}${k.extra ? ' <em>(extra)</em>' : ''} · ${k.peso ?? ''}%</span><span>${k.real} / ${k.meta} ${e(k.unidad)} → <strong>${k.pct ?? '—'}%</strong></span></div>`).join('')}
+      ${r.recomendacion || r.fortalezas || r.debilidades || r.comentarios ? `<div style="margin-top:8px;padding:8px 10px;background:#f7f5ef;border-left:3px solid var(--navy);border-radius:6px;font-size:12px;"><strong>🔒 Recommendation / Recomendación:</strong> ${e(({none:'No change / Sin cambio',raise:'Raise / Aumento',promotion:'Promotion / Promoción',transfer:'Transfer / Traslado',termination:'Termination / Terminación'})[r.recomendacion] || '—')}${r.aumento ? ' · $' + e(r.aumento) : ''}${r.fortalezas ? '<br><strong>Strengths:</strong> ' + e(r.fortalezas) : ''}${r.debilidades ? '<br><strong>To improve:</strong> ' + e(r.debilidades) : ''}${r.comentarios ? '<br><strong>Comments:</strong> ' + e(r.comentarios) : ''}</div>` : ''}
     </div>`).join('') : '<p>No records yet. / Aún no hay registros.</p>';
   content.innerHTML = `<div class="card"><h2>Evaluation Records / Registro de Evaluaciones</h2>${body}
     <button class="btn" style="margin-top:10px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="location.reload()">← Back / Regresar</button></div>`;
@@ -634,7 +635,7 @@ const PEER_DIMENSIONS = [
     'Treats disagreements as a chance to improve; the relationship gets stronger. / Toma los desacuerdos como oportunidad de mejorar; la relación sale fortalecida.'] }
 ];
 /* ════════ BOSS → STAFF (non-sales roles: closed 1-5) ════════ */
-const STAFF_DIMENSIONS = [
+const STAFF_DIMENSIONS_BASE = [
   { key: 'calidad', title: 'Work quality / Calidad del trabajo', q: 'What do you typically observe in the accuracy and quality of this person\'s work? / ¿Qué observas habitualmente en la exactitud y calidad del trabajo de esta persona?', opts: [
     'Frequent errors; work usually has to be redone. / Errores frecuentes; el trabajo normalmente se tiene que rehacer.',
     'Some errors; needs checking before it is final. / Algunos errores; necesita revisión antes de quedar final.',
@@ -666,6 +667,36 @@ const STAFF_DIMENSIONS = [
     'Proposes a solution along with the issue. / Propone una solución junto con el problema.',
     'Implements improvements that benefit the team and shares them. / Implementa mejoras que benefician al equipo y las comparte.'] }
 ];
+
+const STAFF_EXTRA_DIMENSIONS = [
+  { key: 'conocimiento', title: 'Knowledge of work / Conocimiento del trabajo', q: 'How well does this person know the work they do? / ¿Qué tanto conoce esta persona el trabajo que realiza?', opts: [
+    'Does not know the basics of the job; cannot work without constant help. / No conoce lo básico del puesto; no puede trabajar sin ayuda constante.',
+    'Needs considerable help to complete usual tasks. / Necesita bastante ayuda para completar sus tareas habituales.',
+    'Knows the essentials; needs some help with less common tasks. / Conoce lo esencial; necesita algo de ayuda en tareas menos comunes.',
+    'Knows the job well enough to work without assistance. / Conoce bien el puesto y trabaja sin necesitar ayuda.',
+    'Knows every phase of the job and others go to this person for answers. / Conoce todas las fases del puesto y otros acuden a esta persona por respuestas.'] },
+  { key: 'volumen', title: 'Quantity of work / Volumen de trabajo', q: 'How much work does this person complete under normal conditions? / ¿Cuánto trabajo completa esta persona en condiciones normales?', opts: [
+    'Very slow; output is well below what the job needs. / Muy lento; su producción está muy por debajo de lo que el puesto necesita.',
+    'Output is below average; falls behind regularly. / Su producción está por debajo del promedio; se atrasa con regularidad.',
+    'Average output; keeps up with the normal workload. / Producción promedio; mantiene el ritmo de la carga normal.',
+    'Good output; completes the workload and sometimes more. / Buena producción; completa la carga y a veces más.',
+    'Unusually high output without sacrificing quality. / Producción excepcionalmente alta sin sacrificar calidad.'] },
+  { key: 'aprendizaje', title: 'Ability to learn new duties / Capacidad de aprender', q: 'How does this person take on new tasks and changes? / ¿Cómo asume esta persona tareas nuevas y cambios?', opts: [
+    'Very slow to absorb new tasks; forgets instructions. / Muy lento para asimilar tareas nuevas; olvida las instrucciones.',
+    'Needs a great deal of instruction for anything new. / Necesita mucha instrucción para cualquier cosa nueva.',
+    'Learns new tasks with normal instruction. / Aprende tareas nuevas con la instrucción normal.',
+    'Learns quickly and retains instructions. / Aprende rápido y retiene las instrucciones.',
+    'Masters new routines fast and adjusts to changes without friction. / Domina rutinas nuevas rápido y se adapta a los cambios sin fricción.'] },
+  { key: 'juicio', title: 'Judgment & common sense / Juicio y sentido común', q: 'How does this person make everyday decisions? / ¿Cómo toma esta persona sus decisiones del día a día?', opts: [
+    'Poor decisions; cannot be relied on to choose well. / Decisiones deficientes; no se puede confiar en que decida bien.',
+    'Often decides without thinking it through. / Con frecuencia decide sin pensarlo bien.',
+    'Fairly reliable; decides well in routine situations. / Bastante confiable; decide bien en situaciones rutinarias.',
+    'Decisions are usually logical and well founded. / Sus decisiones suelen ser lógicas y fundamentadas.',
+    'Thinks quickly and logically; sees beyond the obvious. / Piensa rápido y con lógica; ve más allá de lo evidente.'] }
+];
+// Order follows the company's existing appraisal form (knowledge, quantity, quality, learning, initiative, cooperation, judgment, attendance) + service.
+const STAFF_DIMENSIONS = ['conocimiento', 'volumen', 'calidad', 'aprendizaje', 'iniciativa', 'equipo', 'juicio', 'cumplimiento', 'servicio']
+  .map(k => STAFF_DIMENSIONS_BASE.concat(STAFF_EXTRA_DIMENSIONS).find(d => d.key === k));
 let feedbackManager = null;
 let feedbackAnswers = {};
 let evalConfig = null;
@@ -1105,16 +1136,27 @@ function renderQuotaScreen() {
       </div>
       <div class="error-msg" id="quota-error">Fill in goal and actual for every KPI. / Llena meta y real en todos los KPIs.</div>
       <button class="btn btn-primary" onclick="confirmQuota()">Continue / Continuar</button>
+      ${metricCfg.kpi_opcional ? `<button class="btn" style="margin-top:10px;background:#f4f1ea;color:var(--navy);font-weight:600;" onclick="skipKpis()">No KPI data yet: skip KPIs / Aún no hay datos de KPIs: omitir</button><div style="font-size:11px;color:var(--mgray);margin-top:4px;">The score will use the behavior ratings only. / El puntaje usará solo las calificaciones de conducta.</div>` : ''}
       <button class="btn" style="margin-top:10px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="renderSupervisorSearchScreen('')">← Back / Regresar</button>
     </div>`;
 }
 
+const RECO_LABELS = { none: 'No change / Sin cambio', raise: 'Raise / Aumento', promotion: 'Promotion / Promoción', transfer: 'Transfer / Traslado', termination: 'Termination / Terminación' };
+let recoData = { tipo: 'none', aumento: '', fortalezas: '', debilidades: '', comentarios: '' };
+function skipKpis() {
+  quotaData = { metrics: [], pct_promedio: null, skipped: true };
+  recoData = { tipo: 'none', aumento: '', fortalezas: '', debilidades: '', comentarios: '' };
+  currentDimIdx = 0;
+  responses = {};
+  renderQuestionScreen();
+}
 async function confirmQuota() {
   const active = metricRows.filter(r => !r.custom || (r.nombre || '').trim());
   const bad = active.some(r => metricPct(r) === null);
   if (!active.length || bad) { document.getElementById('quota-error').classList.add('show'); return; }
   const ew = effWeights();
   quotaData = { metrics: metricRows.map((r, i) => ({ r, w: ew[i] })).filter(x => x.r.custom ? (x.r.nombre || '').trim() : true).map(x => ({ nombre: x.r.nombre.trim(), unidad: (x.r.unidad || '').trim(), meta: parseFloat(x.r.meta), real: parseFloat(x.r.real), peso: Number(x.r.peso), plantilla_id: x.r.plantilla_id || null, direccion: x.r.dir || 'up' })), pct_promedio: metricsAverage() };
+  recoData = { tipo: 'none', aumento: '', fortalezas: '', debilidades: '', comentarios: '' };
   currentDimIdx = 0;
   responses = {};
   renderQuestionScreen();
@@ -1201,9 +1243,43 @@ function nextDimension() {
   if (currentDimIdx < dims.length - 1) {
     currentDimIdx++;
     renderQuestionScreen();
+  } else if (evalMode === 'supervisor') {
+    renderRecoScreen();
   } else {
     renderReviewScreen();
   }
+}
+
+/* ════════ RECOMMENDATION & COMMENTS (supervisor evaluations only; confidential) ════════ */
+function renderRecoScreen() {
+  const content = document.getElementById('app-content');
+  const fld = 'padding:9px 10px;border:2px solid #e8e4dc;border-radius:8px;font-size:13px;width:100%;font-family:inherit;';
+  const opts = Object.keys(RECO_LABELS).map(k => `<div class="bars-option${recoData.tipo === k ? ' selected' : ''}" onclick="setRecoTipo('${k}')" style="padding:9px 12px;margin-bottom:6px;"><div class="txt">${RECO_LABELS[k]}</div></div>`).join('');
+  const showAmt = recoData.tipo === 'raise' || recoData.tipo === 'promotion';
+  const esc = t => String(t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  content.innerHTML = `
+    <div class="card">
+      <h2>Recommendation & Comments / Recomendación y Comentarios</h2>
+      <div class="desc">Evaluating: <strong>${selectedEvaluado.nombre_completo}</strong></div>
+      <div style="background:#eaf3ea;border-left:4px solid #27AE60;border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:14px;">🔒 <strong>Confidential.</strong> Only you, company leadership and HR can see this section. The employee does not. / <strong>Confidencial.</strong> Solo tú, la dirección y RH ven esta sección. El empleado no la ve.</div>
+      <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:6px;">Do you recommend a change in this person's status? / ¿Recomiendas un cambio en el estatus de esta persona?</div>
+      ${opts}
+      <div id="reco-amt" style="display:${showAmt ? 'block' : 'none'};margin:6px 0 10px;"><label style="font-size:12px;font-weight:700;color:var(--navy);">Proposed increase ($) / Aumento propuesto ($)</label><input type="number" min="0" step="any" value="${esc(recoData.aumento)}" oninput="recoData.aumento=this.value" style="${fld}"></div>
+      <label style="font-size:12px;font-weight:700;color:var(--navy);display:block;margin-top:10px;">Strengths / Fortalezas</label>
+      <textarea rows="2" maxlength="2000" oninput="recoData.fortalezas=this.value" style="${fld}">${esc(recoData.fortalezas)}</textarea>
+      <label style="font-size:12px;font-weight:700;color:var(--navy);display:block;margin-top:10px;">Areas to improve and what is being done about it / Áreas de mejora y qué se está haciendo</label>
+      <textarea rows="2" maxlength="2000" oninput="recoData.debilidades=this.value" style="${fld}">${esc(recoData.debilidades)}</textarea>
+      <label style="font-size:12px;font-weight:700;color:var(--navy);display:block;margin-top:10px;">General comments / Comentarios generales</label>
+      <textarea rows="3" maxlength="2000" oninput="recoData.comentarios=this.value" style="${fld}">${esc(recoData.comentarios)}</textarea>
+      <div class="error-msg" id="reco-error">A termination recommendation needs a written explanation in the comments. / Una recomendación de terminación requiere una explicación por escrito en los comentarios.</div>
+      <button class="btn btn-primary" style="margin-top:14px;" onclick="confirmReco()">Continue / Continuar</button>
+      <button class="btn" style="margin-top:10px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="currentDimIdx=currentDimSet().length-1;renderQuestionScreen()">← Back / Regresar</button>
+    </div>`;
+}
+function setRecoTipo(k) { recoData.tipo = k; renderRecoScreen(); }
+function confirmReco() {
+  if (recoData.tipo === 'termination' && (recoData.comentarios || '').trim().length < 10) { document.getElementById('reco-error').classList.add('show'); return; }
+  renderReviewScreen();
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -1225,7 +1301,11 @@ function renderReviewScreen() {
   const quotaRow = evalMode === 'supervisor'
     ? `<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0ece2;font-size:13px;">
         <span style="color:var(--dkgray)">Quota Performance / Desempeño de Cuota</span>
-        <strong style="color:var(--navy)">${quotaData.pct_promedio}% avg (${quotaData.metrics.length} metric${quotaData.metrics.length === 1 ? '' : 's'})</strong>
+        <strong style="color:var(--navy)">${quotaData.skipped ? 'Not measured / Sin medir' : quotaData.pct_promedio + '% avg (' + quotaData.metrics.length + ' metric' + (quotaData.metrics.length === 1 ? '' : 's') + ')'}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0ece2;font-size:13px;">
+        <span style="color:var(--dkgray)">Recommendation / Recomendación</span>
+        <strong style="color:var(--navy)">${RECO_LABELS[recoData.tipo] || RECO_LABELS.none}${recoData.aumento ? ' · $' + recoData.aumento : ''}</strong>
       </div>`
     : '';
 
@@ -1291,13 +1371,18 @@ async function submitEvaluation() {
     if (isSupervisor) {
       const scores = dims.map(d => responses[d.key]);
       const conductual = Math.round(((scores.reduce((a, b) => a + b, 0) / scores.length) - 1) / 4 * 100);
-      const cuota = Math.round(Math.min(quotaData.pct_promedio, 100));
-      evalPayload.pct_promedio_cuota = quotaData.pct_promedio;
+      const cuota = quotaData.skipped ? null : Math.round(Math.min(quotaData.pct_promedio, 100));
+      evalPayload.pct_promedio_cuota = quotaData.skipped ? null : quotaData.pct_promedio;
+      evalPayload.reco_tipo = recoData.tipo || 'none';
+      evalPayload.reco_aumento = (recoData.tipo === 'raise' || recoData.tipo === 'promotion') && recoData.aumento !== '' ? recoData.aumento : null;
+      evalPayload.fortalezas = recoData.fortalezas || null;
+      evalPayload.debilidades = recoData.debilidades || null;
+      evalPayload.comentarios = recoData.comentarios || null;
       evalPayload.score_conductual = conductual;
       evalPayload.score_cuota = cuota;
       const w = evalWeights(evalRoleOf(selectedEvaluado));
       const wsum = (w.kpi || 0) + (w.conducta || 0);
-      evalPayload.score_final = wsum > 0 ? Math.round(((w.kpi || 0) * cuota + (w.conducta || 0) * conductual) / wsum) : Math.round(0.5 * cuota + 0.5 * conductual);
+      evalPayload.score_final = cuota === null ? conductual : (wsum > 0 ? Math.round(((w.kpi || 0) * cuota + (w.conducta || 0) * conductual) / wsum) : Math.round(0.5 * cuota + 0.5 * conductual));
     } else if (isPeer) {
       const scores = dims.map(d => responses[d.key]);
       const peerScore = Math.round(((scores.reduce((a, b) => a + b, 0) / scores.length) - 1) / 4 * 100);
@@ -1324,7 +1409,7 @@ async function submitEvaluation() {
     }));
     // One server call saves the evaluation and its answers; the server sets the evaluator from the session.
     const evaluacionId = await DH.rpc('evaluacion_guardar', { p_eval: evalPayload, p_respuestas: respuestaRows });
-    if (isSupervisor) {
+    if (isSupervisor && quotaData.metrics.length) {
       await DH.rpc('metricas_guardar', { p_evaluacion_id: evaluacionId, p_items: quotaData.metrics });
     }
 
