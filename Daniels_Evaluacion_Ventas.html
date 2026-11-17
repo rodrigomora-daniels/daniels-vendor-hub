@@ -370,6 +370,10 @@ async function renderModePicker() {
         <div class="num">👥</div>
         <div class="txt"><strong>Evaluate My Team / Evaluar a Mi Equipo</strong><br>Evaluate the people who report to you. / Evalúa a las personas que te reportan.</div>
       </div>` : ''}
+      <div class="bars-option" onclick="showRecords()">
+        <div class="num">🗂️</div>
+        <div class="txt"><strong>Evaluation Records / Registro de Evaluaciones</strong><br>KPIs and results by period. Evaluators see their own evaluations. / KPIs y resultados por periodo.</div>
+      </div>
       ${c.n_pares > 0 ? `
       <div class="bars-option" onclick="startPeerEval()">
         <div class="num">🤝</div>
@@ -378,6 +382,24 @@ async function renderModePicker() {
     </div>`;
 }
 
+
+/* ════════ EVALUATION RECORDS (access enforced server-side by eval_registros) ════════ */
+async function showRecords() {
+  const content = document.getElementById('app-content');
+  content.innerHTML = '<div class="card"><p>Loading... / Cargando...</p></div>';
+  let rows = [];
+  try { rows = await sbFetch('rpc/eval_registros', { method: 'POST', body: JSON.stringify({ p_empleado_id: loggedInEmployee.id }) }) || []; }
+  catch (err) { console.warn('records', err); }
+  const e = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const body = rows.length ? rows.map(r => `
+    <div style="border:1px solid #e8e4dc;border-radius:10px;padding:12px 14px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;"><strong>${e(r.evaluado)}</strong><span style="color:var(--mgray);font-size:12px;">${e(r.ciclo)} · ${(r.fecha || '').slice(0, 10)}</span></div>
+      <div style="font-size:12px;color:var(--mgray);margin:2px 0 8px;">Evaluator / Evaluador: ${e(r.evaluador)} · Final: <strong style="color:var(--navy);">${r.score_final ?? '—'}</strong> · KPI: ${r.kpi_pct ?? '—'}% · Behavior / Conducta: ${r.score_conducta ?? '—'}</div>
+      ${(r.kpis || []).map(k => `<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>${e(k.nombre)}${k.extra ? ' <em>(extra)</em>' : ''} · ${k.peso ?? ''}%</span><span>${k.real} / ${k.meta} ${e(k.unidad)} → <strong>${k.pct ?? '—'}%</strong></span></div>`).join('')}
+    </div>`).join('') : '<p>No records yet. / Aún no hay registros.</p>';
+  content.innerHTML = `<div class="card"><h2>Evaluation Records / Registro de Evaluaciones</h2>${body}
+    <button class="btn" style="margin-top:10px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="location.reload()">← Back / Regresar</button></div>`;
+}
 
 /* ════════ MY TEAM DASHBOARD (any boss): progress + team KPIs ════════ */
 let TD = { prog: null, kpis: null, custom: [], tab: 'progress' };
