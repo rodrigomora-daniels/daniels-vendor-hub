@@ -33,7 +33,7 @@
 <main>
   <div class="note">Files stored here open directly. Items marked "SharePoint" are links to the company SharePoint and need a Daniels Microsoft account. / Los archivos guardados aquí se abren directo. Los marcados "SharePoint" son links al SharePoint de la empresa y requieren cuenta Microsoft de Daniels.</div>
   <div id="msg" class="msg hide"></div>
-  <div style="font-size:10px;color:#aaa;text-align:right;margin:-8px 0 6px">page v6</div>
+  <div style="font-size:10px;color:#aaa;text-align:right;margin:-8px 0 6px">page v7</div>
   <div class="bar"><input id="q" placeholder="Search / Buscar…" oninput="render()"><select id="lang" onchange="render()"><option value="">All languages / Todos los idiomas</option><option>EN</option><option>ES</option></select></div>
   <div id="edit" class="card hide" style="margin-bottom:14px"></div>
   <div id="list"></div>
@@ -111,15 +111,17 @@ function bulk(){
    <label>Who sees them / Quién los ve</label>
    <div class="row"><label style="font-weight:400"><input type="checkbox" id="b-all" checked style="width:auto"> Everyone / Todos</label>
    ${['vendedor','staff','manager','director'].map(x=>`<label style="font-weight:400"><input type="checkbox" class="b-r" value="${x}" style="width:auto"> ${x}</label>`).join('')}</div>
-   <label id="b-drop" for="b-f" style="display:block;margin-top:12px;border:2px dashed #aab;border-radius:10px;padding:18px;text-align:center;background:#fafbff;cursor:pointer">📎 Drop files or a .zip here, or tap to choose / Suelta archivos o un .zip aquí, o toca para elegir
+   <label id="b-drop" for="b-f" style="display:block;margin-top:12px;border:2px dashed #aab;border-radius:10px;padding:18px;text-align:center;background:#fafbff;cursor:pointer">📎 Drop files, a folder or a .zip here, or tap to choose files / Suelta archivos, una carpeta o un .zip aquí, o toca para elegir archivos
    <input id="b-f" type="file" multiple style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden" onchange="bulkPick(this.files).catch(x=>err('Error: '+(x&&x.message||x)));this.value=''"></label>
+   <div style="margin-top:8px"><label for="b-d" class="btn ghost" style="display:inline-block;margin:0;cursor:pointer">📁 Choose a folder (with subfolders) / Elegir carpeta (con subcarpetas)</label>
+   <input id="b-d" type="file" webkitdirectory directory multiple style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden" onchange="bulkPick(this.files).catch(x=>err('Error: '+(x&&x.message||x)));this.value=''"></div>
    <div id="b-status" style="font-size:12px;color:var(--gray);margin-top:6px"></div>
    <div id="b-list" style="margin-top:10px"></div>
    <div style="margin-top:12px"><button class="btn" id="b-go" onclick="bulkGo()">Upload all / Subir todo</button> <button class="btn ghost" onclick="$('edit').classList.add('hide')">Close / Cerrar</button></div>`;
   const dz=$('b-drop');
   ['dragover','dragenter'].forEach(ev=>dz.addEventListener(ev,x=>{x.preventDefault();dz.style.background='#eef3ff';}));
   ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,x=>{x.preventDefault();dz.style.background='#fafbff';}));
-  dz.addEventListener('drop',x=>bulkPick(x.dataTransfer.files));
+  dz.addEventListener('drop',x=>{bulkDrop(x.dataTransfer).catch(y=>err('Error: '+(y&&y.message||y)));});
   e.scrollIntoView({behavior:'smooth'});
 }
 const MIME={pdf:'application/pdf',jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp'};
@@ -133,23 +135,48 @@ async function expandZip(f){
   }
   return out;
 }
+const SKIP=/^(\.|thumbs\.db$|desktop\.ini$)/i;
+function catOf(dirs){return dirs.length>=2?dirs[dirs.length-1].replace(/[_]+/g,' ').trim():'';}
+async function readEntry(en,dirs,out){
+  if(en.isFile){await new Promise(res=>en.file(f=>{out.push({file:f,cat:catOf(dirs)});res();},res));}
+  else if(en.isDirectory){
+    const rd=en.createReader(), d2=dirs.concat([en.name]); let batch;
+    do{batch=await new Promise((res,rej)=>rd.readEntries(res,rej)); for(const c of batch)await readEntry(c,d2,out);}while(batch.length);
+  }
+}
+async function bulkDrop(dt){
+  const ents=[...(dt.items||[])].map(i=>i.webkitGetAsEntry&&i.webkitGetAsEntry()).filter(Boolean); // capture before awaiting
+  if(!ents.length)return bulkPick(dt.files);
+  $('b-status').textContent='Reading… / Leyendo…';
+  const raw=[]; for(const en of ents)await readEntry(en,[],raw);
+  return bulkIngest(raw);
+}
 async function bulkPick(files){
   files=[...files]; $('b-status').textContent=files.length?('Reading '+files.length+' file(s)… / Leyendo…'):'No file selected / Ningún archivo';
+  const raw=files.map(f=>{const parts=(f.webkitRelativePath||'').split('/'); return {file:f,cat:parts.length>1?catOf(parts.slice(0,-1)):''};});
+  return bulkIngest(raw);
+}
+async function bulkIngest(raw){
   const have=new Set(D.items.map(i=>i.titulo.toLowerCase()));
   let list=[];
-  for(const f of [...files]){
-    if(/\.zip$/i.test(f.name)||f.type==='application/zip'||f.type==='application/x-zip-compressed'){
+  for(const {file:f,cat} of raw){
+    if(SKIP.test(f.name))continue;
+    if(/\.zip$/i.test(f.name)){
       try{list.push(...await expandZip(f));}catch(e){BULK.push({file:f,title:f.name,cat:'',idioma:'EN',state:'error',msg:'Could not read the zip / No se pudo leer el zip'});}
-    }else list.push({file:f,cat:''});
+    }else{
+      const ext=(f.name.split('.').pop()||'').toLowerCase();
+      list.push({file:(f.type&&/^(application\/pdf|image\/)/.test(f.type))||!MIME[ext]?f:new File([f],f.name,{type:MIME[ext]}),cat});
+    }
   }
   list.forEach(({file:f,cat})=>{
-    if(!/^(application\/pdf|image\/(jpeg|png|webp))$/.test(f.type)){BULK.push({file:f,title:f.name,cat,idioma:'EN',state:'error',msg:'Type not allowed / Tipo no permitido'});return;}
+    if(!/^(application\/pdf|image\/(jpeg|png|webp))$/.test(f.type)){BULK.push({file:f,title:f.name,cat,idioma:'EN',state:'error',msg:'Type not allowed (PDF, JPG, PNG, WebP only) / Tipo no permitido (solo PDF, JPG, PNG, WebP)'});return;}
     if(f.size>20*1024*1024){BULK.push({file:f,title:f.name,cat,idioma:'EN',state:'error',msg:'Over 20 MB / Más de 20 MB'});return;}
     const t=guessTitle(f.name);
     BULK.push({file:f,title:t,cat,idioma:guessLang(f.name),state:'pending',msg:have.has(t.toLowerCase())?'A resource with this title already exists / Ya existe un recurso con este título':''});
   });
   bulkRender();
-  $('b-status').textContent=BULK.length+' file(s) ready / archivo(s) listos';
+  const ok=BULK.filter(r=>r.state==='pending').length, bad=BULK.filter(r=>r.state==='error').length;
+  $('b-status').textContent=ok+' ready / listos'+(bad?' · '+bad+' not supported / no soportados':'');
 }
 function bulkRender(){
   $('b-list').innerHTML=BULK.map((r,i)=>`<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #eee;flex-wrap:wrap">
