@@ -76,5 +76,51 @@
       } catch (e) { return null; }
     }
   };
+
+  // ---- Private files (Supabase Storage via the workspace-files edge function) ----
+  var FN = SUPABASE_URL + '/functions/v1/workspace-files';
+  async function fn(payload) {
+    var res = await fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY }, body: JSON.stringify(Object.assign({ token: DH.token() }, payload)) });
+    var out = null; try { out = await res.json(); } catch (e) {}
+    if (res.status === 401) { DH.expired(); throw new Error('Session expired'); }
+    if (!res.ok || !out || out.error) { var er = new Error((out && out.error) || ('HTTP ' + res.status)); er.code = out && out.error; throw er; }
+    return out;
+  }
+  DH.files = {
+    // ids -> { id: { url, mime, nombre } }; links last 1 hour
+    sign: async function (ids) {
+      ids = (ids || []).filter(Boolean);
+      var urls = {};
+      for (var i = 0; i < ids.length; i += 50) {
+        var r = await fn({ action: 'sign', ids: ids.slice(i, i + 50) });
+        Object.assign(urls, r.urls || {});
+      }
+      return urls;
+    },
+    // downscale big photos so flyers load fast on tablets (PDFs and small images pass through)
+    prepare: async function (file) {
+      if (!/^image\/(jpeg|png|webp)$/.test(file.type) || file.size < 400 * 1024) return file;
+      try {
+        var bmp = await createImageBitmap(file);
+        var max = 2400, k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+        var c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+        c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+        var blob = await new Promise(function (ok) { c.toBlob(ok, 'image/jpeg', 0.88); });
+        if (blob && blob.size < file.size) return new File([blob], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' });
+      } catch (e) {}
+      return file;
+    },
+    // scope: 'promo' | 'recurso'. Returns the archivo_id to attach to a promotion/resource.
+    upload: async function (scope, file) {
+      if (!/^(application\/pdf|image\/(jpeg|png|webp))$/.test(file.type)) throw new Error('Only PDF, JPG, PNG or WebP files. / Solo PDF, JPG, PNG o WebP.');
+      file = await DH.files.prepare(file);
+      if (file.size > 20 * 1024 * 1024) throw new Error('File is larger than 20 MB. / El archivo pesa más de 20 MB.');
+      var r = await fn({ action: 'upload', scope: scope, nombre: file.name, mime: file.type, bytes: file.size });
+      var fd = new FormData(); fd.append('cacheControl', '3600'); fd.append('', file);
+      var up = await fetch(r.signedUrl, { method: 'PUT', headers: { apikey: SUPABASE_KEY }, body: fd });
+      if (!up.ok) throw new Error('Upload failed (' + up.status + '). / Falló la subida.');
+      return r.archivo_id;
+    }
+  };
   window.DH = DH;
 })();

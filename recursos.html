@@ -31,7 +31,7 @@
 <body>
 <header><h1>📚 Resources / Recursos</h1><a href="index.html">← Home / Inicio</a></header>
 <main>
-  <div class="note">Documents live in the company SharePoint; these are links to them. If SharePoint asks you to sign in, use your Daniels Microsoft account. If a link says you don't have access, ask your manager. / Los documentos están en el SharePoint de la empresa; aquí solo están los links. Si te pide iniciar sesión, usa tu cuenta Microsoft de Daniels. Si dice que no tienes acceso, avisa a tu gerente.</div>
+  <div class="note">Files stored here open directly. Items marked "SharePoint" are links to the company SharePoint and need a Daniels Microsoft account. / Los archivos guardados aquí se abren directo. Los marcados "SharePoint" son links al SharePoint de la empresa y requieren cuenta Microsoft de Daniels.</div>
   <div id="msg" class="msg hide"></div>
   <div class="bar"><input id="q" placeholder="Search / Buscar…" oninput="render()"><select id="lang" onchange="render()"><option value="">All languages / Todos los idiomas</option><option>EN</option><option>ES</option></select></div>
   <div id="list"></div>
@@ -48,11 +48,16 @@ async function init(){
   try{D=await DH.rpc('recursos_listar');}catch(e){err('Could not load resources. / No se pudieron cargar los recursos.');return;}
   render();
 }
+async function openFile(id){
+  const it=D.items.find(x=>x.id===id); const w=window.open('','_blank');
+  try{const u=await DH.files.sign([it.archivo_id]); const f=u[it.archivo_id]; if(!f)throw new Error('unavailable'); if(w){w.opener=null;w.location=f.url;}else{location.href=f.url;}}
+  catch(e){if(w)w.close();err('Could not open the file. / No se pudo abrir el archivo.');}
+}
 function render(){
   const q=($('q').value||'').toLowerCase(), lang=$('lang').value;
   const items=(D.items||[]).filter(i=>(!lang||i.idioma===lang)&&(!q||(i.titulo+' '+i.categoria).toLowerCase().includes(q)));
   const cats={}; items.forEach(i=>(cats[i.categoria]=cats[i.categoria]||[]).push(i));
-  let html=Object.keys(cats).sort().map(c=>`<div class="cat"><h2>${esc(c)}</h2>${cats[c].map(i=>`<div class="item"><div class="ico">📄</div><div class="t"><b>${esc(i.titulo)}</b><small>${esc(i.descripcion||'')}</small></div><span class="tag">${esc(i.idioma)}</span>${i.activo?'':'<span class="tag off">hidden</span>'}${D.puede_editar?`<button class="btn ghost sm" onclick="edit('${i.id}')">Edit</button>`:''}<a class="btn" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer">Open / Abrir</a></div>`).join('')}</div>`).join('');
+  let html=Object.keys(cats).sort().map(c=>`<div class="cat"><h2>${esc(c)}</h2>${cats[c].map(i=>`<div class="item"><div class="ico">📄</div><div class="t"><b>${esc(i.titulo)}</b><small>${esc(i.descripcion||'')}</small></div><span class="tag">${esc(i.idioma)}</span>${i.activo?'':'<span class="tag off">hidden</span>'}${D.puede_editar?`<button class="btn ghost sm" onclick="edit('${i.id}')">Edit</button>`:''}${i.archivo_id?`<button class="btn" onclick="openFile('${i.id}')">Open / Abrir</button>`:`<a class="btn" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer">Open / Abrir <small>(SharePoint)</small></a>`}</div>`).join('')}</div>`).join('');
   if(!html)html='<div class="card">Nothing found. / No se encontró nada.</div>';
   if(D.puede_editar)html='<div style="margin-bottom:12px"><button class="btn" onclick="edit(null)">+ Add resource</button></div>'+html;
   $('list').innerHTML=html;
@@ -66,7 +71,8 @@ function edit(id){
    <div class="row"><div><label>Category</label><input id="f-c" list="cats" value="${esc(r.categoria)}"><datalist id="cats">${[...new Set(D.items.map(i=>i.categoria))].map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div>
    <div><label>Language</label><select id="f-i">${['EN','ES','EN/ES'].map(l=>`<option ${l===r.idioma?'selected':''}>${l}</option>`).join('')}</select></div>
    <div><label>Order</label><input id="f-o" type="number" value="${r.orden}"></div></div>
-   <label>SharePoint link (must start with https://mydaniels.sharepoint.com/)</label><input id="f-u" value="${esc(r.url)}">
+   <label>File to store in the workspace (PDF or image) / Archivo para guardar en el workspace ${r.archivo_id?'— current file kept if you leave this empty / se conserva el actual si lo dejas vacío':''}</label><input id="f-f" type="file" accept="application/pdf,image/jpeg,image/png,image/webp">
+   <label>…or a SharePoint link (https://mydaniels.sharepoint.com/…) / …o un link de SharePoint ${r.archivo_id?'— clearing the file and filling this switches it back to a link':''}</label><input id="f-u" value="${esc(r.url||'')}">
    <label>Description (optional)</label><input id="f-d" value="${esc(r.descripcion||'')}">
    <label>Who sees it</label>
    <div class="row"><label style="font-weight:400"><input type="checkbox" id="f-all" ${all?'checked':''} style="width:auto"> Everyone</label>
@@ -78,11 +84,14 @@ function edit(id){
 async function save(id){
   const sel=[...document.querySelectorAll('.f-r:checked')].map(x=>x.value);
   const roles=$('f-all').checked||!sel.length?null:sel;
+  const btn=document.querySelector('#edit .btn:not(.ghost)'); const file=$('f-f').files[0]; const cur=id?D.items.find(x=>x.id===id):null;
+  if(btn){btn.disabled=true;}
   try{
-    const r=await DH.rpc('admin_recurso_guardar',{p_id:id||null,p_titulo:$('f-t').value,p_categoria:$('f-c').value,p_idioma:$('f-i').value,p_url:$('f-u').value,p_descripcion:$('f-d').value||null,p_roles:roles,p_orden:parseInt($('f-o').value)||100,p_activo:$('f-a').checked});
-    if(r.error){err((r.detalle||r.error));return;}
+    let archivo=file?await DH.files.upload('recurso',file):(cur&&cur.archivo_id&&!$('f-u').value.trim()?cur.archivo_id:null);
+    const r=await DH.rpc('admin_recurso_guardar',{p_archivo_id:archivo,p_id:id||null,p_titulo:$('f-t').value,p_categoria:$('f-c').value,p_idioma:$('f-i').value,p_url:$('f-u').value,p_descripcion:$('f-d').value||null,p_roles:roles,p_orden:parseInt($('f-o').value)||100,p_activo:$('f-a').checked});
+    if(r.error){err((r.detalle||r.error));if(btn)btn.disabled=false;return;}
     $('msg').classList.add('hide'); $('edit').classList.add('hide'); D=await DH.rpc('recursos_listar'); render();
-  }catch(e){err('Could not save: '+e.message);}
+  }catch(e){err('Could not save: '+e.message);if(btn)btn.disabled=false;}
 }
 init();
 </script>

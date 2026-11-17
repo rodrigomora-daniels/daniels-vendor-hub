@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>My Workspace — Promotions / Promociones</title>
+<style>
+  :root{--navy:#1B3A6B;--gold:#C8922A;--lt:#D6E4F7;--gray:#6B6B6B;--red:#C0392B;--green:#2E7D32}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,sans-serif;background:#f0f2f5;color:#3c3c3c}
+  header{background:var(--navy);border-bottom:4px solid var(--gold);padding:16px 24px;display:flex;justify-content:space-between;align-items:center;color:#fff}
+  header h1{font-size:18px} header a{color:var(--lt);font-size:13px;text-decoration:none}
+  main{max-width:1100px;margin:20px auto;padding:0 16px 60px}
+  .tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+  .tab{padding:9px 16px;border-radius:20px;border:1px solid #ccc;background:#fff;font-weight:700;font-size:13px;cursor:pointer;color:#444}
+  .tab.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+  .tile{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);display:flex;flex-direction:column}
+  .thumb{height:230px;background:#e8ecf3;display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden}
+  .thumb img{width:100%;height:100%;object-fit:cover}
+  .thumb .pdf{font-size:54px;text-align:center;color:var(--navy)} .thumb .pdf small{display:block;font-size:12px;margin-top:6px;font-weight:700}
+  .tile .meta{padding:10px 12px;flex:1} .tile .meta b{color:var(--navy);display:block;font-size:14px;margin-bottom:3px}
+  .tile .meta small{color:var(--gray);display:block;font-size:12px;line-height:1.4}
+  .tile .act{padding:0 12px 12px;display:flex;gap:6px;flex-wrap:wrap}
+  .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;background:var(--lt);color:var(--navy);font-weight:700;margin-top:4px}
+  .tag.warn{background:#fff3cd;color:#7a5b00} .tag.off{background:#eee;color:#777} .tag.ok{background:#e3f4e5;color:var(--green)}
+  .btn{padding:8px 14px;border-radius:8px;border:none;font-weight:700;font-size:13px;cursor:pointer;background:var(--navy);color:#fff;text-decoration:none;display:inline-block}
+  .btn.ghost{background:#fff;border:1px solid #ccc;color:#333} .btn.sm{padding:5px 10px;font-size:12px} .btn[disabled]{opacity:.5;cursor:wait}
+  .card{background:#fff;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+  label{font-size:12px;font-weight:700;color:var(--navy);display:block;margin:8px 0 3px}
+  input,select,textarea{font:inherit;font-size:13px;padding:8px 10px;border:1px solid #ccc;border-radius:8px;width:100%}
+  input[type=checkbox]{width:auto} .row{display:flex;gap:10px;flex-wrap:wrap} .row>*{flex:1;min-width:150px}
+  .hide{display:none} .msg{padding:10px;border-radius:8px;margin-bottom:10px;font-size:13px;background:#fdecea;color:var(--red)}
+  .msg.ok{background:#e3f4e5;color:var(--green)}
+  #lb{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:50;display:flex;flex-direction:column}
+  #lb .bar{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;color:#fff;font-size:14px}
+  #lb .bar button{background:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer}
+  #lb .stage{flex:1;overflow:auto;display:flex;align-items:flex-start;justify-content:center;-webkit-overflow-scrolling:touch}
+  #lb img{max-width:100%;height:auto;touch-action:pinch-zoom}
+  .empty{background:#fff;border-radius:12px;padding:24px;text-align:center;color:var(--gray)}
+</style>
+</head>
+<body>
+<header><h1>📣 Promotions / Promociones</h1><a href="index.html">← Home / Inicio</a></header>
+<main>
+  <div id="msg" class="msg hide"></div>
+  <div class="tabs" id="tabs"></div>
+  <div id="pubbar" class="hide" style="margin-bottom:12px"><button class="btn" onclick="edit(null)">+ New promotion / Nueva promoción</button></div>
+  <div id="edit" class="card hide"></div>
+  <div id="grid" class="grid"></div>
+  <div id="perm" class="card hide" style="margin-top:20px"></div>
+</main>
+<div id="lb" class="hide"><div class="bar"><span id="lbt"></span><button onclick="closeLb()">Close / Cerrar ✕</button></div><div class="stage"><img id="lbi" alt=""></div></div>
+<script src="dh-session.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let D=null, URLS={}, TAB='vigente';
+const TABS=[['vigente','Current / Vigentes'],['programada','Upcoming / Próximas'],['vencida','Past / Anteriores'],['oculta','Hidden / Ocultas']];
+const ROLES=['vendedor','staff','manager','director'];
+function err(t){const m=$('msg');m.textContent=t;m.className='msg';}
+function ok(t){const m=$('msg');m.textContent=t;m.className='msg ok';setTimeout(()=>m.classList.add('hide'),4000);}
+function fmt(d){if(!d)return '';const[y,m,dd]=d.split('-');return `${m}/${dd}/${y}`;}
+function range(p){return p.vigente_hasta?`${fmt(p.vigente_desde)} – ${fmt(p.vigente_hasta)}`:`From ${fmt(p.vigente_desde)}`;}
+
+async function init(){
+  if(!DH.token()){location.href='index.html';return;}
+  await load();
+}
+async function load(){
+  try{D=await DH.rpc('promos_listar');}catch(e){err('Could not load promotions. / No se pudieron cargar las promociones.');return;}
+  const need=(D.items||[]).map(i=>i.archivo_id);
+  try{URLS=await DH.files.sign(need);}catch(e){URLS={};err('Some images could not be loaded. / No se pudieron cargar algunas imágenes.');}
+  $('pubbar').classList.toggle('hide',!D.puede_publicar);
+  render();
+}
+function render(){
+  const counts={};(D.items||[]).forEach(i=>counts[i.estado]=(counts[i.estado]||0)+1);
+  const tabs=TABS.filter(t=>t[0]==='vigente'||t[0]==='vencida'||D.puede_publicar);
+  $('tabs').innerHTML=tabs.map(t=>`<button class="tab ${t[0]===TAB?'on':''}" onclick="TAB='${t[0]}';render()">${t[1]}${counts[t[0]]?' ('+counts[t[0]]+')':''}</button>`).join('');
+  const items=(D.items||[]).filter(i=>i.estado===TAB);
+  if(!items.length){$('grid').innerHTML='<div class="empty" style="grid-column:1/-1">Nothing here yet. / Aquí no hay nada todavía.</div>';return;}
+  $('grid').innerHTML=items.map(p=>{
+    const u=URLS[p.archivo_id], isImg=p.mime&&p.mime.startsWith('image/');
+    const th=!u?'<div class="pdf">⚠️<small>Unavailable</small></div>':isImg?`<img loading="lazy" src="${esc(u.url)}" alt="${esc(p.titulo)}">`:'<div class="pdf">📄<small>PDF</small></div>';
+    const st=p.estado==='vigente'?'<span class="tag ok">Active</span>':p.estado==='programada'?'<span class="tag warn">Upcoming</span>':p.estado==='vencida'?'<span class="tag off">Ended</span>':'<span class="tag off">Hidden</span>';
+    const aud=p.roles?`<span class="tag">${esc(p.roles.join(', '))}</span>`:'';
+    return `<div class="tile"><div class="thumb" onclick="openItem('${p.id}')">${th}</div><div class="meta"><b>${esc(p.titulo)}</b><small>${esc(p.descripcion||'')}</small><small>${range(p)}</small>${st} ${aud}</div>
+      <div class="act"><button class="btn sm" onclick="openItem('${p.id}')">View / Ver</button>${D.puede_publicar?`<button class="btn ghost sm" onclick="edit('${p.id}')">Edit</button>`:''}</div></div>`;
+  }).join('');
+}
+function openItem(id){
+  const p=D.items.find(x=>x.id===id), u=URLS[p.archivo_id]; if(!u){err('File unavailable. / Archivo no disponible.');return;}
+  if(p.mime==='application/pdf'){window.open(u.url,'_blank','noopener');return;}
+  $('lbt').textContent=p.titulo; $('lbi').src=u.url; $('lb').classList.remove('hide'); document.body.style.overflow='hidden';
+}
+function closeLb(){$('lb').classList.add('hide');$('lbi').src='';document.body.style.overflow='';}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLb();});
+
+function edit(id){
+  const p=id?D.items.find(x=>x.id===id):{titulo:'',descripcion:'',vigente_desde:new Date().toLocaleDateString('en-CA',{timeZone:'America/Los_Angeles'}),vigente_hasta:'',roles:null,activo:true};
+  const roles=p.roles||[], all=!p.roles, e=$('edit'); e.classList.remove('hide');
+  e.innerHTML=`<h2 style="color:var(--navy);font-size:16px">${id?'Edit':'New'} promotion / ${id?'Editar':'Nueva'} promoción</h2>
+   <label>Title / Título</label><input id="f-t" value="${esc(p.titulo)}" placeholder="e.g. Black Friday wrap 11/17">
+   <label>Notes (optional) / Notas (opcional)</label><input id="f-d" value="${esc(p.descripcion||'')}">
+   <label>File: image or PDF / Archivo: imagen o PDF ${id?'(leave empty to keep the current one / déjalo vacío para conservar el actual)':''}</label>
+   <input id="f-f" type="file" accept="image/jpeg,image/png,image/webp,application/pdf">
+   <div class="row"><div><label>Starts / Inicia</label><input id="f-s" type="date" value="${esc(p.vigente_desde||'')}"></div>
+   <div><label>Ends (optional) / Termina (opcional)</label><input id="f-e" type="date" value="${esc(p.vigente_hasta||'')}"></div></div>
+   <label>Who sees it / Quién lo ve</label>
+   <div class="row"><label style="font-weight:400"><input type="checkbox" id="f-all" ${all?'checked':''}> Everyone / Todos</label>
+   ${ROLES.map(x=>`<label style="font-weight:400"><input type="checkbox" class="f-r" value="${x}" ${roles.includes(x)?'checked':''}> ${x}</label>`).join('')}</div>
+   <label style="font-weight:400"><input type="checkbox" id="f-a" ${p.activo?'checked':''}> Visible</label>
+   <div style="margin-top:12px"><button class="btn" id="f-save" onclick="save('${id||''}')">Save / Guardar</button> <button class="btn ghost" onclick="$('edit').classList.add('hide')">Cancel</button></div>`;
+  e.scrollIntoView({behavior:'smooth'});
+}
+async function save(id){
+  const btn=$('f-save'), file=$('f-f').files[0], cur=id?D.items.find(x=>x.id===id):null;
+  if(!id&&!file){err('Choose a file. / Elige un archivo.');return;}
+  if(!$('f-t').value.trim()){err('Title is required. / Falta el título.');return;}
+  const sel=[...document.querySelectorAll('.f-r:checked')].map(x=>x.value);
+  const roles=$('f-all').checked||!sel.length?null:sel;
+  btn.disabled=true; btn.textContent='Saving… / Guardando…';
+  try{
+    const archivo=file?await DH.files.upload('promo',file):cur.archivo_id;
+    const r=await DH.rpc('admin_promo_guardar',{p_id:id||null,p_titulo:$('f-t').value,p_descripcion:$('f-d').value||null,p_archivo_id:archivo,p_desde:$('f-s').value||null,p_hasta:$('f-e').value||null,p_roles:roles,p_activo:$('f-a').checked});
+    if(r.error){err(r.detalle||r.error);btn.disabled=false;btn.textContent='Save / Guardar';return;}
+    $('edit').classList.add('hide'); ok('Saved. / Guardado.'); await load();
+  }catch(e){err(e.message||'Could not save.');btn.disabled=false;btn.textContent='Save / Guardar';}
+}
+
+async function loadPerm(){
+  if(!D||!D.puede_permisos){return;}
+  let P; try{P=await DH.rpc('promo_publicadores');}catch(e){return;}
+  if(P.error)return;
+  const ids=new Set(P.publicadores.map(x=>x.id));
+  $('perm').classList.remove('hide');
+  $('perm').innerHTML=`<h2 style="color:var(--navy);font-size:15px">Who can publish promotions / Quién puede publicar</h2>
+   <p style="font-size:12px;color:var(--gray);margin:6px 0 10px">Super admins and Rey can always publish. Add the marketing team here. / Super admins y Rey siempre pueden. Agrega aquí al equipo de marketing.</p>
+   ${P.publicadores.map(x=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #eee"><span>${esc(x.nombre)} <small style="color:var(--gray)">${esc(x.employee_id||'')}</small></span><button class="btn ghost sm" onclick="setPerm('${x.id}',false)">Remove</button></div>`).join('')||'<small>No one added yet. / Nadie agregado todavía.</small>'}
+   <div class="row" style="margin-top:12px"><select id="p-sel"><option value="">Add person… / Agregar persona…</option>${P.empleados.filter(x=>!ids.has(x.id)).map(x=>`<option value="${x.id}">${esc(x.nombre)} (${esc(x.employee_id||'')})</option>`).join('')}</select><button class="btn" style="flex:0" onclick="setPerm($('p-sel').value,true)">Add</button></div>`;
+}
+async function setPerm(id,on){
+  if(!id)return;
+  try{const r=await DH.rpc('admin_permiso_set',{p_empleado_id:id,p_permiso:'promociones',p_on:on});if(r.error){err(r.error);return;}await loadPerm();}catch(e){err(e.message);}
+}
+init().then(loadPerm);
+</script>
+</body>
+</html>
