@@ -66,6 +66,7 @@
   </div>
 </div>
 
+<script src="dh-session.js"></script>
 <script>
 /* ════════════════════════════════════════════════════════════
    SUPABASE CONFIG — identical to Tier1/Tier2/Cockpit
@@ -283,22 +284,14 @@ const SUPERVISOR_DIMENSIONS = [
    INIT — same real pattern as Tier1: ?emp= param, es_admin check
    ════════════════════════════════════════════════════════════ */
 async function init() {
-  const params = new URLSearchParams(window.location.search);
-  const empId = params.get('emp');
   const content = document.getElementById('app-content');
 
-  if (!empId) {
-    content.innerHTML = `<div class="card"><div class="no-cycle">No employee context found. Please return to the hub and try again. / No se encontró contexto de empleado. Regresa al hub e intenta de nuevo.</div></div>`;
-    return;
-  }
-
+  // /next/: identity comes from the server-issued session token, not from ?emp=
+  if (!DH.token()) { window.location.href = 'index.html'; return; }
   try {
-    const rows = await sbFetch(`empleados?id=eq.${empId}&select=id,nombre_completo,employee_id,tienda,es_admin,rol`);
-    if (!rows || rows.length === 0) {
-      content.innerHTML = `<div class="card"><div class="no-cycle">Employee not found. / Empleado no encontrado.</div></div>`;
-      return;
-    }
-    loggedInEmployee = rows[0];
+    const me = await DH.restore();
+    if (!me) { window.location.href = 'index.html?expired=1'; return; }
+    loggedInEmployee = me;
     isAdminPreview = false; // admins/managers are real evaluators; everything saves
   } catch (err) {
     console.error('Could not load employee:', err);
@@ -307,8 +300,8 @@ async function init() {
   }
 
   try {
-    const cycles = await sbFetch(`evaluacion_ciclos?activo=eq.true&select=id,nombre,tipo,fecha_inicio,fecha_cierre&order=fecha_inicio.desc&limit=1`);
-    activeCycle = (cycles && cycles.length) ? cycles[0] : null;
+    const cyc = await DH.rpc('evaluacion_ciclo_activo');
+    activeCycle = cyc || null;
   } catch (err) {
     console.warn('Could not load evaluation cycle (table may not exist yet):', err);
     activeCycle = null;
@@ -341,13 +334,13 @@ async function renderModePicker() {
   const content = document.getElementById('app-content');
   if (!myContext) {
     try {
-      const r = await sbFetch('rpc/evaluacion_mi_contexto', { method: 'POST', body: JSON.stringify({ p_empleado_id: loggedInEmployee.id }) });
+      const r = await DH.rpc('evaluacion_mi_contexto');
       myContext = (r && r[0]) || { tiene_reportes: false, n_jefes: 0, n_pares: 0 };
     } catch (err) { console.warn('context', err); myContext = { tiene_reportes: false, n_jefes: 0, n_pares: 0 }; }
   }
   const c = myContext;
   let prog = null;
-  try { prog = await sbFetch('rpc/evaluacion_mi_progreso', { method: 'POST', body: JSON.stringify({ p_empleado_id: loggedInEmployee.id }) }); } catch (err) { console.warn('progress', err); }
+  try { prog = await DH.rpc('evaluacion_mi_progreso'); } catch (err) { console.warn('progress', err); }
   content.innerHTML = renderMyProgress(prog) + `
     <div class="card">
       <h2>What would you like to do? / ¿Qué te gustaría hacer?</h2>
@@ -374,6 +367,11 @@ async function renderModePicker() {
         <div class="num">🗂️</div>
         <div class="txt"><strong>Evaluation Records / Registro de Evaluaciones</strong><br>KPIs and results by period. Evaluators see their own evaluations. / KPIs y resultados por periodo.</div>
       </div>
+      ${c.tiene_reportes ? `
+      <div class="bars-option" onclick="showLeadershipSummary()">
+        <div class="num">🧭</div>
+        <div class="txt"><strong>My Leadership Summary / Mi Resumen de Liderazgo</strong><br>A summary of what your team shared anonymously. / Un resumen de lo que tu equipo compartió de forma anónima.</div>
+      </div>` : ''}
       ${c.n_pares > 0 ? `
       <div class="bars-option" onclick="startPeerEval()">
         <div class="num">🤝</div>
@@ -383,12 +381,37 @@ async function renderModePicker() {
 }
 
 
+/* ════════ LEADERSHIP SUMMARY (managers see a digest, never raw answers) ════════ */
+async function showLeadershipSummary() {
+  const content = document.getElementById('app-content');
+  content.innerHTML = '<div class="card"><p>Loading... / Cargando...</p></div>';
+  let r = null;
+  try { r = await DH.rpc('feedback_resumen_mi'); } catch (err) { console.warn('summary', err); }
+  const titleOf = k => { const q = MANAGER_FEEDBACK_QUESTIONS.find(x => x.key === k); return q ? q.title : k; };
+  const LEVEL = { strong: ['Strong leadership / Liderazgo sólido', '#27AE60', 'Your team sees you as a clear, fair and supportive leader. Keep it up. / Tu equipo te ve como un líder claro, justo y de apoyo. Sigue así.'],
+    solid: ['Solid, with room to grow / Sólido, con espacio para crecer', '#2E7D32', 'Your team sees a good base, and a few habits could make a real difference. / Tu equipo ve una buena base y algunos hábitos pueden hacer una gran diferencia.'],
+    growing: ['Developing / En desarrollo', '#B8860B', 'There are clear opportunities to improve how you lead. Talk it through with your own manager. / Hay oportunidades claras para mejorar cómo lideras. Platícalo con tu propio jefe.'],
+    attention: ['Needs attention / Requiere atención', '#C0392B', 'Your team is asking for change. Please set up a conversation with your own manager. / Tu equipo está pidiendo un cambio. Por favor platica con tu propio jefe.'] };
+  let body;
+  if (!r || r.estado === 'sin_datos') body = '<p>No team feedback yet. / Aún no hay comentarios del equipo.</p>';
+  else if (r.estado === 'pocos') body = '<p>Not enough answers yet to protect everyone\'s anonymity. A summary appears once at least 3 people have answered. / Aún no hay suficientes respuestas para proteger el anonimato. El resumen aparece cuando al menos 3 personas hayan contestado.</p>';
+  else {
+    const L = LEVEL[r.nivel];
+    body = `<div style="border-left:5px solid ${L[1]};padding:10px 14px;background:#f8f6f0;border-radius:8px;margin-bottom:14px;"><strong style="color:${L[1]}">${L[0]}</strong><div style="font-size:13px;margin-top:4px;">${L[2]}</div><div style="font-size:11px;color:var(--mgray);margin-top:6px;">Based on ${r.n} anonymous answers. / Basado en ${r.n} respuestas anónimas.</div></div>
+      ${(r.fortalezas || []).length ? `<div style="margin-bottom:10px;"><strong>What your team values / Lo que tu equipo valora</strong><br>${r.fortalezas.map(k => '• ' + titleOf(k)).join('<br>')}</div>` : ''}
+      ${(r.oportunidades || []).length ? `<div><strong>Where you can grow / Dónde puedes crecer</strong><br>${r.oportunidades.map(k => '• ' + titleOf(k)).join('<br>')}</div>` : ''}`;
+  }
+  content.innerHTML = `<div class="card"><h2>My Leadership Summary / Mi Resumen de Liderazgo</h2>${body}
+    <div style="font-size:11px;color:var(--mgray);margin-top:14px;">🔒 This is a group summary. Individual answers are never shown and nobody can tell who answered what. / Este es un resumen del grupo. Nunca se muestran respuestas individuales y nadie puede saber quién contestó qué.</div>
+    <button class="btn" style="margin-top:10px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="location.reload()">← Back / Regresar</button></div>`;
+}
+
 /* ════════ EVALUATION RECORDS (access enforced server-side by eval_registros) ════════ */
 async function showRecords() {
   const content = document.getElementById('app-content');
   content.innerHTML = '<div class="card"><p>Loading... / Cargando...</p></div>';
   let rows = [];
-  try { rows = await sbFetch('rpc/eval_registros', { method: 'POST', body: JSON.stringify({ p_empleado_id: loggedInEmployee.id }) }) || []; }
+  try { rows = await DH.rpc('eval_registros') || []; }
   catch (err) { console.warn('records', err); }
   const e = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const body = rows.length ? rows.map(r => `
@@ -419,8 +442,8 @@ async function startTeamDashboard(tab) {
   const content = document.getElementById('app-content');
   content.innerHTML = '<div class="card"><h2>My Team Dashboard / Panel de Mi Equipo</h2><div class="desc">Loading…</div></div>';
   try {
-    TD.prog = await sbFetch('rpc/evaluacion_mi_equipo', { method: 'POST', body: JSON.stringify({ p_empleado_id: loggedInEmployee.id }) });
-    TD.kpis = await sbFetch('rpc/evaluacion_kpis_equipo_get', { method: 'POST', body: JSON.stringify({ p_manager_id: loggedInEmployee.id }) });
+    TD.prog = await DH.rpc('evaluacion_mi_equipo');
+    TD.kpis = await DH.rpc('evaluacion_kpis_equipo_get');
     TD.custom = ((TD.kpis && TD.kpis.propios) || []).map(k => ({ rol: k.rol_evaluado, nombre: k.nombre, unidad: k.unidad || '', meta: k.meta_default ?? '', peso: k.peso ?? 1 }));
   } catch (err) { content.innerHTML = `<div class="card"><h2>My Team Dashboard</h2><div class="desc">Could not load: ${tdEsc(err.message)}</div><button class="btn" onclick="renderModePicker()">← Back</button></div>`; return; }
   renderTeamDashboard();
@@ -476,7 +499,7 @@ async function tdSaveKpis() {
   const msg = document.getElementById('td-msg');
   const items = TD.custom.filter(c => c.nombre.trim()).map(c => ({ rol_evaluado: c.rol, nombre: c.nombre.trim(), unidad: c.unidad.trim(), meta_default: c.meta === '' ? null : c.meta, peso: c.peso === '' ? 1 : c.peso }));
   try {
-    const r = await sbFetch('rpc/evaluacion_kpis_equipo_set', { method: 'POST', body: JSON.stringify({ p_manager_id: loggedInEmployee.id, p_items: items }) });
+    const r = await DH.rpc('evaluacion_kpis_equipo_set', { p_items: items });
     if (r && r.success) { TD.custom = items.map(c => ({ rol: c.rol_evaluado, nombre: c.nombre, unidad: c.unidad || '', meta: c.meta_default ?? '', peso: c.peso ?? 1 })); msg.style.color = '#27AE60'; msg.textContent = '✓ Saved. They will appear when you evaluate your team. / Guardado.'; }
     else { msg.style.color = '#C0392B'; msg.textContent = (r && r.message) || 'Could not save.'; }
   } catch (err) { msg.style.color = '#C0392B'; msg.textContent = 'Error: ' + err.message; }
@@ -664,7 +687,7 @@ async function startManagerFeedback() {
   content.innerHTML = `<div class="card"><p style="text-align:center;color:var(--mgray);padding:20px 0;">Loading... / Cargando...</p></div>`;
   let managers = [];
   try {
-    managers = await sbFetch('rpc/feedback_managers_elegibles', { method: 'POST', body: JSON.stringify({ p_empleado_id: loggedInEmployee.id }) });
+    managers = await DH.rpc('feedback_managers_elegibles');
   } catch (err) {
     content.innerHTML = `<div class="card"><div class="no-cycle">Could not load managers. / No se pudo cargar la lista.</div></div>`;
     return;
@@ -695,6 +718,7 @@ function selectFeedbackManager(id, nombre) {
   content.innerHTML = `
     <div class="card">
       <h2>${nombre}</h2>
+      <div style="background:#eaf3ea;border-left:4px solid #27AE60;border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:12px;">🔒 <strong>Your answers are anonymous and protected.</strong> The system does not store who answered. Your manager never sees individual answers, only a summary of the whole group, and only when at least 3 people have answered. Detailed results are visible only to a small part of leadership. / <strong>Tus respuestas son anónimas y están protegidas.</strong> El sistema no guarda quién contestó. Tu jefe nunca ve respuestas individuales, solo un resumen del grupo completo y únicamente cuando al menos 3 personas contestaron. Los resultados detallados solo los ve una parte pequeña de la dirección.</div>
       <div class="desc">Anonymous. Pick the statement that best describes what you have actually seen — 1 is the lowest, 5 the highest. Describe behavior, not personality. / Anónimo. Elige la frase que mejor describe lo que has visto realmente — 1 es lo más bajo, 5 lo más alto. Describe conductas, no personalidad.</div>
       ${qs}
       <div class="error-msg" id="fb-error">Please answer every question. / Por favor responde todas las preguntas.</div>
@@ -720,7 +744,7 @@ async function submitManagerFeedback() {
   const btn = document.getElementById('fb-submit');
   btn.disabled = true; btn.textContent = 'Sending... / Enviando...';
   try {
-    const rows = await sbFetch('rpc/enviar_feedback_anonimo', { method: 'POST', body: JSON.stringify({ p_empleado_id: loggedInEmployee.id, p_manager_id: feedbackManager.id, p_respuestas: feedbackAnswers }) });
+    const rows = await DH.rpc('enviar_feedback_anonimo', { p_manager_id: feedbackManager.id, p_respuestas: feedbackAnswers });
     const r = rows && rows[0];
     if (!r || !r.success) { alert((r && r.message) || 'Could not send.'); btn.disabled = false; btn.textContent = 'Send anonymously / Enviar de forma anónima'; return; }
     document.getElementById('app-content').innerHTML = `
@@ -742,7 +766,7 @@ async function startSelfAssessment() {
 
   let existing = [];
   try {
-    existing = await sbFetch(`evaluaciones?ciclo_id=eq.${activeCycle.id}&evaluado_id=eq.${loggedInEmployee.id}&evaluador_id=eq.${loggedInEmployee.id}&tipo_evaluador=eq.self&select=id,estado`);
+    existing = await DH.rpc('evaluacion_existente', { p_ciclo_id: activeCycle.id, p_evaluado_id: loggedInEmployee.id, p_tipo: 'self' });
   } catch (err) {
     console.warn('Could not check existing evaluation:', err);
   }
@@ -782,7 +806,7 @@ async function startSupervisorSearch() {
 
   if (!allEmployeesForSearch) {
     try {
-      const list = await sbFetch('rpc/evaluacion_mis_evaluados', { method: 'POST', body: JSON.stringify({ p_evaluador_id: loggedInEmployee.id }) });
+      const list = await DH.rpc('evaluacion_mis_evaluados');
       allEmployeesForSearch = (list || []).map(r => ({ id: r.empleado_id, roster_id: r.roster_id, nombre_completo: r.nombre, puesto: r.puesto, tienda: r.ubicacion, rol_eval: r.rol_eval, registrado: r.registrado, en_ciclo: r.en_ciclo, cubre: r.cubre }))
         .sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo));
     } catch (err) {
@@ -835,7 +859,7 @@ async function selectEvaluado(empId) {
   // Check for an existing supervisor evaluation of this person, this cycle, by this evaluator
   let existing = [];
   try {
-    existing = await sbFetch(`evaluaciones?ciclo_id=eq.${activeCycle.id}&evaluado_id=eq.${empId}&evaluador_id=eq.${loggedInEmployee.id}&tipo_evaluador=eq.supervisor&select=id,estado`);
+    existing = await DH.rpc('evaluacion_existente', { p_ciclo_id: activeCycle.id, p_evaluado_id: empId, p_tipo: 'supervisor' });
   } catch (err) {
     console.warn('Could not check existing evaluation:', err);
   }
@@ -853,7 +877,7 @@ async function selectEvaluado(empId) {
 
   previousEval = null;
   try {
-    const prev = await sbFetch(`evaluaciones?evaluado_id=eq.${empId}&tipo_evaluador=eq.supervisor&estado=eq.completada&ciclo_id=neq.${activeCycle.id}&select=score_final,score_conductual,pct_promedio_cuota,feedback_narrativo,completada_at&order=completada_at.desc&limit=1`);
+    const prev = await DH.rpc('evaluacion_previa', { p_evaluado_id: empId, p_ciclo_id: activeCycle.id });
     if (prev && prev.length) previousEval = prev[0];
   } catch (err) { console.warn('Could not load previous evaluation:', err); }
 
@@ -907,7 +931,7 @@ function pickNoElegReason(k) {
 async function setEligibility(elegible) {
   if (!elegible && !pendingReason) { document.getElementById('ne-error').classList.add('show'); return; }
   try {
-    const rows = await sbFetch('rpc/evaluacion_elegibilidad_set', { method: 'POST', body: JSON.stringify({ p_evaluador_id: loggedInEmployee.id, p_evaluado_id: selectedEvaluado.id, p_elegible: elegible, p_motivo: elegible ? null : pendingReason }) });
+    const rows = await DH.rpc('evaluacion_elegibilidad_set', { p_evaluado_id: selectedEvaluado.id, p_elegible: elegible, p_motivo: elegible ? null : pendingReason });
     const r = rows && rows[0];
     if (!r || !r.success) { alert((r && r.message) || 'Could not save.'); return; }
   } catch (err) { alert('Error: ' + err.message); return; }
@@ -937,7 +961,7 @@ async function startPeerEval() {
   content.innerHTML = `<div class="card"><p style="text-align:center;color:var(--mgray);padding:20px 0;">Loading... / Cargando...</p></div>`;
   let peers = [], done = [];
   try {
-    const pr = await sbFetch('rpc/evaluacion_mis_pares', { method: 'POST', body: JSON.stringify({ p_empleado_id: loggedInEmployee.id }) });
+    const pr = await DH.rpc('evaluacion_mis_pares');
     peers = (pr || []).map(x => ({ id: x.empleado_id, nombre_completo: x.nombre, tienda: x.ubicacion }));
     done = (pr || []).filter(x => x.ya_evaluado).map(x => ({ evaluado_id: x.empleado_id }));
   } catch (err) {
@@ -977,7 +1001,7 @@ async function loadMetricTemplate() {
   // and add a few extra KPIs; weights are always re-prorated to 100%.
   metricCfg = null;
   try {
-    const r = await sbFetch('rpc/kpi_plantilla_para', { method: 'POST', body: JSON.stringify({ p_evaluador_id: loggedInEmployee.id, p_evaluado_id: selectedEvaluado.id }) });
+    const r = await DH.rpc('kpi_plantilla_para', { p_evaluado_id: selectedEvaluado.id });
     if (r && !r.error) metricCfg = r;
   } catch (err) { console.warn('kpi template', err); }
   if (!metricCfg) metricCfg = { perfil: 'corp_staff', perfil_nombre: '', max_custom: 3, custom_peso_min: 5, custom_peso_max: 15, custom_total_max: 25, items: [] };
@@ -1121,6 +1145,8 @@ function renderQuestionScreen() {
     ? `<div class="badge-admin">🔍 Admin Preview Mode — this run will NOT be saved to any employee's record. / Modo Vista Admin — esta sesión NO se guardará en el registro de ningún empleado.</div>`
     : '';
 
+  const privacyBanner = `<div style="font-size:11px;color:var(--mgray);margin-bottom:10px;">🔒 ${evalMode === 'supervisor' || evalMode === 'peer' ? 'Your answers are confidential: only you, the person\'s leadership and company leadership can see them. / Tus respuestas son confidenciales: solo las ven tú, la dirección del área y la dirección de la empresa.' : 'Your answers are confidential: only you, your evaluator and company leadership can see them. Answer honestly. / Tus respuestas son confidenciales: solo las ven tú, tu evaluador y la dirección de la empresa. Responde con honestidad.'}</div>`;
+
   const evaluandoBanner = isRatedMode()
     ? `<div class="badge-admin" style="background:var(--ltblue);border-left-color:var(--navy);">Evaluating / Evaluando: <strong>${selectedEvaluado.nombre_completo}</strong></div>`
     : '';
@@ -1145,6 +1171,7 @@ function renderQuestionScreen() {
 
   content.innerHTML = `
     ${adminBanner}
+    ${privacyBanner}
     ${evaluandoBanner}
     <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
     <div class="progress-label">Question ${currentDimIdx + 1} of ${dims.length} / Pregunta ${currentDimIdx + 1} de ${dims.length}</div>
@@ -1289,21 +1316,16 @@ async function submitEvaluation() {
       evalPayload.score_final = selfScore;
     }
 
-    const evalRows = await sbFetch('evaluaciones', { method: 'POST', body: JSON.stringify(evalPayload) });
-    const evaluacionId = evalRows[0].id;
-
     const respuestaRows = dims.map(dim => ({
-      evaluacion_id: evaluacionId,
       dimension: dim.key,
       pregunta_key: dim.key,
       pregunta_texto: dim.q,
-      // Supervisor mode: 1-5 BARS score. Self mode: multiple-choice index
-      // (0-3), both numeric so they fit the same column.
       respuesta_score: responses[dim.key]
     }));
-    await sbFetch('evaluacion_respuestas', { method: 'POST', body: JSON.stringify(respuestaRows) });
+    // One server call saves the evaluation and its answers; the server sets the evaluator from the session.
+    const evaluacionId = await DH.rpc('evaluacion_guardar', { p_eval: evalPayload, p_respuestas: respuestaRows });
     if (isSupervisor) {
-      await sbFetch('rpc/metricas_guardar', { method: 'POST', body: JSON.stringify({ p_evaluacion_id: evaluacionId, p_evaluador_id: loggedInEmployee.id, p_items: quotaData.metrics }) });
+      await DH.rpc('metricas_guardar', { p_evaluacion_id: evaluacionId, p_items: quotaData.metrics });
     }
 
     const successMsg = isPeer

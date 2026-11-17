@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Workspace — Org Chart</title>
+<style>
+  :root{--navy:#1B3A6B;--gold:#C8922A;--ltblue:#D6E4F7;--green:#27AE60;--mgray:#6B6B6B;--purple:#7B5EA7;--ind:#00B050;--ted:#8B4513;--karen:#C2185B;--reb:#00838F;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:Arial,sans-serif;background:#f0f2f5;min-height:100vh;}
+  .top-bar{background:var(--navy);border-bottom:4px solid var(--gold);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;}
+  .top-bar h1{color:#fff;font-size:18px;}
+  .top-bar .sub{color:var(--ltblue);font-size:12px;margin-top:2px;}
+  .btn-back{background:transparent;border:1px solid var(--ltblue);color:var(--ltblue);padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;}
+  .content{padding:18px 16px 40px;max-width:1280px;margin:0 auto;}
+  .tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
+  .tools input{flex:1;min-width:180px;padding:9px 12px;border:1px solid #ccd;border-radius:8px;font-size:14px;}
+  .tools button{padding:9px 14px;border:1px solid var(--navy);background:#fff;color:var(--navy);border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;}
+  .board{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px;}
+  .card{background:#fff;border-radius:10px;box-shadow:0 1px 5px rgba(0,0,0,.1);padding:9px 12px;border-left:5px solid var(--navy);display:inline-flex;gap:10px;align-items:center;max-width:100%;}
+  .card.board-c{border-left-color:var(--gold);background:#fffaf0;}
+  .card.dir{background:var(--ltblue);}
+  .card.mgr{border-left-color:#4060a0;}
+  .card.staff{border-left-color:#9aa7b5;}
+  .card.sel{outline:3px solid var(--gold);}
+  .nm{font-weight:700;color:var(--navy);font-size:14px;}
+  .nt{font-size:12px;color:var(--mgray);margin-top:1px;}
+  .loc{display:inline-block;margin-top:3px;padding:1px 7px;border-radius:8px;background:#edf2fb;color:var(--navy);font-size:10px;font-weight:700;}
+  .also{font-size:11px;color:var(--purple);margin-top:2px;}
+  .ind{font-size:11px;color:#8a8a8a;margin-top:2px;font-style:italic;border-top:1px dashed #c4c4c4;padding-top:2px;}
+  .cnt{margin-left:auto;background:var(--navy);color:#fff;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap;}
+  ul.tree{list-style:none;margin-left:22px;border-left:2px solid #c9d3e3;padding-left:14px;}
+  ul.tree.root{margin-left:0;border-left:none;padding-left:0;}
+  ul.tree li{margin:7px 0;}
+  .toggle{cursor:pointer;user-select:none;}
+  .collapsed > ul.tree{display:none;}
+  .arrow{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-right:6px;border:1.5px solid var(--navy);border-radius:50%;color:var(--navy);font-size:14px;font-weight:700;line-height:1;vertical-align:1px;background:#fff;}
+  .toggle:hover .arrow{background:var(--navy);color:#fff;}
+  .empty{color:var(--mgray);padding:30px;text-align:center;}
+  .legend{font-size:11px;color:var(--mgray);margin-top:16px;line-height:1.6;}
+  .band{margin:14px 0 6px;}
+  .band-h{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mgray);margin:0 0 6px 2px;}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch;}
+  .down{text-align:center;color:#9fb0c8;font-size:18px;line-height:14px;margin:2px 0;}
+  .line-block{background:#fff;border:1px solid #dfe5ef;border-radius:12px;padding:10px 12px;margin:10px 0;}
+  .line-h{font-size:12px;font-weight:800;color:var(--navy);margin-bottom:4px;}
+  .line-h span{font-weight:400;color:var(--mgray);}
+  .lochead{font-size:11px;font-weight:800;color:var(--navy);margin:0 0 6px;letter-spacing:.03em;}
+  ul.tree.cols{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:2px 10px;}
+  ul.tree.cols > li{margin:4px 0;}
+  ul.hrow{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;margin-left:0;border-left:none;padding-left:0;}
+  ul.hrow > li{flex:0 1 270px;min-width:230px;margin:0;border-top:3px solid #c9d3e3;padding-top:8px;}
+  ul.hrow > li.wide{flex:1 1 100%;}
+  ul.hrow > li.roomy,ul.hrow > li.locgroup.roomy{flex:0 1 560px;}
+  ul.tree.cols{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));}
+  ul.hrow > li.locgroup{flex:0 1 340px;border-top-color:var(--navy);}
+  ul.hrow > li.locgroup.big{flex:1 1 100%;}
+  .peer{border:2px dashed #4060a0;border-radius:12px;padding:8px 10px 10px;background:#f7faff;}
+  .peer-h{font-size:10px;font-weight:800;color:#4060a0;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;}
+  .peer .row{align-items:flex-start;}
+  .peer-note{font-size:11px;color:var(--purple);margin:8px 0 2px;font-weight:600;}
+  .legend b{color:var(--navy);}
+  /* ===== overview (traditional chart) + zoom ===== */
+  .stage{position:relative;}
+  #overview{transition:transform .4s cubic-bezier(.2,.7,.2,1),opacity .4s ease;}
+  #overview.away{transform:scale(1.5);opacity:0;pointer-events:none;}
+  #overview.leaving{position:absolute;top:0;left:0;right:0;}
+  #zoomview{display:none;transition:transform .4s cubic-bezier(.2,.7,.2,1),opacity .4s ease;}
+  #zoomview.enter{transform:scale(.35);opacity:0;}
+  .zbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px;position:sticky;top:0;z-index:20;background:#e8f0fb;border:2px solid var(--navy);border-radius:12px;padding:10px 14px;}
+  .zbar .zin{flex:1 0 100%;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--navy);}
+  .zbar .crumbs{font-size:15px !important;}
+  .zbar button.primary{font-size:16px !important;padding:12px 24px !important;}
+  .zbar .esc{font-size:12px;color:#556;}
+  .zchain{display:flex;flex-direction:column;align-items:center;margin-bottom:6px;}
+  .zchain .zlbl{font-size:12px;font-weight:700;color:var(--mgray);margin-bottom:8px;}
+  .zanc{border:2px solid #b8c4d8;background:#f4f7fc;border-radius:10px;padding:7px 18px;text-align:center;min-width:200px;cursor:pointer;opacity:.9;}
+  .zanc:hover{border-color:var(--navy);opacity:1;}
+  .zanc .on{font-weight:700;font-size:13px;color:var(--navy);} .zanc .ot{font-size:11px;color:var(--mgray);}
+  .zanc.board{background:#fdf3e3;border-color:#d9b25a;cursor:default;}
+  .zconn{width:2px;height:22px;background:#9aa8c0;position:relative;}
+  .zconn:after{content:"";position:absolute;bottom:-1px;left:-4px;border:5px solid transparent;border-top:7px solid #9aa8c0;border-bottom:0;}
+  .zbar .crumbs{flex:1;min-width:200px;font-size:13px;color:var(--mgray);}
+  .zbar .crumbs a{color:var(--navy);font-weight:700;cursor:pointer;text-decoration:underline;}
+  .zbar button{padding:8px 14px;border:1px solid var(--navy);background:#fff;color:var(--navy);border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;}
+  .zbar button.primary{background:var(--navy);color:#fff;}
+  .oblock{background:#fff;border:1px solid #dfe5ef;border-radius:12px;padding:14px 10px 18px;margin:12px 0;overflow:hidden;position:relative;}
+  .ofit{position:relative;transform-origin:top left;width:max-content;}
+  .olink{position:absolute;height:0;border-top:3px dashed var(--ind);z-index:2;pointer-events:none;}
+  .olink span{position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--purple);font-weight:700;background:#fff;padding:0 3px;white-space:nowrap;}
+  .onode.boardbox{border-top-color:var(--gold);background:#fffaf0;max-width:760px;cursor:default;}
+  .bnrow{display:flex;flex-wrap:nowrap;justify-content:center;gap:2px;white-space:nowrap;}
+  .onode.boardbox:hover{transform:none;box-shadow:0 1px 4px rgba(0,0,0,.08);}
+  .bn{display:inline-block;margin:2px 3px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#fdf3e3;color:#7a5a12;}
+  .hcount{position:absolute;top:10px;right:14px;z-index:5;text-align:center;background:#fff;border:2px solid var(--navy);border-radius:14px;padding:6px 16px;box-shadow:0 2px 8px rgba(0,0,0,.12);}
+  .hcount b{display:block;font-size:44px;line-height:1;color:var(--navy);font-weight:800;}
+  .hcount span{display:block;font-size:11px;font-weight:700;color:var(--mgray);line-height:1.2;margin-top:2px;}
+  .onode.boardbox{max-width:880px;padding:12px 18px 10px;background:#fff;border:2px solid #0054A4;border-top:6px solid #F3B120;}
+  .onode.boardbox .bd-logo{display:block;height:46px;margin:0 auto 6px;}
+  .onode.boardbox .peer-h2{color:#0054A4 !important;letter-spacing:.08em;}
+  .onode.boardbox .bn:not(.t):not(.k){background:#e6effa;color:#0054A4;}
+  .onode.boardbox .peer-h2{font-size:11px;margin-bottom:6px;}
+  .onode.boardbox .bn{font-size:14px;padding:4px 12px;margin:3px 4px;}
+  .oanchor{height:2px;width:2px;margin:0 auto;}
+  .bn.go{cursor:pointer;border:1px solid currentColor;} .bn.go:hover{filter:brightness(.92);}
+  .olb{position:absolute;z-index:1;pointer-events:none;}
+  .bn.rb{background:#dff1f3;color:var(--reb);}
+  .bn.t{background:#f3e6dc;color:var(--ted);} .bn.k{background:#fbe3ec;color:var(--karen);}
+  .oblock .line-h{margin:0 0 8px 6px;}
+  .oblock.l-rod{--lc:#1B3A6B;border-top:4px solid #1B3A6B;} .oblock.l-ted{--lc:#8B4513;border-top:4px solid #8B4513;} .oblock.l-karen{--lc:#C2185B;border-top:4px solid #C2185B;}
+  .otree{display:flex;justify-content:center;min-width:max-content;}
+  .otree ul{display:flex;justify-content:center;padding-top:18px;position:relative;list-style:none;margin:0;}
+  .otree li{--drop:18px;position:relative;padding:var(--drop) 7px 0;text-align:center;list-style:none;margin:0;}
+  .otree li::before,.otree li::after{content:'';position:absolute;top:0;right:50%;width:50%;height:var(--drop);border-top:2px solid var(--lc,#b9c6dc);}
+  .otree li::after{right:auto;left:50%;border-left:2px solid var(--lc,#b9c6dc);}
+  .onode{z-index:1;}
+
+  .ofit,.zwrap{padding-left:132px;}
+  .oflr{position:absolute;left:0;border-top:1px dashed #cfd8e6;background:rgba(27,58,107,.035);z-index:0;pointer-events:none;}
+  .oflr-l{position:absolute;left:8px;top:6px;width:112px;font-size:10px;font-weight:800;letter-spacing:.04em;color:#6c7a93;text-transform:uppercase;line-height:1.25;}
+  .otree li{padding-top:18px;}
+  .onode.closed{padding-right:20px;}
+  .onode.closed::after{content:'+';position:absolute;right:5px;top:3px;font-size:12px;font-weight:800;color:var(--navy);}
+  .onode{position:relative;}
+  .zroot{display:inline-block;margin:0 0 2px;}
+  .zgrid-h{font-size:12px;font-weight:800;color:var(--navy);margin:16px 0 6px 2px;}
+  .zgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;}
+  .zloc{grid-column:1/-1;font-size:11px;font-weight:800;color:var(--navy);margin-top:6px;}
+  .zwrap{background:#fff;border:1px solid #dfe5ef;border-radius:12px;padding:14px 10px 18px;overflow-x:auto;position:relative;}
+  .olinkv{position:absolute;width:0;border-left:3px dashed var(--ind);z-index:2;pointer-events:none;}
+  .otree li:only-child::before,.otree li:only-child::after{display:none;}
+  .otree li:only-child{padding-top:0;}
+  .otree li.fdrop:only-child::after{display:block;top:0;left:50%;right:auto;width:0;border:0;border-left:2px solid var(--lc,#b9c6dc);border-radius:0;height:var(--drop);}
+  .otree li:first-child::before,.otree li:last-child::after{border:0 none;}
+  .otree li:last-child::before{border-right:2px solid var(--lc,#b9c6dc);border-radius:0 6px 0 0;}
+  .otree li:first-child::after{border-radius:6px 0 0 0;}
+  .otree ul ul::before{content:'';position:absolute;top:0;left:50%;border-left:2px solid var(--lc,#b9c6dc);height:18px;}
+  .otree > ul{padding-top:0;}
+  .onode{display:inline-block;min-width:116px;max-width:170px;background:#fff;border:1px solid #d5dcea;border-top:4px solid var(--lc,#1B3A6B);border-radius:8px;padding:6px 9px;box-shadow:0 1px 4px rgba(0,0,0,.08);cursor:pointer;transition:transform .15s,box-shadow .15s;vertical-align:top;}
+  .onode:hover{transform:translateY(-2px);box-shadow:0 5px 12px rgba(0,0,0,.18);}
+  .onode.leaf{cursor:default;} .onode.leaf:hover{transform:none;box-shadow:0 1px 4px rgba(0,0,0,.08);}
+  .onode.dir{background:var(--ltblue);}
+  .onode.team{background:#f4f7fc;border-style:dashed;border-top-style:solid;}
+  .onode.peer{border:2px dashed #4060a0;border-top:4px solid #4060a0;background:#f7faff;max-width:230px;}
+  .onode.sel{outline:3px solid var(--gold);}
+  .onode .on{font-weight:700;color:var(--navy);font-size:12px;line-height:1.25;}
+  .onode[data-floor="2"]{min-width:150px;max-width:210px;padding:9px 12px;}
+  .onode[data-floor="2"] .on{font-size:15px;} .onode[data-floor="2"] .ot{font-size:12px;}
+  .onode .ot{font-size:10px;color:var(--mgray);margin-top:1px;line-height:1.25;}
+  .onode .oc{display:inline-block;margin-top:3px;background:var(--navy);color:#fff;border-radius:9px;padding:0 7px;font-size:10px;font-weight:700;}
+  .onode .oi{font-size:9.5px;color:#8a8a8a;font-style:italic;margin-top:3px;border-top:1px dashed #c4c4c4;padding-top:2px;}
+  .onode .oa{font-size:9.5px;color:var(--purple);margin-top:2px;}
+  .onode .peer-h2{font-size:9px;font-weight:800;color:#4060a0;letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px;}
+  .hint{font-size:11px;color:var(--mgray);margin:0 0 6px 2px;}
+  .zoomtip{display:flex;gap:12px;align-items:center;background:#e8f0fb;border:2px solid var(--navy);border-radius:12px;padding:12px 16px;margin:6px 0 12px;font-size:15px;line-height:1.45;color:#1a2a44;}
+  .zoomtip .zt-i{font-size:28px;}
+  .zoomtip b{color:var(--navy);}
+  kbd{background:#fff;border:1px solid #888;border-bottom-width:2px;border-radius:4px;padding:0 6px;font-size:13px;font-weight:700;}
+
+  .card.ted{border-left-color:var(--ted);background:#fdf8f5;}
+  .card.karen{border-left-color:var(--karen);background:#fdf5f8;}
+  .badge{display:inline-block;margin-top:3px;padding:1px 7px;border-radius:6px;font-size:9px;font-weight:800;letter-spacing:.04em;}
+  .b-board{background:#fdf3e3;color:var(--gold);} .b-md{background:var(--navy);color:#fff;}
+  .keys{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--mgray);margin:2px 0 10px;}
+  .keys i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px;}
+  .rod-wrap{display:flex;justify-content:center;}
+  .conn{text-align:center;font-size:11px;color:var(--mgray);margin:4px 0;}
+  .line-block.l-rod{border-top:4px solid var(--navy);} .line-block.l-ted{border-top:4px solid var(--ted);} .line-block.l-karen{border-top:4px solid var(--karen);}
+
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <div><h1>🏢 Org Chart</h1><div class="sub">Daniels Home Center — live from the company hierarchy</div></div>
+  <button class="btn-back" onclick="window.location.href='index.html'">← Back</button>
+</div>
+<div class="content">
+  <div class="tools">
+    <input id="q" placeholder="Search a person or position…" oninput="onSearch()">
+  </div>
+  <div class="stage">
+    <div id="overview"><div id="top"></div><div id="tree"><div class="empty">Loading…</div></div></div>
+    <div id="zoomview"></div>
+  </div>
+  <div class="legend">
+    <b>How to read this:</b><br>
+    • <b>Solid line</b> = direct report · <b>dashed green line</b> = indirect report.<br>
+    • <b>Dashed blue box</b> = co-leaders who share one team (it reports to both, depending on shift).<br>
+    • Click a box with a <b>+</b> to zoom in. <b>Zoom out</b> or <kbd>Esc</kbd> to go back.
+  </div>
+</div>
+<script>
+const SUPABASE_URL = 'https://ecfxeebhtgkbsdeuiueb.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_oRxEOMLizp1kjlsRjWWaxg_muaaMHFt';
+let NODES = [], BY = {}, KIDS = {};
+const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+async function load() {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/organigrama_publico`, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }, body: '{}' });
+    if (!res.ok) throw new Error(await res.text());
+    NODES = await res.json();
+  } catch (err) { document.getElementById('tree').innerHTML = `<div class="empty">Could not load the org chart: ${esc(err.message)}</div>`; return; }
+  NODES = NODES.filter(n => !/prueba|test/i.test(n.puesto || ''));
+  NODES.forEach(n => { if (/^rodrigo\b/i.test(n.nombre)) n.puesto = 'General Manager / COO'; });
+  BY = {}; KIDS = {}; _FL = {};
+  NODES.forEach(n => { BY[n.id] = n; KIDS[n.id] = []; });
+  const isRos = id => /rosenberg/i.test((BY[id] || {}).nombre || '');
+  PG = {}; // peer groups: key -> {bosses:[ids], team:[ids]}
+  NODES.forEach(n => {
+    // when all bosses are Rosenbergs, Ted (CEO) is the principal line, then Karen
+    const js = (n.jefes || []).filter(j => BY[j]).sort((a, b) => (/^ted\b/i.test(BY[a].nombre) ? 0 : 1) - (/^ted\b/i.test(BY[b].nombre) ? 0 : 1));
+    // a boss who is himself the boss of another boss is a superior (2nd line), not a co-leader
+    const ops0 = js.filter(j => !isRos(j));
+    const ops = ops0.filter(o => !ops0.some(x => x !== o && ((BY[x].jefes || []).includes(o))));
+    n.primary = (n.jefe_principal && js.includes(n.jefe_principal)) ? n.jefe_principal : (ops[0] || js[0] || null);
+    n.also = js.filter(j => j !== n.primary);
+    n.pgKey = null;
+    if (ops.length > 1) { // reports to several same-level operating leaders -> shared team
+      n.pgKey = ops.slice().sort().join('|'); n.also = js.filter(j => isRos(j));
+      PG[n.pgKey] = PG[n.pgKey] || { bosses: ops.slice().sort(cmp), team: [] };
+      PG[n.pgKey].team.push(n.id);
+    } else if (n.primary) KIDS[n.primary].push(n.id);
+  });
+  // members of a peer group share the same slot under their own parent
+  Object.values(KIDS).forEach(a => a.sort(cmp));
+  Object.values(PG).forEach(g => g.team.sort(cmp));
+  render();
+}
+let PG = {};
+const ORD = { director: 0, manager: 1, vendedor: 2, staff: 3 };
+// seniority inside a team: role level first, then title (manager > assistant > supervisor/lead > rest), then name
+const titleRank = p => { p = (p || '').toLowerCase(); return /assistant|asst/.test(p) ? 1 : /manager|director|chief|ceo|coo|cfo|cmo/.test(p) ? 0 : /supervisor|lead|senior/.test(p) ? 2 : 3; };
+const cmp = (x, y) => ((ORD[BY[x].rol] ?? 9) - (ORD[BY[y].rol] ?? 9)) || (titleRank(BY[x].puesto) - titleRank(BY[y].puesto)) || BY[x].nombre.localeCompare(BY[y].nombre);
+
+const ico = n => /^(ted|karen)/i.test(n.nombre) ? '👔' : n.rol === 'director' ? '⚙️' : n.rol === 'manager' ? '🧭' : n.rol === 'vendedor' ? '🛒' : '👤';
+const clsOf = n => n.rol === 'director' ? 'dir' : n.rol === 'manager' ? 'mgr' : n.rol === 'staff' ? 'staff' : '';
+function memberOf(id) { return Object.entries(PG).find(([k, g]) => g.bosses.includes(id)); }
+function total(id) { return KIDS[id].reduce((s, k) => s + 1 + total(k), 0) + sharedOf(id).reduce((s, t) => s + 1 + total(t), 0); }
+function sharedOf(id) { const m = memberOf(id); return m && m[1].bosses[0] === id ? [...m[1].team, ...m[1].bosses.slice(1).flatMap(b => KIDS[b])] : []; }
+function cardHtml(id, opts) {
+  opts = opts || {};
+  const n = BY[id], kids = KIDS[id].length, t = opts.count != null ? opts.count : total(id);
+  return `<div class="card ${clsOf(n)} ${opts.toggle ? 'toggle' : ''}" data-pid="${id}" ${opts.toggle ? 'onclick="toggle(this.parentNode)"' : ''}>
+      <span>${ico(n)}</span><div><div class="nm">${opts.toggle ? '<span class="arrow">−</span>' : ''}${esc(n.nombre)}</div><div class="nt">${esc(n.puesto)}</div>
+      ${n.ubicacion ? `<span class="loc">${esc(n.ubicacion)}</span>` : ''}${(n.indirectos || []).map(i => `<div class="ind">indirect: ${esc(i.nombre)}${i.puesto ? ' (' + esc(i.puesto) + ')' : ''}${i.nota ? ' · ' + esc(i.nota) : ''}</div>`).join('')}${n.also.length ? `<div class="also">also reports to: ${n.also.map(a => esc(BY[a].nombre)).join(', ')}</div>` : ''}${opts.note ? `<div class="also">${esc(opts.note)}</div>` : ''}</div>
+      ${t && !opts.noCount ? `<span class="cnt">${t}</span>` : ''}</div>`;
+}
+function needsGroup(ids) { return ids.length > 3 && new Set(ids.map(i => BY[i].ubicacion || '')).size > 1; }
+// builds a <ul>: columns (horizontal) when people span several locations or when asked, vertical list otherwise
+function listUl(ids, depth, horizontal) {
+  const seenPG = new Set();
+  const itemsFor = arr => arr.map(i => {
+    const m = memberOf(i);
+    if (m) { if (seenPG.has(m[0])) return ''; seenPG.add(m[0]); return peerHtml(m[0], depth); }
+    return nodeHtml(i, depth);
+  }).join('');
+  if (needsGroup(ids) && !horizontal) {
+    const locs = [...new Set(ids.map(i => BY[i].ubicacion || ''))];
+    return `<ul class="tree hrow">${locs.map(l => { const sub = ids.filter(i => (BY[i].ubicacion || '') === l); const big = sub.length > 4; const roomy = sub.some(i => sharedOf(i).length > 4); return `<li class="locgroup ${big ? 'big' : ''} ${roomy ? 'roomy' : ''}"><div class="lochead">📍 ${esc(l || 'Other')}</div><ul class="tree ${big ? 'hrow' : ''}">${itemsFor(sub)}</ul></li>`; }).join('')}</ul>`;
+  }
+  const leafOnly = !horizontal && ids.length > 4 && ids.every(i => !KIDS[i].length && !memberOf(i));
+  return `<ul class="tree ${horizontal ? 'root hrow' : ''} ${leafOnly ? 'cols' : ''}">${itemsFor(ids)}</ul>`;
+}
+function nodeHtml(id, depth) {
+  const kids = KIDS[id];
+  const collapsed = kids.length && (depth >= 2 || kids.length > 8) ? 'collapsed' : '';
+  const wide = needsGroup(kids) ? 'wide' : (kids.length > 6 && kids.every(k => !KIDS[k].length) ? 'roomy' : '');
+  return `<li class="${collapsed} ${wide}" data-id="${id}">${cardHtml(id, { toggle: kids.length })}
+    ${kids.length ? listUl(kids, depth + 1) : ''}</li>`;
+}
+function peerHtml(key, depth) {
+  const g = PG[key], team = g.team;
+  const own = g.bosses.flatMap(b => KIDS[b]);
+  const all = [...team, ...own].sort(cmp);
+  const collapsed = all.length > 6 ? 'collapsed' : '';
+  const loc = BY[g.bosses[0]].ubicacion;
+  return `<li class="${collapsed}" data-id="${g.bosses[0]}" data-pg="${key}"><div class="peer"><div class="peer-h">Co-leaders${loc ? ' · ' + esc(loc) : ''}</div>
+    <div class="row">${g.bosses.map(b => cardHtml(b, { noCount: true })).join('')}</div>
+    ${all.length ? `<div class="peer-note toggle" onclick="toggle(this.closest('li'))"><span class="arrow">−</span>Shared team (${all.length}) — reports to both ${g.bosses.map(b => esc(BY[b].nombre.split(' ')[0])).join(' & ')}, depending on shift</div>` : ''}
+    </div>
+    ${all.length ? `<ul class="tree ${all.length > 4 && all.every(i => !KIDS[i].length) ? 'cols' : ''}">${all.map(i => nodeHtml(i, depth + 1)).join('')}</ul>` : ''}</li>`;
+}
+let EXECIDS = new Set(), EX = {};
+function render() {
+  const find = re => NODES.find(n => re.test(n.nombre));
+  EX = { ted: find(/^ted\b/i), karen: find(/^karen\b/i), rod: find(/^rodrigo\b/i), reb: find(/^rebecca\b/i) };
+  EXECIDS = new Set(Object.values(EX).filter(Boolean).map(e => e.id));
+  const { ted, karen, rod } = EX;
+  document.getElementById('top').innerHTML = `<div class="keys">
+      <span><i style="background:var(--gold)"></i>Board</span><span><i style="background:var(--ted)"></i>Ted (CEO) line</span>
+      <span><i style="background:var(--navy)"></i>Rodrigo line</span><span><i style="background:var(--karen)"></i>Karen line</span>${EX.reb && KIDS[EX.reb.id].length ? '<span><i style="background:var(--reb)"></i>Rebecca line</span>' : ''}
+      <span style="font-weight:700;color:#007a38"><svg width="34" height="8"><line x1="0" y1="4" x2="34" y2="4" stroke="#00B050" stroke-width="3" stroke-dasharray="6,4"/></svg> Dashed = indirect report</span></div>
+    <div class="zoomtip"><span class="zt-i">🔍</span><div><b>Click any box with a +</b> to <b>zoom in</b> on that team.<br><b>Zoom out</b> with the big button on top, or press <kbd>Esc</kbd>. When zoomed in, <b>scroll up</b> to see who they report to.</div></div>`;
+  const boardBox = `<div class="onode boardbox leaf" data-floor="0"><img class="bd-logo" src="icons/daniels-logo.png" alt="Daniel's Home Center"><div class="peer-h2">Board — Rosenberg family</div>
+    <div class="bnrow"><span class="bn">Dani Rosenberg</span>${EX.reb && KIDS[EX.reb.id].length ? `<span class="bn rb go" data-chip="reb" onclick="zoomTo('e:${EX.reb.id}', this)">Rebecca Rosenberg ＋</span>` : '<span class="bn">Rebecca Rosenberg</span>'}${ted ? `<span class="bn t go" data-chip="ted" onclick="zoomTo('e:${ted.id}', this)">${esc(ted.nombre)} · CEO ＋</span>` : ''}${karen ? `<span class="bn k go" data-chip="karen" onclick="zoomTo('e:${karen.id}', this)">${esc(karen.nombre)} · CMO ＋</span>` : ''}</div></div>`;
+  let tedLi = '', karenLi = '', rebLi = '';
+  if (EX.reb && KIDS[EX.reb.id].length) rebLi = `<li class="rebli" style="--lc:transparent"><div class="oanchor" data-floor="1" data-anchor="reb"></div>${oUl(oItems('e:' + EX.reb.id, KIDS[EX.reb.id]), '#00838F')}</li>`;
+  if (ted) {
+    let items = oItems('e:' + ted.id, KIDS[ted.id]);
+    // put Rodrigo between the people who also report to him, so the dashed 2nd lines are short and clean
+    if (rod) {
+      const idOf = it => it.id || it.rep;
+      const rodIt = items.find(it => it.t === 'node' && it.id === rod.id);
+      const sec = items.filter(it => it !== rodIt && it.t === 'node' && BY[it.id].also.includes(rod.id));
+      if (rodIt && sec.length) {
+        const rest = items.filter(it => it !== rodIt && !sec.includes(it));
+        const cut = Math.ceil(sec.length / 2);
+        items = [...sec.slice(0, cut), rodIt, ...sec.slice(cut), ...rest];
+      }
+    }
+    tedLi = `<li class="tedli" style="--lc:transparent"><div class="oanchor" data-floor="1" data-anchor="ted"></div>${oUl(items, '#8B4513', true)}</li>`;
+  }
+  if (karen) karenLi = `<li style="--lc:transparent"><div class="oanchor" data-floor="1" data-anchor="karen"></div>${oUl(oItems('e:' + karen.id, KIDS[karen.id]), '#C2185B')}</li>`;
+  const inner = `<ul><li>${boardBox}<ul style="--lc:transparent">${rebLi}${tedLi}${karenLi}</ul></li></ul>`;
+  const headcount = NODES.filter(n => !/rosenberg/i.test(n.nombre)).length;
+  document.getElementById('tree').innerHTML = `<div class="oblock"><div class="hcount"><b>${headcount}</b><span>employees<br>(excl. Board)</span></div><div class="ofit"><div class="otree">${inner}</div></div></div>`;
+  fitChart();
+}
+function fitChart() {
+  const wrap = document.querySelector('#tree .oblock'), fit = wrap && wrap.querySelector('.ofit');
+  if (!fit || !wrap.clientWidth) return;
+  fit.style.transform = 'none'; fit.style.marginLeft = '0';
+  layoutFloors(fit);
+  const avail = wrap.clientWidth - 20, w = fit.offsetWidth, h = fit.offsetHeight;
+  const sc = Math.min(1, Math.max(.5, avail / w));
+  fit.style.transform = `scale(${sc})`; fit.style.marginLeft = Math.max(0, (avail - w * sc) / 2) + 'px';
+  wrap.style.height = (h * sc + 36) + 'px';
+  wrap.style.overflowX = sc <= .5 && w * sc > avail ? 'auto' : 'hidden';
+  drawLinks(fit);
+}
+function posIn(el, root) { let x = 0, y = 0; while (el && el !== root) { x += el.offsetLeft; y += el.offsetTop; el = el.offsetParent; } return { x, y }; }
+function drawLinks(fit) {
+  fit.querySelectorAll('.olink,.olinkv,.olb').forEach(e => e.remove());
+  // Ted and Karen stay on the Board box; their reporting lines drop straight from their names
+  const bb = fit.querySelector('.boardbox');
+  if (bb) ['reb', 'ted', 'karen'].forEach(k => {
+    const chip = bb.querySelector(`[data-chip="${k}"]`), an = fit.querySelector(`[data-anchor="${k}"]`); if (!chip || !an) return;
+    const col = k === 'ted' ? '#8B4513' : k === 'reb' ? '#00838F' : '#C2185B', pc = posIn(chip, fit), pa = posIn(an, fit), pb = posIn(bb, fit);
+    const cx = pc.x + chip.offsetWidth / 2, cy = pc.y + chip.offsetHeight, ax = pa.x + an.offsetWidth / 2, ay = pa.y, my = pb.y + bb.offsetHeight + (ay - pb.y - bb.offsetHeight) / 2;
+    const seg = (l, t, w, h) => { const d = document.createElement('div'); d.className = 'olb'; d.style.cssText = `left:${l}px;top:${t}px;width:${w}px;height:${h}px;background:${col}`; fit.appendChild(d); };
+    seg(cx - 1, cy, 2, Math.max(0, my - cy)); seg(Math.min(cx, ax) - 1, my - 1, Math.abs(ax - cx) + 2, 2); seg(ax - 1, my, 2, Math.max(0, ay - my));
+  });
+  const rodBox = EX.rod && fit.querySelector(`.onode[data-id="${EX.rod.id}"]`);
+  const tedUl = fit.querySelector('li.tedli > ul');
+  if (!rodBox || !tedUl) return;
+  // dashed indirect lines from Rodrigo to Ted's other direct reports (direct reports hang from his box in solid)
+  const pr = posIn(rodBox, fit), rMid = pr.y + rodBox.offsetHeight / 2;
+  const rebUl = fit.querySelector('li.rebli > ul');
+  const targets = [...tedUl.children, ...(rebUl ? rebUl.children : [])].map(li => li.querySelector(':scope > .onode[data-id]')).filter(el => el && el !== rodBox && !(EX.karen && (BY[el.dataset.id].also || []).includes(EX.karen.id)));
+  const sides = { left: [], right: [] };
+  targets.forEach(a => {
+    const pa = posIn(a, fit); if (pa.y <= rMid) return;
+    const isLeft = pa.x + a.offsetWidth / 2 < pr.x + rodBox.offsetWidth / 2;
+    const xs = isLeft ? pr.x : pr.x + rodBox.offsetWidth;
+    const xv = isLeft ? pa.x + a.offsetWidth * .72 : pa.x + a.offsetWidth * .28;
+    sides[isLeft ? 'left' : 'right'].push({ xs, xv, top: pa.y });
+  });
+  Object.values(sides).forEach(list => {
+    if (!list.length) return;
+    const far = list.reduce((m, o) => Math.abs(o.xv - o.xs) > Math.abs(m.xv - m.xs) ? o : m, list[0]);
+    const h = document.createElement('div'); h.className = 'olink';           // one shared horizontal "bus" per side
+    h.style.left = Math.min(far.xs, far.xv) + 'px'; h.style.width = Math.abs(far.xs - far.xv) + 'px'; h.style.top = rMid + 'px';
+    fit.appendChild(h);
+    list.forEach(o => { const v = document.createElement('div'); v.className = 'olinkv'; v.style.left = o.xv + 'px'; v.style.top = rMid + 'px'; v.style.height = Math.max(0, o.top - rMid) + 'px'; fit.appendChild(v); });
+  });
+}
+window.addEventListener('resize', () => { if (ZCUR === null) fitChart(); });
+
+// ---------- floors: managers/buyers on one floor, supervisors on another, associates on another
+const FLOOR_LABELS = { 0: 'Board', 1: '', 2: 'General Manager', 3: 'Area managers & buyers', 4: 'Store managers · supervisors', 5: 'Associates & staff', 6: 'Store support' };
+let _FL = {};
+function floorOf(id) {
+  if (_FL[id] != null) return _FL[id];
+  const n = BY[id]; let f;
+  if (EX.ted && id === EX.ted.id || EX.karen && id === EX.karen.id || EX.reb && id === EX.reb.id) f = 1;
+  else if (EX.rod && id === EX.rod.id) f = 2;
+  else {
+    const t = (n.puesto || '').toLowerCase();
+    const rank = /store support|facilities/.test(t) ? 6 : /assistant|asst|supervisor/.test(t) ? 4 : (n.rol === 'manager' || n.rol === 'director') ? 3 : 5;
+    f = Math.max(rank, n.primary ? floorOf(n.primary) + 1 : rank);
+  }
+  return (_FL[id] = f);
+}
+const floorOfPg = key => Math.max(...PG[key].bosses.map(floorOf));
+function layoutFloors(root) {
+  if (!root) return;
+  root.querySelectorAll('.oflr').forEach(e => e.remove());
+  const boxOf = li => li.querySelector(':scope > [data-floor]');
+  const lis = [...root.querySelectorAll('li')].filter(li => boxOf(li));
+  lis.forEach(li => { li.style.paddingTop = ''; li.style.removeProperty('--drop'); li.classList.remove('fdrop'); });
+  const floors = [...new Set(lis.map(li => +boxOf(li).dataset.floor))].sort((a, b) => a - b);
+  floors.forEach((f, ri) => {
+    if (ri === 0) return;
+    const row = lis.filter(li => +boxOf(li).dataset.floor === f && li.parentElement.closest('li'));
+    row.forEach(li => { li.style.paddingTop = '0px'; li.style.setProperty('--drop', '0px'); });
+    const parentBottom = li => { const pb = boxOf(li.parentElement.closest('li')); const q = posIn(pb, root); return q.y + pb.offsetHeight; };
+    const prevBoxes = lis.map(boxOf).filter(b => +b.dataset.floor === floors[ri - 1]);
+    const prevBottom = Math.max(...prevBoxes.map(b => posIn(b, root).y + b.offsetHeight));   // a floor always sits below the previous floor
+    const rowTop = Math.max(prevBottom + 36, ...row.map(li => parentBottom(li) + 40));
+    row.forEach(li => { const cur = posIn(boxOf(li), root).y; const pad = Math.max(18, rowTop - cur); li.style.paddingTop = pad + 'px'; li.style.setProperty('--drop', pad + 'px'); li.classList.toggle('fdrop', li.matches(':only-child')); });
+  });
+  floors.filter(f => f !== 1).forEach(f => {
+    const boxes = lis.map(boxOf).filter(b => +b.dataset.floor === f);
+    const top = Math.min(...boxes.map(b => posIn(b, root).y)), bot = Math.max(...boxes.map(b => posIn(b, root).y + b.offsetHeight));
+    const d = document.createElement('div'); d.className = 'oflr';
+    d.style.top = (top - 14) + 'px'; d.style.height = (bot - top + 28) + 'px'; d.style.width = root.scrollWidth + 'px';
+    d.innerHTML = `<div class="oflr-l">${FLOOR_LABELS[f] || ''}</div>`;
+    root.insertBefore(d, root.firstChild);
+  });
+}
+// ---------- overview helpers
+const plural = p => /s$/i.test(p) ? p : p + 's';
+function oItems(parentZoom, ids) {
+  const nodes = [], leaves = [], seen = new Set();
+  ids.forEach(i => {
+    const m = memberOf(i);
+    if (m) { if (!seen.has(m[0])) { seen.add(m[0]); nodes.push({ t: 'pg', key: m[0], rep: m[1].bosses[0] }); } }
+    else if (KIDS[i].length) nodes.push({ t: 'node', id: i, rep: i });
+    else leaves.push(i);
+  });
+  nodes.sort((a, b) => cmp(a.rep, b.rep));
+  // direct reports of an executive, and anyone with an indirect line, always show as their own box
+  const solo = i => parentZoom.startsWith('e:') || titleRank(BY[i].puesto) < 3 || (BY[i].indirectos || []).length;
+  const senior = leaves.filter(solo).sort(cmp);
+  const rest = leaves.filter(i => !solo(i));
+  const items = [...nodes, ...senior.map(i => ({ t: 'leaf', id: i }))];
+  const groups = {};
+  rest.forEach(i => { const k = BY[i].ubicacion || ''; (groups[k] = groups[k] || []).push(i); });
+  Object.values(groups).forEach(g => { g.sort(cmp); if (g.length >= 2) items.push({ t: 'team', ids: g, zoom: parentZoom }); else items.push({ t: 'leaf', id: g[0] }); });
+  return items;
+}
+function oUl(items, lc, low) { return items.length ? `<ul ${lc ? `style="--lc:${lc}"` : ''}>${items.map(it => oItem(it, low)).join('')}</ul>` : ''; }
+function oItem(it, low) {
+  const lw = '';
+  if (it.t === 'node') {
+    if (EXECIDS.has(it.id)) return `<li>${oNode(it.id, 'e:' + it.id, KIDS[it.id])}</li>`; // an executive's line opens one more level
+    const t = total(it.id);
+    return `<li${lw}>${oBox(it.id, 'n:' + it.id, t ? `<span class="oc">${t}</span>` : '')}</li>`; // everything else stays closed until you zoom in
+  }
+  if (it.t === 'pg') return `<li${lw}>${oPeer(it.key)}</li>`;
+  if (it.t === 'leaf') return `<li${lw}>${oBox(it.id, null)}</li>`;
+  const puestos = [...new Set(it.ids.map(i => BY[i].puesto))];
+  const label = puestos.length === 1 ? plural(puestos[0]) : 'Team';
+  const loc = BY[it.ids[0]].ubicacion;
+  return `<li${lw}><div class="onode team" data-floor="${Math.max(...it.ids.map(floorOf))}" data-z="${it.zoom}" onclick="zoomTo('${it.zoom}', this)"><div class="on">${esc(label)}</div><div class="ot">${loc ? esc(loc) + ' · ' : ''}team</div><span class="oc">${it.ids.length}</span></div></li>`;
+}
+function oBox(id, zoom, extra, color) {
+  const n = BY[id], cls = (n.rol === 'director' ? 'dir ' : '') + (zoom ? '' : 'leaf');
+  const indirectRod = EX.rod && EX.ted && n.primary === EX.ted.id && id !== EX.rod.id && !(EX.karen && n.also.includes(EX.karen.id)); // Ted + Karen lines (Angel) bypass Rodrigo
+  const closedCls = (zoom && !EXECIDS.has(id) && (KIDS[id].length || sharedOf(id).length) ? 'closed ' : '');
+  return `<div class="onode ${closedCls}${cls}" data-floor="${floorOf(id)}" ${color ? `style="--lc:${color}"` : ''} ${zoom ? `data-z="${zoom}" onclick="zoomTo('${zoom}', this)"` : ''} data-id="${id}">
+    <div class="on">${esc(n.nombre)}</div><div class="ot">${esc(n.puesto)}</div>
+    ${n.also.filter(a => !(EX.rod && a === EX.rod.id)).length ? `<div class="oa">2nd line: ${n.also.filter(a => !(EX.rod && a === EX.rod.id)).map(a => esc(BY[a].nombre.split(' ')[0])).join(', ')}</div>` : ''}
+    ${(n.indirectos || []).map(i => `<div class="oi">indirect: ${esc(i.nombre)}${i.nota ? ' · temp.' : ''}</div>`).join('')}${extra || ''}</div>`;
+}
+function oNode(id, zoom, kids) {
+  const items = oItems(zoom, kids);
+  const t = zoom.startsWith('e:') ? kids.reduce((n, k) => n + 1 + total(k), 0) : total(id);
+  const isEx = EXECIDS.has(id), col = isEx ? (id === (EX.rod || {}).id ? '#1B3A6B' : id === (EX.karen || {}).id ? '#C2185B' : id === (EX.reb || {}).id ? '#00838F' : '#8B4513') : '';
+  return oBox(id, kids.length || sharedOf(id).length ? zoom : null, t ? `<span class="oc">${t}</span>` : '', col) + oUl(items, col);
+}
+function oPeer(key) {
+  const g = PG[key], zoom = 'p:' + key;
+  const all = [...g.team, ...g.bosses.flatMap(b => KIDS[b])].sort(cmp);
+  return `<div class="onode peer" data-floor="${floorOfPg(key)}" data-z="${zoom}" onclick="zoomTo('${zoom}', this)"><div class="peer-h2">Co-leaders · shared team</div>
+    ${g.bosses.map(b => `<div class="on">${esc(BY[b].nombre)}</div><div class="ot">${esc(BY[b].puesto)}</div>`).join('')}<span class="oc">${all.length}</span></div>`;
+}
+// ---------- zoom
+let ZSCROLL = 0, ZBUSY = false, ZCUR = null;
+function crumbsFor(target) {
+  const [k, id] = [target.slice(0, 1), target.slice(2)];
+  const first = k === 'p' ? (BY[PG[id].bosses[0]].primary || PG[id].bosses[0]) : id;
+  const chain = []; let cur = first;
+  while (cur) { chain.unshift(cur); if (EXECIDS.has(cur)) break; cur = BY[cur].primary; }
+  const parts = chain.map((c, i) => {
+    const isLast = i === chain.length - 1 && k !== 'p';
+    const name = esc(BY[c].nombre);
+    return isLast ? `<b>${name}</b>` : `<a onclick="zoomTo('${EXECIDS.has(c) ? 'e:' : 'n:'}${c}')">${name}</a>`;
+  });
+  if (k === 'p') parts[parts.length - 1] = `<a onclick="zoomTo('${EXECIDS.has(first) ? 'e:' : 'n:'}${first}')">${esc(BY[first].nombre)}</a>`, parts.push(`<b>${PG[id].bosses.map(b => esc(BY[b].nombre.split(' ')[0])).join(' &amp; ')} (co-leaders)</b>`);
+  return `<a onclick="zoomOut()">Company</a> › ` + parts.join(' › ');
+}
+function zoomBody(target) {
+  const k = target.slice(0, 1), id = target.slice(2);
+  let rootHtml, kidIds;
+  if (k === 'p') {
+    const g = PG[id];
+    rootHtml = `<div class="peer"><div class="peer-h">Co-leaders · shared team</div><div class="row">${g.bosses.map(b => cardHtml(b, { noCount: true })).join('')}</div></div>`;
+    kidIds = [...g.team, ...g.bosses.flatMap(b => KIDS[b])].sort(cmp);
+  } else { rootHtml = cardHtml(id, { noCount: true }); kidIds = KIDS[id]; }
+  const execParent = k === 'e';
+  const nodes = [], leaves = [], seen = new Set();
+  kidIds.forEach(i => {
+    const m = memberOf(i);
+    if (m) { if (!seen.has(m[0])) { seen.add(m[0]); nodes.push({ t: 'pg', key: m[0], rep: m[1].bosses[0] }); } }
+    else if (KIDS[i].length) nodes.push({ t: 'node', id: i, rep: i });
+    else leaves.push(i);
+  });
+  nodes.sort((x, y) => cmp(x.rep, y.rep));
+  const solo = i => execParent || titleRank(BY[i].puesto) < 3 || (BY[i].indirectos || []).length || leaves.length <= 4;
+  const soloIds = leaves.filter(solo).sort(cmp), gridIds = leaves.filter(i => !solo(i)).sort(cmp);
+  const items = [...nodes, ...soloIds.map(i => ({ t: 'leaf', id: i }))];
+  const lc = k === 'e' ? (id === (EX.rod || {}).id ? '#1B3A6B' : id === (EX.karen || {}).id ? '#C2185B' : id === (EX.reb || {}).id ? '#00838F' : '#8B4513') : '#1B3A6B';
+  let h = `<div class="zwrap"><div class="otree" style="--lc:${lc}"><ul><li><div class="zroot" data-floor="${k === 'p' ? floorOfPg(id) : floorOf(id)}">${rootHtml}</div>${oUl(items, lc)}</li></ul></div>`;
+  const ORPH = NODES.filter(n => !n.primary && !n.pgKey && !EXECIDS.has(n.id)).map(n => n.id); // report straight to the owners, no lines
+  const gridBlock = (ids, title, flat) => {
+    if (!ids.length) return '';
+    const locs = flat ? [''] : [...new Set(ids.map(i => BY[i].ubicacion || ''))];
+    if (flat) return `<div class="zgrid-h">${title} (${ids.length})</div><div class="zgrid">${ids.map(i => cardHtml(i, { noCount: true, note: ORPH.includes(i) ? 'Reports to the owners · not evaluated' : '' })).join('')}</div>`;
+    return `<div class="zgrid-h">${title} (${ids.length})</div><div class="zgrid">${locs.length > 1 ? locs.map(l => `<div class="zloc">📍 ${esc(l || 'Other')}</div>` + ids.filter(i => (BY[i].ubicacion || '') === l).map(i => cardHtml(i, { noCount: true })).join('')).join('') : ids.map(i => cardHtml(i, { noCount: true })).join('')}</div>`;
+  };
+  const isSup = i => /store support|facilities/i.test(BY[i].puesto || '');
+  h += gridBlock(gridIds.filter(i => !isSup(i)), 'Team members');
+  const supIds = gridIds.filter(isSup);
+  h += gridBlock(supIds.length ? [...supIds, ...ORPH.filter(i => isSup(i))] : [], 'Store support — clerks who move, assemble and handle pick-ups', true);
+  return h + '</div>';
+}
+function ancestorsFor(target) {
+  const k = target.slice(0, 1), id = target.slice(2);
+  let cur = k === 'p' ? (BY[PG[id].bosses[0]].primary || null) : BY[id].primary;
+  const chain = [];
+  while (cur) { chain.unshift(cur); if (EXECIDS.has(cur) && cur !== (EX.rod || {}).id) break; cur = BY[cur].primary; }
+  return chain;
+}
+function chainHtml(target) {
+  const anc = ancestorsFor(target);
+  const board = `<div class="zanc board"><div class="on">Board</div><div class="ot">Dani · Rebecca · Ted · Karen Rosenberg</div></div>`;
+  return `<div class="zchain"><div class="zlbl">↑ Reporting line above (click to jump)</div>${board}` +
+    anc.map(c => `<div class="zconn"></div><div class="zanc" onclick="zoomTo('${EXECIDS.has(c) ? 'e:' : 'n:'}${c}')"><div class="on">${esc(BY[c].nombre)}</div><div class="ot">${esc(BY[c].puesto)}</div></div>`).join('') +
+    `<div class="zconn"></div></div>`;
+}
+function scrollToRoot() {
+  const r = document.querySelector('#zoomview .zroot'); if (!r) return;
+  const bar = document.querySelector('#zoomview .zbar');
+  window.scrollTo(0, Math.max(0, r.getBoundingClientRect().top + window.scrollY - (bar ? bar.offsetHeight : 0) - 24));
+}
+function renderZoom(target) {
+  const zv = document.getElementById('zoomview');
+  zv.innerHTML = `<div class="zbar"><div class="zin">🔍 Zoomed in</div><div class="crumbs">${crumbsFor(target)}</div>
+    <button class="primary" onclick="zoomOut()">⤢ Zoom out</button><span class="esc">or press <kbd>Esc</kbd></span></div>${chainHtml(target)}<div id="zbody">${zoomBody(target)}</div>`;
+}
+function layoutZoom() { const w = document.querySelector('#zoomview .zwrap'); if (w) layoutFloors(w); }
+function originFor(el, box) {
+  if (!el) return '50% 0%';
+  const r = el.getBoundingClientRect(), b = box.getBoundingClientRect();
+  return `${r.left + r.width / 2 - b.left}px ${r.top + r.height / 2 - b.top}px`;
+}
+function zoomTo(target, el) {
+  const ov = document.getElementById('overview'), zv = document.getElementById('zoomview');
+  if (ZBUSY) return;
+  const wasZoomed = ZCUR !== null;
+  if (!wasZoomed) ZSCROLL = window.scrollY;
+  renderZoom(target); ZCUR = target;
+  if (wasZoomed) { // drilling between zoomed views: quick cross-fade
+    layoutZoom(); zv.classList.add('enter'); void zv.offsetWidth; zv.classList.remove('enter'); scrollToRoot(); return;
+  }
+  ZBUSY = true;
+  const o = originFor(el, ov);
+  ov.style.transformOrigin = o; zv.style.transformOrigin = '50% 0%';
+  zv.style.display = 'block'; layoutZoom(); zv.classList.add('enter');
+  ov.classList.add('leaving');
+  void zv.offsetWidth;
+  ov.classList.add('away'); zv.classList.remove('enter');
+  scrollToRoot();
+  setTimeout(() => { ov.style.display = 'none'; ZBUSY = false; }, 420);
+}
+function zoomOut() {
+  if (ZCUR === null || ZBUSY) return;
+  const ov = document.getElementById('overview'), zv = document.getElementById('zoomview');
+  const sel = document.getElementById('q'); sel.value = '';
+  ZBUSY = true;
+  ov.style.display = 'block'; ov.classList.add('leaving', 'away'); fitChart();
+  void ov.offsetWidth;
+  zv.classList.add('enter'); ov.classList.remove('away');
+  setTimeout(() => { zv.style.display = 'none'; zv.classList.remove('enter'); ov.classList.remove('leaving'); ZCUR = null; ZBUSY = false; fitChart(); window.scrollTo(0, ZSCROLL); }, 420);
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') zoomOut(); });
+function syncArrows() { document.querySelectorAll('#zoomview li').forEach(li => { const a = li.querySelector(':scope > .card .arrow') || li.querySelector(':scope > .peer .peer-note .arrow'); if (a) a.textContent = li.classList.contains('collapsed') ? '+' : '−'; }); }
+function toggle(li) { li.classList.toggle('collapsed'); syncArrows(); }
+function setAll(open) { document.querySelectorAll('#zoomview li').forEach(li => { if (li.querySelector(':scope > ul')) li.classList.toggle('collapsed', !open); }); syncArrows(); }
+function onSearch() {
+  const q = document.getElementById('q').value.trim().toLowerCase();
+  document.querySelectorAll('.card.sel,.onode.sel').forEach(c => c.classList.remove('sel'));
+  if (!q) { if (ZCUR !== null) zoomOut(); return; }
+  const hit = NODES.find(n => (n.nombre + ' ' + (n.puesto || '')).toLowerCase().includes(q));
+  if (!hit) return;
+  // zoom to the smallest view that shows this person with their team context
+  let target;
+  if (EXECIDS.has(hit.id)) target = 'e:' + hit.id;
+  else if (hit.pgKey) target = 'p:' + hit.pgKey;
+  else if (hit.primary) target = EXECIDS.has(hit.primary) && !KIDS[hit.id].length ? 'e:' + hit.primary : (memberOf(hit.primary) ? 'p:' + memberOf(hit.primary)[0] : 'n:' + hit.primary);
+  else target = 'n:' + hit.id;
+  const mark = () => {
+    const el = document.querySelector(`#zbody [data-id="${hit.id}"], #zbody [data-pid="${hit.id}"]`);
+    if (el) { el.classList.add('sel'); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  };
+  if (ZCUR === null) { zoomTo(target, document.querySelector('#overview .onode')); setTimeout(mark, 450); }
+  else { zoomTo(target); setTimeout(mark, 60); }
+}
+load();
+</script>
+</body>
+</html>

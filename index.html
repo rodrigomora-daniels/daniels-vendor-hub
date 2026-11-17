@@ -459,6 +459,7 @@
   </div>
 </div>
 
+<script src="dh-session.js"></script>
 <script>
 /* ════════════════════════════════════════════════════════════
    SUPABASE CONFIG
@@ -509,27 +510,13 @@ async function handleLogin() {
   btn.innerHTML = '<span class="spinner"></span>Signing in...';
 
   try {
-    const rows = await sbFetch('rpc/verificar_login', {
-      method: 'POST',
-      body: JSON.stringify({ p_username: username, p_password: password })
-    });
-
-    if (!rows || rows.length === 0) {
+    // /next/: server-issued session. iniciar_sesion returns the employee fields (incl. departamento,
+    // nivel_admin) plus a token that is kept in sessionStorage; the browser never sends an id as proof.
+    const emp = await DH.login(username, password);
+    if (!emp) {
       throw new Error('Incorrect username or password.');
     }
-
-    session.empleado = rows[0];
-
-    // verificar_login is a server-side RPC we didn't write and can't see the
-    // internals of — rather than assume it returns "departamento" (added after
-    // that RPC existed), fetch it directly so gating logic downstream always
-    // has an accurate value, regardless of what the RPC's own return shape is.
-    try {
-      const deptRows = await sbFetch(`empleados?id=eq.${session.empleado.id}&select=departamento`);
-      if (deptRows && deptRows[0]) session.empleado.departamento = deptRows[0].departamento;
-    } catch (err) {
-      console.warn('Could not fetch department:', err);
-    }
+    session.empleado = emp;
 
     await loadDashboard();
 
@@ -562,14 +549,13 @@ async function checkSignupCode() {
   if (!code) { hidePersonalMode(); hideResetBanner(); return; }
   try {
     if (code.length >= 8) {
-      const info = await sbFetch('rpc/codigo_signup_info', { method: 'POST', body: JSON.stringify({ p_codigo: code }) });
+      const info = await DH.rest('rpc/codigo_signup_info', { method: 'POST', body: JSON.stringify({ p_codigo: code }) });
       if (info && info.nombre) { showPersonalBanner(info); return; }
     }
     hidePersonalMode();
-    const codeRows = await sbFetch(`codigos_invitacion?codigo=eq.${encodeURIComponent(code.toUpperCase())}&usado=eq.false&select=empleado_id_reset`);
-    if (!codeRows || !codeRows.length || !codeRows[0].empleado_id_reset) { hideResetBanner(); return; }
-    const empRows = await sbFetch(`empleados?id=eq.${codeRows[0].empleado_id_reset}&select=nombre_completo,username,employee_id`);
+    const empRows = await DH.rest('rpc/codigo_reset_info', { method: 'POST', body: JSON.stringify({ p_codigo: code }) });
     if (!empRows || !empRows.length) { hideResetBanner(); return; }
+    resetInfo = empRows[0];
     showResetBanner(empRows[0]);
   } catch (err) {
     console.error('Reset-code lookup failed (check RLS/select policy on codigos_invitacion):', err);
@@ -600,6 +586,7 @@ function hidePersonalMode() {
   document.getElementById('signup-reset-banner').style.display = 'none';
   document.getElementById('btn-signup').textContent = 'Create Account';
 }
+let resetInfo = null;
 function showResetBanner(emp) {
   signupResetMode = true;
   document.getElementById('signup-reset-banner').style.display = 'block';
@@ -691,35 +678,21 @@ async function handleSignup() {
     }
 
     const isReset = (result.message || '').toLowerCase().includes('reset');
-    let actualUsername = username;
-    if (isReset && result.empleado_id) {
-      try {
-        const empRows = await sbFetch(`empleados?id=eq.${result.empleado_id}&select=username`);
-        if (empRows && empRows[0]) actualUsername = empRows[0].username;
-      } catch (err) { /* fall back to whatever they typed */ }
-    }
+    let actualUsername = (isReset && resetInfo && resetInfo.username) ? resetInfo.username : username;
 
-    // Store the department separately from the registration RPC (which we don't
-    // control/didn't write) — a direct patch on the new record, same pattern used
-    // everywhere else in the hub. Only for brand-new accounts, not password resets
-    // (someone resetting their password already has a department on file).
+    // Store the department/store for brand-new accounts (not password resets). There is no session yet,
+    // so sign in once with the credentials just chosen, assign the store with the token, then sign out.
+    // Personal-code accounts already get store/department from the roster, so they skip this.
     if (!isReset && !signupPersonalMode) {
       try {
-        let targetId = result.empleado_id;
-        if (!targetId) {
-          // RPC didn't hand back the new id directly — look it up by the
-          // username they just chose, which is guaranteed unique.
-          const lookup = await sbFetch(`empleados?username=eq.${encodeURIComponent(username)}&select=id`);
-          if (lookup && lookup[0]) targetId = lookup[0].id;
-        }
-        if (targetId) {
-          await sbFetch('rpc/registro_asignar_tienda', {
-            method: 'POST',
-            body: JSON.stringify({ p_empleado_id: targetId, p_tienda: tienda })
-          });
+        const emp = await DH.login(username, pw1);
+        if (emp) {
+          await DH.rpc('registro_asignar_tienda', { p_tienda: tienda });
+          await DH.logout();
         }
       } catch (err) {
         console.warn('Could not save department (account was still created successfully):', err);
+        try { await DH.logout(); } catch (e) {}
       }
     }
 
@@ -771,14 +744,8 @@ async function handleChangePassword() {
   btn.innerHTML = '<span class="spinner"></span>Updating...';
 
   try {
-    const rows = await sbFetch('rpc/cambiar_password', {
-      method: 'POST',
-      body: JSON.stringify({
-        p_empleado_id: session.empleado.id,
-        p_password_actual: current,
-        p_password_nuevo: new1
-      })
-    });
+    const rows = await DH.rpc('cambiar_password', { p_password_actual: current,
+        p_password_nuevo: new1 });
 
     const result = rows[0];
     if (!result.success) {
@@ -805,6 +772,7 @@ function openAdminConsole() {
 }
 
 function handleLogout() {
+  DH.logout();
   session = { empleado: null, history: [], resets: [] };
   document.getElementById('login-username').value = '';
   document.getElementById('login-password').value = '';
@@ -850,22 +818,12 @@ async function loadDashboard() {
   if (certNavTab) certNavTab.style.display = showCerts ? '' : 'none';
 
   try {
-    const history = await sbFetch(
-      `certificaciones_progreso?empleado_id=eq.${emp.id}&select=*&order=fecha_completado.desc`
-    );
-    session.history = history || [];
+    const mine = await DH.rpc('certificacion_mis_intentos');
+    session.history = (mine && mine.historial) || [];
+    session.resets = (mine && mine.resets) || [];
   } catch (err) {
     console.error('Failed to load history:', err);
     session.history = [];
-  }
-
-  try {
-    const resets = await sbFetch(
-      `certificacion_resets?empleado_id=eq.${emp.id}&select=certificacion,reset_at`
-    );
-    session.resets = resets || [];
-  } catch (err) {
-    console.warn('Could not load reset history (table may not exist yet):', err);
     session.resets = [];
   }
 
@@ -873,7 +831,7 @@ async function loadDashboard() {
   // an admin granted since the last reset. Never re-implement that math in the browser.
   session.estado = null;
   try {
-    const est = await sbFetch('rpc/certificacion_estado', { method: 'POST', body: JSON.stringify({ p_empleado_id: emp.id }) });
+    const est = await DH.rpc('certificacion_estado');
     session.estado = {};
     (est || []).forEach(x => { session.estado[x.certificacion] = x; });
   } catch (err) {
@@ -1066,7 +1024,7 @@ const TOOL_URLS = {
 
 function navigateToEvaluacion() {
   const empId = session && session.empleado ? session.empleado.id : '';
-  window.location.href = `Daniels_Evaluacion_Ventas.html?emp=${empId}`;
+  window.location.href = 'Daniels_Evaluacion_Ventas.html';
 }
 
 function switchTab(tabName) {
@@ -1086,9 +1044,6 @@ function switchTab(tabName) {
 
 function navigateToTool(toolName) {
   let url = TOOL_URLS[toolName];
-  if (toolName === 'leadsource' && session && session.empleado) {
-    url += `?emp=${encodeURIComponent(session.empleado.id)}&name=${encodeURIComponent(session.empleado.nombre_completo || '')}`;
-  }
   window.location.href = url;
 }
 
@@ -1096,19 +1051,24 @@ function goToExam(tier) {
   const examFile = tier === 'tier1' ? 'Daniels_Certification_Tier1.html' : 'Daniels_Certification_Tier2.html';
   // Pass employee context via sessionStorage-free approach: use a query param
   // and have the exam page re-fetch the employee record by ID (no sensitive data in URL).
-  window.location.href = `${examFile}?emp=${session.empleado.id}`;
+  window.location.href = examFile;
 }
+
+// Restore an existing session (coming back from another page, or a reload in the same tab).
+(async function restoreSession() {
+  if (/[?&]expired=1/.test(location.search)) {
+    const e = document.getElementById('login-error');
+    if (e) { e.textContent = 'Your session expired. Please sign in again.'; e.classList.add('show'); }
+    return;
+  }
+  const emp = await DH.restore();
+  if (emp) { session.empleado = emp; await loadDashboard(); }
+})();
 
 // Allow Enter key to submit login
 document.getElementById('login-password').addEventListener('keypress', (e) => {
   if (e.key === 'Enter') handleLogin();
 });
-</script>
-<script>
-// Installable app (PWA): register the service worker; failures must never affect the app.
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => { try { navigator.serviceWorker.register('sw.js').catch(() => {}); } catch (e) {} });
-}
 </script>
 
 <div id="welcome-pop" role="dialog" aria-modal="true" aria-labelledby="wp-title">

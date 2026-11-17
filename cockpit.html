@@ -103,7 +103,7 @@
     </div>
     <div>
       <button class="btn btn-ghost" onclick="window.location.href='index.html'">← My Workspace</button>
-      <button class="btn btn-ghost" onclick="location.reload()">Sign Out</button>
+      <button class="btn btn-ghost" onclick="DH.logout().then(()=>location.reload())">Sign Out</button>
     </div>
   </div>
 
@@ -565,6 +565,7 @@
   </div>
 </div>
 
+<script src="dh-session.js"></script>
 <script>
 const SUPABASE_URL = 'https://ecfxeebhtgkbsdeuiueb.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_oRxEOMLizp1kjlsRjWWaxg_muaaMHFt';
@@ -606,18 +607,10 @@ async function handleAdminLogin() {
   if (!username || !password) { errEl.textContent = 'Please enter both fields.'; errEl.classList.add('show'); return; }
   btn.disabled = true; btn.textContent = 'Signing in...';
   try {
-    const rows = await sbFetch('rpc/verificar_login', { method: 'POST', body: JSON.stringify({ p_username: username, p_password: password }) });
-    if (!rows || rows.length === 0) throw new Error('Invalid credentials.');
-    const emp = rows[0];
-    if (!emp.es_admin) throw new Error('This account does not have admin access.');
-    admin = emp;
-    try {
-      const lvl = await sbFetch(`empleados?id=eq.${admin.id}&select=nivel_admin`);
-      admin.nivel_admin = (lvl && lvl[0] && lvl[0].nivel_admin) || null;
-    } catch (err) {
-      console.warn('Could not load admin tier:', err);
-      admin.nivel_admin = 'super_admin';
-    }
+    const emp = await DH.login(username, password);
+    if (!emp) throw new Error('Invalid credentials.');
+    if (!emp.es_admin) { await DH.logout(); throw new Error('This account does not have admin access.'); }
+    admin = emp;   // iniciar_sesion already returns nivel_admin
     document.getElementById('screen-admin-login').classList.remove('active');
     document.getElementById('screen-cockpit').classList.add('active');
     let tierLabel = 'Admin';
@@ -655,8 +648,9 @@ function applyViewOnlyRestrictions() {
 
 async function loadEmployees() {
   try {
-    const employees = await sbFetch('empleados?select=id,nombre_completo,username,employee_id,tienda,rol,es_admin,nivel_admin,departamento');
-    const progress = await sbFetch('certificaciones_progreso?select=empleado_id,certificacion,porcentaje,score,aprobado&order=fecha_completado.desc');
+    const employees = await DH.rpc('admin_empleados_listar');
+    const ov = await DH.rpc('admin_cert_overview', { p_detalle: false });
+    const progress = (ov && ov.progreso) || [];
     const merged = employees.map(emp => {
       const empProgress = progress.filter(p => p.empleado_id === emp.id);
       const tier1 = empProgress.find(p => p.certificacion === 'tier1' && p.aprobado);
@@ -677,7 +671,7 @@ async function loadEmployees() {
 /* ════════ ORGANIGRAMA ════════ */
 async function loadOrganigrama() {
   try {
-    const rows = await sbFetch('organigrama?activo=eq.true&select=id,empleado_id,supervisor_id,track,nivel,titulo_display,peso');
+    const rows = await DH.rpc('admin_organigrama_listar');
     cachedData.organigrama = rows || [];
     renderOrganigramaTable(cachedData.organigrama);
   } catch (err) {
@@ -744,18 +738,14 @@ async function submitAddOrgRow() {
   const btn = document.getElementById('btn-org-row-save');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Saving...';
   try {
-    const existingSamePair = await sbFetch(`organigrama?empleado_id=eq.${empId}&activo=eq.true&${supId ? `supervisor_id=eq.${supId}` : 'supervisor_id=is.null'}&select=id`);
-    if (existingSamePair && existingSamePair.length) {
-      await sbFetch(`organigrama?id=in.(${existingSamePair.map(e => e.id).join(',')})`, { method: 'PATCH', body: JSON.stringify({ activo: false }) });
-    }
-    const otherActive = await sbFetch(`organigrama?empleado_id=eq.${empId}&activo=eq.true&select=peso`);
-    const currentTotal = (otherActive || []).reduce((s, r) => s + (r.peso || 0), 0);
+    const otherActive = (cachedData.organigrama || []).filter(r => r.empleado_id === empId && r.supervisor_id !== (supId || null));
+    const currentTotal = otherActive.reduce((s, r) => s + (r.peso || 0), 0);
     if (currentTotal + peso > 100) {
       if (!confirm(`This person's total supervisor weight would be ${currentTotal + peso}%, over 100%. Save anyway?`)) {
         btn.disabled = false; btn.textContent = 'Save'; return;
       }
     }
-    await sbFetch('organigrama', { method: 'POST', body: JSON.stringify([{ empleado_id: empId, supervisor_id: supId || null, track, nivel, peso, titulo_display: titulo || null, activo: true }]) });
+    await DH.rpc('admin_organigrama_guardar', { p_empleado_id: empId, p_supervisor_id: supId || null, p_track: track, p_nivel: nivel, p_peso: peso, p_titulo: titulo || '' });
     btn.disabled = false; btn.textContent = 'Save';
     closeModal('modal-add-org-row');
     await loadOrganigrama();
@@ -769,7 +759,7 @@ async function submitAddOrgRow() {
 async function deleteOrgRow(rowId) {
   if (!confirm('Remove this reporting relationship?')) return;
   try {
-    await sbFetch(`organigrama?id=eq.${rowId}`, { method: 'PATCH', body: JSON.stringify({ activo: false }) });
+    await DH.rpc('admin_organigrama_quitar', { p_id: rowId });
     await loadOrganigrama();
   } catch (err) { alert('Error removing: ' + err.message); }
 }
@@ -782,11 +772,13 @@ async function deleteOrgRow(rowId) {
 async function loadMgrFeedback() {
   const sec = document.getElementById('section-mgr-feedback');
   if (!sec) return;
-  if (!isSuperAdmin()) { sec.style.display = 'none'; return; }
+  let allowed = false;
+  try { allowed = await DH.rpc('feedback_puede_detalle'); } catch (e) { allowed = false; }
+  if (!allowed) { sec.style.display = 'none'; return; }
   sec.style.display = '';
   const body = document.getElementById('tbl-mgr-feedback-body');
   try {
-    const rows = await sbFetch('rpc/admin_ver_feedback_anonimo', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id }) });
+    const rows = await DH.rpc('admin_ver_feedback_anonimo');
     if (!rows || !rows.length) { body.innerHTML = '<tr><td colspan="10" class="empty-state">No feedback submitted yet this cycle.</td></tr>'; return; }
     const f = (o, k) => (o && o[k] !== undefined) ? Number(o[k]).toFixed(2) : '—';
     body.innerHTML = rows.map(r => `<tr><td><strong>${r.nombre}</strong></td><td>${r.tienda || ''}</td><td>${r.n}${r.n < 3 ? ' ⚠️' : ''}</td>` +
@@ -803,7 +795,7 @@ async function loadRoster() {
   sec.style.display = '';
   const body = document.getElementById('tbl-roster-body');
   try {
-    const rows = await sbFetch('rpc/admin_roster_listar', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id }) });
+    const rows = await DH.rpc('admin_roster_listar');
     const cls = { vendedor: 'Seller', manager: 'Manager', director: 'Director', staff: 'Staff' };
     body.innerHTML = (rows || []).map(r => `<tr><td><strong>${r.nombre}</strong>${r.nota ? '<br><span style="font-size:11px;color:var(--mgray);">' + r.nota + '</span>' : ''}${r.se_evalua ? '' : ' <span class="pill pill-gray">not evaluated</span>'}</td><td>${r.puesto || ''}</td><td>${r.ubicacion || ''}</td><td>${cls[r.rol_eval] || r.rol_eval}</td><td>${r.jefes || '—'}</td><td>${r.n_reportes || ''}</td>` +
       `<td>${r.registrado ? '<span class="pill pill-green">Registered</span>' : '<span class="pill pill-gray">Not yet</span>'}</td>` +
@@ -813,7 +805,7 @@ async function loadRoster() {
   }
 }
 async function toggleRosterCycle(id, val) {
-  try { await sbFetch('rpc/admin_roster_set_ciclo', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id, p_roster_id: id, p_en_ciclo: val }) }); }
+  try { await DH.rpc('admin_roster_set_ciclo', { p_roster_id: id, p_en_ciclo: val }); }
   catch (err) { alert('Error: ' + err.message); loadRoster(); }
 }
 
@@ -854,7 +846,7 @@ async function loadEvalResults() {
   sec.style.display = '';
   const body = document.getElementById('prog-body');
   try {
-    const r = await sbFetch('rpc/evaluacion_progreso', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id }) });
+    const r = await DH.rpc('evaluacion_progreso');
     if (!r || r.error) throw new Error((r && r.error) || 'no data');
     PROG = r;
     PROG.personas.forEach(p => { p._status = progStatus(p); p._band = progBand(p); });
@@ -887,7 +879,7 @@ async function editCycleDates() {
   const ini = prompt('Period start (YYYY-MM-DD):', PROG.inicio || ''); if (!ini) return;
   const fin = prompt('Due date / period end (YYYY-MM-DD):', PROG.cierre || ''); if (!fin) return;
   try {
-    const r = await sbFetch('rpc/admin_ciclo_set_fechas', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id, p_inicio: ini, p_cierre: fin }) });
+    const r = await DH.rpc('admin_ciclo_set_fechas', { p_inicio: ini, p_cierre: fin });
     if (r && r.success) loadEvalResults(); else alert((r && r.message) || 'Could not save');
   } catch (err) { alert('Error: ' + err.message); }
 }
@@ -1050,7 +1042,7 @@ async function saveEvalConfig() {
   const kpis = evalCfg.kpis.filter(k => (k.nombre || '').trim()).map((k, i) => ({ id: k.id, rol_evaluado: k.rol_evaluado, nombre: k.nombre.trim(), unidad: k.unidad || '', meta_default: k.meta_default === null || k.meta_default === undefined ? '' : String(k.meta_default), orden: i, activo: !k._off }));
   msg.textContent = 'Saving...';
   try {
-    const rows = await sbFetch('rpc/evaluacion_config_set', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id, p_pesos: evalCfg.pesos, p_kpis: kpis }) });
+    const rows = await DH.rpc('evaluacion_config_set', { p_pesos: evalCfg.pesos, p_kpis: kpis });
     const r = rows && rows[0];
     msg.textContent = r ? r.message : 'No response';
     msg.style.color = r && r.success ? '#1a7f37' : '#c0392b';
@@ -1060,7 +1052,7 @@ async function saveEvalConfig() {
 
 async function loadEvalCycles() {
   try {
-    const rows = await sbFetch('evaluacion_ciclos?select=id,nombre,tipo,fecha_inicio,fecha_cierre,activo&order=fecha_inicio.desc');
+    const rows = await DH.rpc('admin_ciclos_listar');
     cachedData.evalCycles = rows || [];
     renderEvalCyclesTable(cachedData.evalCycles);
   } catch (err) {
@@ -1129,17 +1121,7 @@ async function submitNewCycle() {
   btn.innerHTML = '<span class="spinner"></span>Opening...';
 
   try {
-    // Close any currently active cycle first — only one active at a time
-    const active = (cachedData.evalCycles || []).filter(c => c.activo);
-    if (active.length) {
-      await sbFetch(`evaluacion_ciclos?id=in.(${active.map(c => c.id).join(',')})`, {
-        method: 'PATCH', body: JSON.stringify({ activo: false })
-      });
-    }
-    await sbFetch('evaluacion_ciclos', {
-      method: 'POST',
-      body: JSON.stringify([{ nombre, tipo, fecha_inicio: inicio, fecha_cierre: cierre, activo: true }])
-    });
+    await DH.rpc('admin_ciclo_crear', { p_nombre: nombre, p_tipo: tipo, p_inicio: inicio, p_cierre: cierre });
     btn.disabled = false; btn.textContent = 'Open Cycle';
     closeModal('modal-new-cycle');
     await loadEvalCycles();
@@ -1154,7 +1136,7 @@ async function submitNewCycle() {
 async function closeEvalCycle(cycleId) {
   if (!confirm('Close this evaluation cycle? Employees will no longer be able to submit evaluations until a new cycle opens.')) return;
   try {
-    await sbFetch(`evaluacion_ciclos?id=eq.${cycleId}`, { method: 'PATCH', body: JSON.stringify({ activo: false }) });
+    await DH.rpc('admin_ciclo_set_activo', { p_id: cycleId, p_activo: false });
     await loadEvalCycles();
   } catch (err) { alert('Error closing cycle: ' + err.message); }
 }
@@ -1162,13 +1144,7 @@ async function closeEvalCycle(cycleId) {
 async function reopenEvalCycle(cycleId) {
   if (!confirm('Reopen this cycle? Any other active cycle will be closed automatically.')) return;
   try {
-    const active = (cachedData.evalCycles || []).filter(c => c.activo);
-    if (active.length) {
-      await sbFetch(`evaluacion_ciclos?id=in.(${active.map(c => c.id).join(',')})`, {
-        method: 'PATCH', body: JSON.stringify({ activo: false })
-      });
-    }
-    await sbFetch(`evaluacion_ciclos?id=eq.${cycleId}`, { method: 'PATCH', body: JSON.stringify({ activo: true }) });
+    await DH.rpc('admin_ciclo_set_activo', { p_id: cycleId, p_activo: true });
     await loadEvalCycles();
   } catch (err) { alert('Error reopening cycle: ' + err.message); }
 }
@@ -1243,10 +1219,7 @@ async function submitReclassify() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Saving...';
   try {
-    const rr = await sbFetch('rpc/admin_reclasificar_departamento', {
-      method: 'POST',
-      body: JSON.stringify({ p_admin_id: admin.id, p_empleado_id: reclassifyTarget, p_departamento: dept })
-    });
+    const rr = await DH.rpc('admin_reclasificar_departamento', { p_empleado_id: reclassifyTarget, p_departamento: dept });
     if (!rr || !rr[0] || !rr[0].success) throw new Error((rr && rr[0] && rr[0].message) || 'Not saved');
     // ✅ FIX: reset button and target BEFORE closing so next modal open is clean
     btn.disabled = false;
@@ -1281,10 +1254,7 @@ async function submitReclassifyStore() {
   const btn = document.getElementById('btn-reclassify-store-save');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Saving...';
   try {
-    const rs = await sbFetch('rpc/admin_reclasificar_tienda', {
-      method: 'POST',
-      body: JSON.stringify({ p_admin_id: admin.id, p_empleado_id: reclassifyStoreTarget, p_tienda: tienda })
-    });
+    const rs = await DH.rpc('admin_reclasificar_tienda', { p_empleado_id: reclassifyStoreTarget, p_tienda: tienda });
     if (!rs || !rs[0] || !rs[0].success) throw new Error((rs && rs[0] && rs[0].message) || 'Not saved');
     btn.disabled = false; btn.textContent = 'Save';
     reclassifyStoreTarget = null;
@@ -1335,11 +1305,10 @@ function certLockStatus(empId, cert) {
 
 async function loadCertAttempts() {
   try {
-    const rows = await sbFetch('certificaciones_progreso?select=id,empleado_id,certificacion,score,total_puntos,porcentaje,aprobado,estado,tiempo_usado_segundos,fecha_completado,started_at,detalle_respuestas&order=fecha_completado.desc');
-    let resets = [];
-    try { resets = await sbFetch('certificacion_resets?select=empleado_id,certificacion,reset_at&order=reset_at.desc'); } catch(e) { console.warn('certificacion_resets not available yet:', e); }
-    let extras = [];
-    try { extras = await sbFetch('certificacion_intentos_extra?select=empleado_id,certificacion,cantidad,created_at&order=created_at.desc'); } catch(e) { console.warn('certificacion_intentos_extra not available yet:', e); }
+    const ov = await DH.rpc('admin_cert_overview', { p_detalle: true });
+    const rows = (ov && ov.progreso) || [];
+    const resets = (ov && ov.resets) || [];
+    const extras = (ov && ov.extras) || [];
     cachedData.certAttempts = rows || [];
     cachedData.certResets = resets || [];
     cachedData.certExtraAttempts = extras || [];
@@ -1468,7 +1437,7 @@ async function submitCertReset() {
   if (!certResetTarget) return;
   const notes = document.getElementById('cert-reset-notes').value.trim();
   try {
-    const rows = await sbFetch('rpc/admin_reset_certificacion', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id, p_empleado_id: certResetTarget.empId, p_certificacion: certResetTarget.certificacion, p_notas: notes || null }) });
+    const rows = await DH.rpc('admin_reset_certificacion', { p_empleado_id: certResetTarget.empId, p_certificacion: certResetTarget.certificacion, p_notas: notes || null });
     if (!rows[0].success) { alert(rows[0].message); return; }
     closeModal('modal-cert-reset');
     loadAllData();
@@ -1491,7 +1460,7 @@ async function submitUnlockAttempts() {
   const notes = document.getElementById('unlock-attempts-notes').value.trim();
   if (!qty || qty < 1) { alert('Enter a quantity of at least 1.'); return; }
   try {
-    const rows = await sbFetch('rpc/admin_otorgar_intentos_extra', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id, p_empleado_id: unlockAttemptsTarget.empId, p_certificacion: unlockAttemptsTarget.certificacion, p_cantidad: qty, p_notas: notes || null }) });
+    const rows = await DH.rpc('admin_otorgar_intentos_extra', { p_empleado_id: unlockAttemptsTarget.empId, p_certificacion: unlockAttemptsTarget.certificacion, p_cantidad: qty, p_notas: notes || null });
     if (!rows[0].success) { alert(rows[0].message); return; }
     closeModal('modal-unlock-attempts');
     loadAllData();
@@ -1510,7 +1479,7 @@ async function submitRoleChange() {
   if (!roleChangeTarget) return;
   const [rol, nivel] = document.getElementById('role-select').value.split('|');
   try {
-    const rows = await sbFetch('rpc/admin_cambiar_rol_empleado', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id, p_empleado_id: roleChangeTarget.empId, p_nuevo_rol: rol, p_nuevo_nivel_admin: nivel === 'none' ? null : nivel }) });
+    const rows = await DH.rpc('admin_cambiar_rol_empleado', { p_empleado_id: roleChangeTarget.empId, p_nuevo_rol: rol, p_nuevo_nivel_admin: nivel === 'none' ? null : nivel });
     if (!rows[0].success) { alert(rows[0].message); return; }
     closeModal('modal-change-role');
     loadAllData();
@@ -1531,7 +1500,7 @@ async function submitGenerateCode() {
   const rol = document.getElementById('gencode-rol').value;
   const tienda = document.getElementById('gencode-tienda').value.trim();
   try {
-    const rows = await sbFetch('rpc/admin_generar_codigo', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id, p_rol_asignado: rol, p_tienda_asignada: tienda || null, p_cantidad: qty }) });
+    const rows = await DH.rpc('admin_generar_codigo', { p_rol_asignado: rol, p_tienda_asignada: tienda || null, p_cantidad: qty });
     const codes = (rows || []).map(r => r.codigo);
     document.getElementById('gencode-result-list').innerHTML = codes.map(cd => `<div>${cd}</div>`).join('');
     document.getElementById('gencode-result').style.display = 'block';
@@ -1578,7 +1547,7 @@ function exportFullListCSV() {
 async function deleteAttempt(recordId, empName, certLabel, statusText) {
   if (!confirm(`Delete this ${certLabel} attempt for ${empName} (${statusText})?\n\nThis cannot be undone.`)) return;
   try {
-    const rows = await sbFetch('rpc/admin_eliminar_intento_certificacion', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id, p_intento_id: recordId, p_detalle: `${empName} — ${certLabel} — ${statusText}` }) });
+    const rows = await DH.rpc('admin_eliminar_intento_certificacion', { p_intento_id: recordId, p_detalle: `${empName} — ${certLabel} — ${statusText}` });
     if (!rows[0].success) { alert(rows[0].message); return; }
     loadAllData();
   } catch (err) { alert('Error deleting attempt: ' + err.message); }
@@ -1587,7 +1556,7 @@ async function deleteAttempt(recordId, empName, certLabel, statusText) {
 /* ════════ CODES ════════ */
 async function loadCodes() {
   try {
-    const codes = await sbFetch('codigos_invitacion?select=codigo,usado,used_at,usado_por_empleado_id,created_at&order=created_at.desc');
+    const codes = await DH.rpc('admin_codigos_listar');
     cachedData.codes = codes;
     const usedCount = codes.filter(c => c.usado).length;
     document.getElementById('kpi-codes').textContent = `${usedCount}/${codes.length}`;
@@ -1617,7 +1586,7 @@ function openCodesFullList() {
 /* ════════ LEAD SOURCE ════════ */
 async function loadLeadSource() {
   try {
-    const entries = await sbFetch('customer_source_log?select=*&order=submitted_at.desc');
+    const entries = await DH.rpc('admin_lead_source_listar');
     cachedData.leadsource = entries;
     document.getElementById('kpi-ls-total').textContent = entries.length;
     const sourceCounts = {}, empCounts = {};
@@ -1644,7 +1613,7 @@ function openLeadSourceFullList() {
 /* ════════ AUDIT LOG ════════ */
 async function loadAuditLog() {
   try {
-    const logs = await sbFetch('admin_audit_log?select=*&order=created_at.desc&limit=500');
+    const logs = await DH.rpc('admin_audit_listar', { p_limit: 500 });
     cachedData.auditlog = logs;
     const tbody = document.getElementById('tbl-auditlog-body');
     if (logs.length === 0) { tbody.innerHTML = `<tr><td colspan="4" class="empty-state">No admin actions recorded yet.</td></tr>`; return; }
@@ -1662,7 +1631,7 @@ function openAuditLogFullList() {
 async function deleteEmployee(empId, name) {
   if (!confirm(`Delete ${name}? This also deletes their certification history. Cannot be undone.`)) return;
   try {
-    const rows = await sbFetch('rpc/admin_eliminar_empleado', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id, p_empleado_id: empId }) });
+    const rows = await DH.rpc('admin_eliminar_empleado', { p_empleado_id: empId });
     if (!rows[0].success) { alert(rows[0].message); return; }
     loadEmployees(); loadAuditLog();
   } catch (err) { alert('Error deleting employee: ' + err.message); }
@@ -1680,7 +1649,7 @@ function openResetModal(empId, empName) {
 async function submitResetPassword() {
   if (!resetPwTarget) return;
   try {
-    const rows = await sbFetch('rpc/admin_iniciar_reset_password', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id, p_empleado_id: resetPwTarget.empId }) });
+    const rows = await DH.rpc('admin_iniciar_reset_password', { p_empleado_id: resetPwTarget.empId });
     if (!rows[0].success) { alert(rows[0].message); return; }
     document.getElementById('reset-pw-value').textContent = rows[0].codigo;
     document.getElementById('reset-pw-result').style.display = 'block';
@@ -1708,7 +1677,7 @@ async function submitPlantCert() {
   const date = document.getElementById('plant-date').value;
   if (!empId || !score || !total || !date) { errEl.textContent = 'Please fill in all fields.'; errEl.classList.add('show'); return; }
   try {
-    const rows = await sbFetch('rpc/admin_sembrar_certificacion', { method: 'POST', body: JSON.stringify({ p_admin_id: admin.id, p_empleado_id: empId, p_certificacion: cert, p_score: score, p_total_puntos: total, p_fecha: new Date(date).toISOString() }) });
+    const rows = await DH.rpc('admin_sembrar_certificacion', { p_empleado_id: empId, p_certificacion: cert, p_score: score, p_total_puntos: total, p_fecha: new Date(date).toISOString() });
     if (!rows[0].success) { errEl.textContent = rows[0].message; errEl.classList.add('show'); return; }
     closeModal('modal-plant');
     loadAllData();
@@ -1759,6 +1728,20 @@ document.addEventListener('DOMContentLoaded', () => {
   btn.onclick = openPlantModal;
   document.getElementById('screen-cockpit').appendChild(btn);
 });
+
+/* /next/: if the hub already signed this tab in with an admin account, skip the login screen. */
+(async function restoreAdminSession() {
+  const emp = await DH.restore();
+  if (!emp || !emp.es_admin) return;
+  admin = emp;
+  document.getElementById('screen-admin-login').classList.remove('active');
+  document.getElementById('screen-cockpit').classList.add('active');
+  let tierLabel = 'Admin';
+  if (isSuperAdmin()) tierLabel = 'Super Admin';
+  else if (isViewOnly()) tierLabel = 'Store Management — View Only';
+  document.getElementById('admin-greeting').textContent = `Signed in as ${emp.nombre_completo} (${tierLabel})`;
+  loadAllData();
+})();
 </script>
 <script>
 /* Admin modules: collapsed by default, click a header to expand */
