@@ -600,6 +600,9 @@ async function sbFetch(path, options = {}) {
 let admin = null;
 const isSuperAdmin = () => !!(admin && admin.nivel_admin === 'super_admin');
 const isViewOnly = () => !!(admin && admin.nivel_admin === 'manager_visor');
+// HR manager (Rey Quiroz) can edit org chart, roster, names and departments like the Super Admin; the server enforces the same rule.
+const isHR = () => !!(admin && /^rey\s+quiroz/i.test(admin.nombre_completo || ''));
+const canOrg = () => isSuperAdmin() || isHR();
 let roleChangeTarget = null;
 let cachedData = { employees: [], codes: [], leadsource: [], auditlog: [], certAttempts: [], certResets: [], organigrama: [] };
 let certResetTarget = null;
@@ -688,7 +691,7 @@ async function loadOrganigrama() {
     cachedData.organigrama = [];
     document.getElementById('tbl-organigrama-body').innerHTML = `<tr><td colspan="7" class="empty-state">Table not set up yet — run the migration SQL first.</td></tr>`;
   }
-  if (!isSuperAdmin()) {
+  if (!canOrg()) {
     const btn = document.getElementById('btn-org-upload-open');
     if (btn) btn.style.display = 'none';
   }
@@ -712,13 +715,13 @@ function renderOrganigramaTable(rows) {
       <td>${r.track}</td>
       <td>${r.nivel}</td>
       <td>${r.titulo_display || (emp ? emp.rol : '')}</td>
-      <td>${isSuperAdmin() ? `<button class="btn btn-red" style="padding:4px 10px;font-size:11px;" onclick="deleteOrgRow('${r.id}')">Remove</button>` : ''}</td>
+      <td>${canOrg() ? `<button class="btn btn-red" style="padding:4px 10px;font-size:11px;" onclick="deleteOrgRow('${r.id}')">Remove</button>` : ''}</td>
     </tr>`;
   }).join('');
 }
 
 function openAddOrgRowModal() {
-  if (!isSuperAdmin()) { alert('Only a Super Admin can edit the organigrama.'); return; }
+  if (!canOrg()) { alert('Only the Super Admin or HR can edit the organigrama.'); return; }
   const employees = (cachedData.employees || []).slice().sort((a, b) => (a.nombre_completo || '').localeCompare(b.nombre_completo || ''));
   const empSelect = document.getElementById('org-row-employee');
   const supSelect = document.getElementById('org-row-supervisor');
@@ -815,7 +818,7 @@ async function loadEvalDist() {
 async function loadRoster() {
   const sec = document.getElementById('section-roster');
   if (!sec) return;
-  if (!isSuperAdmin()) { sec.style.display = 'none'; return; }
+  if (!canOrg()) { sec.style.display = 'none'; return; }
   sec.style.display = '';
   const body = document.getElementById('tbl-roster-body');
   try {
@@ -1200,12 +1203,13 @@ function renderEmployeesTable(employees) {
     const isMe = admin && e.id === admin.id;
     const changeRoleBtn = (isSuperAdmin() && !isMe) ? `<button class="btn btn-ghost" onclick="openChangeRoleModal('${e.id}','${escName}','${e.rol}','${e.nivel_admin || ''}')">Change Role</button>` : '';
     const deptDisplay = e.departamento ? e.departamento.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase()) : '<span style="color:var(--red)">Unset</span>';
-    const reclassifyBtn = isSuperAdmin() ? ` <button class="btn btn-ghost" style="padding:2px 8px;font-size:11px;" onclick="openReclassifyModal('${e.id}','${escName}','${e.departamento || ''}')">✎</button>` : '';
+    const reclassifyBtn = canOrg() ? ` <button class="btn btn-ghost" style="padding:2px 8px;font-size:11px;" onclick="openReclassifyModal('${e.id}','${escName}','${e.departamento || ''}')">✎</button>` : '';
+    const renameBtn = canOrg() ? ` <button class="btn btn-ghost" style="padding:2px 8px;font-size:11px;" title="Rename" onclick="renameEmployee('${e.id}','${escName}')">✎ Name</button>` : '';
     const canEditStore = isSuperAdmin() || (admin && admin.nivel_admin === 'admin_secundario');
     const storeDisplay = e.tienda || '<span style="color:var(--red)">Unset</span>';
     const storeBtn = canEditStore ? ` <button class="btn btn-ghost" style="padding:2px 8px;font-size:11px;" onclick="openReclassifyStoreModal('${e.id}','${escName}','${e.tienda || ''}')">✎</button>` : '';
     return `<tr>
-      <td>${e.nombre_completo}${adminBadge}${isMe ? ' <span class="pill pill-gray">YOU</span>' : ''}</td>
+      <td>${e.nombre_completo}${renameBtn}${adminBadge}${isMe ? ' <span class="pill pill-gray">YOU</span>' : ''}</td>
       <td>${e.username}</td>
       <td>${e.employee_id || '—'}</td>
       <td>${e.tienda || '—'}</td>
@@ -1225,9 +1229,20 @@ function renderEmployeesTable(employees) {
 
 /* ════════ RECLASSIFY — BUG FIX: reset button state on success ════════ */
 let reclassifyTarget = null;
+async function renameEmployee(empId, currentName) {
+  if (!canOrg()) { alert('Only the Super Admin or HR can change names.'); return; }
+  const nuevo = prompt('New full name for ' + currentName + ':', currentName);
+  if (nuevo === null || nuevo.trim() === '' || nuevo.trim() === currentName) return;
+  try {
+    const rows = await DH.rpc('admin_empleado_renombrar', { p_empleado_id: empId, p_nombre: nuevo.trim() });
+    const r = Array.isArray(rows) ? rows[0] : rows;
+    if (!r || !r.success) { alert((r && r.message) || 'Could not rename.'); return; }
+    loadEmployees();
+  } catch (err) { alert('Error: ' + err.message); }
+}
 
 function openReclassifyModal(empId, empName, currentDept) {
-  if (!isSuperAdmin()) { alert('Only a Super Admin can reclassify departments.'); return; }
+  if (!canOrg()) { alert('Only the Super Admin or HR can reclassify departments.'); return; }
   reclassifyTarget = empId;
   document.getElementById('reclassify-desc').textContent = `${empName} — pick the correct department.`;
   document.getElementById('reclassify-departamento').value = currentDept || 'sales';
