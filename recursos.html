@@ -31,9 +31,9 @@
 <body>
 <header><h1>📚 Resources / Recursos</h1><a href="index.html">← Home / Inicio</a></header>
 <main>
-  <div class="note">Files stored here open directly. Items marked "SharePoint" are links to the company SharePoint and need a Daniels Microsoft account. / Los archivos guardados aquí se abren directo. Los marcados "SharePoint" son links al SharePoint de la empresa y requieren cuenta Microsoft de Daniels.</div>
+  <div class="note">Everything here opens straight from My Workspace — no Microsoft account needed. PDFs and images open in the browser; Excel/Word/PowerPoint files download. / Todo se abre directo desde My Workspace, sin cuenta Microsoft. Los PDF e imágenes se abren en el navegador; los archivos de Excel, Word y PowerPoint se descargan.</div>
   <div id="msg" class="msg hide"></div>
-  <div style="font-size:10px;color:#aaa;text-align:right;margin:-8px 0 6px">page v8</div>
+  <div style="font-size:10px;color:#aaa;text-align:right;margin:-8px 0 6px">page v9</div>
   <div class="bar"><input id="q" placeholder="Search / Buscar…" oninput="render()"><select id="lang" onchange="render()"><option value="">All languages / Todos los idiomas</option><option>EN</option><option>ES</option></select></div>
   <div id="edit" class="card hide" style="margin-bottom:14px"></div>
   <div id="list"></div>
@@ -55,12 +55,25 @@ async function openFile(id){
   try{const u=await DH.files.sign([it.archivo_id]); const f=u[it.archivo_id]; if(!f)throw new Error('unavailable'); if(w){w.opener=null;w.location=f.url;}else{location.href=f.url;}}
   catch(e){if(w)w.close();err('Could not open the file. / No se pudo abrir el archivo.');}
 }
+const CAT_ORDER=['Sales Resources','Credit','Infinity','Training','Policies','Safety','Manager Tools'];
+const CAT_ICON={'Sales Resources':'🛋️','Credit':'💳','Infinity':'🏦','Training':'🎓','Policies':'📜','Safety':'🦺','Manager Tools':'🧰'};
+function catRank(c){const i=CAT_ORDER.findIndex(k=>c.startsWith(k));return i<0?99:i;}
+function catIcon(c){const k=CAT_ORDER.find(k=>c.startsWith(k));return k?CAT_ICON[k]:'📁';}
+function fileIcon(i){const m=i.mime||'';if(!i.archivo_id)return /google\.com/.test(i.url||'')?'📊':'🔗';
+  if(m==='application/pdf')return '📕'; if(/excel|spreadsheet/.test(m))return '📗'; if(/word/.test(m))return '📘'; if(/powerpoint|presentation/.test(m))return '📙'; if(/^image/.test(m))return '🖼️'; return '📄';}
+function fileKind(i){const m=i.mime||'';if(!i.archivo_id)return /google\.com/.test(i.url||'')?'Google':'Link';
+  if(m==='application/pdf')return 'PDF'; if(/excel|spreadsheet/.test(m))return 'Excel'; if(/word/.test(m))return 'Word'; if(/powerpoint|presentation/.test(m))return 'PowerPoint'; if(/^image/.test(m))return 'Image'; return 'File';}
+function slug(c){return 'c-'+c.replace(/[^a-z0-9]+/gi,'-').toLowerCase();}
 function render(){
   const q=($('q').value||'').toLowerCase(), lang=$('lang').value;
-  const items=(D.items||[]).filter(i=>(!lang||i.idioma===lang)&&(!q||(i.titulo+' '+i.categoria).toLowerCase().includes(q)));
+  const items=(D.items||[]).filter(i=>(!lang||i.idioma===lang||i.idioma==='EN/ES')&&(!q||(i.titulo+' '+i.categoria+' '+(i.descripcion||'')).toLowerCase().includes(q)));
   const cats={}; items.forEach(i=>(cats[i.categoria]=cats[i.categoria]||[]).push(i));
-  let html=Object.keys(cats).sort().map(c=>`<div class="cat"><h2>${esc(c)}</h2>${cats[c].map(i=>`<div class="item"><div class="ico">📄</div><div class="t"><b>${esc(i.titulo)}</b><small>${esc(i.descripcion||'')}</small></div><span class="tag">${esc(i.idioma)}</span>${i.activo?'':'<span class="tag off">hidden</span>'}${D.puede_editar?`<button class="btn ghost sm" onclick="edit('${i.id}')">Edit</button>`:''}${i.archivo_id?`<button class="btn" onclick="openFile('${i.id}')">Open / Abrir</button>`:`<a class="btn" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer">Open / Abrir <small>(${/google\.com/.test(i.url||'')?'Google':/sharepoint/.test(i.url||'')?'SharePoint':'Web'})</small></a>`}</div>`).join('')}</div>`).join('');
+  const names=Object.keys(cats).sort((x,y)=>catRank(x)-catRank(y)||x.localeCompare(y));
+  names.forEach(c=>cats[c].sort((x,y)=>(x.orden||0)-(y.orden||0)||x.titulo.localeCompare(y.titulo)));
+  const index=names.length>1?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">${names.map(c=>`<a href="#${slug(c)}" style="text-decoration:none;background:#fff;border:1px solid #d6dbe6;border-radius:20px;padding:6px 12px;font-size:12px;font-weight:700;color:var(--navy)">${catIcon(c)} ${esc(c.split(' / ')[0].split(' (')[0])} <span style="color:var(--gray);font-weight:400">${cats[c].length}</span></a>`).join('')}</div>`:'';
+  let html=names.map(c=>`<div class="cat" id="${slug(c)}" style="scroll-margin-top:12px"><h2 style="display:flex;align-items:center;gap:8px;border-bottom:2px solid var(--gold);padding-bottom:6px;margin-bottom:10px">${catIcon(c)} ${esc(c)} <span class="tag" style="margin-left:auto">${cats[c].length}</span></h2>${cats[c].map(i=>`<div class="item"><div class="ico">${fileIcon(i)}</div><div class="t"><b>${esc(i.titulo)}</b><small>${esc(i.descripcion||'')}${i.roles?` <em>· ${esc(i.roles.join(', '))}</em>`:''}</small></div><span class="tag">${esc(i.idioma)}</span><span class="tag" style="background:#eee;color:#555">${fileKind(i)}</span>${i.activo?'':'<span class="tag off">hidden</span>'}${D.puede_editar?`<button class="btn ghost sm" onclick="edit('${i.id}')">Edit</button>`:''}${i.archivo_id?`<button class="btn" onclick="openFile('${i.id}')">${/^application\/pdf$|^image/.test(i.mime||'')?'Open / Abrir':'Download / Descargar'}</button>`:`<a class="btn" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer">Open / Abrir</a>`}</div>`).join('')}</div>`).join('');
   if(!html)html='<div class="card">Nothing found. / No se encontró nada.</div>';
+  html=index+html;
   if(D.puede_editar)html='<div style="margin-bottom:12px"><button type="button" class="btn ghost" id="btn-add">+ Add resource</button> <button type="button" class="btn" id="btn-bulk">⬆ Bulk upload / Subida masiva</button></div>'+html;
   $('list').innerHTML=html;
   const ba=$('btn-add'), bb=$('btn-bulk');
