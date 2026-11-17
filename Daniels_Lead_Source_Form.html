@@ -111,7 +111,7 @@
   <div class="logo-block">
     <div>
       <div class="logo-text">🏠 DANIEL'S HOME CENTER</div>
-      <div class="logo-sub">How Did They Hear About Us?</div>
+      <div class="logo-sub">How Did They Hear About Us? / ¿Cómo Nos Conoció?</div>
     </div>
   </div>
 </div>
@@ -120,80 +120,80 @@
 <!-- SCREEN 2: SOURCE SELECTION -->
 <div class="screen active" id="screen-source">
   <div class="content">
-    <div class="grid-title">How did the customer<br>hear about us?</div>
-    <div class="grid-sub">Tap one — you can add a note if needed</div>
+    <div class="grid-title">How did the customer<br>hear about us?<br><span style="font-size:.7em;font-weight:600;opacity:.85">¿Cómo se enteró el cliente<br>de nosotros?</span></div>
+    <div class="grid-sub">Tap one — you can add a note if needed / Toca una opción — puedes agregar una nota</div>
 
     <div class="source-grid" id="source-grid">
       <div class="source-tile google" data-source="Google Search" onclick="selectSource(this)">
         <div class="checkmark">✓</div>
         <div class="icon">🔍</div>
-        <div class="label">Google Search</div>
+        <div class="label">Google Search / Búsqueda en Google</div>
       </div>
       <div class="source-tile daniels" data-source="Daniels Website" onclick="selectSource(this)">
         <div class="checkmark">✓</div>
         <div class="icon">🌐</div>
-        <div class="label">Daniels Website</div>
+        <div class="label">Daniels Website / Sitio Web de Daniels</div>
       </div>
       <div class="source-tile wrap" data-source="Wrap Flyer" onclick="selectSource(this)">
         <div class="checkmark">✓</div>
         <div class="icon">📰</div>
-        <div class="label">Wrap Flyer</div>
+        <div class="label">Wrap Flyer / Volante en Vehículo</div>
       </div>
       <div class="source-tile facebook" data-source="Facebook" onclick="selectSource(this)">
         <div class="checkmark">✓</div>
         <div class="icon">📘</div>
-        <div class="label">Facebook</div>
+        <div class="label">Facebook / Facebook</div>
       </div>
       <div class="source-tile instagram" data-source="Instagram" onclick="selectSource(this)">
         <div class="checkmark">✓</div>
         <div class="icon">📷</div>
-        <div class="label">Instagram</div>
+        <div class="label">Instagram / Instagram</div>
       </div>
       <div class="source-tile walked" data-source="Walked By / Passing Location" onclick="selectSource(this)">
         <div class="checkmark">✓</div>
         <div class="icon">🚶</div>
-        <div class="label">Walked By / Passing Location</div>
+        <div class="label">Walked By / Pasó por la Tienda</div>
       </div>
       <div class="source-tile friend" data-source="Referred by Friend" onclick="selectSource(this)">
         <div class="checkmark">✓</div>
         <div class="icon">🗣️</div>
-        <div class="label">Referred by Friend</div>
+        <div class="label">Referred by Friend / Recomendado por Amigo</div>
       </div>
       <div class="source-tile family" data-source="Referred by Family Member" onclick="selectSource(this)">
         <div class="checkmark">✓</div>
         <div class="icon">👨‍👩‍👧</div>
-        <div class="label">Family Member</div>
+        <div class="label">Family Member / Familiar</div>
       </div>
       <div class="source-tile tv" data-source="TV Commercial" onclick="selectSource(this)">
         <div class="checkmark">✓</div>
         <div class="icon">📺</div>
-        <div class="label">TV Commercial</div>
+        <div class="label">TV Commercial / Comercial de TV</div>
       </div>
       <div class="source-tile billboard" data-source="Billboard" onclick="selectSource(this)">
         <div class="checkmark">✓</div>
         <div class="icon">🛣️</div>
-        <div class="label">Billboard</div>
+        <div class="label">Billboard / Espectacular</div>
       </div>
       <div class="source-tile textcampaign" data-source="Text Campaign" onclick="selectSource(this)">
         <div class="checkmark">✓</div>
         <div class="icon">💬</div>
-        <div class="label">Text Campaign</div>
+        <div class="label">Text Campaign / Mensaje de Texto</div>
       </div>
       <div class="source-tile other" data-source="Other" onclick="selectSource(this)" style="grid-column:span 2;">
         <div class="checkmark">✓</div>
         <div class="icon">✏️</div>
-        <div class="label">Other</div>
+        <div class="label">Other / Otro</div>
       </div>
     </div>
 
     <div class="other-detail" id="other-detail">
-      <textarea id="other-text" placeholder="Briefly describe the source..."></textarea>
+      <textarea id="other-text" placeholder="Briefly describe the source... / Describe brevemente la fuente..."></textarea>
     </div>
   </div>
   <div class="bottom-bar">
     <div class="bottom-bar-inner">
-      <button class="btn btn-primary" id="btn-submit" onclick="submitForm()" disabled>Submit</button>
-      <button class="btn btn-ghost" onclick="goBackToHub()">← Back</button>
+      <button class="btn btn-primary" id="btn-submit" onclick="submitForm()" disabled>Submit / Enviar</button>
+      <button class="btn btn-ghost" onclick="goBackToHub()">← Back / Regresar</button>
     </div>
   </div>
 </div>
@@ -202,13 +202,13 @@
 <div class="screen" id="screen-success">
   <div class="success-wrap">
     <div class="success-icon">✓</div>
-    <div class="success-title">Got it — thank you!</div>
-    <div class="success-sub">This helps Daniel's understand what's working and invest in the right places.</div>
+    <div class="success-title">Got it — thank you! / ¡Listo, gracias!</div>
+    <div class="success-sub">This helps Daniel's understand what's working and invest in the right places. / Esto ayuda a Daniel's a saber qué funciona y dónde invertir.</div>
     <div class="success-summary">
-      <div class="row"><span class="k">Source</span><span class="v" id="sum-source">—</span></div>
-      <div class="row"><span class="k">Date</span><span class="v" id="sum-date">—</span></div>
+      <div class="row"><span class="k">Source / Fuente</span><span class="v" id="sum-source">—</span></div>
+      <div class="row"><span class="k">Date / Fecha</span><span class="v" id="sum-date">—</span></div>
     </div>
-    <button class="btn btn-gold" style="max-width:280px" onclick="resetForm()">+ New Entry</button>
+    <button class="btn btn-gold" style="max-width:280px" onclick="resetForm()">+ New Entry / Nueva Entrada</button>
   </div>
 </div>
 
@@ -309,7 +309,7 @@ function selectSource(el) {
 async function submitForm() {
   const btn = document.getElementById('btn-submit');
   btn.disabled = true;
-  btn.textContent = 'Saving...';
+  btn.textContent = 'Saving... / Guardando...';
 
   state.otherNote = document.getElementById('other-text').value.trim();
 
@@ -330,7 +330,7 @@ async function submitForm() {
   document.getElementById('screen-source').classList.remove('active');
   document.getElementById('screen-success').classList.add('active');
   btn.disabled = false;
-  btn.textContent = 'Submit';
+  btn.textContent = 'Submit / Enviar';
 }
 
 function resetForm() {

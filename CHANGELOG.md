@@ -79,3 +79,9 @@ Cierre Fase 4 (verificado como rol anon): 0 filas en empleados y evaluaciones; `
 - Tested in rolled-back DB test: admin sees recommendation, evaluee does not.
 - Rollback: restore previous Daniels_Evaluacion_Ventas.html from git (commit before this one); DB columns are additive and harmless.
 - Pending: score-distribution view per evaluator (anti-leniency), Rey visibility decisions.
+
+## 2026-11-16 (noche) — Bilingual pass + evaluator distribution
+- Bilingual EN/ES (inline "EN / ES" style): index (login, signup, reset, password change, dashboard, badges, cert cards, history, all runtime errors/banners), Lead Source form (labels only; stored `data-source` values unchanged so reports keep working), Tier 1/2 exam intro screens. Exams and evaluation module were already bilingual.
+- Left English-only by decision: Org Chart (user request), Admin Cockpit (admin tool), certificate text.
+- New `admin_eval_distribucion` RPC (token + id overloads; id overload not executable by anon; returns [] for non-leadership) and cockpit section "Rating Distribution by Evaluator": n, average, min–max, spread, % ≥90, % raise/promotion, flag "Review leniency" (avg ≥ 88 or spread < 5 with 3+ evals).
+- Verified: exam size is 28 per attempt (static "38" in HTML is overwritten at render).

@@ -207,6 +207,15 @@
       </div>
     </div>
 
+    <div class="section" id="section-eval-dist" style="display:none">
+      <div class="section-hdr"><h2>⚖️ Rating Distribution by Evaluator</h2></div>
+      <p style="font-size:12px;color:var(--mgray);margin-bottom:14px;">Supervisor evaluations this cycle. Flags evaluators who rate everyone high or almost the same (average ≥ 88, spread under 5 with 3+ evaluations) so scores stay comparable across teams. Leadership only.</p>
+      <div style="overflow-x:auto"><table>
+        <thead><tr><th>Evaluator</th><th>Evals</th><th>Average</th><th>Min–Max</th><th>Spread</th><th>% ≥ 90</th><th>% raise / promotion</th><th>Flag</th></tr></thead>
+        <tbody id="tbl-eval-dist-body"><tr><td colspan="8" class="empty-state">Loading...</td></tr></tbody>
+      </table></div>
+    </div>
+
     <div class="section" id="section-eval-results" style="display:none">
       <div class="section-hdr"><h2>📊 Evaluation Progress &amp; Results <span id="prog-cycle" style="font-size:12px;color:var(--mgray);font-weight:400;"></span></h2>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -629,7 +638,7 @@ async function handleAdminLogin() {
 /* ════════ LOAD DATA ════════ */
 async function loadAllData() {
   await loadCertAttempts();
-  await Promise.all([loadEmployees(), loadCodes(), loadLeadSource(), loadAuditLog(), loadOrganigrama(), loadEvalCycles(), loadMgrFeedback(), loadEvalConfig(), loadEvalResults(), loadRoster()]);
+  await Promise.all([loadEmployees(), loadCodes(), loadLeadSource(), loadAuditLog(), loadOrganigrama(), loadEvalCycles(), loadMgrFeedback(), loadEvalDist(), loadEvalConfig(), loadEvalResults(), loadRoster()]);
   renderCertAttemptsTable(cachedData.certAttempts);
   const plantBtn = document.getElementById('btn-plant-cert-floating');
   if (plantBtn) plantBtn.style.display = isViewOnly() ? 'none' : 'block';
@@ -786,6 +795,21 @@ async function loadMgrFeedback() {
   } catch (err) {
     body.innerHTML = `<tr><td colspan="10" class="empty-state">Could not load: ${err.message}</td></tr>`;
   }
+}
+
+async function loadEvalDist() {
+  const sec = document.getElementById('section-eval-dist');
+  if (!sec) return;
+  let rows = [];
+  try { rows = await DH.rpc('admin_eval_distribucion') || []; } catch (e) { rows = []; }
+  if (!rows.length && !isSuperAdmin()) { sec.style.display = 'none'; return; }
+  sec.style.display = '';
+  const body = document.getElementById('tbl-eval-dist-body');
+  if (!rows.length) { body.innerHTML = '<tr><td colspan="8" class="empty-state">No supervisor evaluations yet this cycle.</td></tr>'; return; }
+  body.innerHTML = rows.map(r => {
+    const flag = (r.n >= 3 && (Number(r.promedio) >= 88 || Number(r.desv) < 5)) ? '<span class="pill pill-gold">Review leniency</span>' : '<span class="pill pill-green">OK</span>';
+    return `<tr><td><strong>${pesc(r.evaluador)}</strong></td><td>${r.n}</td><td>${r.promedio}</td><td>${r.minimo}–${r.maximo}</td><td>${r.desv}</td><td>${r.pct_90}%</td><td>${r.pct_aumento}%</td><td>${flag}</td></tr>`;
+  }).join('');
 }
 
 async function loadRoster() {
