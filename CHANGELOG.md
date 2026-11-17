@@ -2,7 +2,7 @@
 
 Repo: rodrigomora-daniels/daniels-vendor-hub (main, GitHub Pages) · Supabase: ecfxeebhtgkbsdeuiueb
 App: https://rodrigomora-daniels.github.io/daniels-vendor-hub/index.html
-Punto de restauración: tag `release-2026-11-16` (commit más reciente al cierre de este documento).
+Punto de restauración: commit `9838fca` (último cambio funcional del 16 nov; el tag no se pudo subir a GitHub desde este entorno).
 
 ## Línea de tiempo
 
@@ -39,7 +39,7 @@ Cierre Fase 4 (verificado como rol anon): 0 filas en empleados y evaluaciones; `
 ## Cómo revertir
 - **Páginas:** copiar `backup_pre_phase4/*` a la raíz (incluye `Daniels_Manager_Cert.html`, huérfana) y volver a `sw.js` cache `dhc-v1`; o `git revert 3ebff90`. Ojo: las páginas viejas dependen de las políticas/funciones antiguas, hay que revertir también la base.
 - **Base de datos:** SQL de rollback de políticas en `security/06_phase4_lockdown.sql`; funciones: `grant execute on function ... to anon` por firma. Revertir páginas y base juntas o ninguna.
-- **Punto completo:** tag `release-2026-11-16`.
+- **Punto completo:** commit `9838fca`.
 
 ## Limitaciones conocidas
 - Los puntajes calculados en el navegador (evaluaciones, exámenes) el servidor los acepta tal cual.
