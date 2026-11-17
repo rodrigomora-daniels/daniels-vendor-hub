@@ -47,6 +47,11 @@ Cierre Fase 4 (verificado como rol anon): 0 filas en empleados y evaluaciones; `
 - Auditoría funcional previa al lanzamiento: ver incidente anterior; además se corrigió `codigo_signup_info` (pasó a VOLATILE, habría roto el registro con código) y `admin_organigrama_guardar` (convierte `nivel` a entero).
 - Se agregó un código personal para Dennis Jover (total 41 códigos, ninguno usado) y el Excel se regeneró.
 
+## Plantilla de ventas alineada al coaching log real (16 nov, 17:56)
+- Fuente: "Progress Appraisal Report" de Jaime González (semana 1–7 nov, Brenda Vaccaro) y reporte semanal de ventas. Metas reales: ventas $70,000 por 4 semanas, servicios 10% (W2/W3 1.5%, Profit Boost 3.5%, Fabric Protection 5%), descuentos ≤1.8%, ticket promedio $1,350.
+- Plantilla `vendedor` ahora: Monthly sales 40% (30–55) · Attachment rate 25% (15–35) · Average ticket 15% (10–25, meta $1,350, piso $1,200 = propuesta) · Lead source logged 10% (5–15) · Discounts 10% (5–15, meta ≤1.8%, dirección "menor es mejor"). Close rate se retiró porque no está en el coaching report. Suma 100.
+- Pendiente: `sales_sup` conserva su plantilla anterior; el coaching log muestra revisión semanal/quincenal, no se ha reflejado en la cadencia.
+
 ## Cómo revertir
 - **Páginas:** copiar `backup_pre_phase4/*` a la raíz (incluye `Daniels_Manager_Cert.html`, huérfana) y volver a `sw.js` cache `dhc-v1`; o `git revert 3ebff90`. Ojo: las páginas viejas dependen de las políticas/funciones antiguas, hay que revertir también la base.
 - **Base de datos:** SQL de rollback de políticas en `security/06_phase4_lockdown.sql`; funciones: `grant execute on function ... to anon` por firma. Revertir páginas y base juntas o ninguna.
