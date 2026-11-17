@@ -332,12 +332,12 @@
           <h3>Certifications</h3>
           <p>Take your Sales Tier 1 &amp; Tier 2 exams, track your progress, and download your certificates.</p>
         </div>
-        <div class="home-card" onclick="navigateToTool('prescreen')">
+        <div class="home-card" id="card-prescreen" onclick="navigateToTool('prescreen')">
           <div class="home-card-icon">📊</div>
           <h3>Pre-Screener</h3>
           <p>Run a quick credit pre-screen for a customer before starting paperwork.</p>
         </div>
-        <div class="home-card" onclick="navigateToTool('leadsource')">
+        <div class="home-card" id="card-leadsource" onclick="navigateToTool('leadsource')">
           <div class="home-card-icon">📍</div>
           <h3>How They Found Us</h3>
           <p>Quick 10-second check-in — helps us understand where customers come from.</p>
@@ -792,7 +792,11 @@ async function loadDashboard() {
   // Certifications (Tier 1/Tier 2) are sales-specific exams — only show the
   // card/tab to people registered under the Sales department. Admins always
   // see it too, since they may need to preview or plant certifications.
-  const showCerts = emp.departamento === 'sales' || emp.es_admin;
+  // Everyone sees Certifications, Evaluation and the Org Chart. The Pre-Screener and
+  // "How They Found Us" are store tools: only Sales / Store Management, admins, and the owners (Ted, Karen).
+  const canSeeStoreTools = ['sales', 'store_management', 'senior_management'].includes(emp.departamento) || emp.es_admin || /^(ted|karen)\s+rosenberg/i.test(emp.nombre_completo || '');
+  ['card-prescreen', 'card-leadsource'].forEach(id => { const c = document.getElementById(id); if (c) c.style.display = canSeeStoreTools ? '' : 'none'; });
+  const showCerts = true;
   const certCard = document.getElementById('card-certifications');
   const certNavTab = document.getElementById('navtab-certifications');
   if (certCard) certCard.style.display = showCerts ? '' : 'none';
