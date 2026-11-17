@@ -354,18 +354,7 @@ async function saveResultToSupabase(scored, totalPts, pct, pass, elapsed) {
     estado: 'completed'
   };
   try {
-    if (currentRecordId) {
-      await sbFetch(`certificaciones_progreso?id=eq.${currentRecordId}`, {
-        method: 'PATCH',
-        body: JSON.stringify(record)
-      });
-    } else {
-      // Fallback safety net: no start-record exists (shouldn't normally happen) — insert full result directly.
-      await sbFetch('certificaciones_progreso', {
-        method: 'POST',
-        body: JSON.stringify({ empleado_id: loggedInEmployee.id, certificacion: TIER_KEY, started_at: new Date().toISOString(), ...record })
-      });
-    }
+    await DH.rpc('cert_intento_guardar', { p_id: currentRecordId, p_certificacion: TIER_KEY, p_record: record });
     console.log('Result saved to Supabase successfully.');
   } catch (err) {
     console.error('Failed to save result to Supabase:', err);
@@ -2078,16 +2067,8 @@ async function beginExamFlow(){
 
   if (loggedInEmployee && !loggedInEmployee.es_admin) {
     try {
-      const inserted = await sbFetch('certificaciones_progreso', {
-        method:'POST',
-        body: JSON.stringify({
-          empleado_id: loggedInEmployee.id,
-          certificacion: TIER_KEY,
-          started_at: new Date().toISOString(),
-          estado: 'in_progress'
-        })
-      });
-      if (inserted && inserted.length) currentRecordId = inserted[0].id;
+      const newId = await DH.rpc('cert_intento_iniciar', { p_certificacion: TIER_KEY });
+      if (newId) currentRecordId = newId;
     } catch(err){
       console.error('Could not register attempt start:', err);
       alert('There was a problem starting the exam. Please try again or contact your manager. / Hubo un problema al iniciar el examen. Intenta de nuevo o contacta a tu gerente.');
@@ -2172,11 +2153,11 @@ function markAbandonedBeacon(){
   const examScreen = document.getElementById('screen-exam');
   if (!examScreen || !examScreen.classList.contains('active')) return;
   try {
-    fetch(`${SUPABASE_URL}/rest/v1/certificaciones_progreso?id=eq.${currentRecordId}`, {
-      method:'PATCH',
+    fetch(`${SUPABASE_URL}/rest/v1/rpc/cert_intento_abandonar`, {
+      method:'POST',
       keepalive:true,
       headers:{ 'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':`Bearer ${SUPABASE_KEY}` },
-      body: JSON.stringify({ estado:'abandoned', tiempo_usado_segundos: Math.floor((Date.now()-state.startTime)/1000) })
+      body: JSON.stringify({ p_token: DH.token(), p_id: currentRecordId, p_segundos: Math.floor((Date.now()-state.startTime)/1000) })
     });
   } catch(err){}
 }

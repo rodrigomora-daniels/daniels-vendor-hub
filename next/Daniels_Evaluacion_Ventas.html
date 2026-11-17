@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>My Daniels Workspace — Mi Evaluación / My Evaluation</title>
+<title>My Workspace — Mi Evaluación / My Evaluation</title>
 <style>
   :root {
     --navy:#1B3A6B; --gold:#C8922A; --ltblue:#D6E4F7; --cream:#FFF8EC;
@@ -300,8 +300,8 @@ async function init() {
   }
 
   try {
-    const cycles = await sbFetch(`evaluacion_ciclos?activo=eq.true&select=id,nombre,tipo,fecha_inicio,fecha_cierre&order=fecha_inicio.desc&limit=1`);
-    activeCycle = (cycles && cycles.length) ? cycles[0] : null;
+    const cyc = await DH.rpc('evaluacion_ciclo_activo');
+    activeCycle = cyc || null;
   } catch (err) {
     console.warn('Could not load evaluation cycle (table may not exist yet):', err);
     activeCycle = null;
@@ -363,6 +363,15 @@ async function renderModePicker() {
         <div class="num">👥</div>
         <div class="txt"><strong>Evaluate My Team / Evaluar a Mi Equipo</strong><br>Evaluate the people who report to you. / Evalúa a las personas que te reportan.</div>
       </div>` : ''}
+      <div class="bars-option" onclick="showRecords()">
+        <div class="num">🗂️</div>
+        <div class="txt"><strong>Evaluation Records / Registro de Evaluaciones</strong><br>KPIs and results by period. Evaluators see their own evaluations. / KPIs y resultados por periodo.</div>
+      </div>
+      ${c.tiene_reportes ? `
+      <div class="bars-option" onclick="showLeadershipSummary()">
+        <div class="num">🧭</div>
+        <div class="txt"><strong>My Leadership Summary / Mi Resumen de Liderazgo</strong><br>A summary of what your team shared anonymously. / Un resumen de lo que tu equipo compartió de forma anónima.</div>
+      </div>` : ''}
       ${c.n_pares > 0 ? `
       <div class="bars-option" onclick="startPeerEval()">
         <div class="num">🤝</div>
@@ -371,6 +380,49 @@ async function renderModePicker() {
     </div>`;
 }
 
+
+/* ════════ LEADERSHIP SUMMARY (managers see a digest, never raw answers) ════════ */
+async function showLeadershipSummary() {
+  const content = document.getElementById('app-content');
+  content.innerHTML = '<div class="card"><p>Loading... / Cargando...</p></div>';
+  let r = null;
+  try { r = await DH.rpc('feedback_resumen_mi'); } catch (err) { console.warn('summary', err); }
+  const titleOf = k => { const q = MANAGER_FEEDBACK_QUESTIONS.find(x => x.key === k); return q ? q.title : k; };
+  const LEVEL = { strong: ['Strong leadership / Liderazgo sólido', '#27AE60', 'Your team sees you as a clear, fair and supportive leader. Keep it up. / Tu equipo te ve como un líder claro, justo y de apoyo. Sigue así.'],
+    solid: ['Solid, with room to grow / Sólido, con espacio para crecer', '#2E7D32', 'Your team sees a good base, and a few habits could make a real difference. / Tu equipo ve una buena base y algunos hábitos pueden hacer una gran diferencia.'],
+    growing: ['Developing / En desarrollo', '#B8860B', 'There are clear opportunities to improve how you lead. Talk it through with your own manager. / Hay oportunidades claras para mejorar cómo lideras. Platícalo con tu propio jefe.'],
+    attention: ['Needs attention / Requiere atención', '#C0392B', 'Your team is asking for change. Please set up a conversation with your own manager. / Tu equipo está pidiendo un cambio. Por favor platica con tu propio jefe.'] };
+  let body;
+  if (!r || r.estado === 'sin_datos') body = '<p>No team feedback yet. / Aún no hay comentarios del equipo.</p>';
+  else if (r.estado === 'pocos') body = '<p>Not enough answers yet to protect everyone\'s anonymity. A summary appears once at least 3 people have answered. / Aún no hay suficientes respuestas para proteger el anonimato. El resumen aparece cuando al menos 3 personas hayan contestado.</p>';
+  else {
+    const L = LEVEL[r.nivel];
+    body = `<div style="border-left:5px solid ${L[1]};padding:10px 14px;background:#f8f6f0;border-radius:8px;margin-bottom:14px;"><strong style="color:${L[1]}">${L[0]}</strong><div style="font-size:13px;margin-top:4px;">${L[2]}</div><div style="font-size:11px;color:var(--mgray);margin-top:6px;">Based on ${r.n} anonymous answers. / Basado en ${r.n} respuestas anónimas.</div></div>
+      ${(r.fortalezas || []).length ? `<div style="margin-bottom:10px;"><strong>What your team values / Lo que tu equipo valora</strong><br>${r.fortalezas.map(k => '• ' + titleOf(k)).join('<br>')}</div>` : ''}
+      ${(r.oportunidades || []).length ? `<div><strong>Where you can grow / Dónde puedes crecer</strong><br>${r.oportunidades.map(k => '• ' + titleOf(k)).join('<br>')}</div>` : ''}`;
+  }
+  content.innerHTML = `<div class="card"><h2>My Leadership Summary / Mi Resumen de Liderazgo</h2>${body}
+    <div style="font-size:11px;color:var(--mgray);margin-top:14px;">🔒 This is a group summary. Individual answers are never shown and nobody can tell who answered what. / Este es un resumen del grupo. Nunca se muestran respuestas individuales y nadie puede saber quién contestó qué.</div>
+    <button class="btn" style="margin-top:10px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="location.reload()">← Back / Regresar</button></div>`;
+}
+
+/* ════════ EVALUATION RECORDS (access enforced server-side by eval_registros) ════════ */
+async function showRecords() {
+  const content = document.getElementById('app-content');
+  content.innerHTML = '<div class="card"><p>Loading... / Cargando...</p></div>';
+  let rows = [];
+  try { rows = await DH.rpc('eval_registros') || []; }
+  catch (err) { console.warn('records', err); }
+  const e = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const body = rows.length ? rows.map(r => `
+    <div style="border:1px solid #e8e4dc;border-radius:10px;padding:12px 14px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;"><strong>${e(r.evaluado)}</strong><span style="color:var(--mgray);font-size:12px;">${e(r.ciclo)} · ${(r.fecha || '').slice(0, 10)}</span></div>
+      <div style="font-size:12px;color:var(--mgray);margin:2px 0 8px;">Evaluator / Evaluador: ${e(r.evaluador)} · Final: <strong style="color:var(--navy);">${r.score_final ?? '—'}</strong> · KPI: ${r.kpi_pct ?? '—'}% · Behavior / Conducta: ${r.score_conducta ?? '—'}</div>
+      ${(r.kpis || []).map(k => `<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>${e(k.nombre)}${k.extra ? ' <em>(extra)</em>' : ''} · ${k.peso ?? ''}%</span><span>${k.real} / ${k.meta} ${e(k.unidad)} → <strong>${k.pct ?? '—'}%</strong></span></div>`).join('')}
+    </div>`).join('') : '<p>No records yet. / Aún no hay registros.</p>';
+  content.innerHTML = `<div class="card"><h2>Evaluation Records / Registro de Evaluaciones</h2>${body}
+    <button class="btn" style="margin-top:10px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="location.reload()">← Back / Regresar</button></div>`;
+}
 
 /* ════════ MY TEAM DASHBOARD (any boss): progress + team KPIs ════════ */
 let TD = { prog: null, kpis: null, custom: [], tab: 'progress' };
@@ -666,6 +718,7 @@ function selectFeedbackManager(id, nombre) {
   content.innerHTML = `
     <div class="card">
       <h2>${nombre}</h2>
+      <div style="background:#eaf3ea;border-left:4px solid #27AE60;border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:12px;">🔒 <strong>Your answers are anonymous and protected.</strong> The system does not store who answered. Your manager never sees individual answers, only a summary of the whole group, and only when at least 3 people have answered. Detailed results are visible only to a small part of leadership. / <strong>Tus respuestas son anónimas y están protegidas.</strong> El sistema no guarda quién contestó. Tu jefe nunca ve respuestas individuales, solo un resumen del grupo completo y únicamente cuando al menos 3 personas contestaron. Los resultados detallados solo los ve una parte pequeña de la dirección.</div>
       <div class="desc">Anonymous. Pick the statement that best describes what you have actually seen — 1 is the lowest, 5 the highest. Describe behavior, not personality. / Anónimo. Elige la frase que mejor describe lo que has visto realmente — 1 es lo más bajo, 5 lo más alto. Describe conductas, no personalidad.</div>
       ${qs}
       <div class="error-msg" id="fb-error">Please answer every question. / Por favor responde todas las preguntas.</div>
@@ -939,112 +992,129 @@ function selectPeer(id) {
 
 /* ════════ METRICS (KPIs set by the company per role) ════════ */
 let metricRows = [];
-let metricTemplateLoaded = false;
-let metricsLocked = false;
+let metricsLocked = true;
+let metricCfg = null;
 let previousEval = null;
 
 async function loadMetricTemplate() {
-  // KPIs are set by the company per role (Cockpit → Evaluation Setup). The evaluator only enters results.
-  const cfg = await loadEvalConfig();
-  const role = evalRoleOf(selectedEvaluado);
-  const hq = (cfg.kpis || []).filter(k => k.rol_evaluado === role);
+  // Defaults come from the position profile (benchmarked). The evaluator can tune weights/goals only inside the locked limits
+  // and add a few extra KPIs; weights are always re-prorated to 100%.
+  metricCfg = null;
   try {
-    const tk = await DH.rpc('evaluacion_kpis_equipo_get');
-    ((tk && tk.propios) || []).filter(k => k.rol_evaluado === role).forEach(k => hq.push({ nombre: k.nombre, unidad: k.unidad, meta_default: k.meta_default, peso: k.peso }));
-  } catch (err) { console.warn('team kpis', err); }
-  if (hq.length) {
-    metricsLocked = true;
-    metricRows = hq.map(k => ({ nombre: k.nombre, unidad: k.unidad || '', peso: Number(k.peso) > 0 ? Number(k.peso) : 1, meta: (k.meta_default ?? ''), metaLocked: k.meta_default !== null && k.meta_default !== undefined, real: '' }));
-    return;
-  }
-  metricsLocked = false;
-  if (metricTemplateLoaded && metricRows.length) { metricRows = metricRows.map(r => ({ ...r, real: '' })); return; }
-  let tpl = [];
-  try {
-    tpl = await DH.rpc('metricas_plantilla_get');
-  } catch (err) { console.warn('Could not load metric template:', err); }
-  metricRows = (tpl && tpl.length)
-    ? tpl.map(t => ({ nombre: t.nombre, unidad: t.unidad || '', meta: '', real: '' }))
-    : [{ nombre: 'Sales', unidad: '$', meta: '', real: '' }];
-  metricTemplateLoaded = true;
+    const r = await DH.rpc('kpi_plantilla_para', { p_evaluado_id: selectedEvaluado.id });
+    if (r && !r.error) metricCfg = r;
+  } catch (err) { console.warn('kpi template', err); }
+  if (!metricCfg) metricCfg = { perfil: 'corp_staff', perfil_nombre: '', max_custom: 3, custom_peso_min: 5, custom_peso_max: 15, custom_total_max: 25, items: [] };
+  metricRows = metricCfg.items.map(k => ({ plantilla_id: k.plantilla_id, nombre: k.nombre, unidad: k.unidad || '', meta: k.meta_default ?? '', metaLimite: k.meta_limite, dir: k.direccion, peso: Number(k.peso_default), pesoMin: Number(k.peso_min), pesoMax: Number(k.peso_max), bench: k.benchmark || '', custom: false, real: '' }));
 }
 
 function metricPct(r) {
   const meta = parseFloat(r.meta), real = parseFloat(r.real);
   if (!(meta > 0) || isNaN(real) || real < 0) return null;
+  if (r.dir === 'down') return real <= 0 ? 150 : Math.round((meta / real) * 1000) / 10;
   return Math.round((real / meta) * 1000) / 10;
 }
 
+function clampW(r) {
+  const lo = r.custom ? metricCfg.custom_peso_min : r.pesoMin, hi = r.custom ? metricCfg.custom_peso_max : r.pesoMax;
+  const w = parseFloat(r.peso); return Math.min(Math.max(isNaN(w) ? lo : w, lo), hi);
+}
+
+// Effective weights: extras keep their own %, base KPIs share the remainder in proportion — total is always 100.
+function effWeights() {
+  const cu = metricRows.filter(r => r.custom && (r.nombre || '').trim()), ba = metricRows.filter(r => !r.custom);
+  const sc = cu.reduce((a, r) => a + clampW(r), 0), st = ba.reduce((a, r) => a + clampW(r), 0);
+  return metricRows.map(r => r.custom ? ((r.nombre || '').trim() ? clampW(r) : 0) : (st > 0 ? clampW(r) / st * (100 - sc) : 0));
+}
+
 function metricsAverage() {
-  let sw = 0, sp = 0;
-  metricRows.forEach(r => { const p = metricPct(r); if (p === null) return; const w = Number(r.peso) > 0 ? Number(r.peso) : 1; sw += w; sp += Math.min(p, 150) * w; });
+  const ew = effWeights(); let sw = 0, sp = 0;
+  metricRows.forEach((r, i) => { const p = metricPct(r); if (p === null) return; sw += ew[i]; sp += Math.min(p, 150) * ew[i]; });
   return sw > 0 ? Math.round((sp / sw) * 10) / 10 : null;
 }
 
-function updateMetric(i, field, value) {
-  metricRows[i][field] = value;
-  const pct = metricPct(metricRows[i]);
-  const el = document.getElementById('metric-pct-' + i);
-  if (el) el.textContent = pct === null ? '—' : pct + '%';
-  const avg = metricsAverage();
-  const avgEl = document.getElementById('metric-avg');
-  if (avgEl) avgEl.textContent = avg === null ? '—' : avg + '%';
+function customTotal() { return metricRows.filter(r => r.custom && (r.nombre || '').trim()).reduce((a, r) => a + clampW(r), 0); }
+
+function refreshMetricLive() {
+  const ew = effWeights();
+  metricRows.forEach((r, i) => {
+    const pct = metricPct(r), el = document.getElementById('metric-pct-' + i); if (el) el.textContent = pct === null ? '—' : pct + '%';
+    const we = document.getElementById('metric-w-' + i); if (we) we.textContent = Math.round(ew[i] * 10) / 10 + '%';
+  });
+  const avg = metricsAverage(), avgEl = document.getElementById('metric-avg'); if (avgEl) avgEl.textContent = avg === null ? '—' : avg + '%';
 }
 
-function addMetricRow() { metricRows.push({ nombre: '', unidad: '', meta: '', real: '' }); renderQuotaScreen(); }
-function removeMetricRow(i) { metricRows.splice(i, 1); if (!metricRows.length) metricRows.push({ nombre: '', unidad: '', meta: '', real: '' }); renderQuotaScreen(); }
+function updateMetric(i, field, value) { metricRows[i][field] = value; refreshMetricLive(); }
+function blurMetricWeight(i) { metricRows[i].peso = clampW(metricRows[i]); renderQuotaScreen(); }
+function blurMetricGoal(i) {
+  const r = metricRows[i]; if (r.custom || r.metaLimite == null || r.meta === '') return;
+  const m = parseFloat(r.meta); if (isNaN(m)) return;
+  const lim = Number(r.metaLimite), fixed = r.dir === 'down' ? Math.min(m, lim) : Math.max(m, lim);
+  if (fixed !== m) { r.meta = fixed; renderQuotaScreen(); }
+}
+function addMetricRow() {
+  if (metricRows.filter(r => r.custom).length >= metricCfg.max_custom) return;
+  metricRows.push({ nombre: '', unidad: '%', meta: '', dir: 'up', peso: metricCfg.custom_peso_min, custom: true, real: '' }); renderQuotaScreen();
+}
+function removeMetricRow(i) { metricRows.splice(i, 1); renderQuotaScreen(); }
 
 function renderQuotaScreen() {
   const content = document.getElementById('app-content');
   const fld = 'padding:9px 10px;border:2px solid #e8e4dc;border-radius:8px;font-size:13px;width:100%;';
-  const rowsHtml = metricRows.map((r, i) => `
-    <div style="display:grid;grid-template-columns:1.6fr .7fr 1fr 1fr .8fr auto;gap:6px;align-items:center;margin-bottom:8px;">
-      <input type="text" placeholder="Metric / Métrica" value="${(r.nombre || '').replace(/"/g, '&quot;')}" oninput="updateMetric(${i},'nombre',this.value)" style="${fld}" ${metricsLocked ? 'readonly tabindex="-1" title="Set by the company"' : ''}>
-      <input type="text" placeholder="Unit" value="${(r.unidad || '').replace(/"/g, '&quot;')}" oninput="updateMetric(${i},'unidad',this.value)" style="${fld}" ${metricsLocked ? 'readonly tabindex="-1"' : ''}>
-      <input type="number" min="0" step="any" placeholder="Goal / Meta" value="${r.meta}" oninput="updateMetric(${i},'meta',this.value)" style="${fld}" ${r.metaLocked ? 'readonly title="Set by the company"' : ''}>
+  const ew = effWeights();
+  const cols = '1.7fr .8fr 1fr 1fr .7fr .7fr auto';
+  const rowsHtml = metricRows.map((r, i) => {
+    const lo = r.custom ? metricCfg.custom_peso_min : r.pesoMin, hi = r.custom ? metricCfg.custom_peso_max : r.pesoMax;
+    const nm = (r.nombre || '').replace(/"/g, '&quot;');
+    return `
+    <div style="display:grid;grid-template-columns:${cols};gap:6px;align-items:center;margin-bottom:8px;">
+      <div>
+        <input type="text" placeholder="Extra KPI / KPI adicional" value="${nm}" oninput="updateMetric(${i},'nombre',this.value)" style="${fld}" ${r.custom ? '' : 'readonly tabindex="-1" title="Standard KPI for this position"'}>
+        ${r.bench ? `<div style="font-size:10px;color:var(--mgray);margin:2px 2px 0;">${r.bench}${r.metaLimite != null ? ` · goal ${r.dir === 'down' ? 'max' : 'min'} ${r.metaLimite}` : ''}</div>` : ''}
+      </div>
+      <input type="text" placeholder="Unit" value="${(r.unidad || '').replace(/"/g, '&quot;')}" oninput="updateMetric(${i},'unidad',this.value)" style="${fld}" ${r.custom ? '' : 'readonly tabindex="-1"'}>
+      <input type="number" min="0" step="any" placeholder="Goal / Meta" value="${r.meta}" oninput="updateMetric(${i},'meta',this.value)" onblur="blurMetricGoal(${i})" style="${fld}">
       <input type="number" min="0" step="any" placeholder="Actual / Real" value="${r.real}" oninput="updateMetric(${i},'real',this.value)" style="${fld}">
-      <strong id="metric-pct-${i}" style="color:var(--navy);font-size:13px;text-align:center;">${metricPct(r) === null ? '—' : metricPct(r) + '%'}</strong>
-      ${metricsLocked ? '<span></span>' : `<button class="btn" onclick="removeMetricRow(${i})" style="padding:4px 9px;background:transparent;color:var(--mgray);font-size:16px;" title="Remove">✕</button>`}
-    </div>`).join('');
+      <div><input type="number" min="${lo}" max="${hi}" step="1" value="${r.peso}" oninput="updateMetric(${i},'peso',this.value)" onblur="blurMetricWeight(${i})" style="${fld}" title="Allowed ${lo}–${hi}"><div style="font-size:10px;color:var(--mgray);text-align:center;">${lo}–${hi}</div></div>
+      <div style="text-align:center;"><strong id="metric-pct-${i}" style="color:var(--navy);font-size:13px;">${metricPct(r) === null ? '—' : metricPct(r) + '%'}</strong><div style="font-size:10px;color:var(--mgray);">wt <span id="metric-w-${i}">${Math.round(ew[i] * 10) / 10}%</span></div></div>
+      ${r.custom ? `<button class="btn" onclick="removeMetricRow(${i})" style="padding:4px 9px;background:transparent;color:var(--mgray);font-size:16px;" title="Remove">✕</button>` : '<span></span>'}
+    </div>`; }).join('');
 
   const prevHtml = previousEval ? `
     <div style="background:#f4f1ea;border-left:4px solid var(--gold);padding:12px 14px;border-radius:6px;font-size:13px;margin-bottom:16px;">
       <strong>Previous evaluation / Evaluación anterior</strong> (${(previousEval.completada_at || '').slice(0, 10)})<br>
       Final score / Puntaje final: <strong>${previousEval.score_final ?? '—'}</strong>
-      · Quota / Cuota: <strong>${previousEval.pct_promedio_cuota ?? '—'}%</strong>
+      · KPI: <strong>${previousEval.pct_promedio_cuota ?? '—'}%</strong>
     </div>` : '';
+  const nCustom = metricRows.filter(r => r.custom).length;
+  const canAdd = nCustom < metricCfg.max_custom;
 
   content.innerHTML = `
     <div class="card">
       <h2>Performance Metrics / Métricas de Desempeño</h2>
-      <div class="desc">Evaluating: <strong>${selectedEvaluado.nombre_completo}</strong> — ${activeCycle.nombre}<br>${metricsLocked ? 'These KPIs are set by the company for this role. Enter the goal (if blank) and the actual result. / Estos KPIs los define la empresa para este rol. Captura la meta (si está vacía) y el resultado real.' : "Enter this person's goals and actual results for the cycle. / Captura las metas y resultados reales de esta persona en el ciclo."}</div>
+      <div class="desc">Evaluating: <strong>${selectedEvaluado.nombre_completo}</strong>${metricCfg.perfil_nombre ? ' — ' + metricCfg.perfil_nombre : ''} — ${activeCycle.nombre}<br>
+      These KPIs come pre-filled for this position. You can adjust weights and goals within the allowed range, and add up to ${metricCfg.max_custom} extra KPIs (max ${metricCfg.custom_total_max}% combined). Weights always total 100%. / Los KPIs vienen pre-llenados para este puesto. Puedes ajustar pesos y metas dentro del rango permitido y agregar hasta ${metricCfg.max_custom} KPIs extra (máx. ${metricCfg.custom_total_max}% combinado). Los pesos siempre suman 100%.</div>
       ${prevHtml}
-      <div style="display:grid;grid-template-columns:1.6fr .7fr 1fr 1fr .8fr auto;gap:6px;font-size:11px;font-weight:700;color:var(--mgray);margin-bottom:6px;">
-        <span>METRIC</span><span>UNIT</span><span>GOAL</span><span>ACTUAL</span><span style="text-align:center;">% MET</span><span></span>
+      <div style="display:grid;grid-template-columns:${cols};gap:6px;font-size:11px;font-weight:700;color:var(--mgray);margin-bottom:6px;">
+        <span>KPI</span><span>UNIT</span><span>GOAL</span><span>ACTUAL</span><span>WEIGHT</span><span style="text-align:center;">% MET</span><span></span>
       </div>
       ${rowsHtml}
-      ${metricsLocked ? '' : `<button class="btn" onclick="addMetricRow()" style="background:transparent;color:var(--navy);font-weight:600;text-decoration:underline;margin-bottom:10px;">+ Add metric / Agregar métrica</button>`}
+      ${canAdd ? `<button class="btn" onclick="addMetricRow()" style="background:transparent;color:var(--navy);font-weight:600;text-decoration:underline;margin-bottom:10px;">+ Add extra KPI / Agregar KPI extra (${nCustom}/${metricCfg.max_custom})</button>` : ''}
       <div style="display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid #f0ece2;font-size:14px;">
-        <span>Average attainment / Cumplimiento promedio</span><strong id="metric-avg" style="color:var(--navy);">${metricsAverage() === null ? '—' : metricsAverage() + '%'}</strong>
+        <span>Weighted attainment / Cumplimiento ponderado</span><strong id="metric-avg" style="color:var(--navy);">${metricsAverage() === null ? '—' : metricsAverage() + '%'}</strong>
       </div>
-      ${metricsLocked ? '' : `<label style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--mgray);margin:8px 0 14px;"><input type="checkbox" id="metric-save-tpl" checked> Remember these metric names for my next evaluations / Recordar estos nombres para mis próximas evaluaciones</label>`}
-      <div class="error-msg" id="quota-error">Add at least one metric with a goal greater than 0 and an actual value. / Agrega al menos una métrica con meta mayor a 0 y un valor real.</div>
+      <div class="error-msg" id="quota-error">Fill in goal and actual for every KPI. / Llena meta y real en todos los KPIs.</div>
       <button class="btn btn-primary" onclick="confirmQuota()">Continue / Continuar</button>
       <button class="btn" style="margin-top:10px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="renderSupervisorSearchScreen('')">← Back / Regresar</button>
     </div>`;
 }
 
 async function confirmQuota() {
-  const valid = metricRows.filter(r => (r.nombre || '').trim() && metricPct(r) !== null);
-  if (metricsLocked && valid.length < metricRows.length) { document.getElementById('quota-error').textContent = 'Fill in every KPI (goal and actual). / Llena todos los KPIs (meta y real).'; document.getElementById('quota-error').classList.add('show'); return; }
-  if (!valid.length) { document.getElementById('quota-error').classList.add('show'); return; }
-  quotaData = { metrics: valid.map(r => ({ nombre: r.nombre.trim(), unidad: (r.unidad || '').trim(), meta: parseFloat(r.meta), real: parseFloat(r.real) })), pct_promedio: metricsAverage() };
-  const saveTpl = document.getElementById('metric-save-tpl');
-  if (saveTpl && saveTpl.checked && !isAdminPreview) {
-    try {
-      await DH.rpc('metricas_plantilla_set', { p_items: quotaData.metrics.map((m, i) => ({ nombre: m.nombre, unidad: m.unidad, orden: i })) });
-    } catch (err) { console.warn('Could not save metric template:', err); }
-  }
+  const active = metricRows.filter(r => !r.custom || (r.nombre || '').trim());
+  const bad = active.some(r => metricPct(r) === null);
+  if (!active.length || bad) { document.getElementById('quota-error').classList.add('show'); return; }
+  const ew = effWeights();
+  quotaData = { metrics: metricRows.map((r, i) => ({ r, w: ew[i] })).filter(x => x.r.custom ? (x.r.nombre || '').trim() : true).map(x => ({ nombre: x.r.nombre.trim(), unidad: (x.r.unidad || '').trim(), meta: parseFloat(x.r.meta), real: parseFloat(x.r.real), peso: Number(x.r.peso), plantilla_id: x.r.plantilla_id || null, direccion: x.r.dir || 'up' })), pct_promedio: metricsAverage() };
   currentDimIdx = 0;
   responses = {};
   renderQuestionScreen();
@@ -1075,6 +1145,8 @@ function renderQuestionScreen() {
     ? `<div class="badge-admin">🔍 Admin Preview Mode — this run will NOT be saved to any employee's record. / Modo Vista Admin — esta sesión NO se guardará en el registro de ningún empleado.</div>`
     : '';
 
+  const privacyBanner = `<div style="font-size:11px;color:var(--mgray);margin-bottom:10px;">🔒 ${evalMode === 'supervisor' || evalMode === 'peer' ? 'Your answers are confidential: only you, the person\'s leadership and company leadership can see them. / Tus respuestas son confidenciales: solo las ven tú, la dirección del área y la dirección de la empresa.' : 'Your answers are confidential: only you, your evaluator and company leadership can see them. Answer honestly. / Tus respuestas son confidenciales: solo las ven tú, tu evaluador y la dirección de la empresa. Responde con honestidad.'}</div>`;
+
   const evaluandoBanner = isRatedMode()
     ? `<div class="badge-admin" style="background:var(--ltblue);border-left-color:var(--navy);">Evaluating / Evaluando: <strong>${selectedEvaluado.nombre_completo}</strong></div>`
     : '';
@@ -1099,6 +1171,7 @@ function renderQuestionScreen() {
 
   content.innerHTML = `
     ${adminBanner}
+    ${privacyBanner}
     ${evaluandoBanner}
     <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
     <div class="progress-label">Question ${currentDimIdx + 1} of ${dims.length} / Pregunta ${currentDimIdx + 1} de ${dims.length}</div>
@@ -1243,19 +1316,14 @@ async function submitEvaluation() {
       evalPayload.score_final = selfScore;
     }
 
-    const evalRows = await sbFetch('evaluaciones', { method: 'POST', body: JSON.stringify(evalPayload) });
-    const evaluacionId = evalRows[0].id;
-
     const respuestaRows = dims.map(dim => ({
-      evaluacion_id: evaluacionId,
       dimension: dim.key,
       pregunta_key: dim.key,
       pregunta_texto: dim.q,
-      // Supervisor mode: 1-5 BARS score. Self mode: multiple-choice index
-      // (0-3), both numeric so they fit the same column.
       respuesta_score: responses[dim.key]
     }));
-    await sbFetch('evaluacion_respuestas', { method: 'POST', body: JSON.stringify(respuestaRows) });
+    // One server call saves the evaluation and its answers; the server sets the evaluator from the session.
+    const evaluacionId = await DH.rpc('evaluacion_guardar', { p_eval: evalPayload, p_respuestas: respuestaRows });
     if (isSupervisor) {
       await DH.rpc('metricas_guardar', { p_evaluacion_id: evaluacionId, p_items: quotaData.metrics });
     }

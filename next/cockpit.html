@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>My Daniels Workspace — Admin Cockpit</title>
+<title>My Workspace — Admin Cockpit</title>
 <style>
   :root {
     --navy:#1B3A6B; --gold:#C8922A; --ltblue:#D6E4F7; --cream:#FFF8EC;
@@ -49,6 +49,13 @@
   .section{background:var(--white);border-radius:14px;padding:22px;box-shadow:0 2px 10px rgba(0,0,0,.06);margin-bottom:24px;}
   .section-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
   .section-hdr h2{color:var(--navy);font-size:16px;}
+  .section-hdr{cursor:pointer;user-select:none;}
+  .section-hdr .chev{display:inline-block;width:22px;color:var(--gold);font-size:14px;transition:transform .15s;}
+  .section.open .section-hdr .chev{transform:rotate(90deg);}
+  .section:not(.open) .section-hdr{margin-bottom:0;}
+  .sec-body{display:none;} .section.open > .sec-body{display:block;}
+  .sec-tools{display:flex;gap:8px;justify-content:flex-end;margin:0 0 12px;}
+  .sec-tools button{padding:7px 14px;border:1px solid var(--navy);background:#fff;color:var(--navy);border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;}
   table{width:100%;border-collapse:collapse;font-size:13px;}
   th{text-align:left;background:var(--gray);padding:9px 12px;color:var(--navy);font-weight:700;border-bottom:2px solid #e0ddd6;}
   td{padding:9px 12px;border-bottom:1px solid #f0ece2;vertical-align:middle;}
@@ -76,7 +83,7 @@
   <div class="login-wrap">
     <div class="login-card">
       <h1>🔐 Admin Cockpit</h1>
-      <div class="sub">My Daniels Workspace — Authorized access only</div>
+      <div class="sub">My Workspace — Authorized access only</div>
       <div class="error-msg" id="login-error"></div>
       <label class="field-label">Username</label>
       <input type="text" class="field-input" id="login-username" placeholder="rodrigo.mora">
@@ -95,7 +102,7 @@
       <div class="sub" id="admin-greeting">—</div>
     </div>
     <div>
-      <button class="btn btn-ghost" onclick="window.location.href='index.html'">← My Daniels Workspace</button>
+      <button class="btn btn-ghost" onclick="window.location.href='index.html'">← My Workspace</button>
       <button class="btn btn-ghost" onclick="DH.logout().then(()=>location.reload())">Sign Out</button>
     </div>
   </div>
@@ -664,7 +671,7 @@ async function loadEmployees() {
 /* ════════ ORGANIGRAMA ════════ */
 async function loadOrganigrama() {
   try {
-    const rows = await sbFetch('organigrama?activo=eq.true&select=id,empleado_id,supervisor_id,track,nivel,titulo_display,peso');
+    const rows = await DH.rpc('admin_organigrama_listar');
     cachedData.organigrama = rows || [];
     renderOrganigramaTable(cachedData.organigrama);
   } catch (err) {
@@ -731,18 +738,14 @@ async function submitAddOrgRow() {
   const btn = document.getElementById('btn-org-row-save');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Saving...';
   try {
-    const existingSamePair = await sbFetch(`organigrama?empleado_id=eq.${empId}&activo=eq.true&${supId ? `supervisor_id=eq.${supId}` : 'supervisor_id=is.null'}&select=id`);
-    if (existingSamePair && existingSamePair.length) {
-      await sbFetch(`organigrama?id=in.(${existingSamePair.map(e => e.id).join(',')})`, { method: 'PATCH', body: JSON.stringify({ activo: false }) });
-    }
-    const otherActive = await sbFetch(`organigrama?empleado_id=eq.${empId}&activo=eq.true&select=peso`);
-    const currentTotal = (otherActive || []).reduce((s, r) => s + (r.peso || 0), 0);
+    const otherActive = (cachedData.organigrama || []).filter(r => r.empleado_id === empId && r.supervisor_id !== (supId || null));
+    const currentTotal = otherActive.reduce((s, r) => s + (r.peso || 0), 0);
     if (currentTotal + peso > 100) {
       if (!confirm(`This person's total supervisor weight would be ${currentTotal + peso}%, over 100%. Save anyway?`)) {
         btn.disabled = false; btn.textContent = 'Save'; return;
       }
     }
-    await sbFetch('organigrama', { method: 'POST', body: JSON.stringify([{ empleado_id: empId, supervisor_id: supId || null, track, nivel, peso, titulo_display: titulo || null, activo: true }]) });
+    await DH.rpc('admin_organigrama_guardar', { p_empleado_id: empId, p_supervisor_id: supId || null, p_track: track, p_nivel: nivel, p_peso: peso, p_titulo: titulo || '' });
     btn.disabled = false; btn.textContent = 'Save';
     closeModal('modal-add-org-row');
     await loadOrganigrama();
@@ -756,7 +759,7 @@ async function submitAddOrgRow() {
 async function deleteOrgRow(rowId) {
   if (!confirm('Remove this reporting relationship?')) return;
   try {
-    await sbFetch(`organigrama?id=eq.${rowId}`, { method: 'PATCH', body: JSON.stringify({ activo: false }) });
+    await DH.rpc('admin_organigrama_quitar', { p_id: rowId });
     await loadOrganigrama();
   } catch (err) { alert('Error removing: ' + err.message); }
 }
@@ -769,7 +772,9 @@ async function deleteOrgRow(rowId) {
 async function loadMgrFeedback() {
   const sec = document.getElementById('section-mgr-feedback');
   if (!sec) return;
-  if (!isSuperAdmin()) { sec.style.display = 'none'; return; }
+  let allowed = false;
+  try { allowed = await DH.rpc('feedback_puede_detalle'); } catch (e) { allowed = false; }
+  if (!allowed) { sec.style.display = 'none'; return; }
   sec.style.display = '';
   const body = document.getElementById('tbl-mgr-feedback-body');
   try {
@@ -975,7 +980,7 @@ function progDownload(kind) {
 /* ════════ EVALUATION SETUP (weights & KPIs by role) ════════ */
 let evalCfg = { pesos: [], kpis: [] };
 const CFG_ROLES = { vendedor: 'Sellers / Vendedores', manager: 'Store managers / Gerentes de tienda', director: 'Director (Héctor) / Directores', staff: 'Staff — non-sales roles / Personal operativo y administrativo' };
-const CFG_COMPONENTS = { kpi: 'KPIs (numbers)', conducta: 'Behavior / management rated by boss', liderazgo: 'Leadership (rated by reports, anonymous)', pares: 'Peers (other managers)', auto: 'Self-assessment (own evaluation)' };
+const CFG_COMPONENTS = { kpi: 'KPIs (numbers)', conducta: 'Behavior / management rated by boss', liderazgo: 'Leadership (rated by reports, anonymous)', pares: 'Peers (other managers)', auto: 'Self-assessment (own evaluation)', certificaciones: 'Certifications (badges, valid 6 months; only if the role requires them)' };
 
 async function loadEvalConfig() {
   const sec = document.getElementById('section-eval-config');
@@ -1047,7 +1052,7 @@ async function saveEvalConfig() {
 
 async function loadEvalCycles() {
   try {
-    const rows = await sbFetch('evaluacion_ciclos?select=id,nombre,tipo,fecha_inicio,fecha_cierre,activo&order=fecha_inicio.desc');
+    const rows = await DH.rpc('admin_ciclos_listar');
     cachedData.evalCycles = rows || [];
     renderEvalCyclesTable(cachedData.evalCycles);
   } catch (err) {
@@ -1116,17 +1121,7 @@ async function submitNewCycle() {
   btn.innerHTML = '<span class="spinner"></span>Opening...';
 
   try {
-    // Close any currently active cycle first — only one active at a time
-    const active = (cachedData.evalCycles || []).filter(c => c.activo);
-    if (active.length) {
-      await sbFetch(`evaluacion_ciclos?id=in.(${active.map(c => c.id).join(',')})`, {
-        method: 'PATCH', body: JSON.stringify({ activo: false })
-      });
-    }
-    await sbFetch('evaluacion_ciclos', {
-      method: 'POST',
-      body: JSON.stringify([{ nombre, tipo, fecha_inicio: inicio, fecha_cierre: cierre, activo: true }])
-    });
+    await DH.rpc('admin_ciclo_crear', { p_nombre: nombre, p_tipo: tipo, p_inicio: inicio, p_cierre: cierre });
     btn.disabled = false; btn.textContent = 'Open Cycle';
     closeModal('modal-new-cycle');
     await loadEvalCycles();
@@ -1141,7 +1136,7 @@ async function submitNewCycle() {
 async function closeEvalCycle(cycleId) {
   if (!confirm('Close this evaluation cycle? Employees will no longer be able to submit evaluations until a new cycle opens.')) return;
   try {
-    await sbFetch(`evaluacion_ciclos?id=eq.${cycleId}`, { method: 'PATCH', body: JSON.stringify({ activo: false }) });
+    await DH.rpc('admin_ciclo_set_activo', { p_id: cycleId, p_activo: false });
     await loadEvalCycles();
   } catch (err) { alert('Error closing cycle: ' + err.message); }
 }
@@ -1149,13 +1144,7 @@ async function closeEvalCycle(cycleId) {
 async function reopenEvalCycle(cycleId) {
   if (!confirm('Reopen this cycle? Any other active cycle will be closed automatically.')) return;
   try {
-    const active = (cachedData.evalCycles || []).filter(c => c.activo);
-    if (active.length) {
-      await sbFetch(`evaluacion_ciclos?id=in.(${active.map(c => c.id).join(',')})`, {
-        method: 'PATCH', body: JSON.stringify({ activo: false })
-      });
-    }
-    await sbFetch(`evaluacion_ciclos?id=eq.${cycleId}`, { method: 'PATCH', body: JSON.stringify({ activo: true }) });
+    await DH.rpc('admin_ciclo_set_activo', { p_id: cycleId, p_activo: true });
     await loadEvalCycles();
   } catch (err) { alert('Error reopening cycle: ' + err.message); }
 }
@@ -1597,7 +1586,7 @@ function openCodesFullList() {
 /* ════════ LEAD SOURCE ════════ */
 async function loadLeadSource() {
   try {
-    const entries = await sbFetch('customer_source_log?select=*&order=submitted_at.desc');
+    const entries = await DH.rpc('admin_lead_source_listar');
     cachedData.leadsource = entries;
     document.getElementById('kpi-ls-total').textContent = entries.length;
     const sourceCounts = {}, empCounts = {};
@@ -1624,7 +1613,7 @@ function openLeadSourceFullList() {
 /* ════════ AUDIT LOG ════════ */
 async function loadAuditLog() {
   try {
-    const logs = await sbFetch('admin_audit_log?select=*&order=created_at.desc&limit=500');
+    const logs = await DH.rpc('admin_audit_listar', { p_limit: 500 });
     cachedData.auditlog = logs;
     const tbody = document.getElementById('tbl-auditlog-body');
     if (logs.length === 0) { tbody.innerHTML = `<tr><td colspan="4" class="empty-state">No admin actions recorded yet.</td></tr>`; return; }
@@ -1752,6 +1741,31 @@ document.addEventListener('DOMContentLoaded', () => {
   else if (isViewOnly()) tierLabel = 'Store Management — View Only';
   document.getElementById('admin-greeting').textContent = `Signed in as ${emp.nombre_completo} (${tierLabel})`;
   loadAllData();
+})();
+</script>
+<script>
+/* Admin modules: collapsed by default, click a header to expand */
+(function(){
+  function setup(){
+    const secs=[...document.querySelectorAll('.section')];
+    secs.forEach(sec=>{
+      const hdr=sec.querySelector(':scope > .section-hdr'); if(!hdr||sec.dataset.collapsible) return;
+      sec.dataset.collapsible='1';
+      const body=document.createElement('div'); body.className='sec-body';
+      [...sec.childNodes].forEach(n=>{ if(n!==hdr) body.appendChild(n); });
+      sec.appendChild(body);
+      const h2=hdr.querySelector('h2'); if(h2) h2.insertAdjacentHTML('afterbegin','<span class="chev">▸</span>');
+      hdr.addEventListener('click',e=>{ if(e.target.closest('button,input,select,a,label')) return; sec.classList.toggle('open'); });
+    });
+    const first=secs[0];
+    if(first && !document.getElementById('sec-tools')){
+      const t=document.createElement('div'); t.className='sec-tools'; t.id='sec-tools';
+      t.innerHTML='<button onclick="document.querySelectorAll(\'.section\').forEach(s=>s.classList.add(\'open\'))">Expand all</button><button onclick="document.querySelectorAll(\'.section\').forEach(s=>s.classList.remove(\'open\'))">Collapse all</button>';
+      first.parentNode.insertBefore(t,first);
+    }
+    const h=(location.hash||'').slice(1); const tgt=h&&document.getElementById(h); if(tgt&&tgt.classList.contains('section')) tgt.classList.add('open');
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',setup); else setup();
 })();
 </script>
 </body>

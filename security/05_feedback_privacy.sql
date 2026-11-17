@@ -1,0 +1,3 @@
+-- Feedback privacy (2026-11-16): detail for Super Admin, owners and Hector only; managers get a digest only when >= 3 answered.
+-- See function bodies applied in Supabase: feedback_ve_detalle, admin_ver_feedback_anonimo (uuid), feedback_puede_detalle, feedback_resumen_mi.
+-- Also: cert_score_all (certification points, 6-month validity), feedback_managers_elegibles (managers with team >= 3).
