@@ -1636,6 +1636,8 @@ function openLeadSourceFullList() {
 
 /* ════════ AUDIT LOG ════════ */
 async function loadAuditLog() {
+  const _sec = document.getElementById('section-auditlog');
+  if (_sec && !isSuperAdmin()) { _sec.style.display = 'none'; return; }
   try {
     const logs = await DH.rpc('admin_audit_listar', { p_limit: 500 });
     cachedData.auditlog = logs;

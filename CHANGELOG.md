@@ -87,3 +87,10 @@ Cierre Fase 4 (verificado como rol anon): 0 filas en empleados y evaluaciones; `
 - Verified: exam size is 28 per attempt (static "38" in HTML is overwritten at render).
 
 - Welcome popup now shows on EVERY visit during the registration period (`ALWAYS_SHOW=true` in index.html). Set to false to return to first-visit-only.
+
+## 2026-11-16 (19:40) — Fix: non-super admins were logged out of the cockpit
+- Symptom: Héctor (Misael Estrada, `Misa`, admin_secundario) could not stay in the cockpit. Same would have hit the 4 store-management viewers (Jaime, Lourdes, Juan López, Marco).
+- Cause: cockpit loads the activity log with `admin_audit_listar`, which raised a 401 for anyone who is not Super Admin. `dh-session.js` treats any 401 as an expired session, clears the token and redirects to `index.html?expired=1`.
+- Fix (live in DB): `admin_audit_listar` now returns zero rows for non-super (no error). Cockpit also hides the activity-log section for non-super admins.
+- Verified in rolled-back test as `Misa`: every cockpit load call and every admin action (reset password, reclassify store/department, extra attempts, cert reset, roster cycle, generate codes) succeed; super-only actions (create/activate cycle, org chart edit) still answer with a normal "Only a Super Admin can change this." message, which does not log anyone out.
+- Rule: authorization failures must never use 401/"Not authorized"; reserve them for invalid sessions.
