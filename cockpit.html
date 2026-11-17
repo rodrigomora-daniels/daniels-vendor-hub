@@ -1008,7 +1008,7 @@ function progDownload(kind) {
 
 /* ════════ EVALUATION SETUP (weights & KPIs by role) ════════ */
 let evalCfg = { pesos: [], kpis: [] };
-const CFG_ROLES = { vendedor: 'Sellers / Vendedores', manager: 'Store managers / Gerentes de tienda', director: 'Director (Héctor) / Directores', staff: 'Staff — non-sales roles / Personal operativo y administrativo' };
+const CFG_ROLES = { vendedor: 'Sellers / Vendedores', manager: 'Store managers / Gerentes de tienda', staff: 'Staff — non-sales roles / Personal operativo y administrativo' };
 const CFG_COMPONENTS = { kpi: 'KPIs (numbers)', conducta: 'Behavior / management rated by boss', liderazgo: 'Leadership (rated by reports, anonymous)', pares: 'Peers (other managers)', auto: 'Self-assessment (own evaluation)', certificaciones: 'Certifications (badges, valid 6 months; only if the role requires them)' };
 
 async function loadEvalConfig() {
@@ -1043,7 +1043,7 @@ function renderEvalConfig() {
       <h3 style="font-size:14px;color:var(--navy);margin-bottom:10px;">${CFG_ROLES[role]}</h3>
       <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:6px;">${weights}<strong id="cfg-total-${role}" style="font-size:13px;"></strong></div>
       <div style="font-size:11px;font-weight:700;color:var(--mgray);margin:12px 0 6px;">KPIs</div>
-      ${kpis || '<p class="empty-state" style="padding:6px 0;">No KPIs yet.</p>'}
+      ${kpis || (role === 'staff' ? '<p class="empty-state" style="padding:6px 0;">Staff are rated mostly on behavior. Their KPIs (when they apply) come from each position\'s profile template, already filled in when the evaluator opens the evaluation. / Su evaluación es principalmente de conducta; los KPIs de su puesto vienen precargados en la evaluación.</p>' : '<p class="empty-state" style="padding:6px 0;">No KPIs yet.</p>')}
       <button class="btn btn-ghost" style="padding:4px 10px;font-size:12px;" onclick="addCfgKpi('${role}')">+ Add KPI</button>
     </div>`;
   }).join('');
