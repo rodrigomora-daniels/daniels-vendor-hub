@@ -988,7 +988,7 @@ function progDownload(kind) {
 /* ════════ EVALUATION SETUP (weights & KPIs by role) ════════ */
 let evalCfg = { pesos: [], kpis: [] };
 const CFG_ROLES = { vendedor: 'Sellers / Vendedores', manager: 'Store managers / Gerentes de tienda', director: 'Director (Héctor) / Directores', staff: 'Staff — non-sales roles / Personal operativo y administrativo' };
-const CFG_COMPONENTS = { kpi: 'KPIs (numbers)', conducta: 'Behavior / management rated by boss', liderazgo: 'Leadership (rated by reports, anonymous)', pares: 'Peers (other managers)', auto: 'Self-assessment (own evaluation)' };
+const CFG_COMPONENTS = { kpi: 'KPIs (numbers)', conducta: 'Behavior / management rated by boss', liderazgo: 'Leadership (rated by reports, anonymous)', pares: 'Peers (other managers)', auto: 'Self-assessment (own evaluation)', certificaciones: 'Certifications (badges, valid 6 months; only if the role requires them)' };
 
 async function loadEvalConfig() {
   const sec = document.getElementById('section-eval-config');
