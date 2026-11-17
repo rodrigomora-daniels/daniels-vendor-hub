@@ -88,6 +88,28 @@
   .tab-btn{background:transparent;border:none;padding:12px 18px;font-size:14px;font-weight:700;color:var(--mgray);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;transition:all .15s;}
   .tab-btn:hover{color:var(--navy);}
   .tab-btn.active{color:var(--navy);border-bottom-color:var(--gold);}
+
+  /* News hero: compact card on Home that zooms out into the full news feed */
+  #news-hero{display:none;background:#fff;border-radius:16px;box-shadow:0 2px 14px rgba(0,0,0,.08);border-left:6px solid var(--gold);padding:14px 18px;margin-bottom:20px;cursor:pointer;transition:transform .15s,box-shadow .15s;position:relative;overflow:hidden}
+  #news-hero.show{display:block}
+  #news-hero:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.12)}
+  #news-hero .nh-top{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--gold)}
+  #news-hero .nh-more{font-size:11px;font-weight:700;color:var(--navy);letter-spacing:0;text-transform:none;white-space:nowrap}
+  #news-hero h3{color:var(--navy);font-size:17px;margin:6px 0 4px}
+  #news-hero .nh-body{font-size:13px;color:#444;line-height:1.45;white-space:pre-wrap;max-height:4.4em;overflow:hidden;-webkit-mask-image:linear-gradient(#000 55%,transparent);mask-image:linear-gradient(#000 55%,transparent)}
+  #news-full{position:fixed;inset:0;background:rgba(10,22,45,.72);z-index:9000;display:none;align-items:flex-start;justify-content:center;padding:14px;overflow-y:auto}
+  #news-full.show{display:flex}
+  #news-full .nf-panel{background:#f4f6fb;border-radius:18px;width:100%;max-width:720px;margin:auto;padding:18px 18px 22px;box-shadow:0 20px 60px rgba(0,0,0,.4);transform:scale(.35);opacity:0;transition:transform .32s cubic-bezier(.2,.8,.2,1),opacity .25s}
+  #news-full.in .nf-panel{transform:scale(1);opacity:1}
+  #news-full .nf-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+  #news-full .nf-head h2{color:var(--navy);font-size:19px}
+  #news-full .nf-x{background:var(--navy);color:#fff;border:0;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer}
+  #news-full .nf-post{background:#fff;border-radius:12px;padding:14px 16px;margin-bottom:12px;box-shadow:0 1px 6px rgba(0,0,0,.07)}
+  #news-full .nf-post img{width:100%;border-radius:8px;margin-bottom:10px}
+  #news-full .nf-post h3{color:var(--navy);font-size:16px;margin:2px 0}
+  #news-full .nf-post .by{font-size:11px;color:#888;margin-bottom:8px}
+  #news-full .nf-post .b{font-size:14px;line-height:1.55;white-space:pre-wrap;word-wrap:break-word}
+  #news-full .nf-link{display:block;text-align:center;color:var(--navy);font-weight:700;font-size:13px;margin-top:4px}
   .tab-panel{display:none;}
   .tab-panel.active{display:block;}
   .tool-frame-wrap{background:var(--white);border-radius:14px;padding:8px;box-shadow:0 2px 12px rgba(0,0,0,.07);}
@@ -315,6 +337,16 @@
 
     <!-- HOME SCREEN: 3 tool cards -->
     <div class="tab-panel active" id="tab-home">
+      <div id="news-hero" onclick="openNews()" role="button" tabindex="0" aria-label="Open news">
+        <div class="nh-top"><span>📰 News / Noticias</span><span class="nh-more" id="nh-more">Tap to open / Toca para abrir ⤢</span></div>
+        <h3 id="nh-title"></h3><div class="nh-body" id="nh-body"></div>
+      </div>
+      <div id="news-full" onclick="if(event.target===this)closeNews()"><div class="nf-panel">
+        <div class="nf-head"><h2>📰 News / Noticias</h2><button class="nf-x" onclick="closeNews()" aria-label="Close">✕</button></div>
+        <div id="nf-list"></div>
+        <a class="nf-link" href="noticias.html">Open full page / Abrir página completa →</a>
+      </div></div>
+
       <div class="points-banner">
         <div class="left">
           <div class="lbl">Total Points Earned / Puntos Totales</div>
@@ -803,6 +835,7 @@ function handleLogout() {
    DASHBOARD
    ════════════════════════════════════════════════════════════ */
 async function loadDashboard() {
+  loadNewsHero();
   const emp = session.empleado;
 
   // If this employee has a temporary password, force the change screen first
@@ -1063,6 +1096,43 @@ function switchTab(tabName) {
   document.querySelector(`.tab-btn[data-tab="${tabName}"]`).classList.add('active');
   document.getElementById(`tab-${tabName}`).classList.add('active');
 }
+
+
+// ---- News hero (Home) ----
+var NEWS_ITEMS=[], NEWS_URLS={};
+function nhEsc(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function nhFmt(d){if(!d)return '';var p=d.split('-');return p[1]+'/'+p[2]+'/'+p[0];}
+async function loadNewsHero(){
+  try{
+    var r=await DH.rpc('noticias_listar');
+    NEWS_ITEMS=(r.items||[]).filter(function(i){return i.estado==='vigente';});
+    var hero=document.getElementById('news-hero');
+    if(!NEWS_ITEMS.length){hero.classList.remove('show');return;}
+    var n=NEWS_ITEMS[0];
+    document.getElementById('nh-title').textContent=n.titulo;
+    document.getElementById('nh-body').textContent=n.cuerpo;
+    document.getElementById('nh-more').textContent=(NEWS_ITEMS.length>1?'+'+(NEWS_ITEMS.length-1)+' more · ':'')+'Tap to open / Toca para abrir ⤢';
+    hero.classList.add('show');
+    try{NEWS_URLS=await DH.files.sign(NEWS_ITEMS.map(function(i){return i.imagen_archivo_id;}));}catch(e){NEWS_URLS={};}
+  }catch(e){}
+}
+function openNews(){
+  var f=document.getElementById('news-full'), h=document.getElementById('news-hero'), panel=f.querySelector('.nf-panel');
+  document.getElementById('nf-list').innerHTML=NEWS_ITEMS.map(function(n){
+    var u=n.imagen_archivo_id&&NEWS_URLS[n.imagen_archivo_id];
+    return '<div class="nf-post">'+(u?'<img loading="lazy" alt="" src="'+nhEsc(u.url)+'">':'')+(n.fijada?'<small>📌 </small>':'')+'<h3>'+nhEsc(n.titulo)+'</h3><div class="by">'+nhFmt(n.publicada_en)+(n.autor?' · '+nhEsc(n.autor):'')+'</div><div class="b">'+nhEsc(n.cuerpo)+'</div></div>';
+  }).join('');
+  var rc=h.getBoundingClientRect();
+  f.classList.add('show'); document.body.style.overflow='hidden';
+  var pr=panel.getBoundingClientRect();
+  panel.style.transformOrigin=(rc.left+rc.width/2-pr.left)+'px '+(rc.top+rc.height/2-pr.top)+'px';
+  requestAnimationFrame(function(){requestAnimationFrame(function(){f.classList.add('in');});});
+}
+function closeNews(){
+  var f=document.getElementById('news-full'); f.classList.remove('in');
+  setTimeout(function(){f.classList.remove('show');document.body.style.overflow='';},300);
+}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeNews();});
 
 function navigateToTool(toolName) {
   let url = TOOL_URLS[toolName];

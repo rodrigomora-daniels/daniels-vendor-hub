@@ -34,8 +34,8 @@
   <div class="note">Files stored here open directly. Items marked "SharePoint" are links to the company SharePoint and need a Daniels Microsoft account. / Los archivos guardados aquí se abren directo. Los marcados "SharePoint" son links al SharePoint de la empresa y requieren cuenta Microsoft de Daniels.</div>
   <div id="msg" class="msg hide"></div>
   <div class="bar"><input id="q" placeholder="Search / Buscar…" oninput="render()"><select id="lang" onchange="render()"><option value="">All languages / Todos los idiomas</option><option>EN</option><option>ES</option></select></div>
+  <div id="edit" class="card hide" style="margin-bottom:14px"></div>
   <div id="list"></div>
-  <div id="edit" class="card hide"></div>
 </main>
 <script src="dh-session.js?v=4"></script>
 <script src="jszip.min.js?v=4"></script>
@@ -111,7 +111,7 @@ function bulk(){
    <input id="b-f" type="file" multiple style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden" onchange="bulkPick(this.files).catch(x=>err('Error: '+(x&&x.message||x)));this.value=''"></label>
    <div id="b-status" style="font-size:12px;color:var(--gray);margin-top:6px"></div>
    <div id="b-list" style="margin-top:10px"></div>
-   <div style="margin-top:12px"><button class="btn" id="b-go" onclick="bulkGo()" disabled>Upload all / Subir todo</button> <button class="btn ghost" onclick="$('edit').classList.add('hide')">Close / Cerrar</button></div>`;
+   <div style="margin-top:12px"><button class="btn" id="b-go" onclick="bulkGo()">Upload all / Subir todo</button> <button class="btn ghost" onclick="$('edit').classList.add('hide')">Close / Cerrar</button></div>`;
   const dz=$('b-drop');
   ['dragover','dragenter'].forEach(ev=>dz.addEventListener(ev,x=>{x.preventDefault();dz.style.background='#eef3ff';}));
   ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,x=>{x.preventDefault();dz.style.background='#fafbff';}));
@@ -155,16 +155,17 @@ function bulkRender(){
     <select style="flex:0 0 90px" ${(r.state==='pending'||r.state==='failed')?'':'disabled'} onchange="BULK[${i}].idioma=this.value">${['EN','ES','EN/ES'].map(l=>`<option ${l===r.idioma?'selected':''}>${l}</option>`).join('')}</select>
     ${(r.state==='pending'||r.state==='failed')?`<button class="btn ghost sm" onclick="BULK.splice(${i},1);bulkRender()">✕</button>`:''}
     <small style="flex-basis:100%;color:${(r.state==='error'||r.state==='failed')?'var(--red)':'var(--gray)'}">${esc(r.file.name)} · ${(r.file.size/1048576).toFixed(1)} MB ${r.msg?'· '+esc(r.msg):''}</small></div>`).join('');
-  $('b-go').disabled=!BULK.some(r=>r.state==='pending'||r.state==='failed');
+  
 }
 async function bulkGo(){
-  try{ await bulkGo2(); }catch(x){ err('Error: '+(x&&x.message||x)); $('b-go').disabled=false; }
+  try{ await bulkGo2(); }catch(x){ err('Error: '+(x&&x.message||x)); }
 }
 async function bulkGo2(){
+  if(!BULK.some(r=>r.state==='pending'||r.state==='failed')){err('Choose files first (tap the dashed box). / Primero elige archivos (toca el recuadro punteado).');$('b-drop').scrollIntoView({behavior:'smooth',block:'center'});return;}
   if(!(window.DH&&DH.files&&DH.files.upload)){err('Old version of the page is cached — reload (pull down / Ctrl+Shift+R). / Versión vieja en caché: recarga la página.');return;}
   const cat0=$('b-c').value.trim(); if(BULK.some(r=>(r.state==='pending'||r.state==='failed')&&!(r.cat||'').trim()&&!cat0)){err('Every file needs a category (fill the default above). / Cada archivo necesita categoría (llena la de arriba).');return;}
   const sel=[...document.querySelectorAll('.b-r:checked')].map(x=>x.value); const roles=$('b-all').checked||!sel.length?null:sel;
-  $('msg').classList.add('hide'); $('b-go').disabled=true; let n=0;
+  $('msg').classList.add('hide'); let n=0;
   for(const r of BULK){
     if(r.state!=='pending'&&r.state!=='failed')continue;
     if(!r.title.trim()){r.state='error';r.msg='Title is empty / Título vacío';bulkRender();continue;}
@@ -181,7 +182,7 @@ async function bulkGo2(){
   if(n)$('msg').classList.add('hide');
   const bad=BULK.filter(r=>r.state==='error'||r.state==='failed').length;
   if(bad)err(`${n} uploaded, ${bad} failed — fix and retry the failed ones. / ${n} subidos, ${bad} con error.`);
-  $('b-go').disabled=!BULK.some(r=>r.state==='pending'||r.state==='failed');
+  
 }
 init();
 </script>
