@@ -59,7 +59,7 @@ function render(){
   const cats={}; items.forEach(i=>(cats[i.categoria]=cats[i.categoria]||[]).push(i));
   let html=Object.keys(cats).sort().map(c=>`<div class="cat"><h2>${esc(c)}</h2>${cats[c].map(i=>`<div class="item"><div class="ico">📄</div><div class="t"><b>${esc(i.titulo)}</b><small>${esc(i.descripcion||'')}</small></div><span class="tag">${esc(i.idioma)}</span>${i.activo?'':'<span class="tag off">hidden</span>'}${D.puede_editar?`<button class="btn ghost sm" onclick="edit('${i.id}')">Edit</button>`:''}${i.archivo_id?`<button class="btn" onclick="openFile('${i.id}')">Open / Abrir</button>`:`<a class="btn" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer">Open / Abrir <small>(${/google\.com/.test(i.url||'')?'Google':/sharepoint/.test(i.url||'')?'SharePoint':'Web'})</small></a>`}</div>`).join('')}</div>`).join('');
   if(!html)html='<div class="card">Nothing found. / No se encontró nada.</div>';
-  if(D.puede_editar)html='<div style="margin-bottom:12px"><button class="btn" onclick="edit(null)">+ Add resource</button></div>'+html;
+  if(D.puede_editar)html='<div style="margin-bottom:12px"><button class="btn" onclick="edit(null)">+ Add resource</button> <button class="btn ghost" onclick="bulk()">⬆ Bulk upload / Subida masiva</button></div>'+html;
   $('list').innerHTML=html;
 }
 function edit(id){
@@ -92,6 +92,70 @@ async function save(id){
     if(r.error){err((r.detalle||r.error));if(btn)btn.disabled=false;return;}
     $('msg').classList.add('hide'); $('edit').classList.add('hide'); D=await DH.rpc('recursos_listar'); render();
   }catch(e){err('Could not save: '+e.message);if(btn)btn.disabled=false;}
+}
+
+// ---------- Bulk upload ----------
+let BULK=[];
+function guessTitle(n){return n.replace(/\.[^.]+$/,'').replace(/[_]+/g,' ').replace(/\s+/g,' ').replace(/\s+(ES|EN)$/i,'').trim();}
+function guessLang(n){const b=n.replace(/\.[^.]+$/,'');return /(^|[_\s-])ES([_\s-]|$)/i.test(b)?'ES':/(^|[_\s-])EN([_\s-]|$)/i.test(b)?'EN':'EN';}
+function bulk(){
+  BULK=[]; const e=$('edit'); e.classList.remove('hide');
+  e.innerHTML=`<h2 style="color:var(--navy);font-size:16px">Bulk upload / Subida masiva</h2>
+   <p style="font-size:12px;color:var(--gray);margin:6px 0">PDF or images, up to 20 MB each. Titles and language are guessed from the file names; you can edit them before uploading. / PDF o imágenes, hasta 20 MB c/u. El título y el idioma se deducen del nombre del archivo; los puedes editar antes de subir.</p>
+   <div class="row"><div><label>Category / Categoría</label><input id="b-c" list="cats2" placeholder="e.g. Credit / Crédito"><datalist id="cats2">${[...new Set(D.items.map(i=>i.categoria))].map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div></div>
+   <label>Who sees them / Quién los ve</label>
+   <div class="row"><label style="font-weight:400"><input type="checkbox" id="b-all" checked style="width:auto"> Everyone / Todos</label>
+   ${['vendedor','staff','manager','director'].map(x=>`<label style="font-weight:400"><input type="checkbox" class="b-r" value="${x}" style="width:auto"> ${x}</label>`).join('')}</div>
+   <div id="b-drop" style="margin-top:12px;border:2px dashed #aab;border-radius:10px;padding:18px;text-align:center;background:#fafbff;cursor:pointer" onclick="$('b-f').click()">Drop files here or tap to choose / Suelta archivos aquí o toca para elegir</div>
+   <input id="b-f" type="file" multiple accept="application/pdf,image/jpeg,image/png,image/webp" class="hide" onchange="bulkPick(this.files)">
+   <div id="b-list" style="margin-top:10px"></div>
+   <div style="margin-top:12px"><button class="btn" id="b-go" onclick="bulkGo()" disabled>Upload all / Subir todo</button> <button class="btn ghost" onclick="$('edit').classList.add('hide')">Close / Cerrar</button></div>`;
+  const dz=$('b-drop');
+  ['dragover','dragenter'].forEach(ev=>dz.addEventListener(ev,x=>{x.preventDefault();dz.style.background='#eef3ff';}));
+  ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,x=>{x.preventDefault();dz.style.background='#fafbff';}));
+  dz.addEventListener('drop',x=>bulkPick(x.dataTransfer.files));
+  e.scrollIntoView({behavior:'smooth'});
+}
+function bulkPick(files){
+  const have=new Set(D.items.map(i=>i.titulo.toLowerCase()));
+  [...files].forEach(f=>{
+    if(!/^(application\/pdf|image\/(jpeg|png|webp))$/.test(f.type)){BULK.push({file:f,title:f.name,idioma:'EN',state:'error',msg:'Type not allowed / Tipo no permitido'});return;}
+    if(f.size>20*1024*1024){BULK.push({file:f,title:f.name,idioma:'EN',state:'error',msg:'Over 20 MB / Más de 20 MB'});return;}
+    const t=guessTitle(f.name);
+    BULK.push({file:f,title:t,idioma:guessLang(f.name),state:'pending',msg:have.has(t.toLowerCase())?'A resource with this title already exists / Ya existe un recurso con este título':''});
+  });
+  bulkRender();
+}
+function bulkRender(){
+  $('b-list').innerHTML=BULK.map((r,i)=>`<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #eee;flex-wrap:wrap">
+    <span style="width:22px">${r.state==='ok'?'✅':(r.state==='error'||r.state==='failed')?'❌':r.state==='uploading'?'⏳':'📄'}</span>
+    <input style="flex:3;min-width:200px" value="${esc(r.title)}" ${(r.state==='pending'||r.state==='failed')?'':'disabled'} oninput="BULK[${i}].title=this.value">
+    <select style="flex:0 0 90px" ${(r.state==='pending'||r.state==='failed')?'':'disabled'} onchange="BULK[${i}].idioma=this.value">${['EN','ES','EN/ES'].map(l=>`<option ${l===r.idioma?'selected':''}>${l}</option>`).join('')}</select>
+    ${(r.state==='pending'||r.state==='failed')?`<button class="btn ghost sm" onclick="BULK.splice(${i},1);bulkRender()">✕</button>`:''}
+    <small style="flex-basis:100%;color:${(r.state==='error'||r.state==='failed')?'var(--red)':'var(--gray)'}">${esc(r.file.name)} · ${(r.file.size/1048576).toFixed(1)} MB ${r.msg?'· '+esc(r.msg):''}</small></div>`).join('');
+  $('b-go').disabled=!BULK.some(r=>r.state==='pending'||r.state==='failed');
+}
+async function bulkGo(){
+  const cat=$('b-c').value.trim(); if(!cat){err('Category is required. / Falta la categoría.');return;}
+  const sel=[...document.querySelectorAll('.b-r:checked')].map(x=>x.value); const roles=$('b-all').checked||!sel.length?null:sel;
+  $('msg').classList.add('hide'); $('b-go').disabled=true; let n=0, base=100+D.items.filter(i=>i.categoria===cat).length*10;
+  for(const r of BULK){
+    if(r.state!=='pending'&&r.state!=='failed')continue;
+    if(!r.title.trim()){r.state='error';r.msg='Title is empty / Título vacío';bulkRender();continue;}
+    r.state='uploading';r.msg='';bulkRender();
+    try{
+      const archivo=await DH.files.upload('recurso',r.file);
+      const res=await DH.rpc('admin_recurso_guardar',{p_archivo_id:archivo,p_id:null,p_titulo:r.title,p_categoria:cat,p_idioma:r.idioma,p_url:'',p_descripcion:null,p_roles:roles,p_orden:base+n*10,p_activo:true});
+      if(res.error)throw new Error(res.detalle||res.error);
+      r.state='ok';r.msg='Uploaded / Subido';n++;
+    }catch(e){r.state='failed';r.msg=e.message||'Failed / Falló';}
+    bulkRender();
+  }
+  try{D=await DH.rpc('recursos_listar');render();}catch(e){}
+  if(n)$('msg').classList.add('hide');
+  const bad=BULK.filter(r=>r.state==='error'||r.state==='failed').length;
+  if(bad)err(`${n} uploaded, ${bad} failed — fix and retry the failed ones. / ${n} subidos, ${bad} con error.`);
+  $('b-go').disabled=!BULK.some(r=>r.state==='pending'||r.state==='failed');
 }
 init();
 </script>
