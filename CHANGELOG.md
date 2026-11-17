@@ -20,6 +20,7 @@ Punto de restauración: commit `9838fca` (último cambio funcional del 16 nov; e
 | 16 nov | Popup de bienvenida bilingüe (primera visita, clave `dh_welcome_v1`) | d5088f4 … 9838fca |
 | 16 nov | Fase 4 cutover: páginas raíz = versión con token; respaldo en `backup_pre_phase4/`; sw cache v2 | 3ebff90 |
 | 16 nov | Fase 4 cierre en base de datos + SQL con rollback | 9426b5f |
+| 16 nov (noche) | Motor de formatos en base de datos (sin tocar la página de evaluación en uso): 10 formatos v1 (ventas, gerencia, almacén, general + contabilidad, crédito, cobranza, cajeros, compras, marketing con núcleo común de 7 + 2 por área, benchmark), versionado/historial/revertir, núcleo editable solo por Rodrigo/Rey, preguntas propias de managers ≤30% y ≤6, pesos recalculados a 100%, bloqueo si ya hay evaluaciones completadas (RRHH puede forzar), bitácora. Editor de jerarquía/roster (quién evalúa a quién, pesos, alta/baja, anti-ciclos) para Rodrigo/Rey. Nueva página `editor.html` (sin enlace desde el sitio). Pendiente: conectar la página de evaluación a los formatos de la base con bandera y respaldo. | (este commit) |
 
 ## Decisiones de producto de hoy (16 nov)
 - Herramientas de tienda (Pre-Screener, How They Found Us): solo sales / store_management / senior_management, admins, Ted, Karen. Certifications, Evaluation y Org chart: todos.

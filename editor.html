@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>My Workspace — Evaluation Editor</title>
+<style>
+  :root{--navy:#1B3A6B;--gold:#C8922A;--lt:#D6E4F7;--green:#27AE60;--red:#C0392B;--gray:#6B6B6B;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,sans-serif;background:#f0f2f5;color:#3c3c3c}
+  header{background:var(--navy);border-bottom:4px solid var(--gold);padding:16px 24px;display:flex;justify-content:space-between;align-items:center;color:#fff}
+  header h1{font-size:18px} header a{color:var(--lt);font-size:13px;text-decoration:none;margin-left:16px}
+  nav{display:flex;gap:4px;padding:12px 24px 0;background:#fff;border-bottom:1px solid #ddd}
+  nav button{padding:10px 18px;border:none;background:none;font-weight:700;color:var(--gray);cursor:pointer;border-bottom:3px solid transparent}
+  nav button.on{color:var(--navy);border-bottom-color:var(--gold)}
+  main{max-width:1100px;margin:20px auto;padding:0 16px 60px}
+  .card{background:#fff;border-radius:12px;padding:18px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+  h2{color:var(--navy);font-size:17px;margin-bottom:10px} h3{color:var(--navy);font-size:14px;margin:8px 0}
+  .btn{padding:8px 14px;border-radius:8px;border:none;font-weight:700;font-size:13px;cursor:pointer;background:var(--navy);color:#fff}
+  .btn.gold{background:var(--gold)} .btn.red{background:var(--red)} .btn.ghost{background:#fff;border:1px solid #ccc;color:#333}
+  .btn:disabled{opacity:.5;cursor:not-allowed} .btn.sm{padding:4px 9px;font-size:12px}
+  input,select,textarea{font:inherit;font-size:13px;padding:7px 9px;border:1px solid #ccc;border-radius:7px;width:100%}
+  textarea{resize:vertical;min-height:44px}
+  label{font-size:12px;font-weight:700;color:var(--navy);display:block;margin:6px 0 3px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end} .row>*{flex:1;min-width:140px}
+  .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;background:var(--lt);color:var(--navy);font-weight:700}
+  .tag.gold{background:#fbeccc;color:#8a5a00} .tag.lock{background:#eee;color:#555}
+  .dim{border:1px solid #e1e1e1;border-radius:10px;padding:12px;margin-bottom:10px;background:#fafbfd}
+  .dim.core{background:#f4f6fa} .dim .top{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:4px}
+  .anch{display:grid;grid-template-columns:22px 1fr;gap:6px;align-items:center;margin-top:4px} .anch b{color:var(--gold)}
+  table{width:100%;border-collapse:collapse;font-size:13px} th,td{text-align:left;padding:7px 8px;border-bottom:1px solid #eee;vertical-align:top} th{color:var(--navy);font-size:12px}
+  .msg{padding:10px 14px;border-radius:8px;margin-bottom:12px;font-size:13px;display:none} .msg.show{display:block}
+  .msg.ok{background:#e6f6ec;color:#1d6b3a} .msg.err{background:#fdecea;color:var(--red)}
+  .bar{height:8px;border-radius:4px;background:#e6e6e6;overflow:hidden;margin-top:4px} .bar>i{display:block;height:100%;background:var(--gold)}
+  .grid2{display:grid;grid-template-columns:260px 1fr;gap:14px} @media(max-width:800px){.grid2{grid-template-columns:1fr}}
+  .flist button{display:block;width:100%;text-align:left;padding:10px;margin-bottom:6px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer}
+  .flist button.on{border-color:var(--gold);background:#fff8ec} .flist small{color:var(--gray);display:block;margin-top:2px}
+  .hide{display:none} .mut{color:var(--gray);font-size:12px}
+</style>
+</head>
+<body>
+<header><h1>Evaluation Editor <span class="mut" style="color:var(--lt)">/ Editor de evaluaciones</span></h1>
+  <div><span id="who" style="font-size:13px"></span><a href="cockpit.html">Cockpit</a><a href="index.html">Home</a></div></header>
+<nav><button id="t-forms" class="on" onclick="tab('forms')">Forms / Formatos</button><button id="t-org" class="hide" onclick="tab('org')">Hierarchy &amp; roster / Jerarquía</button></nav>
+<main>
+<div id="msg" class="msg"></div>
+
+<section id="p-forms">
+  <div class="grid2">
+    <div class="card"><h2>Forms</h2><div id="flist" class="flist"></div><div id="assign" class="hide"></div></div>
+    <div id="fdetail"><div class="card mut">Pick a form on the left. / Elige un formato a la izquierda.</div></div>
+  </div>
+</section>
+
+<section id="p-org" class="hide">
+  <div class="card"><div class="row"><div><label>Search / Buscar</label><input id="q" oninput="renderOrg()" placeholder="name, position, location…"></div>
+    <div style="flex:0 0 auto"><button class="btn gold" onclick="newPerson()">+ Add person</button></div></div></div>
+  <div class="card" style="overflow-x:auto"><table><thead><tr><th>Person</th><th>Location / Dept</th><th>Role · Profile · Form</th><th>Evaluated by (weight)</th><th></th></tr></thead><tbody id="orgrows"></tbody></table></div>
+  <div id="pdlg" class="card hide"></div>
+</section>
+</main>
+
+<script src="dh-session.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let LIST=null, CUR=null, F=null, ORG=null, PUEDE_ORG=false;
+function say(t,ok){const m=$('msg');m.textContent=t;m.className='msg show '+(ok?'ok':'err');window.scrollTo(0,0);setTimeout(()=>m.className='msg',ok?3500:9000);}
+function tab(t){['forms','org'].forEach(x=>{$('p-'+x).classList.toggle('hide',x!==t);$('t-'+x).classList.toggle('on',x===t);});if(t==='org'&&!ORG)loadOrg();}
+const ERR={forbidden:'You do not have permission for this. / No tienes permiso para esto.',frozen:'Completed evaluations already use this form. HR can force the change.',unknown:'Not found.',duplicate:'That name already exists in the roster.'};
+function errText(r){return (ERR[r.error]||r.error)+(r.detalle?' — '+r.detalle:'');}
+
+async function init(){
+  const emp=DH.emp(); if(!emp||!DH.token()){location.href='index.html';return;}
+  $('who').textContent=emp.nombre_completo||emp.username||'';
+  try{LIST=await DH.rpc('admin_forms_listar');}catch(e){say('Could not load: '+e.message);return;}
+  if(LIST.error){document.querySelector('main').innerHTML='<div class="card">This editor is for managers, HR and admins. / Este editor es para gerentes, RRHH y administradores.</div>';return;}
+  PUEDE_ORG=!!LIST.puede_core; if(PUEDE_ORG)$('t-org').classList.remove('hide');
+  renderList();
+}
+function renderList(){
+  $('flist').innerHTML=LIST.forms.map(f=>`<button class="${CUR===f.clave?'on':''}" onclick="openForm('${f.clave}')"><b>${esc(f.nombre)}</b><small>v${f.version} · ${f.n_dims} questions · ${f.personas} people${f.mi_slice?` · +${f.mi_slice} mine`:''}</small></button>`).join('');
+  if(PUEDE_ORG){const profs=Object.entries(LIST.asignacion||{});
+    $('assign').classList.remove('hide');
+    $('assign').innerHTML='<h3>Default form by KPI profile</h3>'+profs.map(([p,c])=>`<div class="row" style="margin-bottom:5px"><div style="flex:1"><span class="mut">${esc(p)}</span></div><div><select onchange="setAssign('${p}',this.value)">${LIST.forms.map(f=>`<option value="${f.clave}" ${f.clave===c?'selected':''}>${esc(f.nombre.split(' / ')[0])}</option>`).join('')}</select></div></div>`).join('');}
+}
+async function setAssign(p,c){const r=await DH.rpc('admin_form_asignar',{p_kpi_perfil:p,p_clave:c});if(r.error)say(errText(r));else{say('Saved. / Guardado.',true);LIST=await DH.rpc('admin_forms_listar');renderList();}}
+
+async function openForm(clave){
+  CUR=clave; F=await DH.rpc('admin_form_get',{p_clave:clave});
+  if(F.error){say(errText(F));return;}
+  F.coreEd=JSON.parse(JSON.stringify(F.core)); F.sliceEd=JSON.parse(JSON.stringify(F.slice||[]));
+  renderList(); renderForm();
+}
+function pct(core,slice){const all=[...core,...slice];const t=all.reduce((a,d)=>a+(+d.w||1),0)||1;return d=>Math.round(1000*(+d.w||1)/t)/10;}
+function dimCard(d,i,which,editable){
+  const arr=which==='core'?F.coreEd:F.sliceEd, p=pct(F.coreEd,F.sliceEd)(d);
+  const dis=editable?'':'disabled';
+  return `<div class="dim ${which}"><div class="top"><div><span class="tag ${which==='core'?'':'gold'}">${which==='core'?'Core':'Mine'}</span> <b>${i+1}.</b> <span class="mut">key: ${esc(d.key)}</span></div>
+   <div><span class="tag">${p}% of total</span> ${editable?`<button class="btn ghost sm" onclick="mv('${which}',${i},-1)">↑</button> <button class="btn ghost sm" onclick="mv('${which}',${i},1)">↓</button> <button class="btn red sm" onclick="rm('${which}',${i})">Remove</button>`:'<span class="tag lock">🔒 locked</span>'}</div></div>
+   <label>Title (EN / ES)</label><input ${dis} value="${esc(d.title)}" oninput="ed('${which}',${i},'title',this.value)">
+   <label>Question (EN / ES)</label><textarea ${dis} oninput="ed('${which}',${i},'q',this.value)">${esc(d.q)}</textarea>
+   ${d.opts.map((o,j)=>`<div class="anch"><b>${j+1}</b><input ${dis} value="${esc(o)}" oninput="edo('${which}',${i},${j},this.value)"></div>`).join('')}
+   <div class="row" style="margin-top:6px"><div style="max-width:200px"><label>Weight (0.5–2)</label><input ${dis} type="number" min="0.5" max="2" step="0.25" value="${+d.w||1}" onchange="ed('${which}',${i},'w',parseFloat(this.value)||1);renderForm()"></div></div></div>`;
+}
+function renderForm(){
+  const canCore=F.puede_core, cs=F.sliceEd.reduce((a,d)=>a+(+d.w||1),0), cw=F.coreEd.reduce((a,d)=>a+(+d.w||1),0), cap=Math.round(cw*0.4286*100)/100;
+  const share=Math.round(1000*cs/(cs+cw||1))/10;
+  const lib=(F.biblioteca||[]).filter(b=>![...F.coreEd,...F.sliceEd].some(d=>d.key===b.key));
+  $('fdetail').innerHTML=`
+  <div class="card"><h2>${esc((LIST.forms.find(f=>f.clave===CUR)||{}).nombre||CUR)}</h2>
+   <div class="mut">Questions use a fixed 1–5 scale with 5 behavioral anchors. Weights are always recalculated to 100%. / Escala 1–5 con 5 anclas de conducta; los pesos siempre se recalculan a 100%.</div>
+   ${F.congelado_core?'<div class="msg show err" style="margin-top:8px">Evaluations were already completed with this form. Changes apply to new evaluations; only HR can force them.</div>':''}</div>
+  <div class="card"><div style="display:flex;justify-content:space-between"><h2>Core questions (v${F.core_version}) ${canCore?'':'<span class="tag lock">HR only</span>'}</h2>
+   ${canCore?`<div><button class="btn ghost sm" onclick="addCore()">+ Blank</button></div>`:''}</div>
+   ${F.coreEd.map((d,i)=>dimCard(d,i,'core',canCore)).join('')}
+   ${canCore?`<div class="row"><div><label>Change note / Nota del cambio</label><input id="note-core" placeholder="why this change"></div><div style="flex:0 0 auto"><button class="btn" onclick="saveCore()">Save core</button></div></div>`:''}</div>
+  <div class="card"><h2>My questions ${F.slice_version?`(v${F.slice_version})`:''} <span class="tag gold">up to 30% · max 6</span></h2>
+   <div class="mut">Questions only you add for people you evaluate on this form. Currently ${share}% of the total (weight ${cs} of ${cap} allowed). / Preguntas propias para quienes evalúas con este formato.</div>
+   <div class="bar"><i style="width:${Math.min(100,share/30*100)}%"></i></div>
+   ${F.sliceEd.map((d,i)=>dimCard(d,i,'slice',true)).join('')}
+   <div class="row" style="margin-top:8px"><div><label>Add from library / Agregar de la biblioteca</label><select id="lib"><option value="">— choose —</option>${lib.map(b=>`<option value="${b.key}">${esc(b.title)}</option>`).join('')}</select></div>
+    <div style="flex:0 0 auto"><button class="btn ghost" onclick="addLib()">Add</button> <button class="btn ghost" onclick="addBlank()">+ Blank</button></div></div>
+   <div class="row" style="margin-top:8px"><div><label>Change note</label><input id="note-slice"></div><div style="flex:0 0 auto"><button class="btn" onclick="saveSlice()">Save my questions</button></div></div></div>
+  <div class="card"><h2>History / Historial</h2><div id="hist" class="mut">Loading…</div></div>`;
+  loadHist();
+}
+function ed(w,i,k,v){(w==='core'?F.coreEd:F.sliceEd)[i][k]=v;}
+function edo(w,i,j,v){(w==='core'?F.coreEd:F.sliceEd)[i].opts[j]=v;}
+function mv(w,i,d){const a=w==='core'?F.coreEd:F.sliceEd,j=i+d;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];renderForm();}
+function rm(w,i){if(!confirm('Remove this question? / ¿Quitar esta pregunta?'))return;(w==='core'?F.coreEd:F.sliceEd).splice(i,1);renderForm();}
+function blank(){const n=Date.now().toString(36).slice(-5);return {key:'q_'+n,title:'New question / Nueva pregunta',q:'What do you typically observe? / ¿Qué observas habitualmente?',opts:['Level 1 / Nivel 1','Level 2 / Nivel 2','Level 3 / Nivel 3','Level 4 / Nivel 4','Level 5 / Nivel 5'],w:1};}
+function addBlank(){if(F.sliceEd.length>=6){say('Maximum 6 of your own questions.');return;}F.sliceEd.push(blank());renderForm();}
+function addCore(){F.coreEd.push(blank());renderForm();}
+function addLib(){const k=$('lib').value;if(!k)return;if(F.sliceEd.length>=6){say('Maximum 6 of your own questions.');return;}const b=F.biblioteca.find(x=>x.key===k);F.sliceEd.push(JSON.parse(JSON.stringify(b)));renderForm();}
+async function save(prop,dims,note,forzar){
+  const r=await DH.rpc('admin_form_guardar',{p_clave:CUR,p_propietario:prop,p_dims:dims,p_nota:note||null,p_forzar:!!forzar});
+  if(r.error==='frozen'&&PUEDE_ORG&&!forzar){if(confirm(errText(r)+'\n\nForce the change? / ¿Forzar el cambio?'))return save(prop,dims,note,true);return;}
+  if(r.error){say(errText(r));return;}
+  say('Saved as v'+r.version+'. / Guardado.',true); await openForm(CUR); LIST=await DH.rpc('admin_forms_listar'); renderList();
+}
+function saveCore(){save(null,F.coreEd,$('note-core').value);}
+function saveSlice(){save(DH.emp().id,F.sliceEd,$('note-slice').value);}
+async function loadHist(){
+  const h=await DH.rpc('admin_form_historial',{p_clave:CUR}); const el=$('hist'); if(!el)return;
+  if(!h||h.error||!h.length){el.textContent='No changes yet.';return;}
+  el.innerHTML='<table><tr><th>Date</th><th>Version</th><th>Scope</th><th>By</th><th>Note</th><th></th></tr>'+h.map(v=>`<tr><td>${new Date(v.created_at).toLocaleString()}</td><td>v${v.version}</td><td>${v.propietario?'Manager set':'Core'}</td><td>${esc(v.por||'seed')}</td><td>${esc(v.nota||'')}</td><td><button class="btn ghost sm" onclick="revert('${v.id}')">Restore</button></td></tr>`).join('')+'</table>';
+}
+async function revert(id,forzar){
+  if(!forzar&&!confirm('Restore this version as a new version? / ¿Restaurar esta versión?'))return;
+  const r=await DH.rpc('admin_form_revertir',{p_version_id:id,p_forzar:!!forzar});
+  if(r.error==='frozen'&&PUEDE_ORG&&!forzar){if(confirm(errText(r)+'\nForce?'))return revert(id,true);return;}
+  if(r.error){say(errText(r));return;} say('Restored as v'+r.version,true); openForm(CUR);
+}
+
+/* ---------- Hierarchy & roster ---------- */
+async function loadOrg(){const r=await DH.rpc('admin_jerarquia_listar');if(r.error){say(errText(r));return;}ORG=r;renderOrg();}
+function renderOrg(){
+  if(!ORG)return; const q=($('q').value||'').toLowerCase();
+  const rows=ORG.personas.filter(p=>!q||[p.nombre,p.puesto,p.ubicacion,p.departamento].join(' ').toLowerCase().includes(q));
+  $('orgrows').innerHTML=rows.map(p=>`<tr style="${p.se_evalua?'':'opacity:.5'}"><td><b>${esc(p.nombre)}</b><br><span class="mut">${esc(p.puesto||'')}</span> ${p.registrado?'':'<span class="tag lock">not registered</span>'}${p.se_evalua?'':' <span class="tag lock">inactive</span>'}</td>
+   <td>${esc(p.ubicacion||'')}<br><span class="mut">${esc(p.departamento||'')}</span></td>
+   <td>${esc(p.rol_eval)} · ${esc(p.kpi_perfil||'—')}<br><span class="tag">${esc(p.form_efectivo)}${p.formulario?' (override)':''}</span></td>
+   <td>${p.jefes.map(j=>`${esc(j.nombre)} <span class="mut">(${j.peso}, ${j.tipo})</span> <a href="#" onclick="dropJefe('${p.id}','${j.jefe_id}');return false" style="color:var(--red)">✕</a>`).join('<br>')||'<span class="mut">—</span>'}</td>
+   <td><button class="btn ghost sm" onclick="editPerson('${p.id}')">Edit</button></td></tr>`).join('');
+}
+async function dropJefe(r,j){if(!confirm('Remove this evaluator link? / ¿Quitar este evaluador?'))return;const x=await DH.rpc('admin_jefe_quitar',{p_roster_id:r,p_jefe_id:j});if(x.error)say(errText(x));else{say('Removed.',true);loadOrg();}}
+function opts(arr,sel,blankLabel){return (blankLabel?`<option value="">${blankLabel}</option>`:'')+arr.map(([v,t])=>`<option value="${esc(v)}" ${v===sel?'selected':''}>${esc(t)}</option>`).join('');}
+function editPerson(id){
+  const p=ORG.personas.find(x=>x.id===id); const d=$('pdlg'); d.classList.remove('hide');
+  const people=ORG.personas.filter(x=>x.id!==id&&x.se_evalua).map(x=>[x.id,x.nombre+' — '+(x.puesto||'')]);
+  d.innerHTML=`<h2>${esc(p.nombre)}</h2><div class="row">
+   <div><label>Position</label><input id="e-puesto" value="${esc(p.puesto||'')}"></div><div><label>Department</label><input id="e-dep" value="${esc(p.departamento||'')}"></div><div><label>Location</label><input id="e-ubi" value="${esc(p.ubicacion||'')}"></div></div>
+   <div class="row"><div><label>Evaluation role</label><select id="e-rol">${opts([['vendedor','vendedor'],['staff','staff'],['manager','manager'],['director','director']],p.rol_eval)}</select></div>
+    <div><label>KPI profile</label><select id="e-perf">${opts(ORG.perfiles.map(x=>[x.clave,x.nombre]),p.kpi_perfil,'—')}</select></div>
+    <div><label>Form override</label><select id="e-form">${opts(LIST.forms.map(f=>[f.clave,f.nombre]),p.formulario,'(default for profile)')}</select></div></div>
+   <div class="row"><div><label>Evaluated in this cycle</label><select id="e-ciclo"><option value="true" ${p.en_ciclo?'selected':''}>Yes</option><option value="false" ${p.en_ciclo?'':'selected'}>No</option></select></div>
+    <div><label>Active (evaluated at all)</label><select id="e-act"><option value="true" ${p.se_evalua?'selected':''}>Active</option><option value="false" ${p.se_evalua?'':'selected'}>Inactive / left company</option></select></div></div>
+   <div style="margin-top:10px"><button class="btn" onclick="savePerson('${id}')">Save</button> <button class="btn ghost" onclick="$('pdlg').classList.add('hide')">Close</button></div>
+   <h3 style="margin-top:16px">Add an evaluator / Agregar evaluador</h3>
+   <div class="row"><div><label>Evaluator</label><select id="j-who">${opts(people,'','— choose —')}</select></div>
+    <div style="max-width:140px"><label>Weight</label><input id="j-peso" type="number" min="0" max="100" value="1"></div>
+    <div style="max-width:160px"><label>Type</label><select id="j-tipo"><option>directo</option><option>indirecto</option></select></div>
+    <div style="flex:0 0 auto"><button class="btn gold" onclick="addJefe('${id}')">Add</button></div></div>
+   <div class="mut">Weights are relative: two evaluators with 50 and 50 count equally; one evaluator alone uses 1. Type "indirecto" with weight 0 = informational only. Changes affect results computed from now on.</div>`;
+  d.scrollIntoView({behavior:'smooth'});
+}
+async function savePerson(id){
+  const c={puesto:$('e-puesto').value||null,departamento:$('e-dep').value||null,ubicacion:$('e-ubi').value||null,rol_eval:$('e-rol').value,kpi_perfil:$('e-perf').value||null,formulario:$('e-form').value||null,en_ciclo:$('e-ciclo').value==='true',se_evalua:$('e-act').value==='true'};
+  const r=await DH.rpc('admin_roster_editar',{p_roster_id:id,p_cambios:c}); if(r.error){say(errText(r));return;} say('Saved.',true); await loadOrg(); editPerson(id);
+}
+async function addJefe(id){
+  const j=$('j-who').value; if(!j){say('Choose an evaluator.');return;}
+  const r=await DH.rpc('admin_jefe_set',{p_roster_id:id,p_jefe_id:j,p_peso:parseFloat($('j-peso').value)||0,p_tipo:$('j-tipo').value}); if(r.error){say(errText(r));return;} say('Added.',true); await loadOrg(); editPerson(id);
+}
+function newPerson(){
+  const d=$('pdlg'); d.classList.remove('hide');
+  const people=ORG.personas.filter(x=>x.se_evalua).map(x=>[x.id,x.nombre]);
+  d.innerHTML=`<h2>Add person / Agregar persona</h2><div class="row"><div><label>Full name</label><input id="n-nom"></div><div><label>Position</label><input id="n-puesto"></div><div><label>Department</label><input id="n-dep"></div><div><label>Location</label><input id="n-ubi"></div></div>
+  <div class="row"><div><label>Evaluation role</label><select id="n-rol">${opts([['staff','staff'],['vendedor','vendedor'],['manager','manager'],['director','director']],'staff')}</select></div>
+  <div><label>KPI profile</label><select id="n-perf">${opts(ORG.perfiles.map(x=>[x.clave,x.nombre]),'','—')}</select></div>
+  <div><label>Evaluated by</label><select id="n-jefe">${opts(people,'','— none yet —')}</select></div></div>
+  <div style="margin-top:10px"><button class="btn" onclick="createPerson()">Create</button> <button class="btn ghost" onclick="$('pdlg').classList.add('hide')">Cancel</button></div>
+  <div class="mut">When this person registers with the same name they are linked automatically. / Al registrarse con el mismo nombre se vincula solo.</div>`;
+}
+async function createPerson(){
+  const r=await DH.rpc('admin_roster_agregar',{p_nombre:$('n-nom').value,p_puesto:$('n-puesto').value||null,p_departamento:$('n-dep').value||null,p_ubicacion:$('n-ubi').value||null,p_rol_eval:$('n-rol').value,p_kpi_perfil:$('n-perf').value||null,p_jefe_id:$('n-jefe').value||null});
+  if(r.error){say(errText(r));return;} say('Created.',true); $('pdlg').classList.add('hide'); loadOrg();
+}
+init();
+</script>
+</body>
+</html>
