@@ -33,6 +33,7 @@
 <main>
   <div class="note">Files stored here open directly. Items marked "SharePoint" are links to the company SharePoint and need a Daniels Microsoft account. / Los archivos guardados aquí se abren directo. Los marcados "SharePoint" son links al SharePoint de la empresa y requieren cuenta Microsoft de Daniels.</div>
   <div id="msg" class="msg hide"></div>
+  <div style="font-size:10px;color:#aaa;text-align:right;margin:-8px 0 6px">page v6</div>
   <div class="bar"><input id="q" placeholder="Search / Buscar…" oninput="render()"><select id="lang" onchange="render()"><option value="">All languages / Todos los idiomas</option><option>EN</option><option>ES</option></select></div>
   <div id="edit" class="card hide" style="margin-bottom:14px"></div>
   <div id="list"></div>
@@ -60,8 +61,11 @@ function render(){
   const cats={}; items.forEach(i=>(cats[i.categoria]=cats[i.categoria]||[]).push(i));
   let html=Object.keys(cats).sort().map(c=>`<div class="cat"><h2>${esc(c)}</h2>${cats[c].map(i=>`<div class="item"><div class="ico">📄</div><div class="t"><b>${esc(i.titulo)}</b><small>${esc(i.descripcion||'')}</small></div><span class="tag">${esc(i.idioma)}</span>${i.activo?'':'<span class="tag off">hidden</span>'}${D.puede_editar?`<button class="btn ghost sm" onclick="edit('${i.id}')">Edit</button>`:''}${i.archivo_id?`<button class="btn" onclick="openFile('${i.id}')">Open / Abrir</button>`:`<a class="btn" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer">Open / Abrir <small>(${/google\.com/.test(i.url||'')?'Google':/sharepoint/.test(i.url||'')?'SharePoint':'Web'})</small></a>`}</div>`).join('')}</div>`).join('');
   if(!html)html='<div class="card">Nothing found. / No se encontró nada.</div>';
-  if(D.puede_editar)html='<div style="margin-bottom:12px"><button class="btn" onclick="edit(null)">+ Add resource</button> <button class="btn ghost" onclick="bulk()">⬆ Bulk upload / Subida masiva</button></div>'+html;
+  if(D.puede_editar)html='<div style="margin-bottom:12px"><button type="button" class="btn ghost" id="btn-add">+ Add resource</button> <button type="button" class="btn" id="btn-bulk">⬆ Bulk upload / Subida masiva</button></div>'+html;
   $('list').innerHTML=html;
+  const ba=$('btn-add'), bb=$('btn-bulk');
+  if(ba)ba.addEventListener('click',()=>edit(null));
+  if(bb)bb.addEventListener('click',()=>{try{bulk();window.scrollTo({top:0,behavior:'smooth'});}catch(x){err('Error: '+x.message);}});
 }
 function edit(id){
   const r=id?D.items.find(x=>x.id===id):{titulo:'',categoria:'',idioma:'EN',url:'',descripcion:'',roles:null,orden:100,activo:true};
