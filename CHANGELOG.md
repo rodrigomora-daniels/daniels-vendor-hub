@@ -42,6 +42,11 @@ Cierre Fase 4 (verificado como rol anon): 0 filas en empleados y evaluaciones; `
 - Arreglo: las 9 pasaron a VOLATILE (`alter function ... volatile`). Ninguna función con token queda STABLE. Regla: toda RPC nueva llamada por POST debe ser VOLATILE.
 - Los registros de la API no muestran ningún otro error 4xx desde las 22:00 UTC.
 
+## Limpieza previa al lanzamiento (16 nov, 17:40)
+- A pedido de Rodrigo se borraron todas las evaluaciones de prueba: 4 evaluaciones (autoevaluaciones de Misael, Patricia Rivas y Brenda; evaluación de pares Rodrigo→Misael), 22 respuestas, 0 métricas y 2 feedbacks anónimos. Quedaron en cero; el ciclo "Year-End 2026" sigue activo (16 nov – 18 dic).
+- Auditoría funcional previa al lanzamiento: ver incidente anterior; además se corrigió `codigo_signup_info` (pasó a VOLATILE, habría roto el registro con código) y `admin_organigrama_guardar` (convierte `nivel` a entero).
+- Se agregó un código personal para Dennis Jover (total 41 códigos, ninguno usado) y el Excel se regeneró.
+
 ## Cómo revertir
 - **Páginas:** copiar `backup_pre_phase4/*` a la raíz (incluye `Daniels_Manager_Cert.html`, huérfana) y volver a `sw.js` cache `dhc-v1`; o `git revert 3ebff90`. Ojo: las páginas viejas dependen de las políticas/funciones antiguas, hay que revertir también la base.
 - **Base de datos:** SQL de rollback de políticas en `security/06_phase4_lockdown.sql`; funciones: `grant execute on function ... to anon` por firma. Revertir páginas y base juntas o ninguna.
