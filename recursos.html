@@ -33,7 +33,7 @@
 <main>
   <div class="note">Files stored here open directly. Items marked "SharePoint" are links to the company SharePoint and need a Daniels Microsoft account. / Los archivos guardados aquí se abren directo. Los marcados "SharePoint" son links al SharePoint de la empresa y requieren cuenta Microsoft de Daniels.</div>
   <div id="msg" class="msg hide"></div>
-  <div style="font-size:10px;color:#aaa;text-align:right;margin:-8px 0 6px">page v7</div>
+  <div style="font-size:10px;color:#aaa;text-align:right;margin:-8px 0 6px">page v8</div>
   <div class="bar"><input id="q" placeholder="Search / Buscar…" oninput="render()"><select id="lang" onchange="render()"><option value="">All languages / Todos los idiomas</option><option>EN</option><option>ES</option></select></div>
   <div id="edit" class="card hide" style="margin-bottom:14px"></div>
   <div id="list"></div>
@@ -76,7 +76,7 @@ function edit(id){
    <div class="row"><div><label>Category</label><input id="f-c" list="cats" value="${esc(r.categoria)}"><datalist id="cats">${[...new Set(D.items.map(i=>i.categoria))].map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div>
    <div><label>Language</label><select id="f-i">${['EN','ES','EN/ES'].map(l=>`<option ${l===r.idioma?'selected':''}>${l}</option>`).join('')}</select></div>
    <div><label>Order</label><input id="f-o" type="number" value="${r.orden}"></div></div>
-   <label>File to store in the workspace (PDF or image) / Archivo para guardar en el workspace ${r.archivo_id?'— current file kept if you leave this empty / se conserva el actual si lo dejas vacío':''}</label><input id="f-f" type="file" accept="application/pdf,image/jpeg,image/png,image/webp">
+   <label>File to store in the workspace (PDF, image or Office file) / Archivo para guardar en el workspace ${r.archivo_id?'— current file kept if you leave this empty / se conserva el actual si lo dejas vacío':''}</label><input id="f-f" type="file" accept="application/pdf,image/*,.xls,.xlsx,.doc,.docx,.ppt,.pptx">
    <label>…or a link (SharePoint, Google or approved sites) / …o un link (SharePoint o Google) ${r.archivo_id?'— clearing the file and filling this switches it back to a link':''}</label><input id="f-u" value="${esc(r.url||'')}">
    <label>Description (optional)</label><input id="f-d" value="${esc(r.descripcion||'')}">
    <label>Who sees it</label>
@@ -106,7 +106,7 @@ function guessLang(n){const b=n.replace(/\.[^.]+$/,'');return /(^|[_\s-])ES([_\s
 function bulk(){
   BULK=[]; const e=$('edit'); e.classList.remove('hide');
   e.innerHTML=`<h2 style="color:var(--navy);font-size:16px">Bulk upload / Subida masiva</h2>
-   <p style="font-size:12px;color:var(--gray);margin:6px 0">PDF or images, up to 20 MB each (a .zip works too: folder names become the category). Titles and language are guessed from the file names; you can edit them before uploading. / PDF o imágenes, hasta 20 MB c/u (también un .zip: el nombre de la carpeta será la categoría). El título y el idioma se deducen del nombre del archivo; los puedes editar antes de subir.</p>
+   <p style="font-size:12px;color:var(--gray);margin:6px 0">PDF, images, Word, Excel or PowerPoint, up to 20 MB each (a .zip works too: folder names become the category). Titles and language are guessed from the file names; you can edit them before uploading. / PDF, imágenes, Word, Excel o PowerPoint, hasta 20 MB c/u (también un .zip: el nombre de la carpeta será la categoría). El título y el idioma se deducen del nombre del archivo; los puedes editar antes de subir.</p>
    <div class="row"><div><label>Category / Categoría</label><input id="b-c" list="cats2" placeholder="e.g. Credit / Crédito"><datalist id="cats2">${[...new Set(D.items.map(i=>i.categoria))].map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div></div>
    <label>Who sees them / Quién los ve</label>
    <div class="row"><label style="font-weight:400"><input type="checkbox" id="b-all" checked style="width:auto"> Everyone / Todos</label>
@@ -124,7 +124,7 @@ function bulk(){
   dz.addEventListener('drop',x=>{bulkDrop(x.dataTransfer).catch(y=>err('Error: '+(y&&y.message||y)));});
   e.scrollIntoView({behavior:'smooth'});
 }
-const MIME={pdf:'application/pdf',jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp'};
+const MIME={pdf:'application/pdf',jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',xls:'application/vnd.ms-excel',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',doc:'application/msword',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',ppt:'application/vnd.ms-powerpoint',pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation'};
 async function expandZip(f){
   const out=[]; const z=await JSZip.loadAsync(f);
   for(const name of Object.keys(z.files)){
@@ -165,11 +165,11 @@ async function bulkIngest(raw){
       try{list.push(...await expandZip(f));}catch(e){BULK.push({file:f,title:f.name,cat:'',idioma:'EN',state:'error',msg:'Could not read the zip / No se pudo leer el zip'});}
     }else{
       const ext=(f.name.split('.').pop()||'').toLowerCase();
-      list.push({file:(f.type&&/^(application\/pdf|image\/)/.test(f.type))||!MIME[ext]?f:new File([f],f.name,{type:MIME[ext]}),cat});
+      list.push({file:(!MIME[ext]||f.type===MIME[ext])?f:new File([f],f.name,{type:MIME[ext]}),cat});
     }
   }
   list.forEach(({file:f,cat})=>{
-    if(!/^(application\/pdf|image\/(jpeg|png|webp))$/.test(f.type)){BULK.push({file:f,title:f.name,cat,idioma:'EN',state:'error',msg:'Type not allowed (PDF, JPG, PNG, WebP only) / Tipo no permitido (solo PDF, JPG, PNG, WebP)'});return;}
+    if(!Object.values(MIME).includes(f.type)){BULK.push({file:f,title:f.name,cat,idioma:'EN',state:'error',msg:'Type not allowed (PDF, images, Word, Excel, PowerPoint) / Tipo no permitido (PDF, imágenes, Word, Excel, PowerPoint)'});return;}
     if(f.size>20*1024*1024){BULK.push({file:f,title:f.name,cat,idioma:'EN',state:'error',msg:'Over 20 MB / Más de 20 MB'});return;}
     const t=guessTitle(f.name);
     BULK.push({file:f,title:t,cat,idioma:guessLang(f.name),state:'pending',msg:have.has(t.toLowerCase())?'A resource with this title already exists / Ya existe un recurso con este título':''});
