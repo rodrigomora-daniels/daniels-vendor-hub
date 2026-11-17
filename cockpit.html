@@ -866,11 +866,13 @@ function progBand(p) {
 async function loadEvalResults() {
   const sec = document.getElementById('section-eval-results');
   if (!sec) return;
-  if (!(isSuperAdmin() || (admin && admin.nivel_admin === 'admin_secundario'))) { sec.style.display = 'none'; return; }
+  if (!(isSuperAdmin() || isViewOnly() || (admin && admin.nivel_admin === 'admin_secundario'))) { sec.style.display = 'none'; return; }
   sec.style.display = '';
   const body = document.getElementById('prog-body');
   try {
     const r = await DH.rpc('evaluacion_progreso');
+    // View-only accounts (store management) are not allowed here; owners and Rey are. The server decides.
+    if (r && r.error === 'forbidden') { sec.style.display = 'none'; return; }
     if (!r || r.error) throw new Error((r && r.error) || 'no data');
     PROG = r;
     PROG.personas.forEach(p => { p._status = progStatus(p); p._band = progBand(p); });
