@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>My Workspace — Resources / Recursos</title>
+<style>
+  :root{--navy:#1B3A6B;--gold:#C8922A;--lt:#D6E4F7;--gray:#6B6B6B;--red:#C0392B}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,sans-serif;background:#f0f2f5;color:#3c3c3c}
+  header{background:var(--navy);border-bottom:4px solid var(--gold);padding:16px 24px;display:flex;justify-content:space-between;align-items:center;color:#fff}
+  header h1{font-size:18px} header a{color:var(--lt);font-size:13px;text-decoration:none}
+  main{max-width:900px;margin:20px auto;padding:0 16px 60px}
+  .note{background:#fff8ec;border-left:4px solid var(--gold);border-radius:8px;padding:10px 14px;font-size:12px;color:#5a4a1a;margin-bottom:14px}
+  input,select,textarea{font:inherit;font-size:13px;padding:8px 10px;border:1px solid #ccc;border-radius:8px;width:100%}
+  .bar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap} .bar>*{flex:1;min-width:140px}
+  .cat{margin-bottom:18px} .cat h2{color:var(--navy);font-size:15px;margin-bottom:8px}
+  .item{background:#fff;border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 5px rgba(0,0,0,.07)}
+  .item .ico{font-size:22px} .item .t{flex:1} .item .t b{color:var(--navy);display:block;font-size:14px} .item .t small{color:var(--gray)}
+  .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;background:var(--lt);color:var(--navy);font-weight:700}
+  .tag.off{background:#eee;color:#777}
+  .btn{padding:8px 14px;border-radius:8px;border:none;font-weight:700;font-size:13px;cursor:pointer;background:var(--navy);color:#fff;text-decoration:none;display:inline-block}
+  .btn.ghost{background:#fff;border:1px solid #ccc;color:#333} .btn.sm{padding:4px 9px;font-size:12px}
+  .card{background:#fff;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+  label{font-size:12px;font-weight:700;color:var(--navy);display:block;margin:8px 0 3px}
+  .row{display:flex;gap:10px;flex-wrap:wrap} .row>*{flex:1;min-width:150px}
+  .hide{display:none} .msg{padding:10px;border-radius:8px;margin-bottom:10px;font-size:13px;background:#fdecea;color:var(--red)}
+</style>
+</head>
+<body>
+<header><h1>📚 Resources / Recursos</h1><a href="index.html">← Home / Inicio</a></header>
+<main>
+  <div class="note">Documents live in the company SharePoint; these are links to them. If SharePoint asks you to sign in, use your Daniels Microsoft account. If a link says you don't have access, ask your manager. / Los documentos están en el SharePoint de la empresa; aquí solo están los links. Si te pide iniciar sesión, usa tu cuenta Microsoft de Daniels. Si dice que no tienes acceso, avisa a tu gerente.</div>
+  <div id="msg" class="msg hide"></div>
+  <div class="bar"><input id="q" placeholder="Search / Buscar…" oninput="render()"><select id="lang" onchange="render()"><option value="">All languages / Todos los idiomas</option><option>EN</option><option>ES</option></select></div>
+  <div id="list"></div>
+  <div id="edit" class="card hide"></div>
+</main>
+<script src="dh-session.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let D=null;
+function err(t){const m=$('msg');m.textContent=t;m.classList.remove('hide');}
+async function init(){
+  if(!DH.token()){location.href='index.html';return;}
+  try{D=await DH.rpc('recursos_listar');}catch(e){err('Could not load resources. / No se pudieron cargar los recursos.');return;}
+  render();
+}
+function render(){
+  const q=($('q').value||'').toLowerCase(), lang=$('lang').value;
+  const items=(D.items||[]).filter(i=>(!lang||i.idioma===lang)&&(!q||(i.titulo+' '+i.categoria).toLowerCase().includes(q)));
+  const cats={}; items.forEach(i=>(cats[i.categoria]=cats[i.categoria]||[]).push(i));
+  let html=Object.keys(cats).sort().map(c=>`<div class="cat"><h2>${esc(c)}</h2>${cats[c].map(i=>`<div class="item"><div class="ico">📄</div><div class="t"><b>${esc(i.titulo)}</b><small>${esc(i.descripcion||'')}</small></div><span class="tag">${esc(i.idioma)}</span>${i.activo?'':'<span class="tag off">hidden</span>'}${D.puede_editar?`<button class="btn ghost sm" onclick="edit('${i.id}')">Edit</button>`:''}<a class="btn" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer">Open / Abrir</a></div>`).join('')}</div>`).join('');
+  if(!html)html='<div class="card">Nothing found. / No se encontró nada.</div>';
+  if(D.puede_editar)html='<div style="margin-bottom:12px"><button class="btn" onclick="edit(null)">+ Add resource</button></div>'+html;
+  $('list').innerHTML=html;
+}
+function edit(id){
+  const r=id?D.items.find(x=>x.id===id):{titulo:'',categoria:'',idioma:'EN',url:'',descripcion:'',roles:null,orden:100,activo:true};
+  const roles=r.roles||[], all=!r.roles;
+  const e=$('edit'); e.classList.remove('hide');
+  e.innerHTML=`<h2 style="color:var(--navy);font-size:16px">${id?'Edit':'New'} resource</h2>
+   <label>Title</label><input id="f-t" value="${esc(r.titulo)}">
+   <div class="row"><div><label>Category</label><input id="f-c" list="cats" value="${esc(r.categoria)}"><datalist id="cats">${[...new Set(D.items.map(i=>i.categoria))].map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div>
+   <div><label>Language</label><select id="f-i">${['EN','ES','EN/ES'].map(l=>`<option ${l===r.idioma?'selected':''}>${l}</option>`).join('')}</select></div>
+   <div><label>Order</label><input id="f-o" type="number" value="${r.orden}"></div></div>
+   <label>SharePoint link (must start with https://mydaniels.sharepoint.com/)</label><input id="f-u" value="${esc(r.url)}">
+   <label>Description (optional)</label><input id="f-d" value="${esc(r.descripcion||'')}">
+   <label>Who sees it</label>
+   <div class="row"><label style="font-weight:400"><input type="checkbox" id="f-all" ${all?'checked':''} style="width:auto"> Everyone</label>
+   ${['vendedor','staff','manager','director'].map(x=>`<label style="font-weight:400"><input type="checkbox" class="f-r" value="${x}" ${roles.includes(x)?'checked':''} style="width:auto"> ${x}</label>`).join('')}</div>
+   <label style="font-weight:400"><input type="checkbox" id="f-a" ${r.activo?'checked':''} style="width:auto"> Visible</label>
+   <div style="margin-top:12px"><button class="btn" onclick="save('${id||''}')">Save</button> <button class="btn ghost" onclick="$('edit').classList.add('hide')">Cancel</button></div>`;
+  e.scrollIntoView({behavior:'smooth'});
+}
+async function save(id){
+  const sel=[...document.querySelectorAll('.f-r:checked')].map(x=>x.value);
+  const roles=$('f-all').checked||!sel.length?null:sel;
+  try{
+    const r=await DH.rpc('admin_recurso_guardar',{p_id:id||null,p_titulo:$('f-t').value,p_categoria:$('f-c').value,p_idioma:$('f-i').value,p_url:$('f-u').value,p_descripcion:$('f-d').value||null,p_roles:roles,p_orden:parseInt($('f-o').value)||100,p_activo:$('f-a').checked});
+    if(r.error){err((r.detalle||r.error));return;}
+    $('msg').classList.add('hide'); $('edit').classList.add('hide'); D=await DH.rpc('recursos_listar'); render();
+  }catch(e){err('Could not save: '+e.message);}
+}
+init();
+</script>
+</body>
+</html>
