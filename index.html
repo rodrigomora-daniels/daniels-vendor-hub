@@ -863,7 +863,9 @@ async function loadDashboard() {
   // "How They Found Us" are store tools: only Sales / Store Management, admins, and the owners (Ted, Karen).
   const canSeeStoreTools = ['sales', 'store_management', 'senior_management'].includes(emp.departamento) || emp.es_admin || /^(ted|karen)\s+rosenberg/i.test(emp.nombre_completo || '');
   ['card-prescreen', 'card-leadsource'].forEach(id => { const c = document.getElementById(id); if (c) c.style.display = canSeeStoreTools ? '' : 'none'; });
-  const showCerts = true;
+  // Certifications are limited for now: Tier 1/2 sales associates, managers, Ted and Karen (decided server-side by mis_accesos).
+  let showCerts = true;
+  try { const ac = await DH.rpc('mis_accesos'); showCerts = !!(ac && ac.certificaciones); } catch (e) { showCerts = true; }
   const certCard = document.getElementById('card-certifications');
   const certNavTab = document.getElementById('navtab-certifications');
   if (certCard) certCard.style.display = showCerts ? '' : 'none';
