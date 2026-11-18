@@ -145,7 +145,7 @@ function renderChans(){
   $('chans').innerHTML=CH.map(c=>`<button class="chan ${c.id===CUR?'on':''}" onclick="openChan('${c.id}')"><span class="n" data-no-i18n>${esc(tr(c.nombre))}<small>${esc(tr(c.descripcion||''))}</small></span>${c.sin_leer&&c.id!==CUR?`<span class="bdg">${c.sin_leer>99?'99+':c.sin_leer}</span>`:''}</button>`).join('');
 }
 async function openChan(id){
-  CUR=id; DIR=[]; MEN=new Map(); closePop(); LAST=null; SEEN=new Set(); ASK=null; REPLY=null; CI={}; $('msgs').innerHTML=''; $('msgs').removeAttribute('data-day'); $('msgs').removeAttribute('data-who'); showErr('');
+  CUR=id; DIR=dirCache(id); MEN=new Map(); closePop(); LAST=null; SEEN=new Set(); ASK=null; REPLY=null; CI={}; $('msgs').innerHTML=''; $('msgs').removeAttribute('data-day'); $('msgs').removeAttribute('data-who'); showErr('');
   $('app').classList.add('in-thread'); history.replaceState(null,'','#'+id);
   const c=CH.find(x=>x.id===id); if(c){c.sin_leer=0;}
   renderChans(); loadDir(); await fetchMsgs(true);
@@ -255,18 +255,33 @@ async function send(ev){
 
 /* ---- @mentions ---- */
 const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
-async function loadDir(){if(!CUR)return;const c=CUR;try{const d=await DH.rpc('mensajes_directorio',{p_canal:c});if(c===CUR&&Array.isArray(d))DIR=d;}catch(e){}}
+function dirCache(c){try{const v=JSON.parse(localStorage.getItem('dh_dir_'+c)||'null');return Array.isArray(v)?v:[];}catch(e){return [];}}
+let DIRLOAD=0;
+async function loadDir(){
+  if(!CUR)return; const c=CUR;
+  try{
+    const d=await DH.rpc('mensajes_directorio',{p_canal:c});
+    if(c===CUR&&Array.isArray(d)){DIR=d;try{localStorage.setItem('dh_dir_'+c,JSON.stringify(d));}catch(e){}}
+  }catch(e){}
+  if(c===CUR&&!DIR.length)DIR=dirCache(c);
+}
 function mentionIds(v){const ids=[];MEN.forEach((id,name)=>{if(v.indexOf('@'+name)>=0)ids.push(id);});return ids;}
 function closePop(){const p=$('mpop');if(p){p.classList.add('hide');p.innerHTML='';}PSEL=-1;PLIST=[];}
 function popHTML(){return PLIST.map((p,i)=>`<button type="button" role="option" class="${i===PSEL?'on':''}" data-i="${i}" onmousedown="event.preventDefault()" onclick="pickMention(${i})" data-no-i18n>${esc(p.nombre)}<small>${esc([p.puesto,p.ubicacion].filter(Boolean).join(' · '))}</small></button>`).join('');}
 function atQuery(){const t=$('txt'),pos=t.selectionStart,before=t.value.slice(0,pos);const m=before.match(/(?:^|\s)@([^\s@]*(?: [^\s@]*)?)$/);return m?{q:m[1],start:pos-m[1].length-1}:null;}
 function updatePop(){
-  const a=atQuery(); if(!a||!DIR.length){closePop();return;}
+  const a=atQuery(); if(!a){closePop();return;}
+  const p=$('mpop');
+  if(!DIR.length){
+    p.innerHTML='<button type="button" disabled data-no-i18n>'+esc(tr('Loading names… / Cargando nombres…'))+'</button>';p.classList.remove('hide');PLIST=[];
+    if(!DIRLOAD){DIRLOAD=1;loadDir().then(()=>{DIRLOAD=0;updatePop();});}
+    return;
+  }
   const q=norm(a.q);
-  PLIST=DIR.filter(p=>!q||norm(p.nombre).split(' ').some(w=>w.startsWith(q))||norm(p.nombre).startsWith(q)).slice(0,30);
-  if(!PLIST.length){closePop();return;}
+  PLIST=DIR.filter(x=>!q||norm(x.nombre).split(' ').some(w=>w.startsWith(q))||norm(x.nombre).startsWith(q)).slice(0,30);
+  if(!PLIST.length){p.innerHTML='<button type="button" disabled data-no-i18n>'+esc(tr('No match. Only people with an account appear. / Sin coincidencias. Solo aparecen personas con cuenta.'))+'</button>';p.classList.remove('hide');PSEL=-1;return;}
   if(PSEL<0||PSEL>=PLIST.length)PSEL=0;
-  const p=$('mpop');p.innerHTML=popHTML();p.classList.remove('hide');
+  p.innerHTML=popHTML();p.classList.remove('hide');
 }
 function pickMention(i){
   const p=PLIST[i]; if(!p)return; const a=atQuery(), t=$('txt'); if(!a)return;
