@@ -121,6 +121,13 @@
   #goal-card .gst em{font:700 13px 'Segoe UI',Arial,sans-serif;font-style:normal;color:#1B3A6B;display:block;margin-bottom:2px}
   #goal-card .gb.sm{display:block;height:12px;border-radius:6px}
   #goal-card .gst small{display:block;font:12px 'Segoe UI',Arial,sans-serif;color:#6B6B6B;margin-top:2px}
+  #goal-card .gcd{background:#12284A;border-radius:8px;padding:12px 14px 14px;margin:6px 0 10px;color:#fff}
+  #goal-card .gct{font:700 13px 'Segoe UI',Arial,sans-serif;color:#E8C878;margin-bottom:8px}
+  #goal-card .gcg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;max-width:420px}
+  #goal-card .gcg div{background:rgba(255,255,255,.08);border-radius:8px;text-align:center;padding:8px 4px}
+  #goal-card .gcg b{display:block;font:700 34px/1.05 Georgia,'Times New Roman',serif;font-variant-numeric:tabular-nums;color:#fff}
+  #goal-card .gcg span{font:700 11px 'Segoe UI',Arial,sans-serif;color:#9fb6d6}
+  @media(max-width:480px){#goal-card .gcg b{font-size:28px}}
   #goal-card .gs{font:700 13px 'Segoe UI',Arial,sans-serif}
   #briefing{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:22px;align-items:stretch}
   #briefing.two{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}
@@ -1342,6 +1349,21 @@ var NEWS_ITEMS=[], NEWS_URLS={};
 function nhEsc(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function nhFmt(d){if(!d)return '';var p=d.split('-');return p[1]+'/'+p[2]+'/'+p[0];}
 
+
+function laMidnight(iso){var g=Date.parse(iso+'T00:00:00Z'),offs=[8,7],i,t,f;
+  for(i=0;i<2;i++){t=g+offs[i]*36e5;f=new Date(t).toLocaleString('en-CA',{timeZone:'America/Los_Angeles',hour12:false}).slice(0,10);
+    var hh=new Date(t).toLocaleString('en-GB',{timeZone:'America/Los_Angeles',hour:'2-digit',hour12:false});if(f===iso&&(hh==='00'||hh==='24'))return t}
+  return g+8*36e5}
+var _goalClock=null;
+function startGoalClock(){
+  if(_goalClock){clearInterval(_goalClock);_goalClock=null}
+  var box=document.querySelector('#goal-card .gcd'); if(!box)return;
+  var t=+box.getAttribute('data-t');
+  function tick(){var ms=Math.max(0,t-Date.now()),s=Math.floor(ms/1000),v={d:Math.floor(s/86400),h:Math.floor(s%86400/3600),m:Math.floor(s%3600/60),s:s%60};
+    for(var u in v){var n=box.querySelector('[data-u="'+u+'"]');if(n){var x=u==='d'?String(v[u]):String(v[u]).padStart(2,'0');if(n.textContent!==x)n.textContent=x}}
+    if(ms===0){clearInterval(_goalClock);_goalClock=null;loadGoalCard()}}
+  tick(); _goalClock=setInterval(tick,1000);
+}
 async function loadGoalCard(){
   var el=document.getElementById('goal-card'); if(!el)return;
   try{
@@ -1360,8 +1382,11 @@ async function loadGoalCard(){
       if(daysTo>45){el.classList.add('hide');return}
       var cd=daysTo<=0?T('Today','Hoy'):daysTo===1?T('Tomorrow','Mañana'):T('In '+daysTo+' days','En '+daysTo+' días');
       var first=r.dias[0], last=r.dias[r.dias.length-1], fd=function(x){var q=new Date(x+'T12:00:00Z');return (q.getUTCMonth()+1)+'/'+q.getUTCDate()};
+      var gt=laMidnight(r.fecha);
+      var cdb='<div class="gcd" data-t="'+gt+'" role="timer" aria-live="off"><div class="gct">'+T('Goal days start in','Los días con meta arrancan en')+(r.nota?' · '+r.nota:'')+'</div><div class="gcg">'
+        +['d','h','m','s'].map(function(u){return '<div><b data-u="'+u+'">0</b><span>'+({d:T('days','días'),h:T('hours','horas'),m:T('min','min'),s:T('sec','seg')})[u]+'</span></div>'}).join('')+'</div></div>';
       el.innerHTML='<div class="gh"><h3>🎯 '+T('Sales vs goal','Ventas vs meta')+'</h3><span class="gd">'+cd+'</span><a href="ventas_meta.html">'+T('Full report','Reporte completo')+' ›</a></div>'
-        +'<div class="gn"><span>'+T('Next goal day: ','Próximo día con meta: ')+'<b>'+dn+(r.nota?' · '+r.nota:'')+'</b></span><span>'+T('Goal ','Meta ')+'<b>'+$(mv)+'</b></span><span>'+T('Services ','Servicios ')+'<b>'+$(ms)+'</b> ('+penM.toFixed(1)+'%)</span></div>'
+        +cdb+'<div class="gn"><span>'+T('Next goal day: ','Próximo día con meta: ')+'<b>'+dn+(r.nota?' · '+r.nota:'')+'</b></span><span>'+T('Goal ','Meta ')+'<b>'+$(mv)+'</b></span><span>'+T('Services ','Servicios ')+'<b>'+$(ms)+'</b> ('+penM.toFixed(1)+'%)</span></div>'
         +'<div class="gsl">'+r.tiendas.map(function(n){return '<span class="gchip"><em>'+n.tienda+'</em> <b>'+$(n.meta_v)+'</b></span>'}).join('')+'</div>'
         +'<div class="gn"><span style="color:#6B6B6B">'+T('Goal days: ','Días con meta: ')+fd(first)+' – '+fd(last)+'</span></div>';
     }else{
@@ -1372,7 +1397,7 @@ async function loadGoalCard(){
         +'<div class="gn"><span><b>'+$(v)+'</b> / '+$(mv)+' · '+Math.round(pv)+'%</span><span>'+T('Services ','Servicios ')+'<b>'+pen.toFixed(1)+'%</b> '+T('vs goal','vs meta')+' '+penM.toFixed(1)+'%</span><span class="gs" style="color:'+col+'">'+st+'</span></div>'
         +'<div class="gsg">'+r.tiendas.map(sp).join('')+'</div>';
     }
-    el.classList.remove('hide');
+    el.classList.remove('hide'); startGoalClock();
   }catch(e){el.classList.add('hide')}
 }
 async function loadNewsHero(){
