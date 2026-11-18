@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1B3A6B">
+<title>My Workspace — Commercial calendar / Calendario comercial</title>
+<style>
+  :root{--navy:#1B3A6B;--rail:#12284A;--gold:#C8922A;--lt:#D6E4F7;--ink:#1E2735;--gray:#6B6B6B;--red:#C0392B}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#EEF1F6;color:var(--ink)}
+  header{background:var(--navy);border-bottom:3px solid var(--gold);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;color:#fff}
+  header h1{font-size:18px} header a{color:var(--lt);font-size:13px;text-decoration:none}
+  main{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
+  button{font-family:inherit}
+  :focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+  /* This week */
+  .now{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);background:var(--rail);color:#fff;border-radius:8px;overflow:hidden;margin-bottom:18px;box-shadow:0 14px 34px -22px rgba(18,40,74,.7)}
+  .now .l{padding:22px 26px;border-left:6px solid var(--gold)}
+  .now .k{font:600 13px 'Segoe UI',Arial,sans-serif;color:#E8C878}
+  .now h2{font:700 clamp(26px,4vw,40px)/1.1 Georgia,'Times New Roman',serif;margin:6px 0 6px;letter-spacing:-.4px}
+  .now .d{font-size:16px;color:#cfe0f7}
+  .now .nx{display:flex;gap:10px 22px;flex-wrap:wrap;margin-top:16px;font-size:14px;color:#cfe0f7}
+  .now .nx b{color:#fff;display:block;font-size:15px}
+  .now .r{background:rgba(255,255,255,.06);padding:16px;display:flex;gap:10px;align-items:center;justify-content:center;overflow:hidden}
+  .now .r a{flex:0 1 128px;text-decoration:none;color:#fff;font-size:12px;min-width:0}
+  .now .r img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:4px;display:block;box-shadow:0 8px 18px -8px rgba(0,0,0,.6)}
+  .now .r span{display:block;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .now .r .none{color:#9fb6d6;font-size:14px;text-align:center;padding:10px;line-height:1.5}
+  .now.alone{grid-template-columns:1fr}
+  /* Controls */
+  .bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .bar h3{font:600 24px 'Segoe UI',Arial,sans-serif;flex:1;min-width:150px;color:var(--ink)}
+  .btn{border:1px solid #cfd6e2;background:#fff;border-radius:8px;min-height:40px;padding:0 14px;font-weight:700;font-size:14px;cursor:pointer;color:var(--ink)}
+  .btn.p{background:var(--navy);border-color:var(--navy);color:#fff}
+  .btn.on{background:var(--navy);border-color:var(--navy);color:#fff}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .chip{display:inline-flex;align-items:center;gap:7px;border:1px solid #cfd6e2;background:#fff;border-radius:18px;min-height:36px;padding:0 13px;font-weight:600;font-size:13px;cursor:pointer;color:var(--ink)}
+  .chip i{width:11px;height:11px;border-radius:3px;display:inline-block}
+  .chip.off{opacity:.45;text-decoration:line-through}
+  /* Month grid */
+  .cal{background:#fff;border-radius:8px;padding:12px 12px 6px;box-shadow:0 1px 0 #dfe5ee}
+  .dow,.days{display:grid;grid-template-columns:repeat(7,1fr)}
+  .dow div{font:700 12px 'Segoe UI',Arial,sans-serif;color:#677;padding:4px 6px;border-bottom:2px solid var(--navy)}
+  .wk{position:relative;border-bottom:1px solid #e5e8ee;background:repeating-linear-gradient(90deg,transparent 0,transparent calc(100%/7 - 1px),#e5e8ee calc(100%/7 - 1px),#e5e8ee calc(100%/7))}
+  .days div{padding:4px 7px;font:600 12px Arial,sans-serif;color:#555;min-height:26px}
+  .days div.o{color:#bbb} .days div.t span{background:var(--navy);color:#fff;border-radius:10px;padding:1px 7px}
+  .bars{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:26px;gap:3px 0;padding:0 2px 8px;min-height:20px}
+  .ev{margin:0 2px;border:0;border-radius:5px;color:#fff;font:600 12px/26px 'Segoe UI',Arial,sans-serif;padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;text-align:left;display:flex;align-items:center;gap:6px}
+  .ev.pr{background:#fff!important;color:var(--ink);border:2px solid var(--gold);padding:0 6px 0 2px}
+  .ev.pr img{height:20px;width:15px;object-fit:cover;border-radius:2px;flex:none}
+  /* Agenda */
+  .ag{background:#fff;border-radius:8px;padding:6px 16px 14px;box-shadow:0 1px 0 #dfe5ee}
+  .ag h4{font:700 15px 'Segoe UI',Arial,sans-serif;color:var(--navy);margin:16px 0 6px}
+  .ag .it{display:flex;gap:10px;align-items:center;width:100%;border:0;background:none;text-align:left;padding:8px 4px;border-top:1px solid #eef0f4;cursor:pointer;font-size:15px;min-height:44px}
+  .ag .it i{width:6px;align-self:stretch;border-radius:3px;flex:none}
+  .ag .it small{color:var(--gray);display:block;font-size:12px}
+  .ag .it img{height:44px;width:33px;object-fit:cover;border-radius:3px;margin-left:auto}
+  .empty{color:var(--gray);padding:16px 4px}
+  /* Dialog */
+  .dlg{position:fixed;inset:0;background:rgba(10,22,45,.6);z-index:50;display:none;align-items:flex-end;justify-content:center}
+  .dlg.show{display:flex}
+  .dlg .p{background:#fff;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;border-radius:14px 14px 0 0;padding:20px 20px 22px}
+  @media(min-width:700px){.dlg{align-items:center}.dlg .p{border-radius:12px}}
+  .dlg h2{font:700 24px/1.2 Georgia,'Times New Roman',serif;color:var(--navy);margin:6px 0}
+  .tag{display:inline-block;color:#fff;border-radius:10px;padding:2px 10px;font:700 12px 'Segoe UI',Arial,sans-serif}
+  .dlg .when{color:var(--gray);margin:2px 0 12px;font-size:15px}
+  .dlg .note{white-space:pre-wrap;line-height:1.55;font-size:15px;margin-bottom:12px;overflow-wrap:anywhere}
+  .dlg img.big{width:100%;border-radius:6px;margin-bottom:12px;display:block}
+  .dlg .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  label{display:block;font-size:13px;font-weight:700;color:var(--navy);margin:10px 0 3px}
+  input,select,textarea{width:100%;font:inherit;font-size:15px;padding:9px 11px;border:1px solid #cfd6e2;border-radius:8px;min-height:42px}
+  textarea{min-height:90px;resize:vertical} .two{display:flex;gap:10px}.two>div{flex:1}
+  .roles{display:flex;gap:12px;flex-wrap:wrap;font-size:14px;margin-top:4px} .roles label{display:flex;gap:6px;align-items:center;margin:0;font-weight:600;color:var(--ink)} .roles input{width:auto;min-height:0}
+  .err{background:#fdecea;color:var(--red);border-radius:8px;padding:9px 12px;font-size:14px;margin-top:10px}
+  .hide{display:none!important}
+  @media(max-width:760px){.now{grid-template-columns:1fr}.now .r{justify-content:flex-start;padding:12px 16px}.now .r a{flex:0 1 84px}.ev{font-size:11px}}
+</style>
+<meta name="dh-i18n" content="on">
+</head>
+<body>
+<header><h1>📅 Commercial calendar / Calendario comercial</h1><a href="index.html">← Home / Inicio</a></header>
+<main>
+  <section class="now hide" id="now"></section>
+  <div class="bar">
+    <button class="btn" onclick="go(-1)" aria-label="Previous">‹</button>
+    <h3 id="mt" data-no-i18n></h3>
+    <button class="btn" onclick="go(0)">Today / Hoy</button>
+    <button class="btn" onclick="go(1)" aria-label="Next">›</button>
+    <button class="btn" id="vm" onclick="setView('month')">Month / Mes</button>
+    <button class="btn" id="va" onclick="setView('agenda')">List / Lista</button>
+    <button class="btn p hide" id="addb" onclick="openForm(null)">+ New event / Nuevo evento</button>
+  </div>
+  <div class="chips" id="chips"></div>
+  <div id="view"></div>
+</main>
+<div class="dlg" id="dlg" onclick="if(event.target===this)closeDlg()"><div class="p" id="dp" role="dialog" aria-modal="true"></div></div>
+<script src="dh-session.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const tr=s=>(window.DH&&DH.i18n)?DH.i18n.pick(s):s;
+const LA='America/Los_Angeles', L=()=>(DH.i18n&&DH.i18n.lang==='es')?'es-US':'en-US';
+const TYPES={campana:['Campaign / Campaña','#1B3A6B'],arte:['Artwork due / Entrega de arte','#7B4FA0'],compras:['Product list due / Lista de productos','#2E7D32'],tienda:['Store hours / Horario de tiendas','#0E7C86'],holiday:['Holiday / Feriado','#B8821F'],otro:['Other / Otro','#566573'],promo:['Flyers / Flyers','#C8922A']};
+const ORDER=['campana','arte','compras','tienda','holiday','otro','promo'];
+let D={items:[],puede_editar:false}, PR=[], URLS={}, OFF=new Set(), VIEW=window.matchMedia('(max-width:760px)').matches?'agenda':'month', EDIT=null, ASK=false;
+const dI=s=>{const[y,m,d]=s.split('-').map(Number);return Math.floor(Date.UTC(y,m-1,d)/864e5);};
+const iso=i=>new Date(i*864e5).toISOString().slice(0,10);
+const todayS=()=>new Date().toLocaleDateString('en-CA',{timeZone:LA});
+const _t=todayS().split('-').map(Number); let CAL={y:_t[0],m:_t[1]-1};
+const fmt=s=>new Date(s+'T12:00:00Z').toLocaleDateString(L(),{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'});
+const fmtY=s=>new Date(s+'T12:00:00Z').toLocaleDateString(L(),{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'});
+const span=e=>e.hasta&&e.hasta!==e.desde?fmt(e.desde)+' – '+fmt(e.hasta):fmt(e.desde);
+
+async function init(){
+  if(!DH.token()){location.href='index.html';return;}
+  try{D=await DH.rpc('calendario_listar');}catch(e){$('view').innerHTML='<div class="empty">'+esc(tr('Could not load the calendar. / No se pudo cargar el calendario.'))+'</div>';return;}
+  try{const r=await DH.rpc('promos_listar');PR=(r.items||[]).filter(p=>p.estado!=='oculta'&&p.vigente_desde);
+      URLS=await DH.files.sign(PR.map(p=>p.archivo_id));}catch(e){PR=PR||[];}
+  $('addb').classList.toggle('hide',!D.puede_editar);
+  render();
+}
+// unify events + flyers
+function all(){
+  const ev=(D.items||[]).map(e=>({id:e.id,k:'e',tipo:e.tipo,titulo:e.titulo,desde:e.desde,hasta:e.hasta||e.desde,nota:e.nota,roles:e.roles}));
+  const pr=PR.map(p=>({id:p.id,k:'p',tipo:'promo',titulo:p.titulo,desde:p.vigente_desde,hasta:p.vigente_hasta||p.vigente_desde,nota:p.descripcion,seccion:p.seccion,archivo:p.archivo_id,mime:p.mime}));
+  return ev.concat(pr).filter(x=>!OFF.has(x.tipo));
+}
+function setView(v){VIEW=v;render();}
+function go(n){if(n===0){CAL={y:_t[0],m:_t[1]-1};}else{CAL.m+=n;if(CAL.m<0){CAL.m=11;CAL.y--;}if(CAL.m>11){CAL.m=0;CAL.y++;}}render();}
+function render(){
+  $('vm').classList.toggle('on',VIEW==='month');$('va').classList.toggle('on',VIEW==='agenda');
+  $('mt').textContent=new Date(Date.UTC(CAL.y,CAL.m,1)).toLocaleDateString(L(),{month:'long',year:'numeric',timeZone:'UTC'});
+  $('chips').innerHTML=ORDER.map(t=>`<button class="chip ${OFF.has(t)?'off':''}" onclick="tg('${t}')" aria-pressed="${!OFF.has(t)}"><i style="background:${TYPES[t][1]}"></i>${esc(tr(TYPES[t][0]))}</button>`).join('');
+  hero(); $('view').innerHTML=VIEW==='month'?month():agenda();
+}
+function tg(t){if(OFF.has(t))OFF.delete(t);else OFF.add(t);render();}
+function hero(){
+  const T=todayS(), ti=dI(T), ev=(D.items||[]), el=$('now');
+  const act=ev.filter(e=>e.tipo==='campana'&&e.desde<=T&&(e.hasta||e.desde)>=T)[0];
+  const nxA=ev.filter(e=>e.tipo==='arte'&&e.desde>=T).sort((a,b)=>a.desde>b.desde?1:-1)[0];
+  const nxP=ev.filter(e=>e.tipo==='compras'&&e.desde>=T).sort((a,b)=>a.desde>b.desde?1:-1)[0];
+  if(!act&&!nxA&&!nxP){el.classList.add('hide');return;}
+  const fl=PR.filter(p=>p.estado==='vigente'&&URLS[p.archivo_id]&&p.mime&&p.mime.indexOf('image/')===0).slice(0,3);
+  const days=e=>{const n=dI(e.desde)-ti;return n===0?tr('today / hoy'):n===1?tr('tomorrow / mañana'):tr('in / en')+' '+n+' '+tr('days / días');};
+  el.className='now'+(fl.length?'':' alone');
+  el.innerHTML=`<div class="l"><div class="k">${esc(tr(act?'In homes this week / En casas esta semana':'Coming up / Lo que sigue'))}</div>
+    <h2 data-no-i18n>${esc(act?act.titulo:(nxA||nxP).titulo)}</h2>${act?`<div class="d" data-no-i18n>${esc(span(act))}</div>`:''}
+    <div class="nx">${nxA?`<div>${esc(tr('Next artwork due / Próxima entrega de arte'))}<b data-no-i18n>${esc(nxA.titulo.replace(/^Art due · /,''))}</b><span data-no-i18n>${esc(fmt(nxA.desde))} · ${esc(days(nxA))}</span></div>`:''}
+    ${nxP?`<div>${esc(tr('Next product list due / Próxima lista de productos'))}<b data-no-i18n>${esc(nxP.titulo.replace(/^Product list due · /,''))}</b><span data-no-i18n>${esc(fmt(nxP.desde))} · ${esc(days(nxP))}</span></div>`:''}</div></div>
+    ${fl.length?`<div class="r">${fl.map(p=>`<a href="promociones.html"><img alt="" src="${esc(URLS[p.archivo_id].url)}"><span data-no-i18n>${esc(p.titulo)}</span></a>`).join('')}</div>`:''}`;
+}
+function month(){
+  const first=new Date(Date.UTC(CAL.y,CAL.m,1)), dim=new Date(Date.UTC(CAL.y,CAL.m+1,0)).getUTCDate();
+  const s0=Math.floor(first/864e5)-first.getUTCDay(), weeks=Math.ceil((first.getUTCDay()+dim)/7), ti=dI(todayS());
+  const its=all().map(e=>({e,a:dI(e.desde),b:dI(e.hasta)})).sort((x,y)=>x.a-y.a||(y.b-y.a)-(x.b-x.a)||(x.e.tipo>y.e.tipo?1:-1));
+  const dow=[0,1,2,3,4,5,6].map(k=>new Date(Date.UTC(2023,0,1+k)).toLocaleDateString(L(),{weekday:'short',timeZone:'UTC'}));
+  let h=`<div class="cal"><div class="dow" data-no-i18n>${dow.map(d=>`<div>${d}</div>`).join('')}</div>`;
+  for(let w=0;w<weeks;w++){
+    const ws=s0+7*w, we=ws+6, lanes=[];
+    const bars=its.filter(x=>x.a<=we&&x.b>=ws).map(x=>{
+      const c1=Math.max(x.a,ws)-ws+1,c2=Math.min(x.b,we)-ws+2;let l=lanes.findIndex(v=>v<c1);if(l<0){l=lanes.length;lanes.push(0);}lanes[l]=c2-1;
+      const pr=x.e.k==='p', u=pr&&URLS[x.e.archivo], im=u&&x.e.mime&&x.e.mime.indexOf('image/')===0;
+      return `<button class="ev ${pr?'pr':''}" style="grid-column:${c1}/${c2};grid-row:${l+1};background:${TYPES[x.e.tipo][1]}" title="${esc(x.e.titulo)}" onclick="show('${x.e.k}','${x.e.id}')" data-no-i18n>${im?`<img alt="" src="${esc(u.url)}">`:''}${esc(x.e.titulo)}</button>`;}).join('');
+    h+=`<div class="wk"><div class="days" data-no-i18n>${[0,1,2,3,4,5,6].map(k=>{const dd=new Date((ws+k)*864e5);return `<div class="${dd.getUTCMonth()!==CAL.m?'o':''} ${ws+k===ti?'t':''}"><span>${dd.getUTCDate()}</span></div>`;}).join('')}</div><div class="bars">${bars}</div></div>`;
+  }
+  return h+'</div>';
+}
+function agenda(){
+  const a=iso(Math.floor(Date.UTC(CAL.y,CAL.m,1)/864e5)), b=iso(Math.floor(Date.UTC(CAL.y,CAL.m+1,0)/864e5));
+  const its=all().filter(e=>e.desde<=b&&e.hasta>=a).sort((x,y)=>x.desde>y.desde?1:x.desde<y.desde?-1:(x.tipo>y.tipo?1:-1));
+  if(!its.length)return '<div class="ag"><div class="empty">'+esc(tr('Nothing scheduled this month. / No hay nada programado este mes.'))+'</div></div>';
+  let h='<div class="ag">',last='';
+  its.forEach(e=>{const key=e.desde<a?a:e.desde;
+    if(key!==last){h+=`<h4 data-no-i18n>${esc(fmtY(key))}</h4>`;last=key;}
+    const u=e.k==='p'&&URLS[e.archivo], im=u&&e.mime&&e.mime.indexOf('image/')===0;
+    h+=`<button class="it" onclick="show('${e.k}','${e.id}')"><i style="background:${TYPES[e.tipo][1]}"></i><span><span data-no-i18n>${esc(e.titulo)}</span><small>${esc(tr(TYPES[e.tipo][0]))}${e.hasta!==e.desde?' · ':''}<span data-no-i18n>${e.hasta!==e.desde?esc(span(e)):''}</span></small></span>${im?`<img alt="" src="${esc(u.url)}">`:''}</button>`;});
+  return h+'</div>';
+}
+function show(k,id){
+  const e=all().find(x=>x.k===k&&x.id===id)||null; if(!e)return; ASK=false;
+  const u=e.k==='p'&&URLS[e.archivo], im=u&&e.mime&&e.mime.indexOf('image/')===0;
+  $('dp').innerHTML=`<span class="tag" style="background:${TYPES[e.tipo][1]}">${esc(tr(TYPES[e.tipo][0]))}</span><h2 data-no-i18n>${esc(e.titulo)}</h2><div class="when" data-no-i18n>${esc(span(e))}</div>
+  ${im?`<img class="big" alt="" src="${esc(u.url)}">`:''}${e.nota?`<div class="note" data-no-i18n>${esc(e.nota)}</div>`:''}
+  ${e.roles?`<div class="when">${esc(tr('Visible to / Visible para'))}: <span data-no-i18n>${esc(e.roles.join(', '))}</span></div>`:''}
+  <div class="acts">${e.k==='p'?`<a class="btn p" style="text-decoration:none;display:inline-flex;align-items:center" href="promociones.html">${esc(tr('Open in Promotions / Abrir en Promociones'))}</a>`:''}
+  ${e.k==='e'&&D.puede_editar?`<button class="btn" onclick="openForm('${e.id}')">${esc(tr('Edit / Editar'))}</button><button class="btn" id="delb" onclick="del('${e.id}')">${esc(tr('Delete / Borrar'))}</button>`:''}
+  <button class="btn" onclick="closeDlg()">${esc(tr('Close / Cerrar'))}</button></div>`;
+  $('dlg').classList.add('show');
+}
+function closeDlg(){$('dlg').classList.remove('show');document.body.style.overflow='';}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDlg();});
+function openForm(id){
+  const e=id?(D.items||[]).find(x=>x.id===id):{titulo:'',tipo:'campana',desde:todayS(),hasta:'',nota:'',roles:null};
+  const rs=['vendedor','staff','manager','director'];
+  $('dp').innerHTML=`<h2>${esc(tr(id?'Edit event / Editar evento':'New event / Nuevo evento'))}</h2>
+  <label for="f-t">${esc(tr('Title / Título'))}</label><input id="f-t" maxlength="120" value="${esc(e.titulo)}">
+  <label for="f-y">${esc(tr('Type / Tipo'))}</label><select id="f-y">${['campana','arte','compras','tienda','holiday','otro'].map(t=>`<option value="${t}" ${e.tipo===t?'selected':''}>${esc(tr(TYPES[t][0]))}</option>`).join('')}</select>
+  <div class="two"><div><label for="f-a">${esc(tr('From / Desde'))}</label><input type="date" id="f-a" value="${esc(e.desde)}"></div><div><label for="f-b">${esc(tr('To (optional) / Hasta (opcional)'))}</label><input type="date" id="f-b" value="${esc(e.hasta||'')}"></div></div>
+  <label for="f-n">${esc(tr('Note / Nota'))}</label><textarea id="f-n" maxlength="1000">${esc(e.nota||'')}</textarea>
+  <label>${esc(tr('Who sees it / Quién lo ve'))}</label><div class="roles"><label><input type="checkbox" id="f-all" ${e.roles?'':'checked'} onchange="document.querySelectorAll('.rr').forEach(c=>c.disabled=this.checked)">${esc(tr('Everyone / Todos'))}</label>${rs.map(r=>`<label><input type="checkbox" class="rr" value="${r}" ${e.roles&&e.roles.includes(r)?'checked':''} ${e.roles?'':'disabled'}>${r}</label>`).join('')}</div>
+  <div class="err hide" id="f-e"></div>
+  <div class="acts"><button class="btn p" id="f-s" onclick="saveEv(${id?`'${id}'`:'null'})">${esc(tr('Save / Guardar'))}</button><button class="btn" onclick="closeDlg()">${esc(tr('Cancel / Cancelar'))}</button></div>`;
+  $('dlg').classList.add('show');
+}
+async function saveEv(id){
+  const b=$('f-s'); b.disabled=true; const er=$('f-e'); er.classList.add('hide');
+  const roles=$('f-all').checked?null:[...document.querySelectorAll('.rr:checked')].map(c=>c.value);
+  try{
+    const r=await DH.rpc('calendario_guardar',{p_id:id,p_titulo:$('f-t').value,p_tipo:$('f-y').value,p_desde:$('f-a').value||null,p_hasta:$('f-b').value||null,p_nota:$('f-n').value||null,p_roles:roles&&roles.length?roles:null});
+    if(r&&r.ok){closeDlg();D=await DH.rpc('calendario_listar');render();return;}
+    er.textContent=tr(r&&r.error==='forbidden'?'You cannot edit the calendar. / No puedes editar el calendario.':'Check the title and dates. / Revisa el título y las fechas.');er.classList.remove('hide');
+  }catch(e){er.textContent=tr('Could not save. Try again. / No se pudo guardar. Intenta de nuevo.');er.classList.remove('hide');}
+  b.disabled=false;
+}
+async function del(id){
+  const b=$('delb'); if(!ASK){ASK=true;b.textContent=tr('Tap again to delete / Toca otra vez para borrar');b.style.color='#C0392B';return;}
+  try{const r=await DH.rpc('calendario_borrar',{p_id:id});if(r&&r.ok){closeDlg();D=await DH.rpc('calendario_listar');render();}}catch(e){}
+}
+window.addEventListener('dh-lang',()=>{if(D)render();});
+init();
+</script>
+</body>
+</html>
