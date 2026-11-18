@@ -81,6 +81,37 @@
   .dash-header .greeting .name{font-size:17px}
   .dash-content{max-width:1040px}
   /* Lead story (pinned/latest news) */
+  #briefing{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:22px;align-items:stretch}
+  #briefing.two{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}
+  #briefing #news-hero{margin-bottom:0}
+  #briefing.two #news-hero.has-img{grid-template-columns:1fr}
+  #briefing.two #news-hero img{order:-1;min-height:0;max-height:170px}
+  #alerts-card{background:#12284A;color:#fff;border-radius:6px;border-left:6px solid #C8922A;padding:16px 18px 14px;box-shadow:0 14px 34px -22px rgba(18,40,74,.7);display:flex;flex-direction:column;min-width:0}
+  #alerts-card.hide{display:none}
+  .ac-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .ac-head h2{font:700 22px Georgia,'Times New Roman',serif;margin:0}
+  .ac-new{background:#C8922A;color:#12284A;border-radius:12px;padding:2px 10px;font:700 12px 'Segoe UI',Arial,sans-serif}
+  .ac-head a{margin-left:auto;color:#E8C878;font:700 13px 'Segoe UI',Arial,sans-serif;text-decoration:none}
+  .ac-sub{color:#9fb6d6;font:13px 'Segoe UI',Arial,sans-serif;margin:2px 0 10px}
+  .ac-row{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;margin:0 -10px;border-radius:6px;text-decoration:none;color:#fff;border-left:4px solid transparent;min-height:48px}
+  .ac-row:hover{background:rgba(255,255,255,.07)}
+  .ac-row.f1{border-left-color:#E5604F}.ac-row.f2{border-left-color:#5FBF72}.ac-row.f3{border-left-color:#E8B44A}.ac-row.f4{border-left-color:#9aa3b0}.ac-row.f5{border-left-color:#5B9BE0}
+  .ac-row .tx{flex:1;min-width:0;font:15px/1.4 'Segoe UI',Arial,sans-serif;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+  .ac-row .tm{flex:none;color:#9fb6d6;font:12px 'Segoe UI',Arial,sans-serif;white-space:nowrap;padding-top:2px}
+  .ac-empty{color:#cfe0f7;font:15px/1.5 'Segoe UI',Arial,sans-serif;padding:8px 0 4px}
+  .ac-more{align-self:flex-start;margin:4px 0 0;background:none;border:1px solid rgba(232,200,120,.5);color:#E8C878;border-radius:18px;padding:7px 14px;font:700 13px 'Segoe UI',Arial,sans-serif;min-height:40px;cursor:pointer}
+  .ac-more.hide,#ac-alerts.hide,#ac-sched.hide{display:none}
+  #ac-sched{margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.14)}
+  #ac-alerts+#ac-sched.sep{}
+  .ac-sch{display:flex;gap:10px;align-items:center;text-decoration:none;color:#fff;padding:8px 10px;margin:0 -10px;border-radius:6px;min-height:52px;border-left:4px solid #5B9BE0}
+  .ac-sch:hover{background:rgba(255,255,255,.07)}
+  .ac-sch .ic{font-size:22px}
+  .ac-sch .tx{flex:1;min-width:0;font:14px/1.35 'Segoe UI',Arial,sans-serif;color:#cfe0f7}
+  .ac-sch .tx b{display:block;color:#fff;font-size:16px;margin-top:2px}
+  .ac-sch .bd{flex:none;background:#C8922A;color:#12284A;border-radius:12px;padding:2px 10px;font:700 12px 'Segoe UI',Arial,sans-serif}
+  .ac-oth{margin-top:auto;padding-top:10px;color:#E8C878;font:700 13px 'Segoe UI',Arial,sans-serif;text-decoration:none}
+  .ac-oth.hide{display:none}
+  @media (max-width:900px){#briefing.two{grid-template-columns:1fr}}
   #news-hero{display:none;grid-template-columns:1fr;background:#fff;border-radius:6px;border-left:6px solid var(--gold);box-shadow:0 1px 0 #dfe5ee,0 14px 34px -22px rgba(18,40,74,.45);padding:0;margin-bottom:22px;overflow:hidden;cursor:pointer;transition:box-shadow .2s,transform .2s}
   #news-hero.show{display:grid}
   #news-hero.has-img{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}
@@ -419,6 +450,17 @@
 
     <!-- HOME SCREEN: 3 tool cards -->
     <div class="tab-panel active" id="tab-home">
+      <div id="briefing">
+      <section id="alerts-card" class="hide" aria-label="Priority updates">
+        <div id="ac-alerts" class="hide">
+          <div class="ac-head"><h2>⚡ Alerts / Alertas</h2><span class="ac-new hide" id="ac-new"></span><a href="mensajes.html" id="ac-link">Open channel / Abrir canal ›</a></div>
+          <div class="ac-sub">Products &amp; promotions / Productos y promociones</div>
+          <div id="ac-list"></div>
+          <button class="ac-more hide" id="ac-more" onclick="acToggle()"></button>
+        </div>
+        <div id="ac-sched" class="hide"></div>
+        <a class="ac-oth hide" id="ac-oth" href="mensajes.html"></a>
+      </section>
       <div id="news-hero" onclick="openNews()" role="button" tabindex="0" aria-label="Open news">
         <div class="nh-txt">
           <div class="nh-top"><span id="nh-kick">Latest news / Última noticia</span></div>
@@ -426,6 +468,7 @@
           <div class="nh-more" id="nh-more">Read more / Leer más</div>
         </div>
         <img id="nh-img" alt="" style="display:none">
+      </div>
       </div>
       <section id="promo-strip" style="display:none">
         <div class="ps-head"><h2>Current promotions / Promociones vigentes</h2><a href="calendario.html">Calendar / Calendario</a> <a href="promociones.html">See all / Ver todas</a></div>
@@ -959,7 +1002,7 @@ function handleLogout() {
    DASHBOARD
    ════════════════════════════════════════════════════════════ */
 async function loadDashboard() {
-  loadNewsHero(); loadPromoStrip(); loadMsgBadge(); loadNotesToday();
+  loadAlertsCard(); loadNewsHero(); loadPromoStrip(); loadMsgBadge(); loadNotesToday();
   const emp = session.empleado;
 
   // If this employee has a temporary password, force the change screen first
@@ -1255,6 +1298,51 @@ async function loadNewsHero(){
     var u=n.imagen_archivo_id&&NEWS_URLS[n.imagen_archivo_id], im=document.getElementById('nh-img');
     if(u&&u.url){im.src=u.url;im.style.display='block';hero.classList.add('has-img');}else{im.style.display='none';hero.classList.remove('has-img');}
   }catch(e){}
+}
+
+function acAgo(t){var m=Math.max(0,Math.round((Date.now()-new Date(t).getTime())/60000));
+  if(m<1)return 'now / ahora'; if(m<60)return m+' min'; var h=Math.round(m/60); if(h<24)return h+' h'; var d=Math.round(h/24); return d+' d';}
+function acCls(c){c=c||'';return c.indexOf('\uD83D\uDD34')===0?'f1':c.indexOf('\uD83D\uDFE2')===0?'f2':c.indexOf('\uD83D\uDCB2')===0?'f3':c.indexOf('\u26D4')===0?'f4':c.indexOf('\uD83D\uDE9A')===0?'f5':'';}
+var ACI=[], ACX=false, ACL='';
+function a12(t){var p=t.split(':'),h=+p[0],m=+p[1];return (h%12===0?12:h%12)+(m?':'+('0'+m).slice(-2):'')+(h>=12?'p':'a');}
+function acRender(){
+  var its=ACI, show=ACX?its:its.slice(0,2);
+  document.getElementById('ac-list').innerHTML=its.length?show.map(function(i){
+    return '<a class="ac-row '+acCls(i.cuerpo)+'" href="'+ACL+'"><span class="tx" data-no-i18n>'+nhEsc(i.cuerpo)+'</span><span class="tm" data-no-i18n>'+acAgo(i.t)+'</span></a>';}).join('')
+    :'<div class="ac-empty">All quiet. No alerts in the last 2 weeks. / Todo tranquilo. No hay alertas en las últimas 2 semanas.</div>';
+  var mb=document.getElementById('ac-more');
+  if(its.length>2){mb.textContent=ACX?'Show less / Ver menos ▴':'Show '+(its.length-2)+' more / Ver '+(its.length-2)+' más ▾';mb.classList.remove('hide');}else mb.classList.add('hide');
+}
+function acToggle(){ACX=!ACX;acRender();if(window.DH&&DH.i18n&&DH.i18n.apply)try{DH.i18n.apply();}catch(e){}}
+async function loadAlertsCard(){
+  var card=document.getElementById('alerts-card'), br=document.getElementById('briefing');
+  var al=null, sc=null;
+  try{al=await DH.rpc('alertas_recientes');}catch(e){}
+  try{sc=await DH.rpc('horarios_aviso');}catch(e){}
+  var hasA=!!(al&&al.visible), hasS=!!(sc&&sc.visible);
+  if(!hasA&&!hasS){card.classList.add('hide');br.classList.remove('two');return;}
+  var A=document.getElementById('ac-alerts'), S=document.getElementById('ac-sched');
+  if(hasA){
+    ACL='mensajes.html#'+al.canal_id; ACI=al.items||[]; ACX=false;
+    document.getElementById('ac-link').href=ACL;
+    var nw=document.getElementById('ac-new'); nw.textContent=al.nuevos+' new / nuevas'; nw.classList.toggle('hide',!Number(al.nuevos));
+    acRender(); A.classList.remove('hide');
+  }else A.classList.add('hide');
+  if(hasS){
+    var es=window.DH&&DH.i18n&&DH.i18n.lang==='es', loc=es?'es-US':'en-US', fmt=function(d,o){return new Date(d+'T12:00:00Z').toLocaleDateString(loc,Object.assign({timeZone:'UTC'},o));};
+    var line, val;
+    if(sc.turno){line='Your next shift / Tu próximo turno';var t=sc.turno.t;val=fmt(sc.turno.dia,{weekday:'short',month:'short',day:'numeric'})+' · '+(t.length===4?a12(t[0])+'–'+a12(t[1])+', '+a12(t[2])+'–'+a12(t[3]):a12(t[0])+'–'+a12(t[1]));}
+    else if(sc.tiene_fila){line='Your schedule / Tu horario';val='No more shifts this week / Sin más turnos esta semana';}
+    else{line='Schedule posted / Horario publicado';var e=new Date(sc.semana+'T12:00:00Z');e.setUTCDate(e.getUTCDate()+6);val=fmt(sc.semana,{month:'short',day:'numeric'})+' – '+e.toLocaleDateString(loc,{month:'short',day:'numeric',timeZone:'UTC'});}
+    var h48=48*3600*1000, now=Date.now(), badge='';
+    if(sc.publicado_en&&now-new Date(sc.publicado_en).getTime()<h48)badge='New / Nuevo';
+    else if(sc.actualizado_en&&now-new Date(sc.actualizado_en).getTime()<h48)badge='Updated / Actualizado';
+    S.innerHTML='<a class="ac-sch" href="horarios.html"><span class="ic">🗓️</span><span class="tx">'+line+'<b data-no-i18n>'+nhEsc(val)+'</b></span>'+(badge?'<span class="bd">'+badge+'</span>':'')+'</a>';
+    S.classList.remove('hide');
+  }else S.classList.add('hide');
+  card.classList.remove('hide'); br.classList.add('two');
+  try{var ch=await DH.rpc('mensajes_canales'), o=0; (ch||[]).forEach(function(c){if(!hasA||c.id!==al.canal_id)o+=Number(c.sin_leer)||0;});
+    var ot=document.getElementById('ac-oth'); if(o){ot.textContent='💬 '+o+' unread messages in other channels / mensajes sin leer en otros canales ›';ot.classList.remove('hide');}else ot.classList.add('hide');}catch(e){}
 }
 async function loadMsgBadge(){
   try{

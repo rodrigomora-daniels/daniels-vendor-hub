@@ -66,6 +66,8 @@
   .source-tile.tv .icon{color:#8e44ad;}
   .source-tile.billboard .icon{color:#d35400;}
   .source-tile.textcampaign .icon{color:#2980b9;}
+  .source-tile.existing .icon{color:#16a085;}
+  .source-tile.payments .icon{color:var(--navy);}
   .source-tile.other .icon{color:var(--mgray);}
 
   .other-detail{display:none;margin-top:16px;}
@@ -179,7 +181,17 @@
         <div class="icon">💬</div>
         <div class="label">Text Campaign / Mensaje de Texto</div>
       </div>
-      <div class="source-tile other" data-source="Other" onclick="selectSource(this)" style="grid-column:span 2;">
+      <div class="source-tile existing" data-source="Existing Client" onclick="selectSource(this)">
+        <div class="checkmark">✓</div>
+        <div class="icon">🔁</div>
+        <div class="label">Existing Client / Cliente Existente</div>
+      </div>
+      <div class="source-tile payments" data-source="Payments" onclick="selectSource(this)">
+        <div class="checkmark">✓</div>
+        <div class="icon">💳</div>
+        <div class="label">Payments / Pagos</div>
+      </div>
+      <div class="source-tile other" data-source="Other" onclick="selectSource(this)">
         <div class="checkmark">✓</div>
         <div class="icon">✏️</div>
         <div class="label">Other / Otro</div>
