@@ -191,8 +191,8 @@
     }
     function visible(el) { return !!(el && (el.offsetWidth || el.offsetHeight || el.getClientRects().length)); }
     function place(box) {
-      var host = document.querySelector('.dash-header .right-group'); if (!visible(host)) host = document.querySelector('header'); if (!visible(host)) host = null;
-      if (host) { if (box.parentNode !== host) { box.style.cssText = box.getAttribute('data-base'); host.insertBefore(box, host.firstChild); } }
+      var host = document.querySelector('.dash-header .right-group'); if (!visible(host)) host = document.querySelector('header'); if (!visible(host)) { var hm = document.querySelector('.dh-home'); host = visible(hm) ? hm.parentNode : null; }
+      if (host) { if (box.parentNode !== host) { box.style.cssText = box.getAttribute('data-base'); host.insertBefore(box, host.querySelector('.dh-home') || host.firstChild); } }
       else if (box.parentNode !== document.body || box.style.position !== 'fixed') { box.style.cssText = box.getAttribute('data-base') + 'position:fixed;top:8px;right:10px;z-index:10001;'; document.body.appendChild(box); }
     }
     function init() {
