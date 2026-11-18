@@ -114,7 +114,7 @@ async function call(name,args){
 async function load(){
   try{
     const r=await DH.rpc('board_estado',{});
-    if(!r||r.error){showErr(r&&r.error==='forbidden'?T('The board is only for store staff.','El board es solo para el personal de tienda.'):errL());return}
+    if(!r||r.error){showErr(r&&r.error==='forbidden'?T('The Daniels Board is not available yet. Coming soon.','El Daniels Board todavía no está disponible. Pronto.'):errL());return}
     S=r; OFF=Date.parse(r.ahora)-Date.now(); if(!DLG)render(); showErr('');
   }catch(e){showErr(T('No connection. Retrying…','Sin conexión. Reintentando…'))}
 }
