@@ -105,6 +105,18 @@
     .source-tile .icon{font-size:28px;}
     .source-tile .label{font-size:12.5px;}
   }
+  .cnt{display:none;background:#fff;border-bottom:1px solid #eadfba;padding:8px 14px;align-items:center;gap:10px;flex-wrap:wrap}
+  .cnt.show{display:flex}
+  .cnt .sc{font-size:12px;color:#6B6B6B;flex:1 1 140px;min-width:0}
+  .cnt .sc b{display:block;color:var(--navy);font-size:13px}
+  .cnt .st{text-align:center;min-width:74px;padding:4px 10px;border-radius:10px;background:#F4F6FA}
+  .cnt .st .n{font:700 24px/1.1 Georgia,'Times New Roman',serif;color:var(--navy)}
+  .cnt .st .l{font-size:11px;color:#6B6B6B;font-weight:700}
+  .cnt .st .me{font-size:11px;color:#9a7a1a;font-weight:700}
+  .cnt a.rp{flex:none;color:var(--navy);font-weight:700;font-size:13px;text-decoration:none;border:1px solid #c5ccd8;border-radius:8px;padding:9px 12px;min-height:40px;display:inline-flex;align-items:center}
+  .cnt .st.pop .n{animation:cntpop .5s ease}
+  @keyframes cntpop{40%{transform:scale(1.25);color:#C8922A}}
+  @media (prefers-reduced-motion:reduce){.cnt .st.pop .n{animation:none}}
 </style>
 <meta name="dh-i18n" content="on">
 <script src="dh-chrome.js" defer></script>
@@ -119,6 +131,14 @@
     </div>
   </div>
 </div>
+</div>
+
+<div class="cnt" id="cnt" aria-live="polite">
+  <div class="sc" id="cnt-sc"></div>
+  <div class="st" id="c-hoy"><div class="n">0</div><div class="l">Today / Hoy</div><div class="me"></div></div>
+  <div class="st" id="c-semana"><div class="n">0</div><div class="l">Week / Semana</div><div class="me"></div></div>
+  <div class="st" id="c-mes"><div class="n">0</div><div class="l">Month / Mes</div><div class="me"></div></div>
+  <a class="rp" id="cnt-rp" href="clientes.html" style="display:none">📈 Report / Reporte</a>
 </div>
 
 <!-- SCREEN 2: SOURCE SELECTION -->
@@ -321,6 +341,21 @@ function selectSource(el) {
   document.getElementById('btn-submit').disabled = false;
 }
 
+
+/* ---- customer counter (store total + yours) ---- */
+let CNT=null;
+function paintCounter(pop){
+  if(!CNT)return; const el=document.getElementById('cnt'); el.classList.add('show');
+  document.getElementById('cnt-sc').innerHTML='<span data-no-i18n><b>'+String(CNT.alcance).replace(/[<>&]/g,'')+'</b></span>Customers logged / Clientes registrados';
+  ['hoy','semana','mes'].forEach(k=>{const b=document.getElementById('c-'+k); b.querySelector('.n').textContent=CNT[k]; b.querySelector('.me').innerHTML='<span>You / Tú</span>: '+(+CNT['mi_'+k]||0); if(pop){b.classList.remove('pop');void b.offsetWidth;b.classList.add('pop');}});
+  document.getElementById('cnt-rp').style.display=CNT.puede_reporte?'':'none';
+}
+async function loadCounter(pop){
+  try{ if(!(window.DH&&DH.token&&DH.token()))return; const r=await DH.rpc('clientes_resumen'); if(r&&r.alcance){CNT=r;paintCounter(pop);} }catch(e){}
+}
+function bumpCounter(){ if(!CNT)return; ['hoy','semana','mes','mi_hoy','mi_semana','mi_mes'].forEach(k=>CNT[k]=(+CNT[k]||0)+1); paintCounter(true); setTimeout(()=>loadCounter(false),1500); }
+loadCounter(false);
+
 async function submitForm() {
   const btn = document.getElementById('btn-submit');
   btn.disabled = true;
@@ -336,6 +371,7 @@ async function submitForm() {
   };
 
   const result = await saveLead(record);
+  bumpCounter();
 
   // Populate success screen
   document.getElementById('sum-source').textContent = state.source === 'Other' && state.otherNote

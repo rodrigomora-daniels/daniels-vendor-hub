@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1B3A6B">
+<title>My Workspace — Customer counter / Contador de clientes</title>
+<style>
+  :root{--navy:#1B3A6B;--gold:#C8922A;--lt:#D6E4F7;--ink:#1E2735;--gray:#6B6B6B;--red:#C0392B;--green:#2E7D32;--line:#dfe5ee}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#EEF1F6;color:var(--ink)}
+  header{background:var(--navy);border-bottom:3px solid var(--gold);padding:12px 20px;color:#fff}
+  header h1{font:700 19px Georgia,'Times New Roman',serif}
+  main{max-width:1000px;margin:0 auto;padding:16px 14px 70px}
+  .card{background:#fff;border-radius:12px;padding:14px 16px;box-shadow:0 1px 0 var(--line),0 10px 26px -22px rgba(18,40,74,.5);margin-bottom:14px}
+  .filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end}
+  label{display:block;font-size:12px;font-weight:700;color:var(--navy);margin-bottom:3px}
+  select,input[type=date]{width:100%;font:inherit;font-size:15px;padding:9px 10px;border:1px solid #cfd6e2;border-radius:10px;min-height:44px;background:#fff}
+  select:focus-visible,input:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+  .presets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .pre{border:1px solid #c5ccd8;background:#fff;color:var(--navy);border-radius:999px;min-height:40px;padding:0 14px;font:700 13px 'Segoe UI',Arial,sans-serif;cursor:pointer}
+  .pre.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .btn{border:0;background:var(--navy);color:#fff;border-radius:10px;min-height:44px;padding:0 18px;font:700 14px 'Segoe UI',Arial,sans-serif;cursor:pointer}
+  .btn.gold{background:var(--gold)} .btn.ghost{background:#fff;color:var(--navy);border:1px solid #c5ccd8}
+  .btn[disabled]{opacity:.5}
+  .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px}
+  .kpi{background:#fff;border-radius:12px;padding:14px 16px;box-shadow:0 1px 0 var(--line)}
+  .kpi .v{font:700 32px/1.1 Georgia,'Times New Roman',serif;color:var(--navy);overflow-wrap:anywhere}
+  .kpi .v.sm{font-size:19px;line-height:1.25}
+  .kpi .l{font-size:12px;color:var(--gray);font-weight:700;margin-top:4px}
+  .kpi .d{font-size:12px;font-weight:700;margin-top:2px}
+  .up{color:var(--green)} .dn{color:var(--red)} .eq{color:var(--gray)}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+  h2{font:700 15px 'Segoe UI',Arial,sans-serif;color:var(--navy);margin-bottom:10px}
+  .bar{display:grid;grid-template-columns:minmax(90px,38%) 1fr 36px;gap:8px;align-items:center;margin:6px 0;font-size:13px}
+  .bar .nm{overflow-wrap:anywhere;line-height:1.25}
+  .bar .tr{background:#EEF1F6;border-radius:6px;height:16px;overflow:hidden}
+  .bar .fl{height:100%;background:var(--navy);border-radius:6px;min-width:2px}
+  .bar .fl.g{background:var(--gold)}
+  .bar b{text-align:right;color:var(--navy)}
+  .cols{display:flex;align-items:flex-end;gap:3px;height:120px;border-bottom:1px solid #cfd6e2}
+  .cols i{flex:1;background:var(--navy);border-radius:3px 3px 0 0;min-height:1px}
+  .cols i.pk{background:var(--gold)}
+  .cl{display:flex;gap:3px;font-size:10px;color:var(--gray);margin-top:3px}
+  .cl span{flex:1;text-align:center;overflow:hidden}
+  svg.tl{width:100%;height:150px;display:block}
+  .empty{color:var(--gray);padding:10px 2px;font-size:14px}
+  .err{background:#fdecea;color:var(--red);border-radius:8px;padding:10px 12px;font-size:14px;margin-bottom:12px;line-height:1.45}
+  .hide{display:none}
+  .note{font-size:12px;color:var(--gray);margin-top:8px}
+</style>
+<meta name="dh-i18n" content="on">
+<script src="dh-chrome.js" defer></script>
+</head>
+<body>
+<header><h1>Customer counter / Contador de clientes</h1></header>
+<main>
+  <div id="err" class="err hide"></div>
+  <div class="card">
+    <div class="presets" id="presets">
+      <button class="pre" data-p="today">Today / Hoy</button>
+      <button class="pre" data-p="week">This week / Esta semana</button>
+      <button class="pre on" data-p="month">This month / Este mes</button>
+      <button class="pre" data-p="30">Last 30 days / Últimos 30 días</button>
+      <button class="pre" data-p="90">Last 90 days / Últimos 90 días</button>
+    </div>
+    <div class="filters">
+      <div><label for="f-d1">From / Desde</label><input type="date" id="f-d1"></div>
+      <div><label for="f-d2">To / Hasta</label><input type="date" id="f-d2"></div>
+      <div id="w-t"><label for="f-t">Store / Tienda</label><select id="f-t"><option value="">All / Todas</option></select></div>
+      <div><label for="f-s">Reason / Motivo</label><select id="f-s"><option value="">All / Todos</option></select></div>
+      <div><label for="f-e">Salesperson / Vendedor</label><select id="f-e"><option value="">All / Todos</option></select></div>
+    </div>
+    <div class="acts">
+      <button class="btn" id="b-apply">Update / Actualizar</button>
+      <button class="btn gold" id="b-pdf" disabled>Download PDF / Descargar PDF</button>
+      <button class="btn ghost" id="b-xls" disabled>Download Excel / Descargar Excel</button>
+    </div>
+  </div>
+  <div id="out"></div>
+</main>
+<script src="dh-session.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LA='America/Los_Angeles';
+const LANG=()=>{try{return localStorage.getItem('dh_lang')==='es'?'es':'en'}catch(e){return 'en'}};
+const T=(en,es)=>LANG()==='es'?es:en;
+const tr=s=>(window.DH&&DH.i18n)?DH.i18n.pick(s):s;
+const today=()=>new Date().toLocaleDateString('en-CA',{timeZone:LA});
+function addDays(iso,n){const d=new Date(iso+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
+function weekStart(iso){const d=new Date(iso+'T12:00:00Z');const k=(d.getUTCDay()-3+7)%7;return addDays(iso,-k)}
+const fmtD=iso=>{const [y,m,d]=iso.split('-');return m+'/'+d+'/'+y};
+let R=null, FIRST=true;
+
+function showErr(t){const e=$('err');if(!t){e.classList.add('hide');return}e.textContent=t;e.classList.remove('hide')}
+function preset(p){
+  const t=today(); let a=t;
+  if(p==='week')a=weekStart(t); else if(p==='month')a=t.slice(0,8)+'01'; else if(p==='30')a=addDays(t,-29); else if(p==='90')a=addDays(t,-89);
+  $('f-d1').value=a; $('f-d2').value=t;
+  document.querySelectorAll('.pre').forEach(b=>b.classList.toggle('on',b.dataset.p===p));
+}
+document.querySelectorAll('.pre').forEach(b=>b.onclick=()=>{preset(b.dataset.p);load()});
+['f-d1','f-d2'].forEach(i=>$(i).onchange=()=>document.querySelectorAll('.pre').forEach(b=>b.classList.remove('on')));
+$('b-apply').onclick=()=>load();
+
+function fillSel(id,list,cur){
+  const s=$(id); const first=s.options[0].outerHTML;
+  s.innerHTML=first+list.slice().sort().map(v=>`<option value="${esc(v)}" data-no-i18n>${esc(v)}</option>`).join('');
+  s.value=list.includes(cur)?cur:'';
+}
+async function load(){
+  showErr('');
+  const args={p_desde:$('f-d1').value||null,p_hasta:$('f-d2').value||null,p_tienda:$('f-t').value||null,p_fuente:$('f-s').value||null,p_emp:$('f-e').value||null};
+  $('b-apply').disabled=true;
+  try{
+    const r=await DH.rpc('clientes_reporte',args);
+    if(!r||r.error){showErr(tr('You do not have access to this report. / No tienes acceso a este reporte.'));return}
+    R=r; R.filtros={tienda:args.p_tienda,fuente:args.p_fuente,emp:args.p_emp};
+    $('f-d1').value=r.desde; $('f-d2').value=r.hasta;
+    fillSel('f-t',r.opciones.tiendas,args.p_tienda||''); fillSel('f-s',r.opciones.fuentes,args.p_fuente||''); fillSel('f-e',r.opciones.vendedores,args.p_emp||'');
+    $('w-t').classList.toggle('hide',!r.opciones.todas);
+    render(); $('b-pdf').disabled=false; $('b-xls').disabled=false;
+  }catch(e){showErr(tr('Could not load the report. Try again. / No se pudo cargar el reporte. Intenta de nuevo.'))}
+  finally{$('b-apply').disabled=false}
+}
+
+const DOW=()=>LANG()==='es'?['Lun','Mar','Mié','Jue','Vie','Sáb','Dom']:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+function bars(list,key,gold){
+  if(!list.length)return `<div class="empty">${esc(tr('No customers logged in this period. / Sin clientes registrados en este periodo.'))}</div>`;
+  const mx=Math.max(...list.map(x=>x.n),1);
+  return list.map(x=>`<div class="bar"><span class="nm" data-no-i18n>${esc(x[key])}</span><div class="tr"><div class="fl${gold?' g':''}" style="width:${Math.max(2,x.n/mx*100)}%"></div></div><b>${x.n}</b></div>`).join('');
+}
+function cols(arr,labels,every){
+  const mx=Math.max(...arr.map(x=>x),1);
+  return `<div class="cols">${arr.map((n,i)=>`<i title="${labels[i]}: ${n}" class="${n===mx&&n>0?'pk':''}" style="height:${n/mx*100}%"></i>`).join('')}</div><div class="cl">${labels.map((l,i)=>`<span>${i%every===0?l:''}</span>`).join('')}</div>`;
+}
+function timeline(days){
+  const w=600,h=140,p=4,mx=Math.max(...days.map(x=>x.n),1),n=days.length;
+  const x=i=>p+(n<2?0:i*(w-2*p)/(n-1)), y=v=>h-p-v/mx*(h-2*p-8);
+  const pts=days.map((d,i)=>x(i).toFixed(1)+','+y(d.n).toFixed(1)).join(' ');
+  return `<svg class="tl" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="${esc(T('Customers per day','Clientes por día'))}"><polyline fill="none" stroke="#1B3A6B" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke" points="${pts}"/></svg><div class="cl" style="justify-content:space-between"><span style="text-align:left">${fmtD(days[0].d)}</span><span style="text-align:right">${fmtD(days[n-1].d)}</span></div>`;
+}
+function stats(r){
+  const best=r.por_dia.reduce((a,b)=>b.n>a.n?b:a,{n:-1,d:null});
+  const top=r.por_fuente[0]||null;
+  const delta=r.total_previo>0?Math.round((r.total-r.total_previo)/r.total_previo*100):null;
+  const dowTop=r.por_dow.reduce((a,b)=>b.n>a.n?b:a,{n:-1,dow:0});
+  const hTop=r.por_hora.reduce((a,b)=>b.n>a.n?b:a,{n:-1,h:0});
+  return {best,top,delta,dowTop,hTop,avg:(r.total/Math.max(r.dias,1))};
+}
+function render(){
+  const r=R,s=stats(r);
+  const dl=s.delta==null?`<div class="d eq">${esc(T('No previous period data','Sin datos del periodo anterior'))}</div>`:`<div class="d ${s.delta>0?'up':s.delta<0?'dn':'eq'}">${s.delta>0?'▲ +':s.delta<0?'▼ ':'= '}${s.delta}% ${esc(T('vs previous '+r.dias+' days','vs '+r.dias+' días anteriores'))}</div>`;
+  const topP=s.top&&r.total?Math.round(s.top.n/r.total*100):0;
+  $('out').innerHTML=`
+  <div class="kpis">
+    <div class="kpi"><div class="v">${r.total}</div><div class="l">${esc(T('Customers logged','Clientes registrados'))}</div>${dl}</div>
+    <div class="kpi"><div class="v">${s.avg.toFixed(1)}</div><div class="l">${esc(T('Average per day','Promedio por día'))}</div></div>
+    <div class="kpi"><div class="v sm" data-no-i18n>${s.top?esc(s.top.fuente):'—'}</div><div class="l">${esc(T('Top reason','Motivo principal'))}${s.top?` · ${s.top.n} (${topP}%)`:''}</div></div>
+    <div class="kpi"><div class="v sm" data-no-i18n>${s.best.n>0?fmtD(s.best.d):'—'}</div><div class="l">${esc(T('Busiest day','Día más fuerte'))}${s.best.n>0?` · ${s.best.n}`:''}</div></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h2>${esc(T('Why they came in','Por qué vinieron'))}</h2>${bars(r.por_fuente,'fuente')}</div>
+    <div class="card"><h2>${esc(T('Customers per day','Clientes por día'))}</h2>${r.por_dia.length?timeline(r.por_dia):''}</div>
+    ${r.opciones.todas?`<div class="card"><h2>${esc(T('By store','Por tienda'))}</h2>${bars(r.por_tienda,'tienda',true)}</div>`:''}
+    <div class="card"><h2>${esc(T('By salesperson','Por vendedor'))}</h2>${bars(r.por_vendedor,'nombre',true)}</div>
+    <div class="card"><h2>${esc(T('By day of week','Por día de la semana'))}</h2>${cols(r.por_dow.map(x=>x.n),DOW(),1)}</div>
+    <div class="card"><h2>${esc(T('By hour of day','Por hora del día'))}</h2>${cols(r.por_hora.slice(8,22).map(x=>x.n),r.por_hora.slice(8,22).map(x=>x.h),2)}<div class="note">${esc(T('Hours 8–21, Pacific time','Horas 8–21, hora del Pacífico'))}</div></div>
+  </div>`;
+}
+
+/* ---------- PDF (vector, drawn with jsPDF) ---------- */
+function loadScript(src){return new Promise((ok,no)=>{if(window.jspdf)return ok();const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s)})}
+async function makePdf(){
+  await loadScript('vendor/jspdf.umd.min.js');
+  const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:'pt',format:'letter'});
+  const r=R,s=stats(r),W=612,M=40,NAVY=[27,58,107],GOLD=[200,146,42],GR=[107,107,107];
+  const filt=[r.filtros.tienda,r.filtros.fuente,r.filtros.emp].filter(Boolean);
+  doc.setFillColor(...NAVY); doc.rect(0,0,W,70,'F'); doc.setFillColor(...GOLD); doc.rect(0,70,W,3,'F');
+  doc.setTextColor(255); doc.setFont('times','bold'); doc.setFontSize(20); doc.text(T('Customer counter report','Reporte de contador de clientes'),M,36);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  doc.text("Daniel's Home Center · "+fmtD(r.desde)+' – '+fmtD(r.hasta)+' ('+r.dias+' '+T('days','días')+')',M,54);
+  doc.setTextColor(...GR); doc.setFontSize(9);
+  doc.text((filt.length?T('Filters: ','Filtros: ')+filt.join(' · '):T('Filters: none','Filtros: ninguno')),M,88);
+  // KPI tiles
+  const tiles=[[String(r.total),T('Customers logged','Clientes registrados')],[s.avg.toFixed(1),T('Average per day','Promedio por día')],[s.top?s.top.fuente:'—',T('Top reason','Motivo principal')+(s.top?' ('+Math.round(s.top.n/Math.max(r.total,1)*100)+'%)':'')],[s.best.n>0?fmtD(s.best.d):'—',T('Busiest day','Día más fuerte')+(s.best.n>0?' ('+s.best.n+')':'')]];
+  const tw=(W-2*M-30)/4; let y=100;
+  tiles.forEach((t,i)=>{const x=M+i*(tw+10);doc.setFillColor(244,246,250);doc.roundedRect(x,y,tw,62,6,6,'F');doc.setTextColor(...NAVY);doc.setFont('times','bold');doc.setFontSize(t[0].length>9?12:22);doc.text(doc.splitTextToSize(t[0],tw-12)[0],x+8,y+28);doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...GR);doc.text(doc.splitTextToSize(t[1],tw-12),x+8,y+44)});
+  if(s.delta!=null){doc.setFontSize(9);doc.setTextColor(s.delta>0?46:s.delta<0?192:107,s.delta>0?125:s.delta<0?57:107,s.delta>0?50:s.delta<0?43:107);doc.text((s.delta>0?'+':'')+s.delta+'% '+T('vs previous '+r.dias+' days','vs '+r.dias+' días anteriores'),M,176)}
+  y=196;
+  function title(t){doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...NAVY);doc.text(t,M,y);y+=8}
+  function hbars(list,key,color,max){
+    list=list.slice(0,max||12); const mx=Math.max(...list.map(x=>x.n),1); const lw=170,bw=W-2*M-lw-40;
+    list.forEach(x=>{ if(y>740){doc.addPage();y=50}
+      doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(30,39,53);doc.text(doc.splitTextToSize(String(x[key]),lw-8)[0],M,y+11);
+      doc.setFillColor(238,241,246);doc.roundedRect(M+lw,y+2,bw,12,3,3,'F');doc.setFillColor(...color);doc.roundedRect(M+lw,y+2,Math.max(3,x.n/mx*bw),12,3,3,'F');
+      doc.setFont('helvetica','bold');doc.setTextColor(...NAVY);doc.text(String(x.n),M+lw+bw+8,y+11); y+=19});
+    y+=10;
+  }
+  function colchart(arr,labels,every,h){
+    if(y+h+40>760){doc.addPage();y=50}
+    const mx=Math.max(...arr.map(v=>v),1),cw=W-2*M,bw=cw/arr.length;
+    arr.forEach((n,i)=>{const bh=n/mx*h;doc.setFillColor(...(n===mx&&n>0?GOLD:NAVY));doc.rect(M+i*bw+1.5,y+h-bh,bw-3,bh,'F');
+      if(n>0){doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...GR);doc.text(String(n),M+i*bw+bw/2,y+h-bh-2,{align:'center'})}
+      if(i%every===0){doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...GR);doc.text(String(labels[i]),M+i*bw+bw/2,y+h+10,{align:'center'})}});
+    doc.setDrawColor(207,214,226);doc.line(M,y+h,M+cw,y+h); y+=h+28;
+  }
+  title(T('Why they came in','Por qué vinieron')); y+=4; hbars(r.por_fuente,'fuente',NAVY,14);
+  if(y>610){doc.addPage();y=50}
+  title(T('Customers per day','Clientes por día')); y+=6;
+  (function(){const days=r.por_dia,h=90,cw=W-2*M,n=days.length,mx=Math.max(...days.map(d=>d.n),1);
+    if(n<=45){colchart(days.map(d=>d.n),days.map(d=>d.d.slice(5).replace('-','/')),Math.ceil(n/12),h)}
+    else{ // line for long ranges
+      const x=i=>M+i*cw/(n-1),yy=v=>y+h-v/mx*h; doc.setDrawColor(...NAVY);doc.setLineWidth(1.4);
+      for(let i=1;i<n;i++)doc.line(x(i-1),yy(days[i-1].n),x(i),yy(days[i].n));
+      doc.setLineWidth(.5);doc.setDrawColor(207,214,226);doc.line(M,y+h,M+cw,y+h);
+      doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...GR);doc.text(fmtD(days[0].d),M,y+h+10);doc.text(fmtD(days[n-1].d),M+cw,y+h+10,{align:'right'});y+=h+28}
+  })();
+  if(r.opciones.todas&&r.por_tienda.length>0){ if(y>650){doc.addPage();y=50} title(T('By store','Por tienda')); y+=4; hbars(r.por_tienda,'tienda',GOLD,8)}
+  if(y>600){doc.addPage();y=50}
+  title(T('By salesperson','Por vendedor')); y+=4; hbars(r.por_vendedor,'nombre',GOLD,15);
+  if(y>600){doc.addPage();y=50}
+  title(T('By day of week','Por día de la semana')); y+=6; colchart(r.por_dow.map(x=>x.n),DOW(),1,80);
+  if(y>600){doc.addPage();y=50}
+  title(T('By hour of day (Pacific time)','Por hora del día (hora del Pacífico)')); y+=6; colchart(r.por_hora.slice(8,22).map(x=>x.n),r.por_hora.slice(8,22).map(x=>x.h+'h'),1,80);
+  const pc=doc.getNumberOfPages();
+  for(let i=1;i<=pc;i++){doc.setPage(i);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...GR);doc.text(T('Generated ','Generado ')+fmtD(today())+' · My Workspace',M,780);doc.text(i+' / '+pc,W-M,780,{align:'right'})}
+  return doc;
+}
+$('b-pdf').onclick=async()=>{const b=$('b-pdf');b.disabled=true;try{const d=await makePdf();d.save('customer-counter_'+R.desde+'_'+R.hasta+'.pdf')}catch(e){showErr(tr('Could not create the PDF. Try again. / No se pudo crear el PDF. Intenta de nuevo.'))}finally{b.disabled=false}};
+
+/* ---------- Excel ---------- */
+$('b-xls').onclick=async()=>{
+  const b=$('b-xls');b.disabled=true;
+  try{
+    if(!window.XLSX)await new Promise((ok,no)=>{const s=document.createElement('script');s.src='vendor/xlsx.mini.min.js';s.onload=ok;s.onerror=no;document.head.appendChild(s)});
+    const f=R.filtros; const rows=await DH.rpc('clientes_filas',{p_desde:R.desde,p_hasta:R.hasta,p_tienda:f.tienda||null,p_fuente:f.fuente||null,p_emp:f.emp||null});
+    if(!rows||rows.error)throw new Error('x');
+    const s=stats(R), wb=XLSX.utils.book_new();
+    const sum=[['Customer counter / Contador de clientes'],['From / Desde',R.desde],['To / Hasta',R.hasta],['Total',R.total],['Previous period / Periodo anterior',R.total_previo],['Average per day / Promedio por día',+s.avg.toFixed(2)],[],['Reason / Motivo','Customers / Clientes','%']].concat(R.por_fuente.map(x=>[x.fuente,x.n,R.total?+(x.n/R.total).toFixed(3):0]));
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sum),'Summary');
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Date / Fecha','Customers / Clientes']].concat(R.por_dia.map(x=>[x.d,x.n]))),'By day');
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Salesperson / Vendedor','Customers / Clientes']].concat(R.por_vendedor.map(x=>[x.nombre,x.n]))),'By salesperson');
+    if(R.opciones.todas)XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Store / Tienda','Customers / Clientes']].concat(R.por_tienda.map(x=>[x.tienda,x.n]))),'By store');
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Date / Fecha','Hour / Hora','Store / Tienda','Salesperson / Vendedor','Reason / Motivo','Note / Nota']].concat(rows.items.map(x=>[x.fecha,x.hora,x.tienda,x.vendedor,x.fuente,x.nota||'']))),'Customers');
+    XLSX.writeFile(wb,'customer-counter_'+R.desde+'_'+R.hasta+'.xlsx');
+  }catch(e){showErr(tr('Could not create the Excel file. Try again. / No se pudo crear el Excel. Intenta de nuevo.'))}
+  finally{b.disabled=false}
+};
+
+(function init(){ if(!DH.token()){location.href='index.html';return} preset('month'); load(); })();
+</script>
+</body>
+</html>
