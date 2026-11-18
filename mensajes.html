@@ -47,6 +47,28 @@
   .m .pk{display:flex;gap:4px;background:#fff;border:1px solid #d5dce8;border-radius:22px;padding:4px 6px;margin:2px 0;box-shadow:0 6px 16px -8px rgba(18,40,74,.35)}
   .m .pk button{border:0;background:none;font-size:24px;min-width:44px;min-height:44px;border-radius:50%;cursor:pointer}
   .m .pk button:hover{background:#EEF3FB}
+  .hbtn{border:1px solid #c5ccd8;background:#fff;color:var(--navy);border-radius:8px;padding:8px 12px;font:700 13px 'Segoe UI',Arial,sans-serif;min-height:40px;cursor:pointer;flex:none}
+  .rbar{flex:none;display:flex;gap:10px;align-items:center;padding:8px 14px;background:#EEF3FB;border-top:1px solid #d5dce8;font-size:13px;color:#33404f}
+  .rbar span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rbar button{border:0;background:#fff;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;flex:none}
+  .tpl{flex:none;display:flex;gap:8px;overflow-x:auto;padding:8px 14px 0;background:#fff;border-top:1px solid #e3e8f0}
+  .tpl button{flex:none;border:1px solid #c5ccd8;background:#fff;border-radius:18px;padding:8px 14px;font:600 13px 'Segoe UI',Arial,sans-serif;min-height:40px;cursor:pointer;white-space:nowrap}
+  .m .qt{background:#EEF1F6;border-left:3px solid var(--gold);border-radius:6px;padding:5px 9px;margin:0 0 3px;font-size:12.5px;color:#4a5566;cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .m .qt b{color:var(--navy)}
+  .m .rp{border:0;background:none;color:#8a94a3;font:600 12px 'Segoe UI',Arial,sans-serif;cursor:pointer;min-height:28px;padding:2px 4px}
+  .m .rp:hover{color:var(--navy)}
+  .m .b.f1{border-left:6px solid #C0392B}.m .b.f2{border-left:6px solid #2E7D32}.m .b.f3{border-left:6px solid #C8922A}.m .b.f4{border-left:6px solid #3a3a3a}.m .b.f5{border-left:6px solid #2F6FB5}
+  .m.hl .b{box-shadow:0 0 0 3px rgba(200,146,42,.55)}
+  .dlg{position:fixed;inset:0;background:rgba(10,22,45,.6);z-index:50;display:none;align-items:center;justify-content:center;padding:12px}
+  .dlg.show{display:flex}
+  .dp{background:#fff;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;border-radius:12px;padding:20px}
+  .dp h2{font:700 21px Georgia,serif;color:var(--navy);margin-bottom:4px}
+  .dp .sub{color:var(--gray);font-size:14px;margin-bottom:10px}
+  .dp .who2{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #eee;font-size:14px}
+  .dp .who2 i{color:var(--gray);font-size:12px;font-style:normal}
+  .dp select{width:100%;font:inherit;font-size:16px;padding:10px;border:1px solid #c5ccd8;border-radius:8px;min-height:46px;margin-top:10px}
+  .dp .btn2{border:1px solid #c5ccd8;background:#fff;color:var(--navy);border-radius:8px;padding:9px 14px;font-weight:700;min-height:42px;cursor:pointer}
+  .dp .btn2.d{color:var(--red)}
   .empty{margin:auto;text-align:center;color:var(--gray);max-width:300px;line-height:1.5}
   .comp{flex:none;display:flex;gap:10px;align-items:flex-end;padding:12px 14px;background:#fff;border-top:1px solid #e3e8f0}
   .comp textarea{flex:1;min-height:46px;max-height:140px;resize:none;font:inherit;font-size:16px;padding:11px 14px;border:1px solid #cfd6e2;border-radius:12px;line-height:1.35}
@@ -68,23 +90,26 @@
 <div class="app" id="app">
   <nav class="chans" id="chans" aria-label="Channels"></nav>
   <section class="thread" id="thread">
-    <div class="th-head"><button class="back" onclick="back()" aria-label="Back">‹</button><div><h2 id="t-name" data-no-i18n></h2><small id="t-desc" data-no-i18n></small></div></div>
+    <div class="th-head"><button class="back" onclick="back()" aria-label="Back">‹</button><div style="flex:1;min-width:0"><h2 id="t-name" data-no-i18n></h2><small id="t-desc" data-no-i18n></small></div><button class="hbtn hide" id="adm" onclick="openPub()">Who can post / Quién publica</button></div>
     <div class="err hide" id="err"></div>
     <div class="msgs" id="msgs" aria-live="polite"></div>
     <div class="note hide" id="ro">This channel is read-only. / Este canal es solo de lectura.</div>
+    <div class="rbar hide" id="rbar"></div>
+    <div class="tpl hide" id="tpl"></div>
     <form class="comp" id="comp" onsubmit="return send(event)">
       <textarea id="txt" rows="1" maxlength="1500" placeholder="Write a message… / Escribe un mensaje…" aria-label="Message"></textarea>
       <button class="send" id="sendb" type="submit">Send / Enviar</button>
     </form>
   </section>
 </div>
+<div class="dlg" id="dlg" onclick="if(event.target===this)closeDlg()" role="dialog" aria-modal="true"><div class="dp" id="dp"></div></div>
 <script src="dh-session.js"></script>
 <script>
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const tr=s=>(window.DH&&DH.i18n)?DH.i18n.pick(s):s;
 const LA='America/Los_Angeles';
-let CH=[], CUR=null, LAST=null, SEEN=new Set(), POLL=null, BUSY=false, ASK=null;
+let CH=[], CUR=null, LAST=null, SEEN=new Set(), POLL=null, BUSY=false, ASK=null, REPLY=null, CI={};
 const L=()=>(DH.i18n&&DH.i18n.lang==='es')?'es-US':'en-US';
 function dayKey(t){return new Date(t).toLocaleDateString('en-CA',{timeZone:LA});}
 function dayLabel(t){const k=dayKey(t),now=new Date(),td=dayKey(now),yd=dayKey(new Date(now-864e5));
@@ -109,7 +134,7 @@ function renderChans(){
   $('chans').innerHTML=CH.map(c=>`<button class="chan ${c.id===CUR?'on':''}" onclick="openChan('${c.id}')"><span class="n" data-no-i18n>${esc(tr(c.nombre))}<small>${esc(tr(c.descripcion||''))}</small></span>${c.sin_leer&&c.id!==CUR?`<span class="bdg">${c.sin_leer>99?'99+':c.sin_leer}</span>`:''}</button>`).join('');
 }
 async function openChan(id){
-  CUR=id; LAST=null; SEEN=new Set(); ASK=null; $('msgs').innerHTML=''; $('msgs').removeAttribute('data-day'); $('msgs').removeAttribute('data-who'); showErr('');
+  CUR=id; LAST=null; SEEN=new Set(); ASK=null; REPLY=null; CI={}; $('msgs').innerHTML=''; $('msgs').removeAttribute('data-day'); $('msgs').removeAttribute('data-who'); showErr('');
   $('app').classList.add('in-thread'); history.replaceState(null,'','#'+id);
   const c=CH.find(x=>x.id===id); if(c){c.sin_leer=0;}
   renderChans(); await fetchMsgs(true);
@@ -123,7 +148,7 @@ async function fetchMsgs(full){
     if(r.error){showErr(tr('You cannot open this channel. / No puedes abrir este canal.'));return;}
     showErr('');
     $('t-name').textContent=tr(r.canal.nombre); $('t-desc').textContent=tr(r.canal.descripcion||'');
-    const w=r.canal.puede_escribir; $('comp').classList.toggle('hide',!w); $('ro').classList.toggle('hide',w);
+    CI=r.canal; applyComposer();
     const box=$('msgs'), near=box.scrollHeight-box.scrollTop-box.clientHeight<120;
     if(full){box.innerHTML='';box.removeAttribute('data-day');box.removeAttribute('data-who');SEEN=new Set();}
     const fresh=(r.items||[]).filter(m=>!SEEN.has(m.id)); fresh.forEach(m=>SEEN.add(m.id));
@@ -141,7 +166,7 @@ function appendMsgs(list){
     const dk=dayKey(m.t);
     if(dk!==lastDay){box.insertAdjacentHTML('beforeend',`<div class="day" data-no-i18n>${esc(dayLabel(m.t))}</div>`);lastDay=dk;lastWho='';}
     const who=m.mio?'me':m.autor;
-    box.insertAdjacentHTML('beforeend',`<div class="m ${m.mio?'me':''}" id="m-${m.id}">${!m.mio?`<div class="who" data-no-i18n>${esc(m.autor)}</div>`:''}<div class="b" data-no-i18n>${esc(m.cuerpo)}</div><div class="rx" id="rx-${m.id}"></div><div class="meta"><span data-no-i18n>${tm(m.t)}</span><button class="rxadd" onclick="togPk('${m.id}')" aria-label="React">☺+</button>${m.puede_borrar?`<button class="del" onclick="del('${m.id}',this)">Delete / Borrar</button>`:''}</div><div class="pk hide" id="pk-${m.id}">${EMO.map(e=>`<button onclick="react('${m.id}','${e}')" aria-label="${e}">${e}</button>`).join('')}</div></div>`);
+    box.insertAdjacentHTML('beforeend',`<div class="m ${m.mio?'me':''}" id="m-${m.id}">${!m.mio?`<div class="who" data-no-i18n>${esc(m.autor)}</div>`:''}${m.responde?`<div class="qt" data-no-i18n onclick="jumpTo('${m.responde.id}')"><b>↩ ${esc(m.responde.autor)}</b> ${m.responde.borrado?esc(tr('(deleted) / (borrado)')):esc(m.responde.cuerpo)}</div>`:''}<div class="b ${CI.plantillas?flashCls(m.cuerpo):''}" data-no-i18n>${esc(m.cuerpo)}</div><div class="rx" id="rx-${m.id}"></div><div class="meta"><span data-no-i18n>${tm(m.t)}</span><button class="rxadd" onclick="togPk('${m.id}')" aria-label="React">☺+</button>${CI.puede_responder?`<button class="rp" data-id="${m.id}" onclick="setReply(this.dataset.id)">${esc(tr('Reply / Responder'))}</button>`:''}${m.puede_borrar?`<button class="del" onclick="del('${m.id}',this)">Delete / Borrar</button>`:''}</div><div class="pk hide" id="pk-${m.id}">${EMO.map(e=>`<button onclick="react('${m.id}','${e}')" aria-label="${e}">${e}</button>`).join('')}</div></div>`);
     lastWho=who;
   });
   box.setAttribute('data-day',lastDay); box.setAttribute('data-who',lastWho);
@@ -156,6 +181,45 @@ async function react(id,emo){
   try{const r=await DH.rpc('mensaje_reaccionar',{p_id:id,p_emoji:emo});if(r&&r.ok){const el=$('rx-'+id);if(el)el.innerHTML=rxHTML(id,r.reacciones);}else showErr(tr('Could not react. / No se pudo reaccionar.'));}
   catch(e){showErr(tr('Could not react. / No se pudo reaccionar.'));}
 }
+
+const TPL=[['🔴','Out of stock / Agotado','🔴 Out of stock / Agotado: '],['🟢','New promo / Nueva promo','🟢 New promo / Nueva promo: '],['💲','Price change / Cambio de precio','💲 Price change / Cambio de precio: '],['⛔','Discontinued / Descontinuado','⛔ Discontinued / Descontinuado: '],['🚚','Delayed / Retraso','🚚 Delayed / Retraso: ']];
+function flashCls(c){c=c||'';return c.startsWith('🔴')?'f1':c.startsWith('🟢')?'f2':c.startsWith('💲')?'f3':c.startsWith('⛔')?'f4':c.startsWith('🚚')?'f5':'';}
+function applyComposer(){
+  const w=!!CI.puede_escribir, canRep=!!CI.puede_responder, show=w||!!REPLY;
+  $('comp').classList.toggle('hide',!show);
+  const ro=$('ro');
+  if(w||REPLY)ro.classList.add('hide');
+  else{ro.textContent=tr(canRep?'Only the buying team posts here. Tap Reply under a message to answer. / Aquí solo publica el equipo de compras. Toca Responder bajo un mensaje para contestar.':'This channel is read-only. / Este canal es solo de lectura.');ro.classList.remove('hide');}
+  const rb=$('rbar');
+  if(REPLY){rb.classList.remove('hide');rb.innerHTML=`<span data-no-i18n>↩ ${esc(tr('Replying to / Respondiendo a'))} <b>${esc(REPLY.autor)}</b>: ${esc(REPLY.cuerpo)}</span><button onclick="clearReply()" aria-label="Cancel reply">✕</button>`;}
+  else rb.classList.add('hide');
+  const tp=$('tpl');
+  if(CI.plantillas&&w&&!REPLY){tp.classList.remove('hide');tp.innerHTML=TPL.map((t,i)=>`<button type="button" onclick="useTpl(${i})" data-no-i18n>${t[0]} ${esc(tr(t[1]))}</button>`).join('');}
+  else tp.classList.add('hide');
+  $('adm').classList.toggle('hide',!CI.puede_admin);
+  const d=$('t-desc'); d.textContent=tr(CI.descripcion||'')+(CI.retencion_dias?' · '+tr('Messages are deleted after '+CI.retencion_dias+' days. / Los mensajes se borran a los '+CI.retencion_dias+' días.'):'');
+  $('txt').placeholder=REPLY?tr('Write your reply… / Escribe tu respuesta…'):tr('Write a message… / Escribe un mensaje…');
+}
+function useTpl(i){const t=$('txt');t.value=TPL[i][2];t.focus();t.setSelectionRange(t.value.length,t.value.length);}
+function setReply(id){
+  const el=$('m-'+id); if(!el)return;
+  const au=el.classList.contains('me')?tr('yourself / ti mismo'):(el.querySelector('.who')||{}).textContent||'';
+  REPLY={id,autor:au,cuerpo:(el.querySelector('.b')||{}).textContent.slice(0,80)};
+  applyComposer(); $('txt').focus();
+}
+function clearReply(){REPLY=null;applyComposer();}
+function jumpTo(id){const e=$('m-'+id);if(!e)return;e.scrollIntoView({block:'center',behavior:'smooth'});e.classList.add('hl');setTimeout(()=>e.classList.remove('hl'),1600);}
+function closeDlg(){$('dlg').classList.remove('show');}
+async function openPub(){
+  let G;try{G=await DH.rpc('alertas_publicadores');}catch(e){return;}
+  if(!G||G.error)return;
+  $('dp').innerHTML=`<h2>${esc(tr('Who can post here / Quién puede publicar aquí'))}</h2><div class="sub">${esc(tr('Buyers and re-buyers. Everyone else can read, react and reply. / Buyers y re-buyers. Todos los demás pueden leer, reaccionar y responder.'))}</div>
+  ${G.publicadores.map(g=>`<div class="who2"><span data-no-i18n>${esc(g.nombre)} <i>${esc(g.puesto||'')}${g.cuenta?'':' · '+esc(tr('no account yet / sin cuenta aún'))}</i></span><button class="btn2 d" data-r="${g.roster_id}" onclick="pubSet(this.dataset.r,false)">${esc(tr('Remove / Quitar'))}</button></div>`).join('')||`<div class="sub">${esc(tr('No one yet. / Nadie todavía.'))}</div>`}
+  <select onchange="if(this.value)pubSet(this.value,true)"><option value="">${esc(tr('+ Add a person / + Agregar persona'))}</option>${G.personas.map(x=>`<option value="${x.id}">${esc(x.nombre)} — ${esc(x.puesto||'')}${x.cuenta?'':' ('+esc(tr('no account yet / sin cuenta aún'))+')'}</option>`).join('')}</select>
+  <div style="margin-top:14px"><button class="btn2" onclick="closeDlg()">${esc(tr('Done / Listo'))}</button></div>`;
+  $('dlg').classList.add('show');
+}
+async function pubSet(r,on){try{const x=await DH.rpc('alertas_publicador_set',{p_roster:r,p_on:on});if(x&&x.ok)openPub();}catch(e){}}
 async function del(id,btn){
   if(ASK!==id){ASK=id;btn.classList.add('ask');btn.textContent=tr('Tap again to delete / Toca otra vez para borrar');setTimeout(()=>{if(ASK===id){ASK=null;btn.classList.remove('ask');btn.textContent=tr('Delete / Borrar');}},4000);return;}
   ASK=null;
@@ -166,8 +230,8 @@ async function send(ev){
   const t=$('txt'), v=t.value.trim(); if(!v||!CUR)return false;
   const b=$('sendb'); b.disabled=true;
   try{
-    const r=await DH.rpc('mensaje_enviar',{p_canal:CUR,p_cuerpo:v});
-    if(r&&r.ok){t.value='';t.style.height='';showErr('');await fetchMsgs(false);$('msgs').scrollTop=$('msgs').scrollHeight;}
+    const r=await DH.rpc('mensaje_enviar',{p_canal:CUR,p_cuerpo:v,p_responde_a:REPLY?REPLY.id:null});
+    if(r&&r.ok){t.value='';t.style.height='';REPLY=null;applyComposer();showErr('');await fetchMsgs(false);$('msgs').scrollTop=$('msgs').scrollHeight;}
     else showErr(r&&r.error==='slow_down'?tr('Slow down a little. / Más despacio.'):r&&r.error==='read_only'?tr('This channel is read-only. / Este canal es solo de lectura.'):tr('Could not send. / No se pudo enviar.'));
   }catch(e){showErr(tr('Could not send. Check your connection. / No se pudo enviar. Revisa tu conexión.'));}
   b.disabled=false; t.focus(); return false;
