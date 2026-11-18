@@ -77,6 +77,8 @@
   .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
   .err{background:#fdecea;color:var(--red);border-radius:8px;padding:10px;margin-top:10px;font-size:14px}
   .empty{background:#fff;border-radius:12px;padding:28px;text-align:center;color:var(--gray);line-height:1.6}
+  .gs{border-top:1px solid #e3e7ee;padding:12px 0}.gs h3{font:700 17px Georgia,serif;color:var(--navy);margin-bottom:8px}.gs select{margin-top:8px}
+  .who{display:inline-flex;align-items:center;gap:6px;background:#EEF3FB;border:1px solid #c9d7ee;border-radius:20px;padding:6px 6px 6px 12px;font-size:14px;font-weight:600}.who i{font-weight:400;color:var(--gray);font-size:12px}.who button{border:0;background:#fff;border-radius:50%;width:30px;height:30px;font-size:18px;color:var(--red)}
   .lst .r{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #eee;font-size:14px}
   @media(max-width:700px){.wk h2{flex-basis:100%}.mine .row{grid-template-columns:repeat(4,minmax(0,1fr))}}
   @media print{header,.stores,.tools,.addrow,.dlg,.banner.noprint{display:none!important}body{background:#fff}.sc{box-shadow:none;overflow:visible}table{min-width:0}th{position:static}}
@@ -263,14 +265,14 @@ async function doCopy(){const r=await call('horarios_copiar',{p_tienda:S.tienda,
 
 async function openGest(){
   let G;try{G=await DH.rpc('horarios_gestores');}catch(e){return;}
-  if(G.error)return;
-  const tiendas=S.tiendas;
-  showDlg(`<h2>${esc(tr('Who can edit schedules / Quién puede editar horarios'))}</h2><div class="sub">${esc(tr('Store managers who can build and publish their store’s schedule. / Gerentes que pueden armar y publicar el horario de su tienda.'))}</div>
-  <div class="lst">${G.gestores.map(g=>`<div class="r"><span data-no-i18n>${esc(g.nombre)} · ${esc(g.tienda)}</span><button class="btn d" data-r="${g.roster_id}" data-t="${esc(g.tienda)}" onclick="gSet(this.dataset.r,this.dataset.t,false)">${esc(tr('Remove / Quitar'))}</button></div>`).join('')||`<div class="sub">${esc(tr('No one yet. / Nadie todavía.'))}</div>`}</div>
-  <label for="g-p">${esc(tr('Add person / Agregar persona'))}</label><select id="g-p"><option value="">—</option>${G.personas.map(p=>`<option value="${p.id}">${esc(p.nombre)} (${esc(p.puesto||'')} · ${esc(p.ubicacion||'')})</option>`).join('')}</select>
-  <label for="g-t">${esc(tr('Store / Tienda'))}</label><select id="g-t">${tiendas.map(t=>`<option>${esc(t)}</option>`).join('')}</select>
-  <div class="err hide" id="f-e"></div>
-  <div class="acts"><button class="btn pri" onclick="gSet($('g-p').value,$('g-t').value,true)">${esc(tr('Add / Agregar'))}</button><button class="btn" onclick="closeDlg()">${esc(tr('Close / Cerrar'))}</button></div>`);
+  if(!G||G.error)return;
+  const sec=S.tiendas.map(t=>{
+    const cur=G.gestores.filter(g=>g.tienda===t), ids=new Set(cur.map(g=>g.roster_id));
+    return `<div class="gs"><h3 data-no-i18n>${esc(t)}</h3>
+    <div class="chips">${cur.map(g=>`<span class="who" data-no-i18n>${esc(g.nombre)}${g.cuenta?'':' <i>'+esc(tr('(no account yet) / (sin cuenta aún)'))+'</i>'}<button aria-label="Remove" data-r="${g.roster_id}" data-t="${esc(t)}" onclick="gSet(this.dataset.r,this.dataset.t,false)">×</button></span>`).join('')||`<span class="sub">${esc(tr('No one yet. / Nadie todavía.'))}</span>`}</div>
+    <select data-t="${esc(t)}" onchange="if(this.value)gSet(this.value,this.dataset.t,true)"><option value="">${esc(tr('+ Add a person / + Agregar persona'))}</option>${G.personas.filter(x=>!ids.has(x.id)).map(x=>`<option value="${x.id}">${esc(x.nombre)} — ${esc(x.puesto||'')}${x.cuenta?'':' ('+esc(tr('no account yet / sin cuenta aún'))+')'}</option>`).join('')}</select></div>`;}).join('');
+  showDlg(`<h2>${esc(tr('Who can edit each schedule / Quién puede editar cada horario'))}</h2><div class="sub">${esc(tr('Pick a person under the store. They can build, edit and publish that store’s schedule. Tap × to remove. / Elige una persona bajo la tienda. Puede armar, editar y publicar el horario de esa tienda. Toca × para quitar.'))}</div>${sec}
+  <div class="err hide" id="f-e"></div><div class="acts"><button class="btn pri" onclick="closeDlg()">${esc(tr('Done / Listo'))}</button></div>`);
 }
 async function gSet(r,t,on){if(!r)return;const x=await call('horarios_gestor_set',{p_roster:r,p_tienda:t,p_on:on});if(x)openGest();}
 
