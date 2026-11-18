@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1B3A6B">
+<title>My Workspace — My reports / Mis reportes</title>
+<style>
+  :root{--navy:#1B3A6B;--gold:#C8922A;--lt:#D6E4F7;--ink:#1E2735;--gray:#6B6B6B;--red:#C0392B;--green:#2E7D32;--line:#dfe5ee}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#EEF1F6;color:var(--ink)}
+  header{background:var(--navy);border-bottom:3px solid var(--gold);padding:12px 20px;color:#fff}
+  header h1{font:700 19px Georgia,'Times New Roman',serif}
+  main{max-width:900px;margin:0 auto;padding:16px 14px 70px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+  .rc{background:#fff;border-radius:14px;padding:18px;box-shadow:0 1px 0 var(--line),0 10px 26px -22px rgba(18,40,74,.5);display:flex;flex-direction:column;gap:6px}
+  .rc .ic{font-size:32px}
+  .rc h2{font:700 19px Georgia,serif;color:var(--navy)}
+  .rc p{font-size:14px;color:var(--gray);line-height:1.45;flex:1}
+  .btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:10px;min-height:46px;padding:0 18px;font:700 15px 'Segoe UI',Arial,sans-serif;cursor:pointer;color:#fff;background:var(--navy);text-decoration:none;margin-top:8px}
+  .btn.ghost{background:#fff;color:var(--navy);border:1px solid #c5ccd8}
+  .btn:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+  .acts{display:flex;gap:8px;flex-wrap:wrap}
+  .empty{background:#fff;border-radius:14px;padding:22px;color:var(--gray);font-size:15px;line-height:1.5}
+  .err{background:#fdecea;color:var(--red);border-radius:8px;padding:10px 12px;font-size:14px;margin-bottom:12px}
+  .hide{display:none!important}
+  .ov{position:fixed;inset:0;background:rgba(18,40,74,.55);display:flex;align-items:flex-end;justify-content:center;z-index:50}
+  @media(min-width:700px){.ov{align-items:center;padding:20px}}
+  .dlg{background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:640px;max-height:92vh;overflow:auto;padding:16px}
+  @media(min-width:700px){.dlg{border-radius:16px}}
+  .dlg h3{font:700 19px Georgia,serif;color:var(--navy)}
+  .dlg .d{font-size:14px;color:var(--gray);margin:2px 0 8px}
+  .dlg h4{font:700 14px 'Segoe UI',Arial,sans-serif;color:var(--navy);margin:14px 0 6px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{border:2px solid #cfd6e2;background:#fff;color:var(--navy);border-radius:999px;min-height:44px;padding:0 14px;font:700 14px 'Segoe UI',Arial,sans-serif;cursor:pointer}
+  .chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .chip.on::before{content:'✓ '}
+  input[type=search]{width:100%;font:inherit;font-size:16px;padding:10px 12px;border:1px solid #cfd6e2;border-radius:10px;min-height:46px;margin-bottom:8px}
+  .plist{max-height:220px;overflow:auto}
+  .sel{font-size:13px;color:var(--gray);margin-top:8px}
+</style>
+<meta name="dh-i18n" content="on">
+<script src="dh-chrome.js" defer></script>
+</head>
+<body>
+<header><h1>My reports / Mis reportes</h1></header>
+<main>
+  <div id="err" class="err hide" role="alert"></div>
+  <div id="list" data-no-i18n></div>
+</main>
+<script src="dh-session.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LANG=()=>{try{return localStorage.getItem('dh_lang')==='es'?'es':'en'}catch(e){return 'en'}};
+const T=(en,es)=>LANG()==='es'?es:en;
+let D=null, ADM=null;
+const ROLES={vendedor:['Salesperson','Vendedor'],manager:['Manager','Gerente'],director:['Director','Director'],staff:['Staff','Personal']};
+const roleL=r=>ROLES[r]?T(ROLES[r][0],ROLES[r][1]):r;
+const show=t=>{const e=$('err');if(!t){e.classList.add('hide');return}e.textContent=t;e.classList.remove('hide')};
+
+async function load(){
+  try{ D=await DH.rpc('reportes_mis',{}); render(); }
+  catch(e){ show(T('Could not load your reports. Try again.','No se pudieron cargar tus reportes. Intenta de nuevo.')); }
+}
+function render(){
+  const items=D.items||[];
+  if(!items.length){$('list').innerHTML=`<div class="empty">${esc(T('You do not have any reports yet. If you need one, ask your manager.','Todavía no tienes reportes. Si necesitas uno, pídelo a tu gerente.'))}</div>`;return}
+  $('list').innerHTML=`<div class="grid">${items.map(r=>`<div class="rc"><div class="ic" aria-hidden="true">${esc(r.icono)}</div><h2>${esc(LANG()==='es'?r.titulo_es:r.titulo_en)}</h2><p>${esc(LANG()==='es'?r.desc_es:r.desc_en)}</p><div class="acts"><a class="btn" href="${esc(r.url)}">${esc(T('Open','Abrir'))}</a>${D.admin?`<button class="btn ghost" data-s="${esc(r.slug)}">${esc(T('Who can see it','Quién lo ve'))}</button>`:''}</div></div>`).join('')}</div>`;
+  document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>access(b.dataset.s));
+}
+async function access(slug){
+  try{ADM=await DH.rpc('reportes_admin',{})}catch(e){show(T('Could not load access settings.','No se pudo cargar el acceso.'));return}
+  if(!ADM||ADM.error){show(T('Only admins can change access.','Solo los administradores pueden cambiar el acceso.'));return}
+  const rep=ADM.reportes.find(r=>r.slug===slug); if(!rep)return;
+  const o=document.createElement('div'); o.className='ov'; o.innerHTML='<div class="dlg" data-no-i18n role="dialog" aria-modal="true"></div>'; document.body.appendChild(o);
+  o.onclick=e=>{if(e.target===o)o.remove()};
+  const dl=o.firstChild; let q='';
+  const has=(t,v)=>rep.accesos.some(a=>a.tipo===t&&a.valor===(t==='todos'?'':v));
+  const draw=()=>{
+    const ppl=ADM.personas.filter(p=>!q||p.nombre.toLowerCase().includes(q.toLowerCase()));
+    const chosen=ADM.personas.filter(p=>has('persona',p.id));
+    dl.innerHTML=`<h3>${esc(LANG()==='es'?rep.titulo_es:rep.titulo_en)}</h3><div class="d">${esc(T('Pick who can see this report. Admins always can. Changes apply right away.','Elige quién puede ver este reporte. Los administradores siempre lo ven. Los cambios aplican de inmediato.'))}</div>
+    <h4>${esc(T('Everyone','Todos'))}</h4><div class="chips"><button class="chip ${has('todos')?'on':''}" data-t="todos" data-v="">${esc(T('Everyone with an account','Todos con cuenta'))}</button></div>
+    <h4>${esc(T('By role','Por rol'))}</h4><div class="chips">${ADM.roles.map(r=>`<button class="chip ${has('rol',r)?'on':''}" data-t="rol" data-v="${esc(r)}">${esc(roleL(r))}</button>`).join('')}</div>
+    <h4>${esc(T('By department','Por departamento'))}</h4><div class="chips">${ADM.departamentos.map(r=>`<button class="chip ${has('departamento',r)?'on':''}" data-t="departamento" data-v="${esc(r)}">${esc(r)}</button>`).join('')}</div>
+    <h4>${esc(T('By person','Por persona'))}</h4><input type="search" id="q" value="${esc(q)}" placeholder="${esc(T('Search by name','Buscar por nombre'))}" aria-label="${esc(T('Search by name','Buscar por nombre'))}"><div class="plist chips">${ppl.slice(0,60).map(p=>`<button class="chip ${has('persona',p.id)?'on':''}" data-t="persona" data-v="${esc(p.id)}">${esc(p.nombre)}</button>`).join('')}</div>
+    <div class="sel">${chosen.length?esc(T('Chosen people: ','Personas elegidas: '))+esc(chosen.map(p=>p.nombre).join(', ')):''}</div>
+    <div class="acts" style="margin-top:14px"><button class="btn" id="done">${esc(T('Done','Listo'))}</button></div>`;
+    dl.querySelectorAll('.chip').forEach(b=>b.onclick=async()=>{
+      const t=b.dataset.t,v=b.dataset.v,on=!has(t,v);
+      try{const r=await DH.rpc('reportes_acceso_set',{p_slug:slug,p_tipo:t,p_valor:v,p_on:on}); if(r&&r.error)throw 0;
+        if(on)rep.accesos.push({tipo:t,valor:t==='todos'?'':v}); else rep.accesos=rep.accesos.filter(a=>!(a.tipo===t&&a.valor===(t==='todos'?'':v))); draw();
+      }catch(e){show(T('Could not save. Try again.','No se pudo guardar. Intenta de nuevo.'))}
+    });
+    const qi=dl.querySelector('#q'); qi.oninput=()=>{q=qi.value;const pos=qi.selectionStart;draw();const n=dl.querySelector('#q');n.focus();n.setSelectionRange(pos,pos)};
+    dl.querySelector('#done').onclick=()=>o.remove();
+  };
+  draw();
+}
+(function(){ if(!DH.token()){location.href='index.html';return} load(); })();
+</script>
+</body>
+</html>
