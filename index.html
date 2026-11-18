@@ -1192,7 +1192,7 @@ document.getElementById('login-password').addEventListener('keypress', (e) => {
 <script>
 (function(){
   var KEY='dh_welcome_v1';
-  var ALWAYS_SHOW=true; // TEMPORARY (registration period): show on every visit. Set to false to go back to first visit only.
+  var ALWAYS_SHOW=true; // TEMPORARY (registration period): show every time the login screen is shown (never once signed in). Set to false to go back to first visit only.
   function seen(){ if(ALWAYS_SHOW) return false; try { return localStorage.getItem(KEY)==='1'; } catch(e){ return false; } }
   window.closeWelcome=function(){
     var p=document.getElementById('welcome-pop'); if(p) p.classList.remove('show');
@@ -1200,7 +1200,8 @@ document.getElementById('login-password').addEventListener('keypress', (e) => {
   };
   window.addEventListener('load',function(){
     var lg=document.querySelector('img[alt="Daniel\'s Home Center"]'), wl=document.getElementById('wp-logo'); if(lg&&wl) wl.src=lg.src;
-    if(!seen()) setTimeout(function(){ var p=document.getElementById('welcome-pop'); if(p) p.classList.add('show'); },600);
+    var loggedIn=false; try { loggedIn=!!(window.DH && DH.token && DH.token()); } catch(e){}
+    if(!seen() && !loggedIn) setTimeout(function(){ var p=document.getElementById('welcome-pop'); if(p) p.classList.add('show'); },600);
   });
   document.addEventListener('click',function(e){ if(e.target && e.target.id==='welcome-pop') window.closeWelcome(); });
 })();
