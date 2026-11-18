@@ -458,7 +458,7 @@
     </div>
     <div class="right-group">
     <button class="logout-btn" id="btn-admin-console" onclick="openAdminConsole()" style="display:none;background:var(--gold);border-color:var(--gold);color:var(--navy);margin-right:10px;">⚙️ Admin</button>
-    <button class="logout-btn" id="btn-bell" onclick="openPush()" aria-label="Notifications / Notificaciones" style="margin-right:10px">🔔</button>
+    <button class="logout-btn" id="btn-bell" onclick="openPush()" aria-label="Settings / Ajustes" title="Settings / Ajustes" style="margin-right:10px">⚙️</button>
     <button class="logout-btn" onclick="handleLogout()">Sign Out / Salir</button>
     </div>
   </div>
@@ -1385,21 +1385,30 @@ async function initPushCard(){
 }
 function dismissPush(){try{localStorage.setItem('dh-push-dismiss','1');}catch(e){}document.getElementById('push-card').classList.add('hide');}
 function closePush(){document.getElementById('push-dlg').classList.remove('show');}
+function setLangS(l){DH.i18n.set(l);openPush();}
+function settingsHead(){
+  var em=(window.DH&&DH.emp&&DH.emp())||{}, lg=(window.DH&&DH.i18n&&DH.i18n.lang)||'en';
+  return '<h2>⚙️ Settings / Ajustes</h2>'
+   +(em.nombre_completo?'<p data-no-i18n><b>'+nhEsc(em.nombre_completo)+'</b>'+(em.tienda?' · '+nhEsc(em.tienda):'')+'</p>':'')
+   +'<div class="row"><span>🌐 Language / Idioma<i>Saved on this device / Se guarda en este dispositivo</i></span>'
+   +'<span style="flex:none"><button class="pb '+(lg==='en'?'go':'cl')+'" style="margin:0 6px 0 0;min-height:44px" onclick="setLangS(\'en\')">EN</button><button class="pb '+(lg==='es'?'go':'cl')+'" style="margin:0;min-height:44px" onclick="setLangS(\'es\')">ES</button></span></div>'
+   +'<h3 style="font:700 16px Georgia,serif;color:#1B3A6B;margin:16px 0 4px">🔔 Notifications / Notificaciones</h3>';
+}
 async function openPush(){
   var box=document.getElementById('push-box'); document.getElementById('push-dlg').classList.add('show');
-  box.innerHTML='<h2>🔔 Notifications / Notificaciones</h2><p>…</p>';
-  if(!window.DHPush||!DHPush.supported()){box.innerHTML='<h2>🔔 Notifications / Notificaciones</h2><p>This browser does not support notifications. On iPhone/iPad, add the app to the Home Screen first. / Este navegador no soporta notificaciones. En iPhone/iPad, primero agrega la app a la pantalla de inicio.</p><button class="pb cl" onclick="closePush()" style="margin-left:0">OK</button>';return;}
+  var HD=settingsHead();
+  box.innerHTML=HD+'<p>…</p>';
+  if(!window.DHPush||!DHPush.supported()){box.innerHTML=HD+'<p>This browser does not support notifications. On iPhone/iPad, add the app to the Home Screen first. / Este navegador no soporta notificaciones. En iPhone/iPad, primero agrega la app a la pantalla de inicio.</p><button class="pb cl" onclick="closePush()" style="margin-left:0">OK</button>';return;}
   var st=await DHPush.state(); PST=st;
   var P=st.prefs||{menciones:true,alertas:true,noticias:true,horario:true};
   var rows=[['menciones','💬 Mentions and replies / Menciones y respuestas','When someone @mentions you or answers you / Cuando alguien te menciona o te responde'],['alertas','⚡ Product & promo alerts / Alertas de productos y promos','New posts from the buying team / Publicaciones nuevas del equipo de compras'],['noticias','📰 News for my role / Noticias para mi rol','Announcements meant for you / Avisos dirigidos a ti'],['horario','🗓️ My schedule / Mi horario','When your store schedule is posted / Cuando se publica el horario de tu tienda']];
-  var h='<h2>🔔 Notifications / Notificaciones</h2>';
+  var h=HD;
   if(st.needsInstall)h+='<p>On iPhone/iPad: tap Share, then “Add to Home Screen”, open the app from there and come back here. / En iPhone/iPad: toca Compartir, luego “Agregar a pantalla de inicio”, abre la app desde ahí y vuelve aquí.</p>';
   else if(st.permission==='denied')h+='<p>Notifications are blocked for this site. Allow them in your browser settings, then try again. / Las notificaciones están bloqueadas para este sitio. Permítelas en los ajustes del navegador y vuelve a intentar.</p>';
   else h+='<p>'+(st.on?'On for this device. / Activadas en este dispositivo.':'Off for this device. / Desactivadas en este dispositivo.')+'</p>';
   if(st.on)h+=rows.map(function(r){return '<label class="row"><span>'+r[1]+'<i>'+r[2]+'</i></span><input type="checkbox" data-k="'+r[0]+'" '+(P[r[0]]?'checked':'')+' onchange="savePushPrefs()"></label>';}).join('');
   h+=(st.on?'<button class="pb off" onclick="pushOff()">Turn off / Desactivar</button>':(st.needsInstall||st.permission==='denied'?'':'<button class="pb go" onclick="pushOn()">Turn on / Activar</button>'))+'<button class="pb cl" onclick="closePush()">Close / Cerrar</button><div class="msg" id="push-msg"></div>';
   box.innerHTML=h;
-  if(window.DH&&DH.i18n&&DH.i18n.apply)try{DH.i18n.apply(box);}catch(e){}
 }
 async function pushOn(){
   var r=await DHPush.enable(), m=document.getElementById('push-msg');
