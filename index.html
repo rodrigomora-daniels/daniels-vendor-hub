@@ -112,6 +112,15 @@
   #goal-card .gb b{position:absolute;top:-2px;bottom:-2px;width:3px;background:#1E2735}
   #goal-card .gn{display:flex;gap:16px;flex-wrap:wrap;font:14px 'Segoe UI',Arial,sans-serif;color:#1E2735;margin-top:8px}
   #goal-card .gn span b{font:700 16px Georgia,serif;color:#1B3A6B}
+  #goal-card .gsl{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  #goal-card .gchip{background:#F4F6FA;border-radius:999px;padding:6px 12px;font:13px 'Segoe UI',Arial,sans-serif;color:#1E2735}
+  #goal-card .gchip em{font-style:normal;color:#6B6B6B;margin-right:4px}
+  #goal-card .gchip b{color:#1B3A6B}
+  #goal-card .gsg{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px 16px;margin-top:10px}
+  #goal-card .gst{display:block}
+  #goal-card .gst em{font:700 13px 'Segoe UI',Arial,sans-serif;font-style:normal;color:#1B3A6B;display:block;margin-bottom:2px}
+  #goal-card .gb.sm{display:block;height:12px;border-radius:6px}
+  #goal-card .gst small{display:block;font:12px 'Segoe UI',Arial,sans-serif;color:#6B6B6B;margin-top:2px}
   #goal-card .gs{font:700 13px 'Segoe UI',Arial,sans-serif}
   #briefing{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:22px;align-items:stretch}
   #briefing.two{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}
@@ -334,6 +343,7 @@
       <input type="text" class="field-input" id="login-username" placeholder="e.g. jlopez" autocomplete="off">
       <label class="field-label">Password / Contraseña</label>
       <input type="password" class="field-input" id="login-password" placeholder="••••••••">
+      <label id="remember-row" style="display:flex;align-items:center;gap:10px;min-height:48px;margin:2px 0 8px;font-size:14px;color:var(--mgray);cursor:pointer"><input type="checkbox" id="login-remember" checked style="width:22px;height:22px;accent-color:#1B3A6B"> <span>Keep me signed in on this device / Mantenerme conectado en este dispositivo</span></label>
       <button class="btn btn-primary" id="btn-login" onclick="handleLogin()">Sign In / Iniciar Sesión</button>
       <div style="text-align:center;font-size:12px;color:var(--mgray);margin-top:12px;">Have a reset code from your manager? Use <strong>Sign Up</strong> below — it also handles password resets.<br>¿Tienes un código de tu gerente? Usa <strong>Registrarse</strong> abajo — también sirve para restablecer tu contraseña.</div>
       <div style="display:flex;justify-content:space-between;margin-top:10px;">
@@ -775,7 +785,7 @@ async function handleLogin() {
   try {
     // /next/: server-issued session. iniciar_sesion returns the employee fields (incl. departamento,
     // nivel_admin) plus a token that is kept in sessionStorage; the browser never sends an id as proof.
-    const emp = await DH.login(username, password);
+    const emp = await DH.login(username, password, !!(document.getElementById('login-remember')||{}).checked);
     if (!emp) {
       throw new Error('Incorrect username or password. / Usuario o contraseña incorrectos.');
     }
@@ -948,7 +958,7 @@ async function handleSignup() {
     // Personal-code accounts already get store/department from the roster, so they skip this.
     if (!isReset && !signupPersonalMode) {
       try {
-        const emp = await DH.login(username, pw1);
+        const emp = await DH.login(username, pw1, !!(document.getElementById('login-remember')||{}).checked);
         if (emp) {
           await DH.rpc('registro_asignar_tienda', { p_tienda: tienda });
           await DH.logout();
@@ -1343,15 +1353,24 @@ async function loadGoalCard(){
     var es=(localStorage.getItem('dh_lang')==='es'), T=function(a,b){return es?b:a};
     var d=new Date(r.fecha+'T12:00:00Z'), dn=(es?['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'])[d.getUTCDay()]+' '+(d.getUTCMonth()+1)+'/'+d.getUTCDate();
     var hasData=r.hora_max!=null, pv=mv?v/mv*100:0, exp=r.ritmo_actual==null?0:r.ritmo_actual*100, diff=pv-exp, pen=v?sv/v*100:0, penM=mv?ms/mv*100:0;
+    var laToday=new Date().toLocaleDateString('en-CA',{timeZone:'America/Los_Angeles'});
+    var daysTo=Math.round((new Date(r.fecha+'T12:00:00Z')-new Date(laToday+'T12:00:00Z'))/864e5);
+    var sp=function(n){return '<span class="gst"><em>'+n.tienda+'</em><span class="gb sm"><i style="width:'+Math.min(100,n.meta_v?n.v/n.meta_v*100:0).toFixed(1)+'%"></i>'+(hasData?'<b style="left:'+exp.toFixed(1)+'%"></b>':'')+'</span><small>'+$(n.v)+' / '+$(n.meta_v)+'</small></span>'};
     if(r.proxima&&!hasData){
-      var days=(new Date(r.fecha+'T12:00:00Z')-new Date())/864e5; if(days>14){el.classList.add('hide');return}
-      el.innerHTML='<div class="gh"><h3>🎯 '+T('Sales vs goal','Ventas vs meta')+'</h3><a href="ventas_meta.html">'+T('Full report','Reporte completo')+' ›</a></div><div class="gn"><span>'+T('Next goal day: ','Próximo día con meta: ')+'<b>'+dn+(r.nota?' · '+r.nota:'')+'</b></span><span>'+T('Goal ','Meta ')+'<b>'+$(mv)+'</b></span><span>'+T('Services ','Servicios ')+'<b>'+$(ms)+'</b></span></div>';
+      if(daysTo>45){el.classList.add('hide');return}
+      var cd=daysTo<=0?T('Today','Hoy'):daysTo===1?T('Tomorrow','Mañana'):T('In '+daysTo+' days','En '+daysTo+' días');
+      var first=r.dias[0], last=r.dias[r.dias.length-1], fd=function(x){var q=new Date(x+'T12:00:00Z');return (q.getUTCMonth()+1)+'/'+q.getUTCDate()};
+      el.innerHTML='<div class="gh"><h3>🎯 '+T('Sales vs goal','Ventas vs meta')+'</h3><span class="gd">'+cd+'</span><a href="ventas_meta.html">'+T('Full report','Reporte completo')+' ›</a></div>'
+        +'<div class="gn"><span>'+T('Next goal day: ','Próximo día con meta: ')+'<b>'+dn+(r.nota?' · '+r.nota:'')+'</b></span><span>'+T('Goal ','Meta ')+'<b>'+$(mv)+'</b></span><span>'+T('Services ','Servicios ')+'<b>'+$(ms)+'</b> ('+penM.toFixed(1)+'%)</span></div>'
+        +'<div class="gsl">'+r.tiendas.map(function(n){return '<span class="gchip"><em>'+n.tienda+'</em> <b>'+$(n.meta_v)+'</b></span>'}).join('')+'</div>'
+        +'<div class="gn"><span style="color:#6B6B6B">'+T('Goal days: ','Días con meta: ')+fd(first)+' – '+fd(last)+'</span></div>';
     }else{
       var st=!hasData?T('No sales loaded yet','Sin ventas cargadas todavía'):diff>=2?'▲ '+T('Ahead of pace','Adelante del ritmo'):diff<=-2?'▼ '+T('Behind pace','Detrás del ritmo'):'● '+T('On pace','En ritmo');
       var col=!hasData?'#6B6B6B':diff>=2?'#2E7D32':diff<=-2?'#C0392B':'#6B6B6B';
       el.innerHTML='<div class="gh"><h3>🎯 '+T('Sales vs goal','Ventas vs meta')+' · '+dn+'</h3>'+(r.demo?'<span class="gd">'+T('Demo','Prueba')+'</span>':'')+'<a href="ventas_meta.html">'+T('Full report','Reporte completo')+' ›</a></div>'
         +'<div class="gb" role="img" aria-label="'+Math.round(pv)+'% '+T('of goal','de la meta')+'"><i style="width:'+Math.min(100,pv).toFixed(1)+'%"></i>'+(hasData?'<b style="left:'+exp.toFixed(1)+'%"></b>':'')+'</div>'
-        +'<div class="gn"><span><b>'+$(v)+'</b> / '+$(mv)+' · '+Math.round(pv)+'%</span><span>'+T('Services ','Servicios ')+'<b>'+pen.toFixed(1)+'%</b> '+T('vs goal','vs meta')+' '+penM.toFixed(1)+'%</span><span class="gs" style="color:'+col+'">'+st+'</span></div>';
+        +'<div class="gn"><span><b>'+$(v)+'</b> / '+$(mv)+' · '+Math.round(pv)+'%</span><span>'+T('Services ','Servicios ')+'<b>'+pen.toFixed(1)+'%</b> '+T('vs goal','vs meta')+' '+penM.toFixed(1)+'%</span><span class="gs" style="color:'+col+'">'+st+'</span></div>'
+        +'<div class="gsg">'+r.tiendas.map(sp).join('')+'</div>';
     }
     el.classList.remove('hide');
   }catch(e){el.classList.add('hide')}

@@ -14,14 +14,16 @@
   var SUPABASE_URL = 'https://ecfxeebhtgkbsdeuiueb.supabase.co';
   var SUPABASE_KEY = 'sb_publishable_oRxEOMLizp1kjlsRjWWaxg_muaaMHFt';
   var KT = 'dh_token', KE = 'dh_emp';
-  function sget(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }
-  function sset(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} }
-  function sdel(k) { try { sessionStorage.removeItem(k); } catch (e) {} }
+  // Session lives in sessionStorage (this tab only) or, when the person chose "keep me signed in", in localStorage.
+  function sget(k) { try { return sessionStorage.getItem(k) || localStorage.getItem(k); } catch (e) { return null; } }
+  function sset(k, v, persist) { try { (persist ? localStorage : sessionStorage).setItem(k, v); (persist ? sessionStorage : localStorage).removeItem(k); } catch (e) {} }
+  function sdel(k) { try { sessionStorage.removeItem(k); localStorage.removeItem(k); } catch (e) {} }
+  function isPersist() { try { return !!localStorage.getItem(KT); } catch (e) { return false; } }
 
   var DH = {
     token: function () { return sget(KT); },
     emp: function () { try { return JSON.parse(sget(KE) || 'null'); } catch (e) { return null; } },
-    save: function (emp, token) { sset(KT, token); sset(KE, JSON.stringify(emp)); },
+    save: function (emp, token, persist) { if (persist === undefined) persist = isPersist(); sset(KT, token, persist); sset(KE, JSON.stringify(emp), persist); },
     clear: function () { sdel(KT); sdel(KE); },
 
     // plain PostgREST call (apikey only) — for public RPCs and the few direct table calls still left
@@ -59,12 +61,12 @@
       if (!/index\.html$|\/next\/?$/.test(location.pathname)) { location.href = 'index.html?expired=1'; }
     },
 
-    login: async function (username, password) {
-      var rows = await DH.rest('rpc/iniciar_sesion', { method: 'POST', body: JSON.stringify({ p_username: username, p_password: password }) });
+    login: async function (username, password, remember) {
+      var rows = await DH.rest('rpc/iniciar_sesion', { method: 'POST', body: JSON.stringify({ p_username: username, p_password: password, p_recordar: !!remember }) });
       if (!rows || !rows.length) return null;
       var r = rows[0], token = r.token;
       var emp = Object.assign({}, r); delete emp.token;
-      DH.save(emp, token);
+      DH.save(emp, token, !!remember);
       return emp;
     },
 

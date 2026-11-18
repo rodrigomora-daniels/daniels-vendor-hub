@@ -258,7 +258,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_oRxEOMLizp1kjlsRjWWaxg_muaaMHFt';
 const QS = new URLSearchParams(location.search);
 // /next/: the name comes from the signed-in session (stored by index.html), falling back to ?name=
 let SESS_EMP = null;
-try { SESS_EMP = JSON.parse(sessionStorage.getItem('dh_emp') || 'null'); } catch (e) {}
+try { SESS_EMP = (window.DH && DH.emp && DH.emp()) || JSON.parse(sessionStorage.getItem('dh_emp') || localStorage.getItem('dh_emp') || 'null'); } catch (e) {}
 const EMP_NAME = ((SESS_EMP && SESS_EMP.nombre_completo) || QS.get('name') || '').trim() || 'Unknown';
 
 // Lightweight direct REST call - no SDK needed, keeps file dependency-free

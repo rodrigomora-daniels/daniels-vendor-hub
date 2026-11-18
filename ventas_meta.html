@@ -139,7 +139,7 @@ $('d-go').onclick=async()=>{try{const r=await DH.rpc('ventas_demo',{p_fecha:D.fe
 $('d-off').onclick=async()=>{try{await DH.rpc('ventas_demo',{p_fecha:D.fecha,p_hasta:null});setDemo('');await load(null,null)}catch(e){show(T('Could not clear demo data.','No se pudo borrar la prueba.'))}};
 (async function(){
   if(!DH.token()){location.href='index.html';return}
-  try{const e=DH.getEmp?DH.getEmp():JSON.parse(sessionStorage.getItem('dh_emp')||'{}');ISADM=!!(e&&e.es_admin)}catch(e){}
+  try{const e=DH.emp();ISADM=!!(e&&e.es_admin)}catch(e){}
   await load(null,null);
 })();
 </script>
