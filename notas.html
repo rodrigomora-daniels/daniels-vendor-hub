@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1B3A6B">
+<title>My Workspace — My notes / Mis notas</title>
+<style>
+  :root{--navy:#1B3A6B;--gold:#C8922A;--lt:#D6E4F7;--ink:#1E2735;--gray:#6B6B6B;--red:#C0392B;--green:#2E7D32}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#EEF1F6;color:var(--ink)}
+  header{background:var(--navy);border-bottom:3px solid var(--gold);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;color:#fff}
+  header h1{font-size:18px} header a{color:var(--lt);font-size:13px;text-decoration:none}
+  main{max-width:720px;margin:0 auto;padding:18px 16px 60px}
+  .rules{background:#fff;border-left:5px solid var(--gold);border-radius:6px;padding:12px 16px;font-size:14px;line-height:1.5;margin-bottom:16px;box-shadow:0 1px 0 #dfe5ee}
+  .rules b{color:var(--navy)}
+  .new{background:#fff;border-radius:10px;padding:14px;box-shadow:0 1px 0 #dfe5ee,0 10px 26px -20px rgba(18,40,74,.5);margin-bottom:20px}
+  textarea{width:100%;min-height:84px;resize:vertical;font:inherit;font-size:16px;padding:11px 13px;border:1px solid #cfd6e2;border-radius:10px;line-height:1.4}
+  textarea:focus-visible,input:focus-visible,.btn:focus-visible,.ck:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+  .row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-top:10px}
+  .row label{font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:3px}
+  input[type=date]{font:inherit;font-size:15px;padding:9px 11px;border:1px solid #cfd6e2;border-radius:10px;min-height:44px}
+  .cnt{margin-left:auto;font-size:12px;color:var(--gray)}
+  .btn{border:0;background:var(--navy);color:#fff;border-radius:10px;min-height:44px;padding:0 20px;font:700 15px 'Segoe UI',Arial,sans-serif;cursor:pointer}
+  .btn[disabled]{opacity:.5}
+  .err{background:#fdecea;color:var(--red);border-radius:8px;padding:10px 12px;font-size:14px;margin-top:10px;line-height:1.45}
+  .ok{background:#e3f4e5;color:var(--green)}
+  .hide{display:none}
+  h2{font:700 15px 'Segoe UI',Arial,sans-serif;color:var(--navy);margin:18px 2px 8px}
+  .notes{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+  .note{background:#FFF4B8;border-radius:4px 4px 10px 4px;padding:12px 14px 10px;box-shadow:0 1px 0 #e6d78a,0 8px 16px -12px rgba(0,0,0,.4);display:flex;flex-direction:column;gap:8px;min-height:120px}
+  .note.done{background:#EDEFF3;box-shadow:0 1px 0 #d9dde5}
+  .note.done .t{text-decoration:line-through;color:#7b8494}
+  .note .top{display:flex;gap:10px;align-items:flex-start}
+  .ck{flex:none;width:26px;height:26px;border:2px solid var(--navy);border-radius:6px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;margin-top:1px}
+  .note.done .ck{background:var(--navy)}
+  .t{flex:1;font-size:15px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
+  .meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:auto;font-size:12px;color:#6b6340}
+  .note.done .meta{color:#8a94a3}
+  .chip{border-radius:10px;padding:2px 9px;font-weight:700;background:rgba(27,58,107,.12);color:var(--navy)}
+  .chip.late{background:var(--red);color:#fff} .chip.today{background:var(--gold);color:#fff}
+  .del{margin-left:auto;border:0;background:none;color:#7a6f3a;font:600 12px 'Segoe UI',Arial,sans-serif;cursor:pointer;padding:4px 0}
+  .del.ask{color:var(--red)}
+  .empty{color:var(--gray);padding:14px 2px;font-size:14px}
+</style>
+<meta name="dh-i18n" content="on">
+</head>
+<body>
+<header><h1>📝 My notes / Mis notas</h1><a href="index.html">← Home / Inicio</a></header>
+<main>
+  <div class="rules">
+    <b>Private and temporary. / Privado y temporal.</b> Only you can see your notes, and they delete themselves after 30 days. / Solo tú ves tus notas y se borran solas a los 30 días.<br>
+    <b>Never write / Nunca escribas</b> Social Security numbers, card or bank numbers, credit scores, income or birth dates. / números de seguro social, de tarjetas o cuentas, puntajes de crédito, ingresos ni fechas de nacimiento.
+  </div>
+  <form class="new" id="f" onsubmit="return save(event)">
+    <textarea id="txt" maxlength="500" placeholder="Quick note about a customer or a task… / Nota rápida sobre un cliente o una tarea…" aria-label="Note"></textarea>
+    <div class="row">
+      <div><label for="dt">Follow up on (optional) / Dar seguimiento el (opcional)</label><input type="date" id="dt"></div>
+      <span class="cnt" id="cnt">0/500</span>
+      <button class="btn" id="sb" type="submit">Save note / Guardar nota</button>
+    </div>
+    <div class="err hide" id="err" role="alert"></div>
+  </form>
+  <div id="list"></div>
+</main>
+<script src="dh-session.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const tr=s=>(window.DH&&DH.i18n)?DH.i18n.pick(s):s;
+const LA='America/Los_Angeles';
+let N=[], ASK=null;
+const today=()=>new Date().toLocaleDateString('en-CA',{timeZone:LA});
+function showErr(t,ok){const e=$('err');if(!t){e.classList.add('hide');return;}e.textContent=t;e.className='err'+(ok?' ok':'');}
+const WHY={
+  ssn:'That looks like a Social Security or ID number. Remove it and save again. / Parece un número de seguro social o de identificación. Quítalo y guarda de nuevo.',
+  card:'That looks like a card number. Remove it and save again. / Parece un número de tarjeta. Quítalo y guarda de nuevo.',
+  number:'That looks like a long account number. Remove it and save again. / Parece un número de cuenta. Quítalo y guarda de nuevo.',
+  keyword:'Notes cannot include credit scores, income, birth dates or bank or ID details. Remove them and save again. / Las notas no pueden incluir puntajes de crédito, ingresos, fechas de nacimiento ni datos bancarios o de identificación. Quítalos y guarda de nuevo.'};
+async function init(){
+  if(!DH.token()){location.href='index.html';return;}
+  await load();
+}
+async function load(){
+  try{N=await DH.rpc('notas_listar');}catch(e){showErr(tr('Could not load your notes. / No se pudieron cargar tus notas.'));return;}
+  render();
+}
+function chip(n){
+  if(!n.recordar_en||n.hecha)return '';
+  const t=today(); const [y,m,d]=n.recordar_en.split('-');
+  if(n.recordar_en<t)return `<span class="chip late">${esc(tr('Overdue / Vencida'))} · ${m}/${d}</span>`;
+  if(n.recordar_en===t)return `<span class="chip today">${esc(tr('Today / Hoy'))}</span>`;
+  return `<span class="chip">${m}/${d}/${y}</span>`;
+}
+function noteHtml(n){
+  const left=n.dias_restantes;
+  return `<div class="note ${n.hecha?'done':''}" id="n-${n.id}"><div class="top"><button class="ck" role="checkbox" aria-checked="${n.hecha}" aria-label="Done" onclick="tick('${n.id}',${!n.hecha})">${n.hecha?'✓':''}</button><div class="t" data-no-i18n>${esc(n.cuerpo)}</div></div>
+  <div class="meta">${chip(n)}<span>${esc(tr('Deletes in / Se borra en'))} ${left} ${esc(tr(left===1?'day / día':'days / días'))}</span><button class="del" onclick="del('${n.id}',this)">${esc(tr('Delete / Borrar'))}</button></div></div>`;
+}
+function render(){
+  const open=N.filter(n=>!n.hecha), done=N.filter(n=>n.hecha);
+  let h='';
+  if(!N.length)h='<div class="empty">'+esc(tr('No notes yet. Write the first one above. / Aún no tienes notas. Escribe la primera arriba.'))+'</div>';
+  if(open.length)h+=`<h2>${esc(tr('To do / Pendientes'))}</h2><div class="notes">${open.map(noteHtml).join('')}</div>`;
+  if(done.length)h+=`<h2>${esc(tr('Done / Hechas'))}</h2><div class="notes">${done.map(noteHtml).join('')}</div>`;
+  $('list').innerHTML=h;
+}
+async function save(ev){
+  if(ev)ev.preventDefault();
+  const v=$('txt').value.trim(); if(!v)return false;
+  const b=$('sb'); b.disabled=true; showErr('');
+  try{
+    const r=await DH.rpc('nota_guardar',{p_cuerpo:v,p_fecha:$('dt').value||null});
+    if(r&&r.ok){$('txt').value='';$('dt').value='';$('cnt').textContent='0/500';await load();}
+    else if(r&&r.error==='sensitive')showErr(tr(WHY[r.motivo]||WHY.keyword));
+    else if(r&&r.error==='full')showErr(tr('You have 100 notes. Delete some first. / Tienes 100 notas. Borra algunas primero.'));
+    else showErr(tr('Could not save. / No se pudo guardar.'));
+  }catch(e){showErr(tr('Could not save. Check your connection. / No se pudo guardar. Revisa tu conexión.'));}
+  b.disabled=false; return false;
+}
+async function tick(id,v){try{const r=await DH.rpc('nota_estado',{p_id:id,p_hecha:v});if(r&&r.ok){const n=N.find(x=>x.id===id);if(n)n.hecha=v;N.sort((a,b)=>(a.hecha-b.hecha)||((a.recordar_en||'9')>(b.recordar_en||'9')?1:-1));render();}}catch(e){showErr(tr('Could not update. / No se pudo actualizar.'));}}
+async function del(id,btn){
+  if(ASK!==id){ASK=id;btn.classList.add('ask');btn.textContent=tr('Tap again / Toca otra vez');setTimeout(()=>{if(ASK===id){ASK=null;btn.classList.remove('ask');btn.textContent=tr('Delete / Borrar');}},4000);return;}
+  ASK=null; try{const r=await DH.rpc('nota_borrar',{p_id:id});if(r&&r.ok){N=N.filter(x=>x.id!==id);render();}}catch(e){showErr(tr('Could not delete. / No se pudo borrar.'));}
+}
+$('txt').addEventListener('input',function(){$('cnt').textContent=this.value.length+'/500';});
+window.addEventListener('dh-lang',()=>{if($('err').textContent)showErr('');render();});
+init();
+</script>
+</body>
+</html>

@@ -98,6 +98,11 @@
   #promo-strip .ps-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:10px}
   #promo-strip h2{font:700 19px 'Segoe UI',Arial,sans-serif;color:var(--navy)}
   #promo-strip .ps-head a{font:700 13px 'Segoe UI',Arial,sans-serif;color:var(--navy)}
+  #notes-today{margin-bottom:24px}
+  #notes-today .ps-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:10px}
+  #notes-today h2{font:700 19px 'Segoe UI',Arial,sans-serif;color:var(--navy)}
+  #notes-today .ps-head a{font:700 13px 'Segoe UI',Arial,sans-serif;color:var(--navy)}
+  #nt-list a{display:block;background:#FFF4B8;border-radius:4px 4px 10px 4px;padding:11px 14px;margin-bottom:8px;color:#1E2735;text-decoration:none;font:15px/1.4 'Segoe UI',Arial,sans-serif;box-shadow:0 1px 0 #e6d78a}
   .ps-row{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x proximity;padding:2px 2px 12px;-webkit-overflow-scrolling:touch}
   .ps-item{flex:none;width:176px;scroll-snap-align:start;text-decoration:none;color:inherit}
   .ps-item .th{height:236px;border-radius:6px;overflow:hidden;background:#e3e8f0;box-shadow:0 1px 0 #dfe5ee,0 8px 20px -14px rgba(18,40,74,.5);display:flex;align-items:center;justify-content:center;font-size:44px}
@@ -381,6 +386,7 @@
   <button class="nl" onclick="navigateToTool('mensajes')"><span>💬</span>Messages / Mensajes<b class="bdg" id="msg-bdg" style="display:none"></b></button>
   <div class="grp">My work / Mi trabajo</div>
   <button class="nl" onclick="navigateToEvaluacion()"><span>📋</span>My Evaluation / Mi Evaluación</button>
+  <button class="nl" onclick="navigateToTool('notas')"><span>📝</span>My notes / Mis notas</button>
   <button class="nl" id="nl-certifications" onclick="switchTab('certifications')"><span>🎓</span>Certifications / Certificaciones</button>
   <button class="nl" onclick="navigateToTool('organigrama')"><span>🏢</span>Org Chart / Organigrama</button>
   <div class="grp" id="grp-tools">Store tools / Herramientas de tienda</div>
@@ -421,6 +427,10 @@
       <section id="promo-strip" style="display:none">
         <div class="ps-head"><h2>Current promotions / Promociones vigentes</h2><a href="promociones.html">See all / Ver todas</a></div>
         <div class="ps-row" id="ps-row"></div>
+      </section>
+      <section id="notes-today" style="display:none">
+        <div class="ps-head"><h2>Follow-ups for today / Seguimientos de hoy</h2><a href="notas.html">My notes / Mis notas</a></div>
+        <div id="nt-list"></div>
       </section>
       <div id="news-full" onclick="if(event.target===this)closeNews()"><div class="nf-panel">
         <div class="nf-head"><h2>📰 News / Noticias</h2><button class="nf-x" onclick="closeNews()" aria-label="Close">✕</button></div>
@@ -506,6 +516,11 @@
           <div class="home-card-icon">💬</div>
           <h3>Messages / Mensajes<b class="bdg" id="msg-bdg2" style="display:none"></b></h3>
           <p>Talk with your store or team. / Habla con tu tienda o tu equipo.</p>
+        </div>
+        <div class="home-card" onclick="navigateToTool('notas')">
+          <div class="home-card-icon">📝</div>
+          <h3>My notes / Mis notas</h3>
+          <p>Private quick notes and follow-ups. / Notas rápidas y seguimientos privados.</p>
         </div>
         <div class="home-card" onclick="navigateToTool('organigrama')">
           <div class="home-card-icon">🏢</div>
@@ -926,7 +941,7 @@ function handleLogout() {
    DASHBOARD
    ════════════════════════════════════════════════════════════ */
 async function loadDashboard() {
-  loadNewsHero(); loadPromoStrip(); loadMsgBadge();
+  loadNewsHero(); loadPromoStrip(); loadMsgBadge(); loadNotesToday();
   const emp = session.empleado;
 
   // If this employee has a temporary password, force the change screen first
@@ -1172,7 +1187,8 @@ const TOOL_URLS = {
   recursos: 'recursos.html',
   promociones: 'promociones.html',
   noticias: 'noticias.html',
-  mensajes: 'mensajes.html'
+  mensajes: 'mensajes.html',
+  notas: 'notas.html'
 };
 
 function navigateToEvaluacion() {
@@ -1223,6 +1239,16 @@ async function loadMsgBadge(){
   try{
     var ch=await DH.rpc('mensajes_canales'), n=0; (ch||[]).forEach(function(c){n+=Number(c.sin_leer)||0;});
     ['msg-bdg','msg-bdg2'].forEach(function(id){var b=document.getElementById(id); if(!b)return; b.textContent=n>99?'99+':n; b.style.display=n?'':'none';});
+  }catch(e){}
+}
+async function loadNotesToday(){
+  try{
+    var ns=await DH.rpc('notas_listar'), t=new Date().toLocaleDateString('en-CA',{timeZone:'America/Los_Angeles'});
+    var due=(ns||[]).filter(function(n){return !n.hecha&&n.recordar_en&&n.recordar_en<=t;}).slice(0,5);
+    var box=document.getElementById('notes-today');
+    if(!due.length){box.style.display='none';return;}
+    document.getElementById('nt-list').innerHTML=due.map(function(n){return '<a href="notas.html" data-no-i18n>'+nhEsc(n.cuerpo)+'</a>';}).join('');
+    box.style.display='block';
   }catch(e){}
 }
 async function loadPromoStrip(){
