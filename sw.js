@@ -3,7 +3,7 @@
    - NETWORK-FIRST for our own pages: users always get the latest deploy when online;
      the cached copy is only a fallback when the connection drops.
    - Never touches Supabase or any other cross-origin request, and never caches POSTs. */
-const CACHE = 'dhc-v10';
+const CACHE = 'dhc-v11';
 const PRECACHE = ['offline.html', 'manifest.json', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {

@@ -39,6 +39,16 @@
   #lb .bar button{background:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer}
   #lb .stage{flex:1;overflow:auto;display:flex;align-items:flex-start;justify-content:center;-webkit-overflow-scrolling:touch}
   #lb img{max-width:100%;height:auto;touch-action:pinch-zoom}
+  .acc{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.07);margin-bottom:10px;overflow:hidden}
+  .acc>button{width:100%;display:flex;align-items:center;gap:14px;padding:16px 18px;border:0;background:#fff;cursor:pointer;text-align:left;font:600 20px/1.2 'Segoe UI',Arial,sans-serif;color:#262626}
+  .acc>button:hover{background:#f7f9fc}
+  .acc .chev{width:11px;height:11px;border-right:2.5px solid var(--navy);border-bottom:2.5px solid var(--navy);transform:rotate(-45deg);transition:transform .2s;flex:none;margin:0 4px}
+  .acc.open .chev{transform:rotate(45deg)}
+  .acc .cnt{margin-left:auto;font:700 12px Arial,sans-serif;color:var(--navy);background:var(--lt);border-radius:12px;padding:3px 10px}
+  .acc .cnt.z{background:#eee;color:#888}
+  .acc .bd{display:none;padding:4px 16px 18px;border-top:1px solid #eef0f4}
+  .acc.open .bd{display:block}
+  .acc .none{color:var(--gray);font-size:13px;padding:14px 2px}
   .empty{background:#fff;border-radius:12px;padding:24px;text-align:center;color:var(--gray)}
 </style>
 <meta name="dh-i18n" content="on">
@@ -62,7 +72,7 @@ let D=null, URLS={}, TAB='vigente';
 const TABS=[['vigente','Current / Vigentes'],['programada','Upcoming / Próximas'],['vencida','Past / Anteriores'],['oculta','Hidden / Ocultas']];
 const ROLES=['vendedor','staff','manager','director'];
 const SECS=['Current week Mailers','Spiders and Aldi Signs','Future WRAP Mailers','Spectrum Commercials','Insert & Billboard','Social Media Post & Current Running Product List','Holiday List Coming soon','Campaign Calendar'];
-let SEC='';
+let OPEN=null;
 function err(t){const m=$('msg');m.textContent=t;m.className='msg';}
 function ok(t){const m=$('msg');m.textContent=t;m.className='msg ok';setTimeout(()=>m.classList.add('hide'),4000);}
 function fmt(d){if(!d)return '';const[y,m,dd]=d.split('-');return `${m}/${dd}/${y}`;}
@@ -82,22 +92,27 @@ async function load(){
 function render(){
   const counts={};(D.items||[]).forEach(i=>counts[i.estado]=(counts[i.estado]||0)+1);
   const tabs=TABS.filter(t=>t[0]==='vigente'||t[0]==='vencida'||D.puede_publicar);
-  $('tabs').innerHTML=tabs.map(t=>`<button class="tab ${t[0]===TAB?'on':''}" onclick="TAB='${t[0]}';render()">${t[1]}${counts[t[0]]?' ('+counts[t[0]]+')':''}</button>`).join('');
+  $('tabs').innerHTML=tabs.map(t=>`<button class="tab ${t[0]===TAB?'on':''}" onclick="TAB='${t[0]}';OPEN=null;render()">${t[1]}${counts[t[0]]?' ('+counts[t[0]]+')':''}</button>`).join('');
   const inTab=(D.items||[]).filter(i=>i.estado===TAB);
-  const secs=[...new Set([...SECS.filter(x=>inTab.some(i=>i.seccion===x)),...inTab.map(i=>i.seccion).filter(x=>x&&!SECS.includes(x)),...(inTab.some(i=>!i.seccion)?['']:[])])];
-  if(SEC&&!secs.includes(SEC))SEC='';
-  window._secs=secs.filter(x=>x);
-  $('tabs').innerHTML+=secs.length>1?'<div style="flex-basis:100%;display:flex;gap:6px;flex-wrap:wrap"><button class="tab '+(SEC===''?'on':'')+'" style="font-size:12px;padding:6px 12px" onclick="SEC=\'\';render()">All / Todas</button>'+window._secs.map((x,k)=>`<button class="tab ${SEC===x?'on':''}" style="font-size:12px;padding:6px 12px" onclick="SEC=window._secs[${k}];render()">${esc(x)}</button>`).join('')+'</div>':'';
-  const items=inTab.filter(i=>!SEC||i.seccion===SEC);
-  if(!items.length){$('grid').innerHTML='<div class="empty" style="grid-column:1/-1">Nothing here yet. / Aquí no hay nada todavía.</div>';return;}
-  $('grid').innerHTML=items.map(p=>{
+  const extra=[...new Set(inTab.map(i=>i.seccion).filter(x=>x&&!SECS.includes(x)))];
+  const names=[...SECS,...extra,...(inTab.some(i=>!i.seccion)?['']:[])];
+  window._secs=names;
+  if(OPEN===null){const f=names.findIndex(x=>inTab.some(i=>(i.seccion||'')===x));OPEN=new Set(f>=0?[f]:[0]);}
+  $('grid').className='';
+  $('grid').innerHTML=names.map((nm,k)=>{
+    const its=inTab.filter(i=>(i.seccion||'')===nm), open=OPEN.has(k);
+    return `<section class="acc ${open?'open':''}"><button onclick="tog(${k})" aria-expanded="${open}"><span class="chev"></span><span data-no-i18n>${esc(nm||'Other / Otros')}</span><span class="cnt ${its.length?'':'z'}">${its.length}</span></button>
+    <div class="bd">${its.length?`<div class="grid">${its.map(tile).join('')}</div>`:'<div class="none">Nothing here yet. / Aquí no hay nada todavía.</div>'}</div></section>`;
+  }).join('');
+}
+function tog(k){if(OPEN.has(k))OPEN.delete(k);else OPEN.add(k);render();}
+function tile(p){
     const u=URLS[p.archivo_id], isImg=p.mime&&p.mime.startsWith('image/');
     const th=!u?'<div class="pdf">⚠️<small>Unavailable</small></div>':isImg?`<img loading="lazy" src="${esc(u.url)}" alt="${esc(p.titulo)}">`:'<div class="pdf">📄<small>PDF</small></div>';
     const st=p.estado==='vigente'?'<span class="tag ok">Active</span>':p.estado==='programada'?'<span class="tag warn">Upcoming</span>':p.estado==='vencida'?'<span class="tag off">Ended</span>':'<span class="tag off">Hidden</span>';
     const aud=p.roles?`<span class="tag">${esc(p.roles.join(', '))}</span>`:'';
-    return `<div class="tile"><div class="thumb" onclick="openItem('${p.id}')">${th}</div><div class="meta"><b>${esc(p.titulo)}</b><small>${esc(p.descripcion||'')}</small><small>${range(p)}</small>${st} ${aud}${p.seccion?`<span class="tag" style="background:#fdf1d8;color:#7a5b00">${esc(p.seccion)}</span>`:''}</div>
+    return `<div class="tile"><div class="thumb" onclick="openItem('${p.id}')">${th}</div><div class="meta"><b data-no-i18n>${esc(p.titulo)}</b><small data-no-i18n>${esc(p.descripcion||'')}</small><small>${range(p)}</small>${st} ${aud}</div>
       <div class="act"><button class="btn sm" onclick="openItem('${p.id}')">View / Ver</button>${D.puede_publicar?`<button class="btn ghost sm" onclick="edit('${p.id}')">Edit</button>`:''}</div></div>`;
-  }).join('');
 }
 function openItem(id){
   const p=D.items.find(x=>x.id===id), u=URLS[p.archivo_id]; if(!u){err('File unavailable. / Archivo no disponible.');return;}
