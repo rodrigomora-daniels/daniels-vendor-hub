@@ -113,14 +113,15 @@
     // scope: 'promo' | 'recurso'. Returns the archivo_id to attach to a promotion/resource.
     upload: async function (scope, file) {
       var OFFICE = { xls: 'application/vnd.ms-excel', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', ppt: 'application/vnd.ms-powerpoint', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' };
-      if (scope === 'recurso') {
+      if (scope === 'recurso' || scope === 'promo') {
         var ext = (file.name.split('.').pop() || '').toLowerCase();
         if (OFFICE[ext] && file.type !== OFFICE[ext]) file = new File([file], file.name, { type: OFFICE[ext] });
       }
-      var okType = /^(application\/pdf|image\/(jpeg|png|webp))$/.test(file.type) || (scope === 'recurso' && Object.keys(OFFICE).some(function (k) { return OFFICE[k] === file.type; }));
-      if (!okType) throw new Error(scope === 'recurso' ? 'Only PDF, images, Word, Excel or PowerPoint. / Solo PDF, imágenes, Word, Excel o PowerPoint.' : 'Only PDF, JPG, PNG or WebP files. / Solo PDF, JPG, PNG o WebP.');
+      var okType = /^(application\/pdf|image\/(jpeg|png|webp))$/.test(file.type) || (scope === 'promo' && file.type === 'video/mp4') || ((scope === 'recurso' || scope === 'promo') && Object.keys(OFFICE).some(function (k) { return OFFICE[k] === file.type; }));
+      if (!okType) throw new Error(scope === 'recurso' ? 'Only PDF, images, Word, Excel or PowerPoint. / Solo PDF, imágenes, Word, Excel o PowerPoint.' : 'Only PDF, images, Excel, Word, PowerPoint or MP4. / Solo PDF, imágenes, Excel, Word, PowerPoint o MP4.');
       file = await DH.files.prepare(file);
-      if (file.size > 20 * 1024 * 1024) throw new Error('File is larger than 20 MB. / El archivo pesa más de 20 MB.');
+      var MAXMB = scope === 'promo' ? 50 : 20;
+      if (file.size > MAXMB * 1024 * 1024) throw new Error('File is larger than ' + MAXMB + ' MB. / El archivo pesa más de ' + MAXMB + ' MB.');
       var r = await fn({ action: 'upload', scope: scope, nombre: file.name, mime: file.type, bytes: file.size });
       var fd = new FormData(); fd.append('cacheControl', '3600'); fd.append('', file);
       var up = await fetch(r.signedUrl, { method: 'PUT', headers: { apikey: SUPABASE_KEY }, body: fd });

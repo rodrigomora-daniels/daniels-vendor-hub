@@ -76,7 +76,7 @@
   <div id="grid" class="grid"></div>
   <div id="perm" class="card hide" style="margin-top:20px"></div>
 </main>
-<div id="lb" class="hide"><div class="bar"><span id="lbt"></span><button onclick="closeLb()">Close / Cerrar ✕</button></div><div class="stage"><img id="lbi" alt=""></div></div>
+<div id="lb" class="hide"><div class="bar"><span id="lbt"></span><button onclick="closeLb()">Close / Cerrar ✕</button></div><div class="stage"><img id="lbi" alt=""><video id="lbv" controls playsinline style="display:none;max-width:100%;max-height:85vh;margin:auto"></video></div></div>
 <script src="dh-session.js"></script>
 <script>
 const $=id=>document.getElementById(id);
@@ -84,7 +84,7 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;',
 let D=null, URLS={}, TAB='vigente';
 const TABS=[['vigente','Current / Vigentes'],['programada','Upcoming / Próximas'],['vencida','Past / Anteriores'],['oculta','Hidden / Ocultas']];
 const ROLES=['vendedor','staff','manager','director'];
-const SECS=['Current week Mailers','Spiders and Aldi Signs','Future WRAP Mailers','Spectrum Commercials','Insert & Billboard','Social Media Post & Current Running Product List','Holiday List Coming soon','Campaign Calendar'];
+const SECS=['Current week Mailers','Spiffs & Incentive Programs','Product Info & Features','Buyer Updates','Spiders and Aldi Signs','Future WRAP Mailers','Spectrum Commercials','Insert & Billboard','Social Media Post & Current Running Product List','Holiday List Coming soon','Campaign Calendar'];
 let OPEN=null, VIEW='list';
 const _n=new Date(new Date().toLocaleString('en-US',{timeZone:'America/Los_Angeles'}));
 let CAL={y:_n.getFullYear(),m:_n.getMonth()};
@@ -144,9 +144,15 @@ function render(){
   }).join('');
 }
 function tog(k){if(OPEN.has(k))OPEN.delete(k);else OPEN.add(k);render();}
+function kindTh(m){m=m||'';
+  if(m.startsWith('video/'))return '<div class="pdf">🎬<small>Video</small></div>';
+  if(/sheet|ms-excel/.test(m))return '<div class="pdf">📊<small>Excel</small></div>';
+  if(/word|msword/.test(m))return '<div class="pdf">📝<small>Word</small></div>';
+  if(/presentation|powerpoint/.test(m))return '<div class="pdf">📽️<small>PowerPoint</small></div>';
+  return '<div class="pdf">📄<small>PDF</small></div>';}
 function tile(p){
     const u=URLS[p.archivo_id], isImg=p.mime&&p.mime.startsWith('image/');
-    const th=!u?'<div class="pdf">⚠️<small>Unavailable</small></div>':isImg?`<img loading="lazy" src="${esc(u.url)}" alt="${esc(p.titulo)}">`:'<div class="pdf">📄<small>PDF</small></div>';
+    const th=!u?'<div class="pdf">⚠️<small>Unavailable</small></div>':isImg?`<img loading="lazy" src="${esc(u.url)}" alt="${esc(p.titulo)}">`:kindTh(p.mime);
     const st=p.estado==='vigente'?'<span class="tag ok">Active</span>':p.estado==='programada'?'<span class="tag warn">Upcoming</span>':p.estado==='vencida'?'<span class="tag off">Ended</span>':'<span class="tag off">Hidden</span>';
     const aud=p.roles?`<span class="tag">${esc(p.roles.join(', '))}</span>`:'';
     return `<div class="tile"><div class="thumb" onclick="openItem('${p.id}')">${th}</div><div class="meta"><b data-no-i18n>${esc(p.titulo)}</b><small data-no-i18n>${esc(p.descripcion||'')}</small><small>${range(p)}</small>${st} ${aud}</div>
@@ -154,10 +160,12 @@ function tile(p){
 }
 function openItem(id){
   const p=D.items.find(x=>x.id===id), u=URLS[p.archivo_id]; if(!u){err('File unavailable. / Archivo no disponible.');return;}
-  if(p.mime==='application/pdf'){window.open(u.url,'_blank','noopener');return;}
-  $('lbt').textContent=p.titulo; $('lbi').src=u.url; $('lb').classList.remove('hide'); document.body.style.overflow='hidden';
+  const isV=p.mime&&p.mime.startsWith('video/'), isI=p.mime&&p.mime.startsWith('image/');
+  if(!isV&&!isI){window.open(u.url,'_blank','noopener');return;}
+  $('lbt').textContent=p.titulo; $('lbi').style.display=isV?'none':''; $('lbv').style.display=isV?'':'none';
+  if(isV){$('lbv').src=u.url;}else{$('lbi').src=u.url;} $('lb').classList.remove('hide'); document.body.style.overflow='hidden';
 }
-function closeLb(){$('lb').classList.add('hide');$('lbi').src='';document.body.style.overflow='';}
+function closeLb(){$('lb').classList.add('hide');$('lbi').src='';try{$('lbv').pause();}catch(e){}$('lbv').removeAttribute('src');document.body.style.overflow='';}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLb();});
 
 function edit(id){
@@ -167,8 +175,8 @@ function edit(id){
    <label>Title / Título</label><input id="f-t" value="${esc(p.titulo)}" placeholder="e.g. Black Friday wrap 11/17">
    <label>Section / Sección</label><input id="f-sec" list="secs" value="${esc(p.seccion||'')}" placeholder="Pick or type / Elige o escribe"><datalist id="secs">${SECS.map(x=>`<option value="${esc(x)}">`).join('')}</datalist>
    <label>Notes (optional) / Notas (opcional)</label><input id="f-d" value="${esc(p.descripcion||'')}">
-   <label>File: image or PDF / Archivo: imagen o PDF ${id?'(leave empty to keep the current one / déjalo vacío para conservar el actual)':''}</label>
-   <input id="f-f" type="file" accept="image/jpeg,image/png,image/webp,application/pdf">
+   <label>File: image, PDF, Excel, Word, PowerPoint or MP4 (up to 50 MB) / Archivo: imagen, PDF, Excel, Word, PowerPoint o MP4 (hasta 50 MB) ${id?'(leave empty to keep the current one / déjalo vacío para conservar el actual)':''}</label>
+   <input id="f-f" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.xlsx,.xls,.docx,.doc,.pptx,.ppt,video/mp4">
    <div class="row"><div><label>Starts / Inicia</label><input id="f-s" type="date" value="${esc(p.vigente_desde||'')}"></div>
    <div><label>Ends (optional) / Termina (opcional)</label><input id="f-e" type="date" value="${esc(p.vigente_hasta||'')}"></div></div>
    <label>Who sees it / Quién lo ve</label>
