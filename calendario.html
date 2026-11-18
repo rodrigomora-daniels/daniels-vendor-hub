@@ -74,6 +74,30 @@
   textarea{min-height:90px;resize:vertical} .two{display:flex;gap:10px}.two>div{flex:1}
   .roles{display:flex;gap:12px;flex-wrap:wrap;font-size:14px;margin-top:4px} .roles label{display:flex;gap:6px;align-items:center;margin:0;font-weight:600;color:var(--ink)} .roles input{width:auto;min-height:0}
   .err{background:#fdecea;color:var(--red);border-radius:8px;padding:9px 12px;font-size:14px;margin-top:10px}
+
+  /* Big days */
+  .big{position:relative;display:flex;align-items:center;gap:22px;border-radius:10px;padding:22px 28px;margin-bottom:16px;color:var(--fg);background:var(--bg);overflow:hidden;cursor:pointer;border:0;width:100%;text-align:left;box-shadow:0 18px 40px -24px rgba(0,0,0,.7);font-family:inherit}
+  .big:before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(115deg,rgba(255,255,255,.05) 0 14px,transparent 14px 28px);pointer-events:none}
+  .big .em{font-size:clamp(54px,9vw,96px);line-height:1;transform:rotate(-8deg);flex:none;filter:drop-shadow(0 6px 0 rgba(0,0,0,.25))}
+  .big .tx{position:relative;min-width:0;flex:1}
+  .big .k{font:700 14px 'Segoe UI',Arial,sans-serif;color:var(--ac)}
+  .big h2{font:900 clamp(36px,7vw,76px)/.95 'Arial Black','Segoe UI',Arial,sans-serif;letter-spacing:-1.5px;margin:4px 0 6px;color:var(--fg);text-shadow:4px 4px 0 var(--ac)}
+  .big .d{font-size:16px;opacity:.92;max-width:60ch}
+  .big .cd{position:relative;text-align:center;flex:none;background:var(--ac);color:var(--bg);border-radius:12px;padding:12px 22px;transform:rotate(3deg);box-shadow:5px 5px 0 rgba(0,0,0,.35)}
+  .big .cd b{display:block;font:900 clamp(44px,7vw,72px)/1 'Arial Black',Arial,sans-serif}
+  .big .cd span{font:700 14px 'Segoe UI',Arial,sans-serif}
+  @media(max-width:760px){.big{flex-wrap:wrap;padding:18px}.big .cd{transform:none}}
+  .wk.hw .days div{min-height:60px}
+  .pop{position:absolute;z-index:4;top:-12px;left:calc(var(--c)*100%/7 - 4px);width:calc(100%/7 + 8px);height:70px;border:0;cursor:pointer;transform:rotate(-3deg);background:var(--bg);color:var(--fg);border-radius:10px 10px 10px 3px;box-shadow:4px 4px 0 var(--ac);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px;font-family:inherit;transition:transform .15s}
+  .pop:nth-of-type(even){transform:rotate(3deg)}.pop.bf{z-index:6;transform:rotate(-4deg) scale(1.12)}.pop:hover{transform:rotate(-1deg) scale(1.06)}
+  .pop b{font:900 clamp(11px,1.35vw,17px)/1 'Arial Black',Arial,sans-serif;text-align:center;overflow-wrap:anywhere}
+  .pop i{position:absolute;right:-8px;top:-16px;font-style:normal;font-size:28px;transform:rotate(14deg);filter:drop-shadow(0 3px 0 rgba(0,0,0,.25))}
+  .pop small{font:700 11px 'Segoe UI',Arial,sans-serif;color:var(--ac)}
+  .ag .it.hero{background:var(--bg);color:var(--fg);border-radius:8px;margin:8px 0;padding:12px 14px;border-top:0;box-shadow:4px 4px 0 var(--ac)}
+  .ag .it.hero small{color:var(--ac)} .ag .it.hero i{background:var(--ac)}
+  .ag .it.hero b{font:900 20px 'Arial Black',Arial,sans-serif}
+  .tag.hero{background:var(--bg)!important;color:var(--ac)}
+  @media(prefers-reduced-motion:reduce){.pop{transition:none}}
   .hide{display:none!important}
   @media(max-width:760px){.now{grid-template-columns:1fr}.now .r{justify-content:flex-start;padding:12px 16px}.now .r a{flex:0 1 84px}.ev{font-size:11px}}
 </style>
@@ -82,6 +106,7 @@
 <body>
 <header><h1>📅 Commercial calendar / Calendario comercial</h1><a href="index.html">← Home / Inicio</a></header>
 <main>
+  <section id="big"></section>
   <section class="now hide" id="now"></section>
   <div class="bar">
     <button class="btn" onclick="go(-1)" aria-label="Previous">‹</button>
@@ -127,13 +152,24 @@ function all(){
   const pr=PR.map(p=>({id:p.id,k:'p',tipo:'promo',titulo:p.titulo,desde:p.vigente_desde,hasta:p.vigente_hasta||p.vigente_desde,nota:p.descripcion,seccion:p.seccion,archivo:p.archivo_id,mime:p.mime}));
   return ev.concat(pr).filter(x=>!OFF.has(x.tipo));
 }
+
+const THEMES=[[/black friday/i,'#0B0B0B','#FFFFFF','#F2C14E','🛍️'],[/cyber monday/i,'#0F2A5C','#FFFFFF','#27D3F5','💻'],[/thanksgiving/i,'#7A3E0E','#FFF1DC','#F2A93B','🦃'],[/christmas eve/i,'#14532D','#FFFFFF','#E8B04B','🎁'],[/christmas/i,'#8E1B1B','#FFFFFF','#8FD19E','🎄'],[/new year/i,'#12284A','#FFFFFF','#E8C878','🎆'],[/big game/i,'#1D3B2A','#FFFFFF','#F5C542','🏈'],[/valentine/i,'#9B1B4B','#FFFFFF','#FFC2D6','💝'],[/presidents|memorial|labor|4th|july|martin/i,'#1B3A6B','#FFFFFF','#E5484D','🇺🇸'],[/easter/i,'#4B3B8F','#FFFFFF','#FFD6A5','🐣'],[/mother|father/i,'#7A2E5A','#FFFFFF','#FFD27A','💐'],[/halloween/i,'#2B1245','#FFFFFF','#FF8A1F','🎃']];
+const theme=t=>{const m=THEMES.find(x=>x[0].test(t))||[0,'#1B3A6B','#FFFFFF','#C8922A','⭐'];return{bg:m[1],fg:m[2],ac:m[3],em:m[4]};};
+const tv=th=>`--bg:${th.bg};--fg:${th.fg};--ac:${th.ac}`;
+function bigDay(){
+  const T=todayS(), ti=dI(T);
+  const h=(D.items||[]).filter(e=>e.tipo==='holiday'&&e.desde>=T&&dI(e.desde)-ti<=75&&/black friday|cyber monday|christmas day|new year|presidents|memorial|4th|labor|mother|father|valentine|easter|big game|halloween/i.test(e.titulo)).sort((a,b)=>a.desde>b.desde?1:-1)[0];
+  if(!h)return '';
+  const n=dI(h.desde)-ti, th=theme(h.titulo);
+  return `<button class="big" style="${tv(th)}" onclick="show('e','${h.id}')"><span class="em">${th.em}</span><span class="tx"><div class="k" data-no-i18n>${esc(fmt(h.desde))}</div><h2 data-no-i18n>${esc(h.titulo)}</h2>${h.nota?`<div class="d" data-no-i18n>${esc(h.nota)}</div>`:''}</span><span class="cd"><b data-no-i18n>${n===0?'🎉':n}</b><span>${esc(tr(n===0?'Today! / ¡Hoy!':n===1?'day to go / día para el gran día':'days to go / días para el gran día'))}</span></span></button>`;
+}
 function setView(v){VIEW=v;render();}
 function go(n){if(n===0){CAL={y:_t[0],m:_t[1]-1};}else{CAL.m+=n;if(CAL.m<0){CAL.m=11;CAL.y--;}if(CAL.m>11){CAL.m=0;CAL.y++;}}render();}
 function render(){
   $('vm').classList.toggle('on',VIEW==='month');$('va').classList.toggle('on',VIEW==='agenda');
   $('mt').textContent=new Date(Date.UTC(CAL.y,CAL.m,1)).toLocaleDateString(L(),{month:'long',year:'numeric',timeZone:'UTC'});
   $('chips').innerHTML=ORDER.map(t=>`<button class="chip ${OFF.has(t)?'off':''}" onclick="tg('${t}')" aria-pressed="${!OFF.has(t)}"><i style="background:${TYPES[t][1]}"></i>${esc(tr(TYPES[t][0]))}</button>`).join('');
-  hero(); $('view').innerHTML=VIEW==='month'?month():agenda();
+  hero(); $('big').innerHTML=bigDay(); $('view').innerHTML=VIEW==='month'?month():agenda();
 }
 function tg(t){if(OFF.has(t))OFF.delete(t);else OFF.add(t);render();}
 function hero(){
@@ -154,7 +190,7 @@ function hero(){
 function month(){
   const first=new Date(Date.UTC(CAL.y,CAL.m,1)), dim=new Date(Date.UTC(CAL.y,CAL.m+1,0)).getUTCDate();
   const s0=Math.floor(first/864e5)-first.getUTCDay(), weeks=Math.ceil((first.getUTCDay()+dim)/7), ti=dI(todayS());
-  const its=all().map(e=>({e,a:dI(e.desde),b:dI(e.hasta)})).sort((x,y)=>x.a-y.a||(y.b-y.a)-(x.b-x.a)||(x.e.tipo>y.e.tipo?1:-1));
+  const allx=all().map(e=>({e,a:dI(e.desde),b:dI(e.hasta)})), heroes=allx.filter(x=>x.e.tipo==='holiday'), its=allx.filter(x=>x.e.tipo!=='holiday').sort((x,y)=>x.a-y.a||(y.b-y.a)-(x.b-x.a)||(x.e.tipo>y.e.tipo?1:-1));
   const dow=[0,1,2,3,4,5,6].map(k=>new Date(Date.UTC(2023,0,1+k)).toLocaleDateString(L(),{weekday:'short',timeZone:'UTC'}));
   let h=`<div class="cal"><div class="dow" data-no-i18n>${dow.map(d=>`<div>${d}</div>`).join('')}</div>`;
   for(let w=0;w<weeks;w++){
@@ -163,7 +199,9 @@ function month(){
       const c1=Math.max(x.a,ws)-ws+1,c2=Math.min(x.b,we)-ws+2;let l=lanes.findIndex(v=>v<c1);if(l<0){l=lanes.length;lanes.push(0);}lanes[l]=c2-1;
       const pr=x.e.k==='p', u=pr&&URLS[x.e.archivo], im=u&&x.e.mime&&x.e.mime.indexOf('image/')===0;
       return `<button class="ev ${pr?'pr':''}" style="grid-column:${c1}/${c2};grid-row:${l+1};background:${TYPES[x.e.tipo][1]}" title="${esc(x.e.titulo)}" onclick="show('${x.e.k}','${x.e.id}')" data-no-i18n>${im?`<img alt="" src="${esc(u.url)}">`:''}${esc(x.e.titulo)}</button>`;}).join('');
-    h+=`<div class="wk"><div class="days" data-no-i18n>${[0,1,2,3,4,5,6].map(k=>{const dd=new Date((ws+k)*864e5);return `<div class="${dd.getUTCMonth()!==CAL.m?'o':''} ${ws+k===ti?'t':''}"><span>${dd.getUTCDate()}</span></div>`;}).join('')}</div><div class="bars">${bars}</div></div>`;
+    const hs=heroes.filter(x=>x.a>=ws&&x.a<=we);
+    const pops=hs.map(x=>{const th=theme(x.e.titulo);return `<button class="pop ${/black friday/i.test(x.e.titulo)?'bf':''}" style="--c:${x.a-ws};${tv(th)}" onclick="show('e','${x.e.id}')" title="${esc(x.e.titulo)}" data-no-i18n><i>${th.em}</i><b>${esc(x.e.titulo)}</b></button>`;}).join('');
+    h+=`<div class="wk ${hs.length?'hw':''}">${pops}<div class="days" data-no-i18n>${[0,1,2,3,4,5,6].map(k=>{const dd=new Date((ws+k)*864e5);return `<div class="${dd.getUTCMonth()!==CAL.m?'o':''} ${ws+k===ti?'t':''}"><span>${dd.getUTCDate()}</span></div>`;}).join('')}</div><div class="bars">${bars}</div></div>`;
   }
   return h+'</div>';
 }
@@ -175,13 +213,15 @@ function agenda(){
   its.forEach(e=>{const key=e.desde<a?a:e.desde;
     if(key!==last){h+=`<h4 data-no-i18n>${esc(fmtY(key))}</h4>`;last=key;}
     const u=e.k==='p'&&URLS[e.archivo], im=u&&e.mime&&e.mime.indexOf('image/')===0;
-    h+=`<button class="it" onclick="show('${e.k}','${e.id}')"><i style="background:${TYPES[e.tipo][1]}"></i><span><span data-no-i18n>${esc(e.titulo)}</span><small>${esc(tr(TYPES[e.tipo][0]))}${e.hasta!==e.desde?' · ':''}<span data-no-i18n>${e.hasta!==e.desde?esc(span(e)):''}</span></small></span>${im?`<img alt="" src="${esc(u.url)}">`:''}</button>`;});
+    const hth=e.tipo==='holiday'?theme(e.titulo):null;
+    h+=`<button class="it ${hth?'hero':''}" ${hth?`style="${tv(hth)}"`:''} onclick="show('${e.k}','${e.id}')"><i style="background:${TYPES[e.tipo][1]}"></i><span><span ${hth?'class="hb"':''} data-no-i18n>${hth?hth.em+' ':''}${hth?`<b>${esc(e.titulo)}</b>`:esc(e.titulo)}</span><small>${esc(tr(TYPES[e.tipo][0]))}${e.hasta!==e.desde?' · ':''}<span data-no-i18n>${e.hasta!==e.desde?esc(span(e)):''}</span></small></span>${im?`<img alt="" src="${esc(u.url)}">`:''}</button>`;});
   return h+'</div>';
 }
 function show(k,id){
   const e=all().find(x=>x.k===k&&x.id===id)||null; if(!e)return; ASK=false;
   const u=e.k==='p'&&URLS[e.archivo], im=u&&e.mime&&e.mime.indexOf('image/')===0;
-  $('dp').innerHTML=`<span class="tag" style="background:${TYPES[e.tipo][1]}">${esc(tr(TYPES[e.tipo][0]))}</span><h2 data-no-i18n>${esc(e.titulo)}</h2><div class="when" data-no-i18n>${esc(span(e))}</div>
+  const dth=e.tipo==='holiday'?theme(e.titulo):null;
+  $('dp').innerHTML=`${dth?`<div style="${tv(dth)};background:var(--bg);color:var(--fg);border-radius:10px;padding:18px;margin:-4px 0 12px;text-align:center;box-shadow:4px 4px 0 var(--ac)"><div style="font-size:56px;line-height:1">${dth.em}</div><div style="font:900 30px/1 'Arial Black',Arial,sans-serif;margin-top:6px" data-no-i18n>${esc(e.titulo)}</div></div>`:''}<span class="tag" style="background:${TYPES[e.tipo][1]}">${esc(tr(TYPES[e.tipo][0]))}</span>${dth?'':`<h2 data-no-i18n>${esc(e.titulo)}</h2>`}<div class="when" data-no-i18n>${esc(span(e))}</div>
   ${im?`<img class="big" alt="" src="${esc(u.url)}">`:''}${e.nota?`<div class="note" data-no-i18n>${esc(e.nota)}</div>`:''}
   ${e.roles?`<div class="when">${esc(tr('Visible to / Visible para'))}: <span data-no-i18n>${esc(e.roles.join(', '))}</span></div>`:''}
   <div class="acts">${e.k==='p'?`<a class="btn p" style="text-decoration:none;display:inline-flex;align-items:center" href="promociones.html">${esc(tr('Open in Promotions / Abrir en Promociones'))}</a>`:''}
