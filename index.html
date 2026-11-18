@@ -55,7 +55,7 @@
   body.dashboard-mode{background:#f0f2f5;align-items:flex-start;padding:0;}
 
   .dash-header{background:var(--navy);border-bottom:4px solid var(--gold);padding:18px 28px;display:flex;align-items:center;justify-content:space-between;gap:16px;}
-  .dash-header .right-group{display:flex;align-items:center;gap:20px;}
+  .dash-header .right-group{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
   .dash-header .greeting{color:var(--white);}
   .dash-header .greeting .name{font-size:19px;font-weight:700;}
   .dash-header .greeting .role{font-size:12px;color:var(--gold);}
@@ -327,8 +327,10 @@
       <div class="name" id="dash-name">—</div>
       <div class="role" id="dash-role">—</div>
     </div>
+    <div class="right-group">
     <button class="logout-btn" id="btn-admin-console" onclick="openAdminConsole()" style="display:none;background:var(--gold);border-color:var(--gold);color:var(--navy);margin-right:10px;">⚙️ Admin</button>
     <button class="logout-btn" onclick="handleLogout()">Sign Out / Salir</button>
+    </div>
   </div>
 
   <div class="dash-content">
