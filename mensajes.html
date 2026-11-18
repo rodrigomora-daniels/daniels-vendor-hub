@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1B3A6B">
+<title>My Workspace — Messages / Mensajes</title>
+<style>
+  :root{--navy:#1B3A6B;--rail:#12284A;--gold:#C8922A;--lt:#D6E4F7;--ink:#1E2735;--gray:#6B6B6B;--red:#C0392B}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#EEF1F6;color:var(--ink);display:flex;flex-direction:column}
+  header{background:var(--navy);border-bottom:3px solid var(--gold);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;color:#fff;flex:none}
+  header h1{font-size:18px} header a{color:var(--lt);font-size:13px;text-decoration:none}
+  .app{flex:1;min-height:0;display:flex;max-width:1180px;width:100%;margin:0 auto;background:#fff;box-shadow:0 0 0 1px #dfe5ee}
+  .chans{width:270px;flex:none;background:var(--rail);overflow-y:auto;padding:10px 8px}
+  .chan{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;text-align:left;border:0;border-left:3px solid transparent;border-radius:8px;background:none;color:#d6e4f7;font:600 14px/1.25 'Segoe UI',Arial,sans-serif;padding:8px 12px;cursor:pointer}
+  .chan:hover{background:rgba(255,255,255,.07)}
+  .chan.on{background:rgba(200,146,42,.18);color:#fff;border-left-color:var(--gold)}
+  .chan:focus-visible,.send:focus-visible,textarea:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+  .chan .n{flex:1;min-width:0}
+  .chan small{display:block;font:400 12px 'Segoe UI',Arial,sans-serif;color:#8fa6c8;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chan .bdg{background:var(--gold);color:#fff;border-radius:11px;min-width:22px;padding:2px 7px;font:700 12px Arial,sans-serif;text-align:center}
+  .thread{flex:1;min-width:0;display:flex;flex-direction:column;background:#F6F8FB}
+  .th-head{display:flex;align-items:center;gap:10px;padding:12px 18px;background:#fff;border-bottom:1px solid #e3e8f0;flex:none}
+  .th-head h2{font:700 18px 'Segoe UI',Arial,sans-serif;color:var(--navy)}
+  .th-head small{color:var(--gray);font-size:13px;display:block}
+  .back{display:none;border:0;background:none;font-size:22px;color:var(--navy);cursor:pointer;padding:4px 8px}
+  .msgs{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:6px}
+  .day{align-self:center;font:600 12px 'Segoe UI',Arial,sans-serif;color:var(--gray);background:#e6ebf3;border-radius:10px;padding:3px 12px;margin:10px 0 4px}
+  .m{max-width:min(620px,86%);display:flex;flex-direction:column;align-self:flex-start}
+  .m.me{align-self:flex-end;align-items:flex-end}
+  .m .who{font:600 12px 'Segoe UI',Arial,sans-serif;color:var(--gray);margin:6px 4px 2px}
+  .m .b{background:#fff;border:1px solid #e1e6ee;border-radius:14px 14px 14px 4px;padding:9px 13px;font-size:15px;line-height:1.45;white-space:pre-wrap;word-wrap:break-word;overflow-wrap:anywhere}
+  .m.me .b{background:var(--navy);color:#fff;border-color:var(--navy);border-radius:14px 14px 4px 14px}
+  .m .meta{font:12px 'Segoe UI',Arial,sans-serif;color:#8a94a3;margin:2px 4px;display:flex;gap:10px;align-items:center}
+  .m .del{border:0;background:none;color:#8a94a3;font:600 12px 'Segoe UI',Arial,sans-serif;cursor:pointer;padding:2px 0}
+  .m .del:hover,.m .del.ask{color:var(--red)}
+  .empty{margin:auto;text-align:center;color:var(--gray);max-width:300px;line-height:1.5}
+  .comp{flex:none;display:flex;gap:10px;align-items:flex-end;padding:12px 14px;background:#fff;border-top:1px solid #e3e8f0}
+  .comp textarea{flex:1;min-height:46px;max-height:140px;resize:none;font:inherit;font-size:16px;padding:11px 14px;border:1px solid #cfd6e2;border-radius:12px;line-height:1.35}
+  .send{border:0;background:var(--navy);color:#fff;border-radius:12px;min-height:46px;padding:0 20px;font:700 15px 'Segoe UI',Arial,sans-serif;cursor:pointer}
+  .send[disabled]{opacity:.45;cursor:default}
+  .note{padding:12px 16px;background:#fff8e6;color:#7a5b00;font-size:13px;text-align:center;flex:none;border-top:1px solid #f0e2b8}
+  .err{padding:8px 16px;background:#fdecea;color:var(--red);font-size:13px;flex:none}
+  .hide{display:none!important}
+  @media (max-width:760px){
+    .chans{width:100%} .thread{width:100%}
+    .app.in-thread .chans{display:none} .app:not(.in-thread) .thread{display:none}
+    .back{display:block}
+  }
+</style>
+<meta name="dh-i18n" content="on">
+</head>
+<body>
+<header><h1>💬 Messages / Mensajes</h1><a href="index.html">← Home / Inicio</a></header>
+<div class="app" id="app">
+  <nav class="chans" id="chans" aria-label="Channels"></nav>
+  <section class="thread" id="thread">
+    <div class="th-head"><button class="back" onclick="back()" aria-label="Back">‹</button><div><h2 id="t-name" data-no-i18n></h2><small id="t-desc" data-no-i18n></small></div></div>
+    <div class="err hide" id="err"></div>
+    <div class="msgs" id="msgs" aria-live="polite"></div>
+    <div class="note hide" id="ro">This channel is read-only. / Este canal es solo de lectura.</div>
+    <form class="comp" id="comp" onsubmit="return send(event)">
+      <textarea id="txt" rows="1" maxlength="1500" placeholder="Write a message… / Escribe un mensaje…" aria-label="Message"></textarea>
+      <button class="send" id="sendb" type="submit">Send / Enviar</button>
+    </form>
+  </section>
+</div>
+<script src="dh-session.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const tr=s=>(window.DH&&DH.i18n)?DH.i18n.pick(s):s;
+const LA='America/Los_Angeles';
+let CH=[], CUR=null, LAST=null, SEEN=new Set(), POLL=null, BUSY=false, ASK=null;
+const L=()=>(DH.i18n&&DH.i18n.lang==='es')?'es-US':'en-US';
+function dayKey(t){return new Date(t).toLocaleDateString('en-CA',{timeZone:LA});}
+function dayLabel(t){const k=dayKey(t),now=new Date(),td=dayKey(now),yd=dayKey(new Date(now-864e5));
+  return k===td?tr('Today / Hoy'):k===yd?tr('Yesterday / Ayer'):new Date(t).toLocaleDateString(L(),{weekday:'long',month:'long',day:'numeric',timeZone:LA});}
+function tm(t){return new Date(t).toLocaleTimeString(L(),{hour:'numeric',minute:'2-digit',timeZone:LA});}
+function showErr(t){const e=$('err');if(!t){e.classList.add('hide');return;}e.textContent=t;e.classList.remove('hide');}
+
+async function init(){
+  if(!DH.token()){location.href='index.html';return;}
+  await loadChans(true);
+  const want=location.hash.slice(1); const first=CH.find(c=>c.id===want)||(window.matchMedia('(max-width:760px)').matches?null:CH[0]);
+  if(first)openChan(first.id);
+  setInterval(()=>{if(!document.hidden)tick();},8000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)tick();});
+}
+async function loadChans(first){
+  try{CH=await DH.rpc('mensajes_canales');}catch(e){showErr(tr('Could not load channels. Try again. / No se pudieron cargar los canales. Intenta de nuevo.'));return;}
+  renderChans();
+  if(first&&!CH.length)$('msgs').innerHTML='<div class="empty">'+esc(tr('You are not in any channel yet. / Todavía no estás en ningún canal.'))+'</div>';
+}
+function renderChans(){
+  $('chans').innerHTML=CH.map(c=>`<button class="chan ${c.id===CUR?'on':''}" onclick="openChan('${c.id}')"><span class="n" data-no-i18n>${esc(tr(c.nombre))}<small>${esc(tr(c.descripcion||''))}</small></span>${c.sin_leer&&c.id!==CUR?`<span class="bdg">${c.sin_leer>99?'99+':c.sin_leer}</span>`:''}</button>`).join('');
+}
+async function openChan(id){
+  CUR=id; LAST=null; SEEN=new Set(); ASK=null; $('msgs').innerHTML=''; showErr('');
+  $('app').classList.add('in-thread'); history.replaceState(null,'','#'+id);
+  const c=CH.find(x=>x.id===id); if(c){c.sin_leer=0;}
+  renderChans(); await fetchMsgs(true);
+}
+function back(){$('app').classList.remove('in-thread');CUR=null;history.replaceState(null,'',location.pathname);renderChans();loadChans();}
+async function fetchMsgs(full){
+  if(!CUR||BUSY)return; BUSY=true; const id=CUR;
+  try{
+    const r=await DH.rpc('mensajes_listar',{p_canal:id,p_despues:full?null:LAST});
+    if(id!==CUR)return;
+    if(r.error){showErr(tr('You cannot open this channel. / No puedes abrir este canal.'));return;}
+    showErr('');
+    $('t-name').textContent=tr(r.canal.nombre); $('t-desc').textContent=tr(r.canal.descripcion||'');
+    const w=r.canal.puede_escribir; $('comp').classList.toggle('hide',!w); $('ro').classList.toggle('hide',w);
+    const box=$('msgs'), near=box.scrollHeight-box.scrollTop-box.clientHeight<120;
+    if(full){box.innerHTML='';SEEN=new Set();}
+    const fresh=(r.items||[]).filter(m=>!SEEN.has(m.id)); fresh.forEach(m=>SEEN.add(m.id));
+    if(r.items&&r.items.length)LAST=r.items[r.items.length-1].t;
+    if(full&&!(r.items||[]).length)box.innerHTML='<div class="empty">'+esc(tr('No messages yet. Say hello. / Aún no hay mensajes. Saluda al equipo.'))+'</div>';
+    if(fresh.length){const e=box.querySelector('.empty');if(e)e.remove();appendMsgs(fresh);}
+    if(full||near)box.scrollTop=box.scrollHeight;
+  }catch(e){ if(full)showErr(tr('Could not load messages. / No se pudieron cargar los mensajes.')); }
+  finally{BUSY=false;}
+}
+function appendMsgs(list){
+  const box=$('msgs'); let lastDay=box.getAttribute('data-day')||'', lastWho=box.getAttribute('data-who')||'';
+  list.forEach(m=>{
+    const dk=dayKey(m.t);
+    if(dk!==lastDay){box.insertAdjacentHTML('beforeend',`<div class="day" data-no-i18n>${esc(dayLabel(m.t))}</div>`);lastDay=dk;lastWho='';}
+    const who=m.mio?'me':m.autor;
+    box.insertAdjacentHTML('beforeend',`<div class="m ${m.mio?'me':''}" id="m-${m.id}">${(!m.mio&&who!==lastWho)?`<div class="who" data-no-i18n>${esc(m.autor)}</div>`:''}<div class="b" data-no-i18n>${esc(m.cuerpo)}</div><div class="meta"><span data-no-i18n>${tm(m.t)}</span>${m.puede_borrar?`<button class="del" onclick="del('${m.id}',this)">Delete / Borrar</button>`:''}</div></div>`);
+    lastWho=who;
+  });
+  box.setAttribute('data-day',lastDay); box.setAttribute('data-who',lastWho);
+}
+async function del(id,btn){
+  if(ASK!==id){ASK=id;btn.classList.add('ask');btn.textContent=tr('Tap again to delete / Toca otra vez para borrar');setTimeout(()=>{if(ASK===id){ASK=null;btn.classList.remove('ask');btn.textContent=tr('Delete / Borrar');}},4000);return;}
+  ASK=null;
+  try{const r=await DH.rpc('mensaje_borrar',{p_id:id}); if(r&&r.ok){const e=$('m-'+id);if(e)e.remove();}else showErr(tr('Could not delete. / No se pudo borrar.'));}catch(e){showErr(tr('Could not delete. / No se pudo borrar.'));}
+}
+async function send(ev){
+  if(ev)ev.preventDefault();
+  const t=$('txt'), v=t.value.trim(); if(!v||!CUR)return false;
+  const b=$('sendb'); b.disabled=true;
+  try{
+    const r=await DH.rpc('mensaje_enviar',{p_canal:CUR,p_cuerpo:v});
+    if(r&&r.ok){t.value='';t.style.height='';showErr('');await fetchMsgs(false);$('msgs').scrollTop=$('msgs').scrollHeight;}
+    else showErr(r&&r.error==='slow_down'?tr('Slow down a little. / Más despacio.'):r&&r.error==='read_only'?tr('This channel is read-only. / Este canal es solo de lectura.'):tr('Could not send. / No se pudo enviar.'));
+  }catch(e){showErr(tr('Could not send. Check your connection. / No se pudo enviar. Revisa tu conexión.'));}
+  b.disabled=false; t.focus(); return false;
+}
+async function tick(){ await fetchMsgs(false); try{const n=await DH.rpc('mensajes_canales');CH=n;renderChans();}catch(e){} }
+$('txt').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();send();}});
+$('txt').addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,140)+'px';});
+window.addEventListener('dh-lang',()=>{renderChans();if(CUR)fetchMsgs(true);});
+init();
+</script>
+</body>
+</html>

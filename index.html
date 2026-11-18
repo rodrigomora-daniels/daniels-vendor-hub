@@ -72,6 +72,8 @@
   .side .grp{color:#8fa6c8;font:600 12px 'Segoe UI',Arial,sans-serif;margin:18px 12px 6px}
   .side .nl{display:flex;align-items:center;gap:11px;width:100%;min-height:44px;text-align:left;text-decoration:none;background:none;border:0;border-left:3px solid transparent;border-radius:8px;color:#d6e4f7;font:600 14px/1.25 'Segoe UI',Arial,sans-serif;padding:9px 12px;cursor:pointer}
   .side .nl span{font-size:18px;width:22px;text-align:center;flex:none}
+  .bdg{background:var(--gold);color:#fff;border-radius:11px;min-width:22px;padding:2px 7px;font:700 12px Arial,sans-serif;text-align:center;margin-left:auto}
+  .home-card h3 .bdg{margin-left:8px;vertical-align:middle}
   .side .nl:hover{background:rgba(255,255,255,.07)}
   .side .nl.on{background:rgba(200,146,42,.18);color:#fff;border-left-color:var(--gold)}
   .side .nl:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
@@ -376,6 +378,7 @@
   <button class="nl" onclick="navigateToTool('noticias')"><span>📰</span>News / Noticias</button>
   <button class="nl" onclick="navigateToTool('promociones')"><span>📣</span>Promotions / Promociones</button>
   <button class="nl" onclick="navigateToTool('recursos')"><span>📚</span>Resources / Recursos</button>
+  <button class="nl" onclick="navigateToTool('mensajes')"><span>💬</span>Messages / Mensajes<b class="bdg" id="msg-bdg" style="display:none"></b></button>
   <div class="grp">My work / Mi trabajo</div>
   <button class="nl" onclick="navigateToEvaluacion()"><span>📋</span>My Evaluation / Mi Evaluación</button>
   <button class="nl" id="nl-certifications" onclick="switchTab('certifications')"><span>🎓</span>Certifications / Certificaciones</button>
@@ -498,6 +501,11 @@
           <div class="home-card-icon">📚</div>
           <h3>Resources / Recursos</h3>
           <p>Manuals, guides and training documents. / Manuales, guías y documentos de capacitación.</p>
+        </div>
+        <div class="home-card" onclick="navigateToTool('mensajes')">
+          <div class="home-card-icon">💬</div>
+          <h3>Messages / Mensajes<b class="bdg" id="msg-bdg2" style="display:none"></b></h3>
+          <p>Talk with your store or team. / Habla con tu tienda o tu equipo.</p>
         </div>
         <div class="home-card" onclick="navigateToTool('organigrama')">
           <div class="home-card-icon">🏢</div>
@@ -918,7 +926,7 @@ function handleLogout() {
    DASHBOARD
    ════════════════════════════════════════════════════════════ */
 async function loadDashboard() {
-  loadNewsHero(); loadPromoStrip();
+  loadNewsHero(); loadPromoStrip(); loadMsgBadge();
   const emp = session.empleado;
 
   // If this employee has a temporary password, force the change screen first
@@ -1163,7 +1171,8 @@ const TOOL_URLS = {
   organigrama: 'Daniels_Organigrama.html',
   recursos: 'recursos.html',
   promociones: 'promociones.html',
-  noticias: 'noticias.html'
+  noticias: 'noticias.html',
+  mensajes: 'mensajes.html'
 };
 
 function navigateToEvaluacion() {
@@ -1208,6 +1217,12 @@ async function loadNewsHero(){
     try{NEWS_URLS=await DH.files.sign(NEWS_ITEMS.map(function(i){return i.imagen_archivo_id;}));}catch(e){NEWS_URLS={};}
     var u=n.imagen_archivo_id&&NEWS_URLS[n.imagen_archivo_id], im=document.getElementById('nh-img');
     if(u&&u.url){im.src=u.url;im.style.display='block';hero.classList.add('has-img');}else{im.style.display='none';hero.classList.remove('has-img');}
+  }catch(e){}
+}
+async function loadMsgBadge(){
+  try{
+    var ch=await DH.rpc('mensajes_canales'), n=0; (ch||[]).forEach(function(c){n+=Number(c.sin_leer)||0;});
+    ['msg-bdg','msg-bdg2'].forEach(function(id){var b=document.getElementById(id); if(!b)return; b.textContent=n>99?'99+':n; b.style.display=n?'':'none';});
   }catch(e){}
 }
 async function loadPromoStrip(){
