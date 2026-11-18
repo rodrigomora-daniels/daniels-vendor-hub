@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1B3A6B">
+<title>My Workspace — Schedule / Horarios</title>
+<style>
+  :root{--navy:#1B3A6B;--rail:#12284A;--gold:#C8922A;--lt:#D6E4F7;--ink:#1E2735;--gray:#6B6B6B;--red:#C0392B;--ok:#2E7D32}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#EEF1F6;color:var(--ink)}
+  header{background:var(--navy);border-bottom:3px solid var(--gold);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;color:#fff}
+  header h1{font-size:18px} header a{color:var(--lt);font-size:13px;text-decoration:none}
+  main{max-width:1240px;margin:0 auto;padding:16px 14px 60px}
+  button{font-family:inherit;cursor:pointer}
+  :focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+  .hide{display:none!important}
+  .btn{border:1px solid #c5ccd8;background:#fff;color:var(--navy);border-radius:8px;padding:10px 14px;font-weight:700;font-size:14px;min-height:44px}
+  .btn.pri{background:var(--navy);border-color:var(--navy);color:#fff}
+  .btn.g{background:var(--ok);border-color:var(--ok);color:#fff}
+  .btn.d{color:var(--red);border-color:#e3b3ad}
+  .btn[disabled]{opacity:.5;cursor:wait}
+  .stores{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .stores button{border:1px solid #c5ccd8;background:#fff;border-radius:22px;padding:10px 18px;font-weight:700;font-size:15px;color:#444;min-height:44px}
+  .stores button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .wk{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .wk h2{font:700 clamp(22px,3.2vw,32px)/1.1 Georgia,'Times New Roman',serif;color:var(--rail);flex:1 1 260px;min-width:0}
+  .wk h2 small{display:block;font:600 14px 'Segoe UI',Arial,sans-serif;color:var(--gray);margin-top:4px}
+  .pill{display:inline-block;font:700 12px 'Segoe UI',Arial,sans-serif;border-radius:12px;padding:3px 10px;vertical-align:middle}
+  .pill.draft{background:#FFF1D6;color:#8A5A00}.pill.pub{background:#E3F3E5;color:#1E6B24}
+  .tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+  .banner{background:#fff;border-left:5px solid var(--gold);border-radius:6px;padding:14px 16px;margin-bottom:12px;font-size:15px;line-height:1.5}
+  .mine{background:var(--rail);color:#fff;border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .mine h3{font:700 18px Georgia,'Times New Roman',serif;margin-bottom:10px}
+  .mine .row{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+  .mine .c{background:rgba(255,255,255,.08);border-radius:6px;padding:8px 6px;text-align:center;font-size:13px;line-height:1.35;min-height:62px}
+  .mine .c b{display:block;font-size:12px;color:#E8C878;margin-bottom:3px}
+  .mine .c.t{outline:2px solid var(--gold)}
+  .mine .c.o{opacity:.55}
+  .sc{background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.08);overflow-x:auto}
+  table{border-collapse:separate;border-spacing:0;width:100%;min-width:860px;table-layout:fixed}
+  th,td{border-bottom:1px solid #e3e7ee;border-right:1px solid #e3e7ee;padding:0;text-align:center;vertical-align:middle}
+  th{background:var(--rail);color:#fff;padding:9px 4px;font-size:14px;line-height:1.25;position:sticky;top:0}
+  th small{display:block;font-weight:400;color:#cfe0f7;font-size:12px}
+  th.t{background:var(--gold);color:#12284A}th.t small{color:#12284A}
+  th.nm,td.nm{width:170px;text-align:left;position:sticky;left:0;z-index:2}
+  td.nm{background:#fff;padding:8px 10px;font-weight:700;font-size:14px;color:var(--rail)}
+  td.nm small{display:block;color:var(--gray);font-weight:600;font-size:12px}
+  td.nm.me{background:#FFF6DD;box-shadow:inset 4px 0 0 var(--gold)}
+  button.nm{all:unset;display:block;width:100%;cursor:pointer}
+  .fe{display:flex;gap:3px;justify-content:center;flex-wrap:wrap;margin-top:3px}
+  .fe span{font:700 10px 'Segoe UI',Arial,sans-serif;background:#FFE08A;color:#6B4A00;border-radius:8px;padding:1px 6px}
+  .fe span.bf{background:#12284A;color:#FFD66B}
+  td.c{height:70px}
+  .cell{display:flex;flex-direction:column;justify-content:center;align-items:center;width:100%;height:100%;min-height:70px;border:0;background:transparent;font-size:12.5px;line-height:1.4;color:#1E2735;padding:4px 2px;font-weight:600}
+  .cell.off{font-weight:800;color:#444;font-size:14px}
+  .cell.empty{color:#b3bac6;font-weight:400;font-size:20px}
+  .cell.ro{cursor:default}
+  td.me .cell{box-shadow:inset 0 0 0 2px var(--gold)}
+  td.today .cell.off,td.today .cell.empty{background:#FFF9E8}
+  tfoot td{background:#F4F6FA;font:700 16px Georgia,serif;color:var(--rail);padding:9px 4px}
+  tfoot td.nm{font:600 13px 'Segoe UI',Arial,sans-serif}
+  .addrow{padding:10px 12px;border-top:1px solid #e3e7ee}
+  .dlg{position:fixed;inset:0;background:rgba(10,22,45,.6);z-index:50;display:none;align-items:flex-end;justify-content:center}
+  .dlg.show{display:flex}
+  .dlg .p{background:#fff;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;border-radius:14px 14px 0 0;padding:20px 20px 22px}
+  @media(min-width:700px){.dlg{align-items:center}.dlg .p{border-radius:12px}}
+  .dlg h2{font:700 22px/1.2 Georgia,'Times New Roman',serif;color:var(--navy);margin:2px 0 4px}
+  .dlg .sub{color:var(--gray);font-size:14px;margin-bottom:12px}
+  .dlg label{display:block;font-weight:700;font-size:14px;margin:12px 0 4px}
+  .dlg input,.dlg select{font:inherit;font-size:16px;padding:10px;border:1px solid #c5ccd8;border-radius:8px;width:100%;min-height:46px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{border:1px solid #c5ccd8;background:#fff;border-radius:8px;padding:8px 10px;font-size:13px;font-weight:600;min-height:44px;text-align:center;line-height:1.35}
+  .chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .times{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}
+  .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+  .err{background:#fdecea;color:var(--red);border-radius:8px;padding:10px;margin-top:10px;font-size:14px}
+  .empty{background:#fff;border-radius:12px;padding:28px;text-align:center;color:var(--gray);line-height:1.6}
+  .lst .r{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #eee;font-size:14px}
+  @media(max-width:700px){.wk h2{flex-basis:100%}.mine .row{grid-template-columns:repeat(4,minmax(0,1fr))}}
+  @media print{header,.stores,.tools,.addrow,.dlg,.banner.noprint{display:none!important}body{background:#fff}.sc{box-shadow:none;overflow:visible}table{min-width:0}th{position:static}}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<meta name="dh-i18n" content="on">
+</head>
+<body>
+<header><h1>🗓️ Schedule / Horarios</h1><a href="index.html">← Home / Inicio</a></header>
+<main>
+  <div class="stores hide" id="stores"></div>
+  <div class="wk"><h2 id="wt" data-no-i18n></h2>
+    <button class="btn" onclick="nav(-7)" aria-label="Previous week">◀</button>
+    <button class="btn" onclick="nav(0)" id="thisb"></button>
+    <button class="btn" onclick="nav(7)" aria-label="Next week">▶</button>
+  </div>
+  <div class="tools hide" id="tools"></div>
+  <div id="view"><div class="empty" id="ld"></div></div>
+</main>
+<div class="dlg" id="dlg" onclick="if(event.target===this)closeDlg()" role="dialog" aria-modal="true"><div class="p" id="dp"></div></div>
+<script src="dh-session.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const tr=s=>(window.DH&&DH.i18n)?DH.i18n.pick(s):s;
+const LA='America/Los_Angeles', L=()=>(DH.i18n&&DH.i18n.lang==='es')?'es-US':'en-US';
+const todayS=()=>new Date().toLocaleDateString('en-CA',{timeZone:LA});
+const addD=(s,n)=>{const d=new Date(s+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);};
+const fd=(s,o)=>new Date(s+'T12:00:00Z').toLocaleDateString(L(),Object.assign({timeZone:'UTC'},o));
+let S=null, TIENDA=null, SEM=null, BUSY=false, EDIT=null;
+const PAL=['#DDF0DA','#F6D9EE','#FBE0CC','#D3E5FA','#E6E6E6','#FFE9A8','#CBE8C4','#E9D5F2','#BFE3F0','#F9D4D4'];
+function hue(key){let h=0;for(let i=0;i<key.length;i++)h=(h*31+key.charCodeAt(i))>>>0;return PAL[h%PAL.length];}
+function ft(t){const [h,m]=t.split(':').map(Number);const ap=h>=12?'p':'a';const h12=h%12===0?12:h%12;return m?h12+':'+String(m).padStart(2,'0')+ap:h12+ap;}
+function shiftLines(t){return t.length===4?[ft(t[0])+'–'+ft(t[1]),ft(t[2])+'–'+ft(t[3])]:[ft(t[0])+'–'+ft(t[1])];}
+const DAYN=()=>L()==='es-US'?['Mié','Jue','Vie','Sáb','Dom','Lun','Mar']:['Wed','Thu','Fri','Sat','Sun','Mon','Tue'];
+function holidayBadge(f){return `<span class="${/black friday/i.test(f)?'bf':''}" data-no-i18n>${esc(/black friday/i.test(f)?'🔥 '+f:f)}</span>`;}
+
+async function load(){
+  try{S=await DH.rpc('horarios_ver',{p_tienda:TIENDA,p_semana:SEM});}
+  catch(e){$('view').innerHTML='<div class="empty">'+esc(tr('Could not load the schedule. / No se pudo cargar el horario.'))+'</div>';return;}
+  if(S&&S.tienda){TIENDA=S.tienda;SEM=S.semana;}
+  render();
+}
+function nav(n){
+  if(!S||!S.semana)return;
+  if(n===0){SEM=null;}else{SEM=addD(S.semana,n);}
+  load();
+}
+function render(){
+  $('thisb').textContent=tr('This week / Esta semana');
+  if(!S||!(S.tiendas||[]).length){
+    $('stores').classList.add('hide');$('tools').classList.add('hide');$('wt').textContent='';
+    $('view').innerHTML='<div class="empty">'+esc(tr('No schedule available for your location yet. / Aún no hay horario para tu ubicación.'))+'</div>';return;}
+  const st=$('stores');
+  if(S.tiendas.length>1){st.classList.remove('hide');st.innerHTML=S.tiendas.map(t=>`<button class="${t===S.tienda?'on':''}" data-no-i18n data-t="${esc(t)}" onclick="pickStore(this.dataset.t)">${esc(t)}</button>`).join('');}else st.classList.add('hide');
+  const end=addD(S.semana,6);
+  $('wt').innerHTML=`${esc(fd(S.semana,{month:'short',day:'numeric'}))} – ${esc(fd(end,{month:'short',day:'numeric',year:'numeric'}))} ${S.puede_editar?`<span class="pill ${S.publicado?'pub':'draft'}">${esc(tr(S.publicado?'Published / Publicado':'Draft / Borrador'))}</span>`:''}<small>${esc(S.tienda)}</small>`;
+  // tools
+  const tl=$('tools');
+  if(S.puede_editar||S.puede_gestores){
+    tl.classList.remove('hide');
+    tl.innerHTML=(S.puede_editar?`<button class="btn ${S.publicado?'':'g'}" onclick="publish(${!S.publicado})">${esc(tr(S.publicado?'Unpublish / Despublicar':'Publish for the team / Publicar para el equipo'))}</button>
+      <button class="btn" onclick="copyPrev()">${esc(tr('Copy previous week / Copiar semana anterior'))}</button>`:'')
+      +`<button class="btn" onclick="window.print()">${esc(tr('Print / Imprimir'))}</button>`
+      +(S.puede_gestores?`<button class="btn" onclick="openGest()">${esc(tr('Who can edit / Quién puede editar'))}</button>`:'');
+  }else{tl.classList.remove('hide');tl.innerHTML=`<button class="btn" onclick="window.print()">${esc(tr('Print / Imprimir'))}</button>`;}
+  const rows=S.filas||[];
+  if(!rows.length&&!S.puede_editar){
+    $('view').innerHTML='<div class="empty">'+esc(tr(S.publicado?'Nothing scheduled this week. / No hay nada programado esta semana.':'This week’s schedule is not published yet. Ask your manager. / El horario de esta semana aún no está publicado. Pregunta a tu gerente.'))+'</div>';return;}
+  const T=todayS(), dn=DAYN(), days=S.dias;
+  const mine=rows.find(r=>S.mi_roster_id&&r.roster_id===S.mi_roster_id);
+  let h='';
+  if(S.puede_editar&&!S.publicado)h+=`<div class="banner noprint"><b>${esc(tr('Draft. / Borrador.'))}</b> ${esc(tr('Only managers see it until you publish. Tap any cell to edit. / Solo los gerentes lo ven hasta que lo publiques. Toca cualquier celda para editar.'))}</div>`;
+  if(mine){
+    h+=`<div class="mine"><h3>${esc(tr('My week / Mi semana'))}</h3><div class="row">${days.map((d,i)=>{const c=(mine.celdas||{})[d.d];
+      const body=!c?'—':c.libre?esc(tr('OFF / LIBRE')):shiftLines(c.t).map(esc).join('<br>');
+      return `<div class="c ${d.d===T?'t':''} ${c&&c.libre?'o':''}"><b data-no-i18n>${esc(dn[i])} ${esc(fd(d.d,{day:'numeric'}))}</b>${body}</div>`;}).join('')}</div></div>`;
+  }
+  h+=`<div class="sc"><table><thead><tr><th class="nm">${esc(tr('Name / Nombre'))}</th>${days.map((d,i)=>`<th class="${d.d===T?'t':''}" data-no-i18n>${esc(dn[i])}<small>${esc(fd(d.d,{month:'short',day:'numeric'}))}</small>${(d.fiestas||[]).length?`<div class="fe">${d.fiestas.map(holidayBadge).join('')}</div>`:''}</th>`).join('')}</tr></thead><tbody>`;
+  rows.forEach(r=>{
+    const me=mine&&mine.id===r.id;
+    h+=`<tr><td class="nm ${me?'me':''}">${S.puede_editar?`<button class="nm" onclick="openRow('${r.id}')" data-no-i18n>${esc(r.nombre)}${r.abrev?`<small>${esc(r.abrev)}</small>`:''}</button>`:`<span data-no-i18n>${esc(r.nombre)}${r.abrev?`<small>${esc(r.abrev)}</small>`:''}</span>`}</td>`;
+    days.forEach(d=>{
+      const c=(r.celdas||{})[d.d], cls=(d.d===T?'today ':'')+(me?'me':'');
+      let inner,sty='',cc='cell';
+      if(!c){inner=S.puede_editar?'+':'';cc+=' empty';}
+      else if(c.libre){inner=esc(tr('OFF / LIBRE'));cc+=' off';}
+      else{inner=shiftLines(c.t).map(esc).join('<br>');sty=`background:${hue(c.t.join())}`;}
+      h+=`<td class="c ${cls}">${S.puede_editar?`<button class="${cc}" style="${sty}" onclick="openCell('${r.id}','${d.d}')" data-no-i18n aria-label="${esc(r.nombre+' '+d.d)}">${inner}</button>`:`<div class="${cc} ro" style="${sty}" data-no-i18n>${inner}</div>`}</td>`;
+    });
+    h+='</tr>';
+  });
+  h+=`</tbody><tfoot><tr><td class="nm">${esc(tr('Working / Trabajando'))}</td>${days.map(d=>`<td data-no-i18n>${rows.filter(r=>{const c=(r.celdas||{})[d.d];return c&&!c.libre;}).length}</td>`).join('')}</tr></tfoot></table>`;
+  if(S.puede_editar)h+=`<div class="addrow"><button class="btn" onclick="openRow(null)">${esc(tr('+ Add person / + Agregar persona'))}</button></div>`;
+  h+='</div>';
+  $('view').innerHTML=h;
+}
+function pickStore(t){TIENDA=t;SEM=S.semana;load();}
+
+/* ---- dialogs ---- */
+function closeDlg(){$('dlg').classList.remove('show');EDIT=null;}
+function showDlg(html){$('dp').innerHTML=html;$('dlg').classList.add('show');}
+const errBox=m=>{const e=$('f-e');if(e){e.textContent=m;e.classList.remove('hide');}};
+async function call(name,args){
+  if(BUSY)return null;BUSY=true;
+  try{const r=await DH.rpc(name,args);BUSY=false;
+    if(r&&r.error){errBox(tr(r.error));return null;}return r||{};}
+  catch(e){BUSY=false;errBox(tr('Could not save. Try again. / No se pudo guardar. Intenta de nuevo.'));return null;}
+}
+function presets(){
+  const seen=new Map();
+  (S.filas||[]).forEach(r=>Object.values(r.celdas||{}).forEach(c=>{if(!c.libre&&c.t){const k=c.t.join();seen.set(k,(seen.get(k)||0)+1);}}));
+  return [...seen.entries()].sort((a,b)=>b[1]-a[1]).slice(0,8).map(e=>e[0].split(','));
+}
+function openCell(fid,day){
+  const r=S.filas.find(x=>x.id===fid), c=(r.celdas||{})[day]||null, dn=DAYN();
+  const idx=S.dias.findIndex(d=>d.d===day);
+  const t=c&&!c.libre?c.t:null;
+  EDIT={fid,day,mode:t&&t.length===2?2:4,days:new Set([day]),t:t?t.slice():['11:00','14:00','15:00','20:00']};
+  drawCell(r,idx,dn);
+}
+function drawCell(r,idx,dn){
+  const E=EDIT, ps=presets(), lab4=['In / Entrada','Lunch out / Sale a comer','Lunch in / Regresa','Out / Salida'], lab2=['In / Entrada','Out / Salida'];
+  const labs=E.mode===4?lab4:lab2;
+  showDlg(`<h2 data-no-i18n>${esc(r.nombre)}</h2><div class="sub" data-no-i18n>${esc(dn[idx])} ${esc(fd(E.day,{month:'short',day:'numeric'}))}</div>
+  <div class="acts" style="margin-top:0"><button class="btn" onclick="setOff()">${esc(tr('Day off / Día libre'))}</button><button class="btn d" onclick="clearCells()">${esc(tr('Clear / Borrar'))}</button></div>
+  ${ps.length?`<label>${esc(tr('Shifts used this week / Turnos usados esta semana'))}</label><div class="chips">${ps.map(p=>`<button class="chip" data-t="${p.join()}" onclick="usePreset(this.dataset.t)" data-no-i18n>${shiftLines(p).map(esc).join('<br>')}</button>`).join('')}</div>`:''}
+  <label>${esc(tr('Custom shift / Turno personalizado'))}</label>
+  <div class="chips" style="margin-bottom:8px"><button class="chip ${E.mode===4?'on':''}" onclick="setMode(4)">${esc(tr('With lunch / Con comida'))}</button><button class="chip ${E.mode===2?'on':''}" onclick="setMode(2)">${esc(tr('Straight / Corrido'))}</button></div>
+  <div class="times">${labs.map((l,i)=>`<div><label style="margin-top:0">${esc(tr(l))}</label><input type="time" step="300" id="tm${i}" value="${esc(E.t[i]||'')}" onchange="EDIT.t[${i}]=this.value"></div>`).join('')}</div>
+  <label>${esc(tr('Apply to / Aplicar a'))}</label><div class="chips">${S.dias.map((d,i)=>`<button class="chip ${E.days.has(d.d)?'on':''}" data-d="${d.d}" onclick="togDay(this.dataset.d)" data-no-i18n>${esc(dn[i])} ${esc(fd(d.d,{day:'numeric'}))}</button>`).join('')}</div>
+  <div class="err hide" id="f-e"></div>
+  <div class="acts"><button class="btn pri" onclick="saveShift()">${esc(tr('Save / Guardar'))}</button><button class="btn" onclick="closeDlg()">${esc(tr('Cancel / Cancelar'))}</button></div>`);
+}
+function rowIdx(){return S.dias.findIndex(d=>d.d===EDIT.day);}
+function setMode(m){const E=EDIT;E.mode=m;E.t=m===4?(E.t.length===4?E.t:['11:00',E.t[1]||'15:00','16:00',E.t[1]||'20:00']):[E.t[0],E.t[E.t.length-1]];drawCell(S.filas.find(x=>x.id===E.fid),rowIdx(),DAYN());}
+function togDay(d){const s=EDIT.days;if(s.has(d)){if(s.size>1)s.delete(d);}else s.add(d);drawCell(S.filas.find(x=>x.id===EDIT.fid),rowIdx(),DAYN());}
+function usePreset(k){const t=k.split(',');EDIT.t=t;EDIT.mode=t.length;drawCell(S.filas.find(x=>x.id===EDIT.fid),rowIdx(),DAYN());}
+async function applyCells(libre,t){
+  const E=EDIT;
+  for(const d of [...E.days]){const r=await call('horarios_celda_set',{p_fila:E.fid,p_dia:d,p_libre:libre,p_t:t});if(!r)return;}
+  closeDlg();await load();
+}
+function saveShift(){
+  const E=EDIT, n=E.mode, t=[];
+  for(let i=0;i<n;i++){const v=($('tm'+i)||{}).value||E.t[i];if(!v){errBox(tr('Fill in all the times. / Completa todas las horas.'));return;}t.push(v);}
+  for(let i=1;i<t.length;i++)if(t[i]<=t[i-1]){errBox(tr('Times must be in order. / Las horas deben ir en orden.'));return;}
+  applyCells(false,t);
+}
+function setOff(){applyCells(true,null);}
+function clearCells(){applyCells(false,null);}
+
+function openRow(id){
+  const r=id?S.filas.find(x=>x.id===id):null;
+  EDIT={rid:id};
+  showDlg(`<h2>${esc(tr(id?'Edit person / Editar persona':'Add person / Agregar persona'))}</h2>
+  ${!id&&(S.candidatos||[]).length?`<label for="f-c">${esc(tr('From the team roster / Del roster del equipo'))}</label><select id="f-c" onchange="const o=this.selectedOptions[0];if(this.value){$('f-n').value=o.textContent;}"><option value="">—</option>${S.candidatos.map(c=>`<option value="${c.id}">${esc(c.nombre)}</option>`).join('')}</select>`:''}
+  <label for="f-n">${esc(tr('Name / Nombre'))}</label><input id="f-n" maxlength="60" value="${esc(r?r.nombre:'')}">
+  <label for="f-a">${esc(tr('Initials (optional) / Iniciales (opcional)'))}</label><input id="f-a" maxlength="8" value="${esc(r?r.abrev||'':'')}">
+  <div class="err hide" id="f-e"></div>
+  <div class="acts"><button class="btn pri" onclick="saveRow()">${esc(tr('Save / Guardar'))}</button>
+  ${id?`<button class="btn" onclick="moveRow(-1)" aria-label="Up">↑</button><button class="btn" onclick="moveRow(1)" aria-label="Down">↓</button><button class="btn d" id="delb" onclick="delRow()">${esc(tr('Remove / Quitar'))}</button>`:''}
+  <button class="btn" onclick="closeDlg()">${esc(tr('Cancel / Cancelar'))}</button></div>`);
+}
+async function saveRow(){
+  const sel=$('f-c'); const r=await call('horarios_fila_guardar',{p_tienda:S.tienda,p_id:EDIT.rid||null,p_nombre:$('f-n').value,p_abrev:$('f-a').value||null,p_roster:sel&&sel.value?sel.value:null});
+  if(r){closeDlg();await load();}
+}
+async function moveRow(d){const r=await call('horarios_mover',{p_id:EDIT.rid,p_dir:d});if(r){closeDlg();await load();}}
+let ASK=false;
+async function delRow(){
+  const b=$('delb');if(!ASK){ASK=true;b.textContent=tr('Tap again to remove / Toca otra vez para quitar');return;}
+  ASK=false;const r=await call('horarios_fila_borrar',{p_id:EDIT.rid});if(r){closeDlg();await load();}
+}
+async function publish(on){
+  const r=await call('horarios_publicar',{p_tienda:S.tienda,p_semana:S.semana,p_on:on,p_nota:null});
+  if(r)await load();
+}
+async function copyPrev(){
+  showDlg(`<h2>${esc(tr('Copy previous week / Copiar semana anterior'))}</h2><div class="sub">${esc(tr('This replaces everything in this week and turns it back into a draft. / Esto reemplaza todo en esta semana y la regresa a borrador.'))}</div>
+  <div class="err hide" id="f-e"></div><div class="acts"><button class="btn pri" onclick="doCopy()">${esc(tr('Copy / Copiar'))}</button><button class="btn" onclick="closeDlg()">${esc(tr('Cancel / Cancelar'))}</button></div>`);
+}
+async function doCopy(){const r=await call('horarios_copiar',{p_tienda:S.tienda,p_desde:addD(S.semana,-7),p_a:S.semana});if(r){closeDlg();await load();}}
+
+async function openGest(){
+  let G;try{G=await DH.rpc('horarios_gestores');}catch(e){return;}
+  if(G.error)return;
+  const tiendas=S.tiendas;
+  showDlg(`<h2>${esc(tr('Who can edit schedules / Quién puede editar horarios'))}</h2><div class="sub">${esc(tr('Store managers who can build and publish their store’s schedule. / Gerentes que pueden armar y publicar el horario de su tienda.'))}</div>
+  <div class="lst">${G.gestores.map(g=>`<div class="r"><span data-no-i18n>${esc(g.nombre)} · ${esc(g.tienda)}</span><button class="btn d" data-r="${g.roster_id}" data-t="${esc(g.tienda)}" onclick="gSet(this.dataset.r,this.dataset.t,false)">${esc(tr('Remove / Quitar'))}</button></div>`).join('')||`<div class="sub">${esc(tr('No one yet. / Nadie todavía.'))}</div>`}</div>
+  <label for="g-p">${esc(tr('Add person / Agregar persona'))}</label><select id="g-p"><option value="">—</option>${G.personas.map(p=>`<option value="${p.id}">${esc(p.nombre)} (${esc(p.puesto||'')} · ${esc(p.ubicacion||'')})</option>`).join('')}</select>
+  <label for="g-t">${esc(tr('Store / Tienda'))}</label><select id="g-t">${tiendas.map(t=>`<option>${esc(t)}</option>`).join('')}</select>
+  <div class="err hide" id="f-e"></div>
+  <div class="acts"><button class="btn pri" onclick="gSet($('g-p').value,$('g-t').value,true)">${esc(tr('Add / Agregar'))}</button><button class="btn" onclick="closeDlg()">${esc(tr('Close / Cerrar'))}</button></div>`);
+}
+async function gSet(r,t,on){if(!r)return;const x=await call('horarios_gestor_set',{p_roster:r,p_tienda:t,p_on:on});if(x)openGest();}
+
+window.addEventListener('dh-lang',()=>{if(S)render();});
+(async function init(){
+  if(!DH.token()){location.href='index.html';return;}
+  $('ld').textContent=tr('Loading… / Cargando…');
+  await load();
+})();
+</script>
+</body>
+</html>

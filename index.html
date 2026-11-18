@@ -384,6 +384,7 @@
   <button class="nl" onclick="navigateToTool('promociones')"><span>📣</span>Promotions / Promociones</button>
   <button class="nl" onclick="navigateToTool('calendario')"><span>📅</span>Commercial calendar / Calendario comercial</button>
   <button class="nl" onclick="navigateToTool('recursos')"><span>📚</span>Resources / Recursos</button>
+  <button class="nl" onclick="navigateToTool('horarios')"><span>🗓️</span>Schedule / Horarios</button>
   <button class="nl" onclick="navigateToTool('capacitacion')"><span>🧭</span>Training / Capacitación</button>
   <button class="nl" onclick="navigateToTool('mensajes')"><span>💬</span>Messages / Mensajes<b class="bdg" id="msg-bdg" style="display:none"></b></button>
   <div class="grp">My work / Mi trabajo</div>
@@ -503,6 +504,11 @@
           <div class="home-card-icon">📰</div>
           <h3>News / Noticias</h3>
           <p>Company news and recognitions. / Noticias y reconocimientos de la empresa.</p>
+        </div>
+        <div class="home-card" onclick="navigateToTool('horarios')">
+          <div class="home-card-icon">🗓️</div>
+          <h3>Schedule / Horarios</h3>
+          <p>See your shifts for the week, always up to date. / Consulta tus turnos de la semana, siempre actualizados.</p>
         </div>
         <div class="home-card" onclick="navigateToTool('capacitacion')">
           <div class="home-card-icon">🧭</div>
@@ -1200,6 +1206,7 @@ const TOOL_URLS = {
   promociones: 'promociones.html',
   calendario: 'calendario.html',
   capacitacion: 'capacitacion.html',
+  horarios: 'horarios.html',
   noticias: 'noticias.html',
   mensajes: 'mensajes.html',
   notas: 'notas.html'
