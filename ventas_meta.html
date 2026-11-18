@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1B3A6B">
+<title>My Workspace — Sales vs goal / Ventas vs meta</title>
+<style>
+  :root{--navy:#1B3A6B;--gold:#C8922A;--lt:#D6E4F7;--ink:#1E2735;--gray:#6B6B6B;--red:#C0392B;--green:#2E7D32;--line:#dfe5ee}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#EEF1F6;color:var(--ink)}
+  header{background:var(--navy);border-bottom:3px solid var(--gold);padding:12px 20px;color:#fff}
+  header h1{font:700 19px Georgia,'Times New Roman',serif}
+  main{max-width:1000px;margin:0 auto;padding:14px 12px 80px}
+  .card{background:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 1px 0 var(--line),0 10px 26px -22px rgba(18,40,74,.5);margin-bottom:14px}
+  .err{background:#fdecea;color:var(--red);border-radius:8px;padding:10px 12px;font-size:14px;margin-bottom:12px}
+  .hide{display:none!important}
+  .ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;align-items:end}
+  label{display:block;font-size:12px;font-weight:700;color:var(--navy);margin-bottom:4px}
+  select{width:100%;font:inherit;font-size:15px;padding:9px 10px;border:1px solid #cfd6e2;border-radius:10px;min-height:44px;background:#fff}
+  input[type=range]{width:100%;height:44px;accent-color:var(--navy)}
+  select:focus-visible,input:focus-visible,button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+  .rv{font:700 15px Georgia,serif;color:var(--navy)}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:14px}
+  .kpi{background:#fff;border-radius:12px;padding:14px 16px;box-shadow:0 1px 0 var(--line)}
+  .kpi .v{font:700 30px/1.1 Georgia,serif;color:var(--navy)}
+  .kpi .l{font-size:12px;color:var(--gray);font-weight:700;margin-top:4px}
+  .kpi .d{font-size:13px;font-weight:700;margin-top:3px}
+  .up{color:var(--green)} .dn{color:var(--red)} .eq{color:var(--gray)}
+  h2{font:700 15px 'Segoe UI',Arial,sans-serif;color:var(--navy);margin-bottom:10px}
+  .st{margin:12px 0}
+  .st .top{display:flex;justify-content:space-between;gap:10px;font-size:14px;margin-bottom:4px;flex-wrap:wrap}
+  .st .top b{font-size:15px}
+  .bar{position:relative;background:#E7EBF2;border-radius:8px;height:20px;overflow:hidden}
+  .bar .f{height:100%;background:var(--navy);border-radius:8px}
+  .bar .f.s{background:var(--gold)}
+  .pace{position:absolute;top:-2px;bottom:-2px;width:3px;background:var(--ink)}
+  .sub{font-size:12px;color:var(--gray);margin-top:3px}
+  svg.ch{width:100%;height:230px;display:block}
+  .demo{border:2px dashed var(--gold);background:#FFF9EA}
+  .btn{border:0;border-radius:10px;min-height:44px;padding:0 16px;font:700 14px 'Segoe UI',Arial,sans-serif;cursor:pointer;color:#fff;background:var(--navy)}
+  .btn.ghost{background:#fff;color:var(--navy);border:1px solid #c5ccd8}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .badge{display:inline-block;background:var(--gold);color:#fff;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:700;margin-left:6px}
+  .note{font-size:12px;color:var(--gray);margin-top:6px;line-height:1.4}
+</style>
+<meta name="dh-i18n" content="on">
+<script src="dh-chrome.js" defer></script>
+</head>
+<body>
+<header><h1>Sales vs goal / Ventas vs meta</h1></header>
+<main>
+  <div id="err" class="err hide" role="alert"></div>
+  <div class="card"><div class="ctl">
+    <div><label for="f-d">Day / Día</label><select id="f-d"></select></div>
+    <div><label for="f-t">Store / Tienda</label><select id="f-t"></select></div>
+    <div id="w-h" class="hide"><label for="f-h">As of hour / Hasta la hora: <span class="rv" id="rv-h"></span></label><input type="range" id="f-h" min="10" max="20" step="1"></div>
+  </div></div>
+  <div id="out" data-no-i18n></div>
+  <div class="card demo hide" id="demo">
+    <h2>Test mode / Modo de prueba <span class="badge">Admin</span></h2>
+    <label for="d-h">Simulate sales until hour / Simular ventas hasta la hora: <span class="rv" id="rv-d"></span></label>
+    <input type="range" id="d-h" min="10" max="20" step="1" value="15">
+    <div class="row"><button class="btn" id="d-go">Load demo data / Cargar datos de prueba</button><button class="btn ghost" id="d-off">Clear demo / Borrar prueba</button></div>
+    <div class="note">Fake numbers for the selected day, only visible to admins. Real hourly data will replace them. / Números falsos para el día elegido, solo visibles para administradores. Los datos reales por hora los reemplazarán.</div>
+  </div>
+</main>
+<script src="dh-session.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LANG=()=>{try{return localStorage.getItem('dh_lang')==='es'?'es':'en'}catch(e){return 'en'}};
+const T=(en,es)=>LANG()==='es'?es:en;
+const $$=n=>'$'+Math.round(n).toLocaleString('en-US');
+const pct=(a,b)=>b>0?a/b*100:0;
+const DOWN={en:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],es:['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']};
+const fdate=iso=>{const d=new Date(iso+'T12:00:00Z');return DOWN[LANG()][d.getUTCDay()]+' '+(d.getUTCMonth()+1)+'/'+d.getUTCDate()};
+let D=null, DEMO=false, ISADM=false;
+const show=t=>{const e=$('err');if(!t){e.classList.add('hide');return}e.textContent=t;e.classList.remove('hide')};
+function getDemo(){try{return localStorage.getItem('dh_goal_demo')||''}catch(e){return ''}}
+function setDemo(v){try{if(v)localStorage.setItem('dh_goal_demo',v);else localStorage.removeItem('dh_goal_demo')}catch(e){}}
+
+async function load(fecha,hora){
+  try{
+    const dm=getDemo(); DEMO=!!dm;
+    D=await DH.rpc('ventas_meta',{p_fecha:fecha||(dm||null),p_hora:hora==null?null:hora,p_demo:DEMO});
+    if(!D||D.error){show(T('You do not have access to this report.','No tienes acceso a este reporte.'));return}
+    show(''); draw();
+  }catch(e){show(T('Could not load the report. Try again.','No se pudo cargar el reporte. Intenta de nuevo.'))}
+}
+function sums(list){return list.reduce((a,t)=>({mv:a.mv+t.meta_v,ms:a.ms+t.meta_s,v:a.v+t.v,s:a.s+t.s}),{mv:0,ms:0,v:0,s:0})}
+function draw(){
+  const fd=$('f-d'); fd.innerHTML=D.dias.map(d=>`<option value="${d}">${esc(fdate(d))}</option>`).join(''); fd.value=D.fecha;
+  const ft=$('f-t'), cur=ft.value||''; ft.innerHTML=`<option value="">${esc(T('All stores','Todas las tiendas'))}</option>`+D.tiendas.map(t=>`<option value="${esc(t.tienda)}">${esc(t.tienda)}</option>`).join(''); ft.value=D.tiendas.some(t=>t.tienda===cur)?cur:'';
+  const w=$('w-h'); if(D.hora_max!=null){w.classList.remove('hide');const r=$('f-h');r.min=10;r.max=D.hora_max;r.value=D.hora;$('rv-h').textContent=D.hora+':00'}else w.classList.add('hide');
+  const sel=ft.value, L=sel?D.tiendas.filter(t=>t.tienda===sel):D.tiendas, S=sums(L), pace=D.ritmo_actual;
+  const hasData=D.hora_max!=null;
+  const pv=pct(S.v,S.mv), exp=pace==null?0:pace*100, diff=pv-exp;
+  const stat=!hasData?`<div class="d eq">${esc(T('No sales loaded yet','Sin ventas cargadas todavía'))}</div>`:diff>=2?`<div class="d up">▲ ${esc(T('Ahead of pace','Adelante del ritmo'))} (+${diff.toFixed(0)} pts)</div>`:diff<=-2?`<div class="d dn">▼ ${esc(T('Behind pace','Detrás del ritmo'))} (${diff.toFixed(0)} pts)</div>`:`<div class="d eq">● ${esc(T('On pace','En ritmo'))}</div>`;
+  const penA=S.v>0?S.s/S.v*100:0, penM=S.mv>0?S.ms/S.mv*100:0;
+  const bar=(a,b,cls)=>`<div class="bar"><div class="f ${cls||''}" style="width:${Math.min(100,pct(a,b)).toFixed(1)}%"></div>${cls==='s'||pace==null?'':`<div class="pace" style="left:${(exp).toFixed(1)}%" title="${esc(T('Expected by now','Esperado a esta hora'))}"></div>`}</div>`;
+  $('out').innerHTML=`
+   <div class="kpis">
+    <div class="kpi"><div class="v">${$$(S.v)}</div><div class="l">${esc(T('Sales so far · goal ','Ventas hasta ahora · meta '))}${$$(S.mv)}</div><div class="d">${pv.toFixed(0)}% ${esc(T('of goal','de la meta'))}</div></div>
+    <div class="kpi"><div class="v">${pace==null?'—':exp.toFixed(0)+'%'}</div><div class="l">${esc(T('Expected by now','Esperado a esta hora'))}</div>${stat}</div>
+    <div class="kpi"><div class="v">${$$(S.s)}</div><div class="l">${esc(T('Services · goal ','Servicios · meta '))}${$$(S.ms)}</div><div class="d">${pct(S.s,S.ms).toFixed(0)}% ${esc(T('of goal','de la meta'))}</div></div>
+    <div class="kpi"><div class="v">${penA.toFixed(1)}%</div><div class="l">${esc(T('Services penetration · goal ','Penetración de servicios · meta '))}${penM.toFixed(1)}%</div><div class="d ${penA>=penM?'up':'dn'}">${penA>=penM?'▲':'▼'} ${(penA-penM>=0?'+':'')+(penA-penM).toFixed(1)} pts</div></div>
+   </div>
+   <div class="card"><h2>${esc(T('By store','Por tienda'))}${D.nota?` · ${esc(D.nota)}`:''}${D.demo?`<span class="badge">${esc(T('Demo data','Datos de prueba'))}</span>`:''}</h2>
+    ${L.map(t=>`<div class="st"><div class="top"><b>${esc(t.tienda)}</b><span>${$$(t.v)} / ${$$(t.meta_v)} · ${pct(t.v,t.meta_v).toFixed(0)}%</span></div>${bar(t.v,t.meta_v)}
+     <div class="sub">${esc(T('Services','Servicios'))} ${$$(t.s)} / ${$$(t.meta_s)} · ${esc(T('penetration','penetración'))} ${(t.v>0?t.s/t.v*100:0).toFixed(1)}% ${esc(T('vs goal','vs meta'))} ${(t.meta_v>0?t.meta_s/t.meta_v*100:0).toFixed(1)}%</div></div>`).join('')}
+    <div class="note">${esc(T('The dark tick marks where each store should be by this hour. The pace curve is a default assumption for now.','La marca oscura indica dónde debería ir cada tienda a esta hora. La curva de ritmo es un supuesto por ahora.'))}</div></div>
+   <div class="card"><h2>${esc(T('Sales through the day','Ventas durante el día'))}</h2>${chart(L,S)}</div>`;
+  const dm=$('demo'); if(ISADM)dm.classList.remove('hide');
+}
+function chart(L,S){
+  const W=640,H=230,pl=52,pr=12,pt=14,pb=28, hrs=[]; for(let h=10;h<=20;h++)hrs.push(h);
+  const x=h=>pl+(h-10)/10*(W-pl-pr), top=S.mv||1, y=v=>H-pb-Math.min(v,top*1.15)/(top*1.15)*(H-pb-pt);
+  const hv=h=>L.reduce((a,t)=>{const r=t.hist.filter(q=>q.h<=h).slice(-1)[0];return a+(r?r.v:0)},0);
+  const have=hrs.filter(h=>D.hora_max!=null&&h<=D.hora_max&&L.some(t=>t.hist.some(q=>q.h===h)));
+  const paceL=hrs.map(h=>x(h).toFixed(1)+','+y(S.mv*(h<10?0:(D.ritmo.find(r=>r.h===Math.min(h,20))||{f:1}).f)).toFixed(1)).join(' ');
+  const act=have.map(h=>x(h).toFixed(1)+','+y(hv(h)).toFixed(1)).join(' ');
+  const ticks=[0,.25,.5,.75,1].map(f=>`<line x1="${pl}" x2="${W-pr}" y1="${y(top*f).toFixed(1)}" y2="${y(top*f).toFixed(1)}" stroke="#E7EBF2"/><text x="${pl-6}" y="${(y(top*f)+4).toFixed(1)}" text-anchor="end" font-size="11" fill="#6B6B6B">${$$(top*f)}</text>`).join('');
+  return `<svg class="ch" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(T('Cumulative sales by hour versus expected pace','Ventas acumuladas por hora contra el ritmo esperado'))}">${ticks}
+   <line x1="${pl}" x2="${W-pr}" y1="${y(top).toFixed(1)}" y2="${y(top).toFixed(1)}" stroke="#C8922A" stroke-dasharray="5 4" stroke-width="2"/><text x="${W-pr}" y="${(y(top)-5).toFixed(1)}" text-anchor="end" font-size="11" fill="#9a7a1a" font-weight="700">${esc(T('Goal','Meta'))}</text>
+   <polyline points="${paceL}" fill="none" stroke="#9aa3b2" stroke-width="2" stroke-dasharray="2 4"/>
+   ${act?`<polyline points="${act}" fill="none" stroke="#1B3A6B" stroke-width="3" stroke-linejoin="round"/>${have.map(h=>`<circle cx="${x(h).toFixed(1)}" cy="${y(hv(h)).toFixed(1)}" r="4" fill="#1B3A6B"/>`).join('')}`:`<text x="${W/2}" y="${H/2}" text-anchor="middle" font-size="14" fill="#6B6B6B">${esc(T('No sales loaded yet','Sin ventas cargadas todavía'))}</text>`}
+   ${hrs.map(h=>`<text x="${x(h).toFixed(1)}" y="${H-8}" text-anchor="middle" font-size="11" fill="#6B6B6B">${h}h</text>`).join('')}</svg>
+   <div class="note"><b style="color:#1B3A6B">━</b> ${esc(T('Actual','Real'))} · <b style="color:#9aa3b2">┈</b> ${esc(T('Expected pace','Ritmo esperado'))} · <b style="color:#C8922A">┅</b> ${esc(T('Goal','Meta'))}</div>`;
+}
+$('f-d').onchange=()=>load($('f-d').value,null);
+$('f-t').onchange=()=>draw();
+$('f-h').oninput=e=>{$('rv-h').textContent=e.target.value+':00'};
+$('f-h').onchange=e=>load(D.fecha,+e.target.value);
+$('d-h').oninput=e=>{$('rv-d').textContent=e.target.value+':00'};
+$('rv-d').textContent='15:00';
+$('d-go').onclick=async()=>{try{const r=await DH.rpc('ventas_demo',{p_fecha:D.fecha,p_hasta:+$('d-h').value});if(r&&r.error)throw 0;setDemo(D.fecha);await load(D.fecha,null)}catch(e){show(T('Could not load demo data.','No se pudieron cargar los datos de prueba.'))}};
+$('d-off').onclick=async()=>{try{await DH.rpc('ventas_demo',{p_fecha:D.fecha,p_hasta:null});setDemo('');await load(null,null)}catch(e){show(T('Could not clear demo data.','No se pudo borrar la prueba.'))}};
+(async function(){
+  if(!DH.token()){location.href='index.html';return}
+  try{const e=DH.getEmp?DH.getEmp():JSON.parse(sessionStorage.getItem('dh_emp')||'{}');ISADM=!!(e&&e.es_admin)}catch(e){}
+  await load(null,null);
+})();
+</script>
+</body>
+</html>
