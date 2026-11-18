@@ -70,12 +70,19 @@
   .dp .btn2{border:1px solid #c5ccd8;background:#fff;color:var(--navy);border-radius:8px;padding:9px 14px;font-weight:700;min-height:42px;cursor:pointer}
   .dp .btn2.d{color:var(--red)}
   .empty{margin:auto;text-align:center;color:var(--gray);max-width:300px;line-height:1.5}
-  .comp{flex:none;display:flex;gap:10px;align-items:flex-end;padding:12px 14px;background:#fff;border-top:1px solid #e3e8f0}
+  .comp{position:relative;flex:none;display:flex;gap:10px;align-items:flex-end;padding:12px 14px;background:#fff;border-top:1px solid #e3e8f0}
   .comp textarea{flex:1;min-height:46px;max-height:140px;resize:none;font:inherit;font-size:16px;padding:11px 14px;border:1px solid #cfd6e2;border-radius:12px;line-height:1.35}
   .send{border:0;background:var(--navy);color:#fff;border-radius:12px;min-height:46px;padding:0 20px;font:700 15px 'Segoe UI',Arial,sans-serif;cursor:pointer}
   .send[disabled]{opacity:.45;cursor:default}
   .note{padding:12px 16px;background:#fff8e6;color:#7a5b00;font-size:13px;text-align:center;flex:none;border-top:1px solid #f0e2b8}
   .err{padding:8px 16px;background:#fdecea;color:var(--red);font-size:13px;flex:none}
+  #mpop{position:absolute;left:14px;right:14px;bottom:calc(100% - 2px);background:#fff;border:1px solid #cfd6e2;border-radius:12px;box-shadow:0 -8px 24px -10px rgba(18,40,74,.35);max-height:264px;overflow-y:auto;z-index:20}
+  #mpop button{display:flex;flex-direction:column;align-items:flex-start;width:100%;min-height:48px;border:0;background:none;padding:6px 14px;text-align:left;font:600 15px 'Segoe UI',Arial,sans-serif;color:var(--ink);cursor:pointer;border-bottom:1px solid #f0f2f6}
+  #mpop button small{font:400 12px 'Segoe UI',Arial,sans-serif;color:var(--gray)}
+  #mpop button.on,#mpop button:hover{background:#EEF3FB}
+  .atb{border:1px solid #cfd6e2;background:#fff;color:var(--navy);border-radius:12px;min-width:46px;min-height:46px;font:700 18px 'Segoe UI',Arial,sans-serif;cursor:pointer;flex:none}
+  .mt{color:#1B5FB3;font-weight:700}.m.me .mt{color:#F2CD7A}
+  .m.mn .b{box-shadow:0 0 0 2px var(--gold)}
   .hide{display:none!important}
   @media (max-width:760px){
     .chans{width:100%} .thread{width:100%}
@@ -97,6 +104,8 @@
     <div class="rbar hide" id="rbar"></div>
     <div class="tpl hide" id="tpl"></div>
     <form class="comp" id="comp" onsubmit="return send(event)">
+      <div id="mpop" class="hide" role="listbox" aria-label="Mention"></div>
+      <button type="button" class="atb" id="atb" onclick="openAt()" aria-label="Mention someone / Mencionar a alguien">@</button>
       <textarea id="txt" rows="1" maxlength="1500" placeholder="Write a message… / Escribe un mensaje…" aria-label="Message"></textarea>
       <button class="send" id="sendb" type="submit">Send / Enviar</button>
     </form>
@@ -104,12 +113,13 @@
 </div>
 <div class="dlg" id="dlg" onclick="if(event.target===this)closeDlg()" role="dialog" aria-modal="true"><div class="dp" id="dp"></div></div>
 <script src="dh-session.js"></script>
+<script src="push.js"></script>
 <script>
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const tr=s=>(window.DH&&DH.i18n)?DH.i18n.pick(s):s;
 const LA='America/Los_Angeles';
-let CH=[], CUR=null, LAST=null, SEEN=new Set(), POLL=null, BUSY=false, ASK=null, REPLY=null, CI={};
+let DIR=[], MEN=new Map(), PSEL=-1, PLIST=[], CH=[], CUR=null, LAST=null, SEEN=new Set(), POLL=null, BUSY=false, ASK=null, REPLY=null, CI={};
 const L=()=>(DH.i18n&&DH.i18n.lang==='es')?'es-US':'en-US';
 function dayKey(t){return new Date(t).toLocaleDateString('en-CA',{timeZone:LA});}
 function dayLabel(t){const k=dayKey(t),now=new Date(),td=dayKey(now),yd=dayKey(new Date(now-864e5));
@@ -134,10 +144,10 @@ function renderChans(){
   $('chans').innerHTML=CH.map(c=>`<button class="chan ${c.id===CUR?'on':''}" onclick="openChan('${c.id}')"><span class="n" data-no-i18n>${esc(tr(c.nombre))}<small>${esc(tr(c.descripcion||''))}</small></span>${c.sin_leer&&c.id!==CUR?`<span class="bdg">${c.sin_leer>99?'99+':c.sin_leer}</span>`:''}</button>`).join('');
 }
 async function openChan(id){
-  CUR=id; LAST=null; SEEN=new Set(); ASK=null; REPLY=null; CI={}; $('msgs').innerHTML=''; $('msgs').removeAttribute('data-day'); $('msgs').removeAttribute('data-who'); showErr('');
+  CUR=id; DIR=[]; MEN=new Map(); closePop(); LAST=null; SEEN=new Set(); ASK=null; REPLY=null; CI={}; $('msgs').innerHTML=''; $('msgs').removeAttribute('data-day'); $('msgs').removeAttribute('data-who'); showErr('');
   $('app').classList.add('in-thread'); history.replaceState(null,'','#'+id);
   const c=CH.find(x=>x.id===id); if(c){c.sin_leer=0;}
-  renderChans(); await fetchMsgs(true);
+  renderChans(); loadDir(); await fetchMsgs(true);
 }
 function back(){$('app').classList.remove('in-thread');CUR=null;history.replaceState(null,'',location.pathname);renderChans();loadChans();}
 async function fetchMsgs(full){
@@ -160,13 +170,18 @@ async function fetchMsgs(full){
   }catch(e){ if(full)showErr(tr('Could not load messages. / No se pudieron cargar los mensajes.')); }
   finally{BUSY=false;}
 }
+function body(m){
+  let h=esc(m.cuerpo);
+  (m.menciones||[]).forEach(n=>{const e=esc('@'+n);h=h.split(e).join('<span class="mt">'+e+'</span>');});
+  return h;
+}
 function appendMsgs(list){
   const box=$('msgs'); let lastDay=box.getAttribute('data-day')||'', lastWho=box.getAttribute('data-who')||'';
   list.forEach(m=>{
     const dk=dayKey(m.t);
     if(dk!==lastDay){box.insertAdjacentHTML('beforeend',`<div class="day" data-no-i18n>${esc(dayLabel(m.t))}</div>`);lastDay=dk;lastWho='';}
     const who=m.mio?'me':m.autor;
-    box.insertAdjacentHTML('beforeend',`<div class="m ${m.mio?'me':''}" id="m-${m.id}">${!m.mio?`<div class="who" data-no-i18n>${esc(m.autor)}</div>`:''}${m.responde?`<div class="qt" data-no-i18n onclick="jumpTo('${m.responde.id}')"><b>↩ ${esc(m.responde.autor)}</b> ${m.responde.borrado?esc(tr('(deleted) / (borrado)')):esc(m.responde.cuerpo)}</div>`:''}<div class="b ${CI.plantillas?flashCls(m.cuerpo):''}" data-no-i18n>${esc(m.cuerpo)}</div><div class="rx" id="rx-${m.id}"></div><div class="meta"><span data-no-i18n>${tm(m.t)}</span><button class="rxadd" onclick="togPk('${m.id}')" aria-label="React">☺+</button>${CI.puede_responder?`<button class="rp" data-id="${m.id}" onclick="setReply(this.dataset.id)">${esc(tr('Reply / Responder'))}</button>`:''}${m.puede_borrar?`<button class="del" onclick="del('${m.id}',this)">Delete / Borrar</button>`:''}</div><div class="pk hide" id="pk-${m.id}">${EMO.map(e=>`<button onclick="react('${m.id}','${e}')" aria-label="${e}">${e}</button>`).join('')}</div></div>`);
+    box.insertAdjacentHTML('beforeend',`<div class="m ${m.mio?'me':''} ${m.mencionado?'mn':''}" id="m-${m.id}">${!m.mio?`<div class="who" data-no-i18n>${esc(m.autor)}</div>`:''}${m.responde?`<div class="qt" data-no-i18n onclick="jumpTo('${m.responde.id}')"><b>↩ ${esc(m.responde.autor)}</b> ${m.responde.borrado?esc(tr('(deleted) / (borrado)')):esc(m.responde.cuerpo)}</div>`:''}<div class="b ${CI.plantillas?flashCls(m.cuerpo):''}" data-no-i18n>${body(m)}</div><div class="rx" id="rx-${m.id}"></div><div class="meta"><span data-no-i18n>${tm(m.t)}</span><button class="rxadd" onclick="togPk('${m.id}')" aria-label="React">☺+</button>${CI.puede_responder?`<button class="rp" data-id="${m.id}" onclick="setReply(this.dataset.id)">${esc(tr('Reply / Responder'))}</button>`:''}${m.puede_borrar?`<button class="del" onclick="del('${m.id}',this)">Delete / Borrar</button>`:''}</div><div class="pk hide" id="pk-${m.id}">${EMO.map(e=>`<button onclick="react('${m.id}','${e}')" aria-label="${e}">${e}</button>`).join('')}</div></div>`);
     lastWho=who;
   });
   box.setAttribute('data-day',lastDay); box.setAttribute('data-who',lastWho);
@@ -230,12 +245,42 @@ async function send(ev){
   const t=$('txt'), v=t.value.trim(); if(!v||!CUR)return false;
   const b=$('sendb'); b.disabled=true;
   try{
-    const r=await DH.rpc('mensaje_enviar',{p_canal:CUR,p_cuerpo:v,p_responde_a:REPLY?REPLY.id:null});
-    if(r&&r.ok){t.value='';t.style.height='';REPLY=null;applyComposer();showErr('');await fetchMsgs(false);$('msgs').scrollTop=$('msgs').scrollHeight;}
+    const r=await DH.rpc('mensaje_enviar',{p_canal:CUR,p_cuerpo:v,p_responde_a:REPLY?REPLY.id:null,p_menciones:mentionIds(v)});
+    if(r&&r.ok){t.value='';t.style.height='';MEN=new Map();closePop();REPLY=null;applyComposer();showErr('');await fetchMsgs(false);$('msgs').scrollTop=$('msgs').scrollHeight;}
     else showErr(r&&r.error==='slow_down'?tr('Slow down a little. / Más despacio.'):r&&r.error==='read_only'?tr('This channel is read-only. / Este canal es solo de lectura.'):tr('Could not send. / No se pudo enviar.'));
   }catch(e){showErr(tr('Could not send. Check your connection. / No se pudo enviar. Revisa tu conexión.'));}
   b.disabled=false; t.focus(); return false;
 }
+
+/* ---- @mentions ---- */
+const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+async function loadDir(){if(!CUR)return;const c=CUR;try{const d=await DH.rpc('mensajes_directorio',{p_canal:c});if(c===CUR&&Array.isArray(d))DIR=d;}catch(e){}}
+function mentionIds(v){const ids=[];MEN.forEach((id,name)=>{if(v.indexOf('@'+name)>=0)ids.push(id);});return ids;}
+function closePop(){const p=$('mpop');if(p){p.classList.add('hide');p.innerHTML='';}PSEL=-1;PLIST=[];}
+function popHTML(){return PLIST.map((p,i)=>`<button type="button" role="option" class="${i===PSEL?'on':''}" data-i="${i}" onmousedown="event.preventDefault()" onclick="pickMention(${i})" data-no-i18n>${esc(p.nombre)}<small>${esc([p.puesto,p.ubicacion].filter(Boolean).join(' · '))}</small></button>`).join('');}
+function atQuery(){const t=$('txt'),pos=t.selectionStart,before=t.value.slice(0,pos);const m=before.match(/(?:^|\s)@([^\s@]*(?: [^\s@]*)?)$/);return m?{q:m[1],start:pos-m[1].length-1}:null;}
+function updatePop(){
+  const a=atQuery(); if(!a||!DIR.length){closePop();return;}
+  const q=norm(a.q);
+  PLIST=DIR.filter(p=>!q||norm(p.nombre).split(' ').some(w=>w.startsWith(q))||norm(p.nombre).startsWith(q)).slice(0,30);
+  if(!PLIST.length){closePop();return;}
+  if(PSEL<0||PSEL>=PLIST.length)PSEL=0;
+  const p=$('mpop');p.innerHTML=popHTML();p.classList.remove('hide');
+}
+function pickMention(i){
+  const p=PLIST[i]; if(!p)return; const a=atQuery(), t=$('txt'); if(!a)return;
+  const after=t.value.slice(t.selectionStart), ins='@'+p.nombre+' ';
+  t.value=t.value.slice(0,a.start)+ins+after; const pos=a.start+ins.length; t.setSelectionRange(pos,pos);
+  MEN.set(p.nombre,p.id); closePop(); t.focus(); t.dispatchEvent(new Event('input'));
+}
+function openAt(){const t=$('txt'),pos=t.selectionStart,v=t.value,pre=(pos>0&&!/\s/.test(v[pos-1]))?' ':'';t.value=v.slice(0,pos)+pre+'@'+v.slice(pos);const np=pos+pre.length+1;t.setSelectionRange(np,np);t.focus();if(!DIR.length)loadDir().then(updatePop);else updatePop();}
+$('txt').addEventListener('input',updatePop);
+$('txt').addEventListener('keydown',e=>{
+  const open=!$('mpop').classList.contains('hide');
+  if(open&&(e.key==='ArrowDown'||e.key==='ArrowUp')){e.preventDefault();PSEL=(PSEL+(e.key==='ArrowDown'?1:-1)+PLIST.length)%PLIST.length;$('mpop').innerHTML=popHTML();const on=$('mpop').querySelector('.on');if(on)on.scrollIntoView({block:'nearest'});}
+  else if(open&&(e.key==='Enter'||e.key==='Tab')&&!e.isComposing){e.preventDefault();e.stopImmediatePropagation();pickMention(PSEL);}
+  else if(open&&e.key==='Escape'){closePop();}
+},true);
 async function tick(){ await fetchMsgs(false); try{const n=await DH.rpc('mensajes_canales');CH=n;renderChans();}catch(e){} }
 $('txt').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();send();}});
 $('txt').addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,140)+'px';});

@@ -81,6 +81,25 @@
   .dash-header .greeting .name{font-size:17px}
   .dash-content{max-width:1040px}
   /* Lead story (pinned/latest news) */
+  #push-card{display:flex;align-items:center;gap:12px;background:#FFF8E6;border:1px solid #F0E2B8;border-left:6px solid #C8922A;border-radius:6px;padding:12px 14px;margin-bottom:14px}
+  #push-card.hide{display:none}
+  #push-card .pc-ic{font-size:26px}
+  #push-card .pc-tx{flex:1;min-width:0;font:14px/1.4 'Segoe UI',Arial,sans-serif;color:#5b4a14}
+  #push-card .pc-tx b{display:block;font-size:16px;color:#12284A}
+  #push-card button{border:0;background:#12284A;color:#fff;border-radius:8px;padding:0 16px;min-height:44px;font:700 14px 'Segoe UI',Arial,sans-serif;cursor:pointer}
+  #push-card button.x{background:none;color:#7a6a2a;min-width:44px;padding:0;font-size:18px}
+  #push-dlg{position:fixed;inset:0;background:rgba(10,22,45,.6);z-index:300;display:none;align-items:center;justify-content:center;padding:12px}
+  #push-dlg.show{display:flex}
+  #push-dlg .pd{background:#fff;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;border-radius:12px;padding:20px;font-family:'Segoe UI',Arial,sans-serif;color:#1E2735}
+  #push-dlg h2{font:700 21px Georgia,serif;color:#1B3A6B;margin-bottom:6px}
+  #push-dlg p{font-size:14px;color:#5a6575;line-height:1.45;margin-bottom:12px}
+  #push-dlg .row{display:flex;align-items:center;gap:12px;min-height:52px;border-bottom:1px solid #eef0f4;font-size:15px}
+  #push-dlg .row span{flex:1}
+  #push-dlg .row i{display:block;font-style:normal;font-size:12px;color:#7a8494}
+  #push-dlg input[type=checkbox]{width:26px;height:26px;accent-color:#1B3A6B}
+  #push-dlg .pb{border:0;border-radius:8px;min-height:48px;padding:0 18px;font:700 15px 'Segoe UI',Arial,sans-serif;cursor:pointer;margin-top:14px}
+  #push-dlg .pb.go{background:#1B3A6B;color:#fff}#push-dlg .pb.off{background:#fff;border:1px solid #c5ccd8;color:#C0392B}#push-dlg .pb.cl{background:#fff;border:1px solid #c5ccd8;color:#1B3A6B;margin-left:8px}
+  #push-dlg .msg{margin-top:10px;font-size:13px;color:#C0392B}
   #briefing{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:22px;align-items:stretch}
   #briefing.two{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}
   #briefing #news-hero{margin-bottom:0}
@@ -439,6 +458,7 @@
     </div>
     <div class="right-group">
     <button class="logout-btn" id="btn-admin-console" onclick="openAdminConsole()" style="display:none;background:var(--gold);border-color:var(--gold);color:var(--navy);margin-right:10px;">⚙️ Admin</button>
+    <button class="logout-btn" id="btn-bell" onclick="openPush()" aria-label="Notifications / Notificaciones" style="margin-right:10px">🔔</button>
     <button class="logout-btn" onclick="handleLogout()">Sign Out / Salir</button>
     </div>
   </div>
@@ -450,6 +470,12 @@
 
     <!-- HOME SCREEN: 3 tool cards -->
     <div class="tab-panel active" id="tab-home">
+      <div id="push-card" class="hide" role="region" aria-label="Notifications">
+        <span class="pc-ic">🔔</span>
+        <div class="pc-tx"><b>Turn on notifications / Activa las notificaciones</b><span>Get alerts, @mentions and schedule updates on this device. / Recibe alertas, menciones y cambios de horario en este dispositivo.</span></div>
+        <button onclick="openPush()">Set up / Configurar</button>
+        <button class="x" onclick="dismissPush()" aria-label="Not now / Ahora no">✕</button>
+      </div>
       <div id="briefing">
       <section id="alerts-card" class="hide" aria-label="Priority updates">
         <div id="ac-alerts" class="hide">
@@ -478,6 +504,7 @@
         <div class="ps-head"><h2>Follow-ups for today / Seguimientos de hoy</h2><a href="notas.html">My notes / Mis notas</a></div>
         <div id="nt-list"></div>
       </section>
+      <div id="push-dlg" onclick="if(event.target===this)closePush()" role="dialog" aria-modal="true"><div class="pd" id="push-box"></div></div>
       <div id="news-full" onclick="if(event.target===this)closeNews()"><div class="nf-panel">
         <div class="nf-head"><h2>📰 News / Noticias</h2><button class="nf-x" onclick="closeNews()" aria-label="Close">✕</button></div>
         <div id="nf-list"></div>
@@ -678,6 +705,7 @@
 </div>
 
 <script src="dh-session.js"></script>
+<script src="push.js"></script>
 <script>
 /* ════════════════════════════════════════════════════════════
    SUPABASE CONFIG
@@ -1002,7 +1030,7 @@ function handleLogout() {
    DASHBOARD
    ════════════════════════════════════════════════════════════ */
 async function loadDashboard() {
-  loadAlertsCard(); loadNewsHero(); loadPromoStrip(); loadMsgBadge(); loadNotesToday();
+  loadAlertsCard(); initPushCard(); loadNewsHero(); loadPromoStrip(); loadMsgBadge(); loadNotesToday();
   const emp = session.empleado;
 
   // If this employee has a temporary password, force the change screen first
@@ -1343,6 +1371,45 @@ async function loadAlertsCard(){
   card.classList.remove('hide'); br.classList.add('two');
   try{var ch=await DH.rpc('mensajes_canales'), o=0; (ch||[]).forEach(function(c){if(!hasA||c.id!==al.canal_id)o+=Number(c.sin_leer)||0;});
     var ot=document.getElementById('ac-oth'); if(o){ot.textContent='💬 '+o+' unread messages in other channels / mensajes sin leer en otros canales ›';ot.classList.remove('hide');}else ot.classList.add('hide');}catch(e){}
+}
+
+var PST=null;
+function pTr(x){return (window.DH&&DH.i18n)?DH.i18n.pick(x):x;}
+async function initPushCard(){
+  if(!window.DHPush||!DHPush.supported())return;
+  try{
+    var st=await DHPush.state(); PST=st;
+    var dis=false; try{dis=localStorage.getItem('dh-push-dismiss')==='1';}catch(e){}
+    document.getElementById('push-card').classList.toggle('hide',st.on||dis||st.permission==='denied');
+  }catch(e){}
+}
+function dismissPush(){try{localStorage.setItem('dh-push-dismiss','1');}catch(e){}document.getElementById('push-card').classList.add('hide');}
+function closePush(){document.getElementById('push-dlg').classList.remove('show');}
+async function openPush(){
+  var box=document.getElementById('push-box'); document.getElementById('push-dlg').classList.add('show');
+  box.innerHTML='<h2>🔔 Notifications / Notificaciones</h2><p>…</p>';
+  if(!window.DHPush||!DHPush.supported()){box.innerHTML='<h2>🔔 Notifications / Notificaciones</h2><p>This browser does not support notifications. On iPhone/iPad, add the app to the Home Screen first. / Este navegador no soporta notificaciones. En iPhone/iPad, primero agrega la app a la pantalla de inicio.</p><button class="pb cl" onclick="closePush()" style="margin-left:0">OK</button>';return;}
+  var st=await DHPush.state(); PST=st;
+  var P=st.prefs||{menciones:true,alertas:true,noticias:true,horario:true};
+  var rows=[['menciones','💬 Mentions and replies / Menciones y respuestas','When someone @mentions you or answers you / Cuando alguien te menciona o te responde'],['alertas','⚡ Product & promo alerts / Alertas de productos y promos','New posts from the buying team / Publicaciones nuevas del equipo de compras'],['noticias','📰 News for my role / Noticias para mi rol','Announcements meant for you / Avisos dirigidos a ti'],['horario','🗓️ My schedule / Mi horario','When your store schedule is posted / Cuando se publica el horario de tu tienda']];
+  var h='<h2>🔔 Notifications / Notificaciones</h2>';
+  if(st.needsInstall)h+='<p>On iPhone/iPad: tap Share, then “Add to Home Screen”, open the app from there and come back here. / En iPhone/iPad: toca Compartir, luego “Agregar a pantalla de inicio”, abre la app desde ahí y vuelve aquí.</p>';
+  else if(st.permission==='denied')h+='<p>Notifications are blocked for this site. Allow them in your browser settings, then try again. / Las notificaciones están bloqueadas para este sitio. Permítelas en los ajustes del navegador y vuelve a intentar.</p>';
+  else h+='<p>'+(st.on?'On for this device. / Activadas en este dispositivo.':'Off for this device. / Desactivadas en este dispositivo.')+'</p>';
+  if(st.on)h+=rows.map(function(r){return '<label class="row"><span>'+r[1]+'<i>'+r[2]+'</i></span><input type="checkbox" data-k="'+r[0]+'" '+(P[r[0]]?'checked':'')+' onchange="savePushPrefs()"></label>';}).join('');
+  h+=(st.on?'<button class="pb off" onclick="pushOff()">Turn off / Desactivar</button>':(st.needsInstall||st.permission==='denied'?'':'<button class="pb go" onclick="pushOn()">Turn on / Activar</button>'))+'<button class="pb cl" onclick="closePush()">Close / Cerrar</button><div class="msg" id="push-msg"></div>';
+  box.innerHTML=h;
+  if(window.DH&&DH.i18n&&DH.i18n.apply)try{DH.i18n.apply(box);}catch(e){}
+}
+async function pushOn(){
+  var r=await DHPush.enable(), m=document.getElementById('push-msg');
+  if(r&&r.ok){initPushCard();openPush();}
+  else if(m)m.textContent=pTr(r&&r.error==='denied'?'Permission was not granted. / No se otorgó el permiso.':r&&r.error==='install'?'Add the app to your Home Screen first. / Primero agrega la app a la pantalla de inicio.':'Could not turn on notifications. / No se pudieron activar las notificaciones.');
+}
+async function pushOff(){await DHPush.disable();initPushCard();openPush();}
+async function savePushPrefs(){
+  var p={};document.querySelectorAll('#push-box input[data-k]').forEach(function(c){p[c.dataset.k]=c.checked;});
+  try{await DHPush.savePrefs(p);}catch(e){var m=document.getElementById('push-msg');if(m)m.textContent=pTr('Could not save. / No se pudo guardar.');}
 }
 async function loadMsgBadge(){
   try{
