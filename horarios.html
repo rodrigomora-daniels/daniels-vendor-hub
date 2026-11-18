@@ -141,7 +141,8 @@ function render(){
   if(S.puede_editar||S.puede_gestores){
     tl.classList.remove('hide');
     tl.innerHTML=(S.puede_editar?`<button class="btn ${S.publicado?'':'g'}" onclick="publish(${!S.publicado})">${esc(tr(S.publicado?'Unpublish / Despublicar':'Publish for the team / Publicar para el equipo'))}</button>
-      <button class="btn" onclick="copyPrev()">${esc(tr('Copy previous week / Copiar semana anterior'))}</button>`:'')
+      <button class="btn" onclick="copyPrev()">${esc(tr('Copy previous week / Copiar semana anterior'))}</button>
+      <button class="btn" onclick="openImport()">${esc(tr('Upload Excel / Subir Excel'))}</button>`:'')
       +`<button class="btn" onclick="window.print()">${esc(tr('Print / Imprimir'))}</button>`
       +(S.puede_gestores?`<button class="btn" onclick="openGest()">${esc(tr('Who can edit / Quién puede editar'))}</button>`:'');
   }else{tl.classList.remove('hide');tl.innerHTML=`<button class="btn" onclick="window.print()">${esc(tr('Print / Imprimir'))}</button>`;}
@@ -262,6 +263,114 @@ async function copyPrev(){
   <div class="err hide" id="f-e"></div><div class="acts"><button class="btn pri" onclick="doCopy()">${esc(tr('Copy / Copiar'))}</button><button class="btn" onclick="closeDlg()">${esc(tr('Cancel / Cancelar'))}</button></div>`);
 }
 async function doCopy(){const r=await call('horarios_copiar',{p_tienda:S.tienda,p_desde:addD(S.semana,-7),p_a:S.semana});if(r){closeDlg();await load();}}
+
+
+/* ---- Bulk upload from Excel ---- */
+let IMP=null;
+function loadXL(){return new Promise((res,rej)=>{if(window.XLSX)return res();const x=document.createElement('script');x.src='vendor/xlsx.mini.min.js';x.onload=res;x.onerror=rej;document.head.appendChild(x);});}
+const pad=n=>String(n).padStart(2,'0');
+function pdate(v){
+  if(v==null||v==='')return null;
+  if(typeof v==='number'){const o=XLSX.SSF.parse_date_code(v);return o?o.y+'-'+pad(o.m)+'-'+pad(o.d):null;}
+  const t=String(v).trim(); let m;
+  if(m=t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))return m[1]+'-'+pad(m[2])+'-'+pad(m[3]);
+  if(m=t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/)){const y=m[3].length===2?'20'+m[3]:m[3];return y+'-'+pad(m[1])+'-'+pad(m[2]);}
+  return null;
+}
+function ptime(v){
+  if(v==null||String(v).trim()==='')return undefined;
+  if(typeof v==='number'){const mins=Math.round((v%1)*1440);return pad(Math.floor(mins/60)%24)+':'+pad(mins%60);}
+  const t=String(v).trim(); let m;
+  if(m=t.match(/^(\d{1,2})(?::(\d{2}))?\s*([ap])\.?\s*m?\.?$/i)){let h=+m[1];const mi=+(m[2]||0);if(h<1||h>12||mi>59)return null;if(/p/i.test(m[3])&&h<12)h+=12;if(/a/i.test(m[3])&&h===12)h=0;return pad(h)+':'+pad(mi);}
+  if(m=t.match(/^(\d{1,2}):(\d{2})$/)){const h=+m[1],mi=+m[2];if(h>23||mi>59)return null;return pad(h)+':'+pad(mi);}
+  return null;
+}
+const t12=t=>{const [h,m]=t.split(':').map(Number);return (h%12===0?12:h%12)+':'+pad(m)+' '+(h>=12?'PM':'AM');};
+function openImport(){
+  IMP={rows:[],errs:[],ready:false};
+  const cols=[['A','Date / Fecha','2026-12-02'],['B','Employee / Empleado','Estela Chavez'],['C','In / Entrada','11:00 AM'],['D','Lunch out / Sale a comer','2:00 PM'],['E','Lunch in / Regresa','3:00 PM'],['F','Out / Salida','8:00 PM']];
+  showDlg(`<h2>${esc(tr('Upload a schedule from Excel / Subir un horario desde Excel'))}</h2>
+  <div class="sub" data-no-i18n>${esc(S.tienda)}</div>
+  <div class="banner" style="margin-bottom:10px;font-size:14px"><b>${esc(tr('Your file needs these 6 columns, in this order, one row per person per day. / Tu archivo necesita estas 6 columnas, en este orden, una fila por persona por día.'))}</b>
+  <div style="overflow-x:auto"><table style="min-width:0;margin:8px 0;font-size:13px;table-layout:auto"><thead><tr><th style="position:static;padding:6px 8px"> </th><th style="position:static;padding:6px 8px;text-align:left">${esc(tr('Column / Columna'))}</th><th style="position:static;padding:6px 8px;text-align:left">${esc(tr('Example / Ejemplo'))}</th></tr></thead><tbody>${cols.map(c=>`<tr><td style="padding:5px 8px"><b>${c[0]}</b></td><td style="padding:5px 8px;text-align:left">${esc(tr(c[1]))}</td><td style="padding:5px 8px;text-align:left" data-no-i18n>${esc(c[2])}</td></tr>`).join('')}</tbody></table></div>
+  <ul style="padding-left:18px;line-height:1.6">
+  <li>${esc(tr('The first row is the header (titles). / La primera fila es el encabezado (títulos).'))}</li>
+  <li>${esc(tr('Day off: write OFF in column C and leave D to F empty. / Día libre: escribe OFF en la columna C y deja D a F vacías.'))}</li>
+  <li>${esc(tr('No lunch break: fill only In and Out (C and F). / Sin comida: llena solo Entrada y Salida (C y F).'))}</li>
+  <li>${esc(tr('Times like 11:00 AM, 11am or 14:30 all work. / Las horas como 11:00 AM, 11am o 14:30 funcionan.'))}</li>
+  <li>${esc(tr('Add as many weeks as you need, a whole month is fine. Days you do not include stay as they are. / Agrega las semanas que necesites, un mes completo está bien. Los días que no incluyas se quedan igual.'))}</li>
+  <li>${esc(tr('Names must match the schedule (or use the initials). / Los nombres deben coincidir con el horario (o usa las iniciales).'))}</li></ul></div>
+  <div class="acts" style="margin-top:0"><button class="btn" id="tplb" onclick="downloadTpl()">${esc(tr('Download template with this week / Descargar plantilla con esta semana'))}</button></div>
+  <label for="f-x">${esc(tr('Choose your Excel file / Elige tu archivo de Excel'))}</label><input type="file" id="f-x" accept=".xlsx,.xls,.csv" onchange="readImport(this.files[0])">
+  <div id="imp-pre"></div><div class="err hide" id="f-e"></div>
+  <div class="acts"><button class="btn pri" id="imp-go" disabled onclick="doImport()">${esc(tr('Upload / Subir'))}</button><button class="btn" onclick="closeDlg()">${esc(tr('Cancel / Cancelar'))}</button></div>`);
+}
+async function downloadTpl(){
+  const b=$('tplb');b.disabled=true;
+  try{await loadXL();}catch(e){errBox(tr('Could not load the Excel tool. Check your connection. / No se pudo cargar la herramienta de Excel. Revisa tu conexión.'));b.disabled=false;return;}
+  const H=['Date','Employee','In','Lunch out','Lunch in','Out'], rows=[H];
+  (S.filas||[]).forEach(r=>S.dias.forEach(d=>{const c=(r.celdas||{})[d.d];
+    if(!c)rows.push([d.d,r.nombre,'','','','']);
+    else if(c.libre)rows.push([d.d,r.nombre,'OFF','','','']);
+    else if(c.t.length===4)rows.push([d.d,r.nombre,t12(c.t[0]),t12(c.t[1]),t12(c.t[2]),t12(c.t[3])]);
+    else rows.push([d.d,r.nombre,t12(c.t[0]),'','',t12(c.t[1])]);}));
+  const ws=XLSX.utils.aoa_to_sheet(rows); ws['!cols']=[{wch:12},{wch:26},{wch:11},{wch:11},{wch:11},{wch:11}];
+  const ins=[['How to fill this file / Cómo llenar este archivo'],[''],['One row per person per day. Keep the header in row 1. / Una fila por persona por día. Deja el encabezado en la fila 1.'],['Date: YYYY-MM-DD (e.g. 2026-12-02) or MM/DD/YYYY. / Fecha: AAAA-MM-DD o MM/DD/AAAA.'],['Employee: the name shown in the schedule, or the initials. / Empleado: el nombre como aparece en el horario, o las iniciales.'],['Day off: write OFF in In, leave the rest empty. / Día libre: escribe OFF en In y deja el resto vacío.'],['No lunch: fill only In and Out. / Sin comida: llena solo In y Out.'],['Empty rows (no times) are ignored. / Las filas sin horas se ignoran.'],['Times: 11:00 AM, 11am or 14:30. / Horas: 11:00 AM, 11am o 14:30.']];
+  const wi=XLSX.utils.aoa_to_sheet(ins); wi['!cols']=[{wch:110}];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Schedule'); XLSX.utils.book_append_sheet(wb,wi,'Instructions');
+  XLSX.writeFile(wb,'schedule-'+S.tienda.replace(/[^A-Za-z]+/g,'-').toLowerCase()+'-'+S.semana+'.xlsx');
+  b.disabled=false;
+}
+async function readImport(file){
+  if(!file)return;
+  const pre=$('imp-pre'), go=$('imp-go'); go.disabled=true; pre.innerHTML=''; $('f-e').classList.add('hide');
+  try{await loadXL();}catch(e){errBox(tr('Could not load the Excel tool. Check your connection. / No se pudo cargar la herramienta de Excel. Revisa tu conexión.'));return;}
+  let data;
+  try{const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];data=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null,blankrows:false});}
+  catch(e){errBox(tr('That file could not be read. Use .xlsx, .xls or .csv. / No se pudo leer ese archivo. Usa .xlsx, .xls o .csv.'));return;}
+  const rows=[], errs=[]; let start=0;
+  if(data.length&&pdate(data[0][0])==null)start=1;
+  for(let i=start;i<data.length;i++){
+    const r=data[i], rn=i+1; if(!r||r.every(x=>x==null||String(x).trim()===''))continue;
+    const d=pdate(r[0]), nm=r[1]==null?'':String(r[1]).trim();
+    const ct=r.slice(2,6);
+    if(ct.every(x=>x==null||String(x).trim==='' || String(x).trim()===''))continue; // empty shift = leave as is
+    if(!d){errs.push([rn,tr('Date not understood / No se entiende la fecha')]);continue;}
+    if(!nm){errs.push([rn,tr('Missing employee name / Falta el nombre del empleado')]);continue;}
+    if(typeof r[2]==='string'&&/^(off|libre|day off)$/i.test(r[2].trim())){rows.push({dia:d,nombre:nm,libre:true,t:null});continue;}
+    const p=ct.map(ptime);
+    if(p.some(x=>x===null)){errs.push([rn,tr('A time is not understood / No se entiende una hora')]);continue;}
+    const [a,b2,c2,f2]=p;
+    if(a&&f2&&!b2&&!c2)rows.push({dia:d,nombre:nm,libre:false,t:[a,f2]});
+    else if(a&&b2&&c2&&f2)rows.push({dia:d,nombre:nm,libre:false,t:[a,b2,c2,f2]});
+    else errs.push([rn,tr('Fill In and Out, or all four times / Llena Entrada y Salida, o las cuatro horas')]);
+  }
+  IMP={rows,errs,ready:false,unk:[]};
+  if(!rows.length&&!errs.length){errBox(tr('No shifts found in the file. / No se encontraron turnos en el archivo.'));return;}
+  if(errs.length){pre.innerHTML=impErrs(errs);return;}
+  let r;
+  try{r=await DH.rpc('horarios_importar',{p_tienda:S.tienda,p_filas:rows,p_crear:false,p_publicar:false,p_aplicar:false});}
+  catch(e){errBox(tr('Could not check the file. Try again. / No se pudo revisar el archivo. Intenta de nuevo.'));return;}
+  if(r&&r.error){errBox(tr(r.error));return;}
+  const bad=(r.errores||[]).map(e=>[e.fila,tr(e.msg)]);
+  if(bad.length){pre.innerHTML=impErrs(bad);return;}
+  IMP.unk=r.desconocidos||[]; IMP.ready=true;
+  const ws=r.semanas||[], people=new Set(rows.map(x=>x.nombre.toLowerCase())).size;
+  pre.innerHTML=`<div class="banner" style="margin-top:12px"><b>✓ ${rows.length} ${esc(tr('shifts ready / turnos listos'))}</b><br><span data-no-i18n>${esc(fd(ws[0],{month:'short',day:'numeric'}))} – ${esc(fd(addD(ws[ws.length-1],6),{month:'short',day:'numeric',year:'numeric'}))}</span> · ${ws.length} ${esc(tr('week(s) / semana(s)'))} · ${people} ${esc(tr('people / personas'))}</div>
+  ${IMP.unk.length?`<label style="display:flex;gap:10px;align-items:flex-start;font-weight:600"><input type="checkbox" id="imp-new" style="width:auto;min-height:0;margin-top:3px" checked><span>${esc(tr('Add these names as new people in the schedule: / Agregar estos nombres como personas nuevas en el horario:'))} <b data-no-i18n>${esc(IMP.unk.join(', '))}</b></span></label>`:''}
+  <label style="display:flex;gap:10px;align-items:flex-start;font-weight:600"><input type="checkbox" id="imp-pub" style="width:auto;min-height:0;margin-top:3px" checked><span>${esc(tr('Publish the uploaded weeks right away (the team sees them). / Publicar de inmediato las semanas subidas (el equipo las ve).'))}</span></label>`;
+  go.disabled=false;
+}
+function impErrs(errs){return `<div class="err" style="margin-top:12px"><b>${esc(tr('Fix these rows in your file and upload it again: / Corrige estas filas en tu archivo y vuelve a subirlo:'))}</b><ul style="padding-left:18px;margin-top:6px">${errs.slice(0,12).map(e=>`<li>${esc(tr('Row / Fila'))} ${e[0]}: ${esc(e[1])}</li>`).join('')}${errs.length>12?`<li>+${errs.length-12} ${esc(tr('more / más'))}</li>`:''}</ul></div>`;}
+async function doImport(){
+  if(!IMP||!IMP.ready||BUSY)return; const go=$('imp-go'); go.disabled=true; BUSY=true;
+  let r;
+  try{r=await DH.rpc('horarios_importar',{p_tienda:S.tienda,p_filas:IMP.rows,p_crear:!!($('imp-new')&&$('imp-new').checked),p_publicar:!!($('imp-pub')&&$('imp-pub').checked),p_aplicar:true});}
+  catch(e){BUSY=false;go.disabled=false;errBox(tr('Could not upload. Try again. / No se pudo subir. Intenta de nuevo.'));return;}
+  BUSY=false;
+  if(!r||r.error){go.disabled=false;errBox(tr((r&&r.error)||'Could not upload. / No se pudo subir.'));return;}
+  const first=(r.semanas||[])[0]; closeDlg(); if(first)SEM=first; await load();
+}
 
 async function openGest(){
   let G;try{G=await DH.rpc('horarios_gestores');}catch(e){return;}
