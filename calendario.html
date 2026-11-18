@@ -61,8 +61,8 @@
   /* Dialog */
   .dlg{position:fixed;inset:0;background:rgba(10,22,45,.6);z-index:50;display:none;align-items:flex-end;justify-content:center}
   .dlg.show{display:flex}
-  .dlg .p{background:#fff;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;border-radius:14px 14px 0 0;padding:20px 20px 22px}
-  @media(min-width:700px){.dlg{align-items:center}.dlg .p{border-radius:12px}}
+  .dlg>.p{background:#fff;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;border-radius:14px 14px 0 0;padding:20px 20px 22px}
+  @media(min-width:700px){.dlg{align-items:center}.dlg>.p{border-radius:12px}}
   .dlg h2{font:700 24px/1.2 Georgia,'Times New Roman',serif;color:var(--navy);margin:6px 0}
   .tag{display:inline-block;color:#fff;border-radius:10px;padding:2px 10px;font:700 12px 'Segoe UI',Arial,sans-serif}
   .dlg .when{color:var(--gray);margin:2px 0 12px;font-size:15px}
@@ -116,6 +116,8 @@
     <button class="btn" id="vm" onclick="setView('month')">Month / Mes</button>
     <button class="btn" id="va" onclick="setView('agenda')">List / Lista</button>
     <button class="btn p hide" id="addb" onclick="openForm(null)">+ New event / Nuevo evento</button>
+    <button class="btn hide" id="impb" onclick="openImport()">Upload Excel / Subir Excel</button>
+    <button class="btn hide" id="edb" onclick="openEd()">Who can edit / Quién puede editar</button>
   </div>
   <div class="chips" id="chips"></div>
   <div id="view"></div>
@@ -143,7 +145,8 @@ async function init(){
   try{D=await DH.rpc('calendario_listar');}catch(e){$('view').innerHTML='<div class="empty">'+esc(tr('Could not load the calendar. / No se pudo cargar el calendario.'))+'</div>';return;}
   try{const r=await DH.rpc('promos_listar');PR=(r.items||[]).filter(p=>p.estado!=='oculta'&&p.vigente_desde);
       URLS=await DH.files.sign(PR.map(p=>p.archivo_id));}catch(e){PR=PR||[];}
-  $('addb').classList.toggle('hide',!D.puede_editar);
+  $('addb').classList.toggle('hide',!D.puede_editar); $('impb').classList.toggle('hide',!D.puede_editar);
+  if(D.puede_editar){try{const g=await DH.rpc('calendario_editores');if(g&&!g.error)$('edb').classList.remove('hide');}catch(e){}}
   render();
 }
 // unify events + flyers
@@ -258,6 +261,96 @@ async function del(id){
   const b=$('delb'); if(!ASK){ASK=true;b.textContent=tr('Tap again to delete / Toca otra vez para borrar');b.style.color='#C0392B';return;}
   try{const r=await DH.rpc('calendario_borrar',{p_id:id});if(r&&r.ok){closeDlg();D=await DH.rpc('calendario_listar');render();}}catch(e){}
 }
+
+/* ---- Excel upload ---- */
+let IMP=null, BUSY=false;
+function loadXL(){return new Promise((res,rej)=>{if(window.XLSX)return res();const x=document.createElement('script');x.src='vendor/xlsx.mini.min.js';x.onload=res;x.onerror=rej;document.head.appendChild(x);});}
+const pad=n=>String(n).padStart(2,'0');
+function pdate(v){
+  if(v==null||v==='')return null;
+  if(typeof v==='number'){const o=XLSX.SSF.parse_date_code(v);return o?o.y+'-'+pad(o.m)+'-'+pad(o.d):null;}
+  const t=String(v).trim(); let m;
+  if(m=t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))return m[1]+'-'+pad(m[2])+'-'+pad(m[3]);
+  if(m=t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/)){const y=m[3].length===2?'20'+m[3]:m[3];return y+'-'+pad(m[1])+'-'+pad(m[2]);}
+  return null;
+}
+const errBox=m=>{const e=$('f-e');if(e){e.textContent=m;e.classList.remove('hide');}};
+function openImport(){
+  IMP={rows:[],ready:false};
+  const cols=[['A','Title / Título','Black Friday Sale','Required / Obligatorio'],['B','Type / Tipo','Campaign','Campaign, Artwork due, Product list due, Store hours, Holiday, Other / Campaña, Entrega de arte, Lista de productos, Horario de tiendas, Feriado, Otro'],['C','From / Desde','2026-11-27','YYYY-MM-DD or MM/DD/YYYY / AAAA-MM-DD o MM/DD/AAAA'],['D','To / Hasta','2026-11-30','Optional. Leave empty for one day. / Opcional. Vacío si es un solo día.'],['E','Note / Nota','Doorbusters on sectionals','Optional / Opcional'],['F','Who sees it / Quién lo ve','Everyone','Optional: Everyone, or Sales, Staff, Manager, Director separated by commas. / Opcional: Todos, o Vendedor, Staff, Manager, Director separados por comas.']];
+  $('dp').innerHTML=`<h2>${esc(tr('Upload calendar events from Excel / Subir eventos al calendario desde Excel'))}</h2>
+  <div class="note" style="white-space:normal;background:#FFF8E6;border:1px solid #F0E2B8;border-radius:8px;padding:12px;font-size:14px"><b>${esc(tr('Your file needs these 6 columns, in this order, one row per event. / Tu archivo necesita estas 6 columnas, en este orden, una fila por evento.'))}</b>
+  <div style="overflow-x:auto"><table style="border-collapse:collapse;margin:8px 0;font-size:13px;width:100%"><thead><tr style="text-align:left"><th style="padding:5px 6px"> </th><th style="padding:5px 6px;white-space:nowrap">${esc(tr('Column / Columna'))}</th><th style="padding:5px 6px">${esc(tr('Example / Ejemplo'))}</th><th style="padding:5px 6px">${esc(tr('Notes / Notas'))}</th></tr></thead><tbody>
+  ${cols.map(c=>`<tr style="border-top:1px solid #eadfba"><td style="padding:5px 6px"><b>${c[0]}</b></td><td style="padding:5px 6px;white-space:nowrap">${esc(tr(c[1]))}</td><td style="padding:5px 6px" data-no-i18n>${esc(c[2])}</td><td style="padding:5px 6px">${esc(tr(c[3]))}</td></tr>`).join('')}</tbody></table></div>
+  <ul style="padding-left:18px;line-height:1.6">
+  <li>${esc(tr('The first row is the header (titles). / La primera fila es el encabezado (títulos).'))}</li>
+  <li>${esc(tr('If an event with the same title, type and start date already exists, it is updated instead of duplicated. / Si ya existe un evento con el mismo título, tipo y fecha de inicio, se actualiza en vez de duplicarse.'))}</li>
+  <li>${esc(tr('Up to 500 rows per file. Nothing is deleted. / Hasta 500 filas por archivo. No se borra nada.'))}</li></ul></div>
+  <div class="acts" style="margin-top:10px"><button class="btn" id="tplb" onclick="downloadTpl(false)">${esc(tr('Download template / Descargar plantilla'))}</button><button class="btn" onclick="downloadTpl(true)">${esc(tr('Download upcoming events / Descargar eventos próximos'))}</button></div>
+  <label for="f-x" style="display:block;font-weight:700;font-size:14px;margin:14px 0 4px">${esc(tr('Choose your Excel file / Elige tu archivo de Excel'))}</label><input type="file" id="f-x" accept=".xlsx,.xls,.csv" onchange="readImport(this.files[0])" style="font:inherit;width:100%">
+  <div id="imp-pre"></div><div class="err hide" id="f-e"></div>
+  <div class="acts"><button class="btn p" id="imp-go" disabled onclick="doImport()">${esc(tr('Upload / Subir'))}</button><button class="btn" onclick="closeDlg()">${esc(tr('Cancel / Cancelar'))}</button></div>`;
+  $('dlg').classList.add('show');
+}
+async function downloadTpl(current){
+  try{await loadXL();}catch(e){errBox(tr('Could not load the Excel tool. Check your connection. / No se pudo cargar la herramienta de Excel. Revisa tu conexión.'));return;}
+  const H=['Title','Type','From','To','Note','Who sees it'], rows=[H];
+  const tn={campana:'Campaign',arte:'Artwork due',compras:'Product list due',tienda:'Store hours',holiday:'Holiday',otro:'Other'};
+  if(current){const t0=new Date().toLocaleDateString('en-CA',{timeZone:LA});(D.items||[]).filter(e=>(e.hasta||e.desde)>=t0).forEach(e=>rows.push([e.titulo,tn[e.tipo]||e.tipo,e.desde,e.hasta||'',e.nota||'',e.roles?e.roles.join(', '):'Everyone']));}
+  else{rows.push(['Black Friday Sale','Campaign','2026-11-27','2026-11-30','Doorbusters on sectionals','Everyone']);rows.push(['Black Friday artwork','Artwork due','2026-11-20','','','Everyone']);rows.push(['Thanksgiving','Holiday','2026-11-26','','Stores closed','Everyone']);}
+  const ws=XLSX.utils.aoa_to_sheet(rows); ws['!cols']=[{wch:34},{wch:18},{wch:12},{wch:12},{wch:40},{wch:22}];
+  const ins=[['How to fill this file / Cómo llenar este archivo'],[''],['One row per event. Keep the header in row 1. / Una fila por evento. Deja el encabezado en la fila 1.'],['Title (A): required, up to 120 characters. / Título (A): obligatorio, hasta 120 caracteres.'],['Type (B): Campaign, Artwork due, Product list due, Store hours, Holiday or Other (Spanish names work too). / Tipo (B): Campaña, Entrega de arte, Lista de productos, Horario de tiendas, Feriado u Otro (también en inglés).'],['From (C): YYYY-MM-DD or MM/DD/YYYY. To (D): optional, same format. / Desde (C): AAAA-MM-DD o MM/DD/AAAA. Hasta (D): opcional, mismo formato.'],['Note (E): optional. Who sees it (F): Everyone, or Sales, Staff, Manager, Director separated by commas. / Nota (E): opcional. Quién lo ve (F): Todos, o Vendedor, Staff, Manager, Director separados por comas.'],['Same title + type + start date = the event is updated, not duplicated. / Mismo título + tipo + fecha de inicio = se actualiza el evento, no se duplica.']];
+  const wi=XLSX.utils.aoa_to_sheet(ins); wi['!cols']=[{wch:120}];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Events'); XLSX.utils.book_append_sheet(wb,wi,'Instructions');
+  XLSX.writeFile(wb,current?'calendar-upcoming.xlsx':'calendar-template.xlsx');
+}
+function impErrs(errs){return `<div class="err" style="margin-top:12px"><b>${esc(tr('Fix these rows in your file and upload it again: / Corrige estas filas en tu archivo y vuelve a subirlo:'))}</b><ul style="padding-left:18px;margin-top:6px">${errs.slice(0,12).map(e=>`<li>${esc(tr('Row / Fila'))} ${e[0]}: ${esc(e[1])}</li>`).join('')}${errs.length>12?`<li>… +${errs.length-12}</li>`:''}</ul></div>`;}
+async function readImport(file){
+  if(!file)return;
+  const pre=$('imp-pre'), go=$('imp-go'); go.disabled=true; pre.innerHTML=''; $('f-e').classList.add('hide');
+  try{await loadXL();}catch(e){errBox(tr('Could not load the Excel tool. Check your connection. / No se pudo cargar la herramienta de Excel. Revisa tu conexión.'));return;}
+  let data;
+  try{const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];data=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null,blankrows:false});}
+  catch(e){errBox(tr('That file could not be read. Use .xlsx, .xls or .csv. / No se pudo leer ese archivo. Usa .xlsx, .xls o .csv.'));return;}
+  const rows=[], errs=[]; let start=0;
+  if(data.length&&pdate(data[0][2])==null)start=1;
+  const S=v=>v==null?'':String(v).trim();
+  for(let i=start;i<data.length;i++){
+    const r=data[i], rn=i+1; if(!r||r.every(x=>S(x)===''))continue;
+    const d=pdate(r[2]); const h=S(r[3])===''?'':pdate(r[3]);
+    if(S(r[2])!==''&&!d){errs.push([rn,tr('Start date not understood / No se entiende la fecha de inicio')]);continue;}
+    if(S(r[3])!==''&&!h){errs.push([rn,tr('End date not understood / No se entiende la fecha final')]);continue;}
+    rows.push({titulo:S(r[0]),tipo:S(r[1]),desde:d||'',hasta:h||'',nota:S(r[4]),roles:S(r[5])});
+  }
+  if(!rows.length&&!errs.length){errBox(tr('No events found in the file. / No se encontraron eventos en el archivo.'));return;}
+  if(errs.length){pre.innerHTML=impErrs(errs);return;}
+  let r;
+  try{r=await DH.rpc('calendario_importar',{p_filas:rows,p_aplicar:false});}catch(e){errBox(tr('Could not check the file. Try again. / No se pudo revisar el archivo. Intenta de nuevo.'));return;}
+  if(r&&r.error){errBox(tr(r.error));return;}
+  const bad=(r.errores||[]).map(e=>[e.fila,tr(e.msg)]);
+  if(bad.length){pre.innerHTML=impErrs(bad);return;}
+  IMP={rows,ready:true};
+  pre.innerHTML=`<div class="note" style="white-space:normal;margin-top:12px;background:#EAF6EC;border:1px solid #bfe0c5;border-radius:8px;padding:12px"><b>✓ ${r.nuevos} ${esc(tr('new events / eventos nuevos'))}</b>${r.actualizados?` · ${r.actualizados} ${esc(tr('will be updated / se actualizarán'))}`:''}</div>`;
+  go.disabled=false;
+}
+async function doImport(){
+  if(!IMP||!IMP.ready||BUSY)return; const go=$('imp-go'); go.disabled=true; BUSY=true;
+  let r; try{r=await DH.rpc('calendario_importar',{p_filas:IMP.rows,p_aplicar:true});}catch(e){BUSY=false;go.disabled=false;errBox(tr('Could not upload. Try again. / No se pudo subir. Intenta de nuevo.'));return;}
+  BUSY=false;
+  if(!r||r.error){go.disabled=false;errBox(tr((r&&r.error)||'Could not upload. / No se pudo subir.'));return;}
+  closeDlg(); D=await DH.rpc('calendario_listar'); render();
+}
+/* ---- Who can edit ---- */
+async function openEd(){
+  let G;try{G=await DH.rpc('calendario_editores');}catch(e){return;}
+  if(!G||G.error)return;
+  $('dp').innerHTML=`<h2>${esc(tr('Who can edit the calendar / Quién puede editar el calendario'))}</h2><div class="when">${esc(tr('They can add events, upload Excel files and edit or delete events. Super admins can always edit. / Pueden agregar eventos, subir Excel y editar o borrar eventos. Los super admin siempre pueden editar.'))}</div>
+  <div>${G.editores.map(g=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #eee;font-size:15px"><span data-no-i18n>${esc(g.nombre)} <i style="color:#6B6B6B;font-size:12px;font-style:normal">${esc(g.puesto||'')}${g.cuenta?'':' · '+esc(tr('no account yet / sin cuenta aún'))}</i></span><button class="btn" style="color:#C0392B" data-r="${g.roster_id}" onclick="edSet(this.dataset.r,false)">${esc(tr('Remove / Quitar'))}</button></div>`).join('')||`<div class="when">${esc(tr('Nobody yet. / Nadie aún.'))}</div>`}</div>
+  <select style="width:100%;font:inherit;font-size:16px;padding:10px;border:1px solid #c5ccd8;border-radius:8px;min-height:46px;margin-top:12px" onchange="if(this.value)edSet(this.value,true)"><option value="">${esc(tr('+ Add a person / + Agregar persona'))}</option>${G.personas.map(x=>`<option value="${x.id}">${esc(x.nombre)} — ${esc(x.puesto||'')}${x.cuenta?'':' ('+esc(tr('no account yet / sin cuenta aún'))+')'}</option>`).join('')}</select>
+  <div class="acts"><button class="btn p" onclick="closeDlg()">${esc(tr('Done / Listo'))}</button></div>`;
+  $('dlg').classList.add('show');
+}
+async function edSet(r,on){try{const x=await DH.rpc('calendario_editor_set',{p_roster:r,p_on:on});if(x&&x.ok)openEd();}catch(e){}}
 window.addEventListener('dh-lang',()=>{if(D)render();});
 init();
 </script>
