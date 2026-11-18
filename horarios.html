@@ -95,6 +95,7 @@
     <button class="btn" onclick="nav(-7)" aria-label="Previous week">◀</button>
     <button class="btn" onclick="nav(0)" id="thisb"></button>
     <button class="btn" onclick="nav(7)" aria-label="Next week">▶</button>
+    <input type="date" id="jump" class="btn" style="min-height:44px;font:inherit;width:auto" aria-label="Go to date / Ir a fecha" title="Go to date / Ir a fecha" onchange="if(this.value){SEM=this.value;load();this.value='';}">
   </div>
   <div class="tools hide" id="tools"></div>
   <div id="view"><div class="empty" id="ld"></div></div>
