@@ -81,6 +81,7 @@
   .who{display:inline-flex;align-items:center;gap:6px;background:#EEF3FB;border:1px solid #c9d7ee;border-radius:20px;padding:6px 6px 6px 12px;font-size:14px;font-weight:600}.who i{font-weight:400;color:var(--gray);font-size:12px}.who button{border:0;background:#fff;border-radius:50%;width:30px;height:30px;font-size:18px;color:var(--red)}
   .lst .r{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #eee;font-size:14px}
   @media(max-width:700px){.wk h2{flex-basis:100%}.mine .row{grid-template-columns:repeat(4,minmax(0,1fr))}}
+  .hist .hr{padding:9px 0;border-bottom:1px solid #eef0f4}.hist .hw{font-size:12px;color:var(--gray)}.hist .hx{font-size:15px;line-height:1.4;margin-top:2px}
   @media print{header,.stores,.tools,.addrow,.dlg,.banner.noprint{display:none!important}body{background:#fff}.sc{box-shadow:none;overflow:visible}table{min-width:0}th{position:static}}
   @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -142,7 +143,8 @@ function render(){
     tl.classList.remove('hide');
     tl.innerHTML=(S.puede_editar?`<button class="btn ${S.publicado?'':'g'}" onclick="publish(${!S.publicado})">${esc(tr(S.publicado?'Unpublish / Despublicar':'Publish for the team / Publicar para el equipo'))}</button>
       <button class="btn" onclick="copyPrev()">${esc(tr('Copy previous week / Copiar semana anterior'))}</button>
-      <button class="btn" onclick="openImport()">${esc(tr('Upload Excel / Subir Excel'))}</button>`:'')
+      <button class="btn" onclick="openImport()">${esc(tr('Upload Excel / Subir Excel'))}</button>
+      <button class="btn" onclick="openHist()">${esc(tr('Change log / Historial de cambios'))}</button>`:'')
       +`<button class="btn" onclick="window.print()">${esc(tr('Print / Imprimir'))}</button>`
       +(S.puede_gestores?`<button class="btn" onclick="openGest()">${esc(tr('Who can edit / Quién puede editar'))}</button>`:'');
   }else{tl.classList.remove('hide');tl.innerHTML=`<button class="btn" onclick="window.print()">${esc(tr('Print / Imprimir'))}</button>`;}
@@ -180,6 +182,27 @@ function render(){
 function pickStore(t){TIENDA=t;SEM=S.semana;load();}
 
 /* ---- dialogs ---- */
+
+async function openHist(){
+  showDlg(`<h2>${esc(tr('Change log / Historial de cambios'))}</h2><div class="sub">…</div>`);
+  let r; try{r=await DH.rpc('horarios_historial',{p_tienda:TIENDA});}catch(e){r=null;}
+  if(!r||r.error){showDlg(`<h2>${esc(tr('Change log / Historial de cambios'))}</h2><div class="sub">${esc(tr('Could not load. / No se pudo cargar.'))}</div><button class="btn" onclick="closeDlg()">${esc(tr('Close / Cerrar'))}</button>`);return;}
+  const dt=t=>new Date(t).toLocaleString(DH.i18n&&DH.i18n.lang==='es'?'es-US':'en-US',{timeZone:'America/Los_Angeles',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+  const dd=d=>new Date(d+'T12:00:00Z').toLocaleDateString(DH.i18n&&DH.i18n.lang==='es'?'es-US':'en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'});
+  const line=i=>{
+    if(i.accion==='cell')return `${esc(dd(i.dia))} · <b>${esc(i.fila)}</b>: ${esc(i.antes)} → <b>${esc(i.despues)}</b>`;
+    if(i.accion==='row_add')return esc(tr('Added person / Agregó a'))+` <b>${esc(i.fila)}</b>`;
+    if(i.accion==='row_del')return esc(tr('Removed person / Quitó a'))+` <b>${esc(i.fila)}</b>`;
+    if(i.accion==='row_edit')return esc(tr('Renamed / Renombró'))+`: ${esc(i.antes)} → <b>${esc(i.despues)}</b>`;
+    if(i.accion==='publish')return `📢 ${esc(tr('Published week of / Publicó la semana del'))} ${esc(dd(i.semana))}`;
+    if(i.accion==='unpublish')return `🙈 ${esc(tr('Unpublished week of / Despublicó la semana del'))} ${esc(dd(i.semana))}`;
+    return esc(i.accion);
+  };
+  const items=r.items||[];
+  showDlg(`<h2>${esc(tr('Change log / Historial de cambios'))}</h2><div class="sub">${esc(tr('Who changed what and when for this store. Kept for 4 months, then deleted. / Quién cambió qué y cuándo en esta tienda. Se conserva 4 meses y luego se borra.'))}</div>
+    <div class="hist">${items.length?items.map(i=>`<div class="hr"><div class="hw" data-no-i18n>${esc(dt(i.t))} · <b>${esc(i.actor)}</b></div><div class="hx" data-no-i18n>${line(i)}</div></div>`).join(''):`<div class="sub">${esc(tr('No changes recorded yet. / Aún no hay cambios registrados.'))}</div>`}</div>
+    <div style="margin-top:14px"><button class="btn" onclick="closeDlg()">${esc(tr('Close / Cerrar'))}</button></div>`);
+}
 function closeDlg(){$('dlg').classList.remove('show');EDIT=null;}
 function showDlg(html){$('dp').innerHTML=html;$('dlg').classList.add('show');}
 const errBox=m=>{const e=$('f-e');if(e){e.textContent=m;e.classList.remove('hide');}};
