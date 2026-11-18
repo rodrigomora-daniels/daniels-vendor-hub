@@ -37,6 +37,16 @@
   .m .meta{font:12px 'Segoe UI',Arial,sans-serif;color:#8a94a3;margin:2px 4px;display:flex;gap:10px;align-items:center}
   .m .del{border:0;background:none;color:#8a94a3;font:600 12px 'Segoe UI',Arial,sans-serif;cursor:pointer;padding:2px 0}
   .m .del:hover,.m .del.ask{color:var(--red)}
+  .m .rx{display:flex;gap:5px;flex-wrap:wrap;margin:4px 2px 0}
+  .m.me .rx{justify-content:flex-end}
+  .rxc{display:inline-flex;align-items:center;gap:5px;border:1px solid #d5dce8;background:#fff;border-radius:16px;padding:3px 10px;font-size:15px;min-height:32px;cursor:pointer}
+  .rxc b{font:700 12px Arial,sans-serif;color:var(--navy)}
+  .rxc.yo{background:#E4EDFB;border-color:var(--navy)}
+  .m .rxadd{border:0;background:none;color:#8a94a3;font:600 13px 'Segoe UI',Arial,sans-serif;cursor:pointer;min-height:28px;padding:2px 4px}
+  .m .rxadd:hover{color:var(--navy)}
+  .m .pk{display:flex;gap:4px;background:#fff;border:1px solid #d5dce8;border-radius:22px;padding:4px 6px;margin:2px 0;box-shadow:0 6px 16px -8px rgba(18,40,74,.35)}
+  .m .pk button{border:0;background:none;font-size:24px;min-width:44px;min-height:44px;border-radius:50%;cursor:pointer}
+  .m .pk button:hover{background:#EEF3FB}
   .empty{margin:auto;text-align:center;color:var(--gray);max-width:300px;line-height:1.5}
   .comp{flex:none;display:flex;gap:10px;align-items:flex-end;padding:12px 14px;background:#fff;border-top:1px solid #e3e8f0}
   .comp textarea{flex:1;min-height:46px;max-height:140px;resize:none;font:inherit;font-size:16px;padding:11px 14px;border:1px solid #cfd6e2;border-radius:12px;line-height:1.35}
@@ -99,7 +109,7 @@ function renderChans(){
   $('chans').innerHTML=CH.map(c=>`<button class="chan ${c.id===CUR?'on':''}" onclick="openChan('${c.id}')"><span class="n" data-no-i18n>${esc(tr(c.nombre))}<small>${esc(tr(c.descripcion||''))}</small></span>${c.sin_leer&&c.id!==CUR?`<span class="bdg">${c.sin_leer>99?'99+':c.sin_leer}</span>`:''}</button>`).join('');
 }
 async function openChan(id){
-  CUR=id; LAST=null; SEEN=new Set(); ASK=null; $('msgs').innerHTML=''; showErr('');
+  CUR=id; LAST=null; SEEN=new Set(); ASK=null; $('msgs').innerHTML=''; $('msgs').removeAttribute('data-day'); $('msgs').removeAttribute('data-who'); showErr('');
   $('app').classList.add('in-thread'); history.replaceState(null,'','#'+id);
   const c=CH.find(x=>x.id===id); if(c){c.sin_leer=0;}
   renderChans(); await fetchMsgs(true);
@@ -115,11 +125,12 @@ async function fetchMsgs(full){
     $('t-name').textContent=tr(r.canal.nombre); $('t-desc').textContent=tr(r.canal.descripcion||'');
     const w=r.canal.puede_escribir; $('comp').classList.toggle('hide',!w); $('ro').classList.toggle('hide',w);
     const box=$('msgs'), near=box.scrollHeight-box.scrollTop-box.clientHeight<120;
-    if(full){box.innerHTML='';SEEN=new Set();}
+    if(full){box.innerHTML='';box.removeAttribute('data-day');box.removeAttribute('data-who');SEEN=new Set();}
     const fresh=(r.items||[]).filter(m=>!SEEN.has(m.id)); fresh.forEach(m=>SEEN.add(m.id));
     if(r.items&&r.items.length)LAST=r.items[r.items.length-1].t;
     if(full&&!(r.items||[]).length)box.innerHTML='<div class="empty">'+esc(tr('No messages yet. Say hello. / Aún no hay mensajes. Saluda al equipo.'))+'</div>';
     if(fresh.length){const e=box.querySelector('.empty');if(e)e.remove();appendMsgs(fresh);}
+    renderRx(r.reacciones||{});
     if(full||near)box.scrollTop=box.scrollHeight;
   }catch(e){ if(full)showErr(tr('Could not load messages. / No se pudieron cargar los mensajes.')); }
   finally{BUSY=false;}
@@ -130,10 +141,20 @@ function appendMsgs(list){
     const dk=dayKey(m.t);
     if(dk!==lastDay){box.insertAdjacentHTML('beforeend',`<div class="day" data-no-i18n>${esc(dayLabel(m.t))}</div>`);lastDay=dk;lastWho='';}
     const who=m.mio?'me':m.autor;
-    box.insertAdjacentHTML('beforeend',`<div class="m ${m.mio?'me':''}" id="m-${m.id}">${(!m.mio&&who!==lastWho)?`<div class="who" data-no-i18n>${esc(m.autor)}</div>`:''}<div class="b" data-no-i18n>${esc(m.cuerpo)}</div><div class="meta"><span data-no-i18n>${tm(m.t)}</span>${m.puede_borrar?`<button class="del" onclick="del('${m.id}',this)">Delete / Borrar</button>`:''}</div></div>`);
+    box.insertAdjacentHTML('beforeend',`<div class="m ${m.mio?'me':''}" id="m-${m.id}">${!m.mio?`<div class="who" data-no-i18n>${esc(m.autor)}</div>`:''}<div class="b" data-no-i18n>${esc(m.cuerpo)}</div><div class="rx" id="rx-${m.id}"></div><div class="meta"><span data-no-i18n>${tm(m.t)}</span><button class="rxadd" onclick="togPk('${m.id}')" aria-label="React">☺+</button>${m.puede_borrar?`<button class="del" onclick="del('${m.id}',this)">Delete / Borrar</button>`:''}</div><div class="pk hide" id="pk-${m.id}">${EMO.map(e=>`<button onclick="react('${m.id}','${e}')" aria-label="${e}">${e}</button>`).join('')}</div></div>`);
     lastWho=who;
   });
   box.setAttribute('data-day',lastDay); box.setAttribute('data-who',lastWho);
+}
+
+const EMO=['👍','❤️','😂','😮','🙏','✅'];
+function rxHTML(id,arr){return (arr||[]).map(r=>`<button class="rxc ${r.yo?'yo':''}" onclick="react('${id}','${r.e}')" aria-pressed="${!!r.yo}"><span>${r.e}</span><b>${r.n}</b></button>`).join('');}
+function renderRx(map){document.querySelectorAll('#msgs .rx').forEach(el=>{const id=el.id.slice(3);el.innerHTML=rxHTML(id,map[id]);});}
+function togPk(id){document.querySelectorAll('#msgs .pk').forEach(el=>{if(el.id!=='pk-'+id)el.classList.add('hide');});const e=$('pk-'+id);if(e)e.classList.toggle('hide');}
+async function react(id,emo){
+  const pk=$('pk-'+id);if(pk)pk.classList.add('hide');
+  try{const r=await DH.rpc('mensaje_reaccionar',{p_id:id,p_emoji:emo});if(r&&r.ok){const el=$('rx-'+id);if(el)el.innerHTML=rxHTML(id,r.reacciones);}else showErr(tr('Could not react. / No se pudo reaccionar.'));}
+  catch(e){showErr(tr('Could not react. / No se pudo reaccionar.'));}
 }
 async function del(id,btn){
   if(ASK!==id){ASK=id;btn.classList.add('ask');btn.textContent=tr('Tap again to delete / Toca otra vez para borrar');setTimeout(()=>{if(ASK===id){ASK=null;btn.classList.remove('ask');btn.textContent=tr('Delete / Borrar');}},4000);return;}
