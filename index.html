@@ -443,6 +443,7 @@
   <button class="nl" onclick="navigateToTool('organigrama')"><span>🏢</span>Org Chart / Organigrama</button>
   <div class="grp" id="grp-tools">Store tools / Herramientas de tienda</div>
   <button class="nl" id="nl-prescreen" onclick="navigateToTool('prescreen')"><span>📊</span>Pre-Screener</button>
+  <button class="nl" id="nl-board" onclick="navigateToTool('board')"><span>🟢</span>Daniels Board / Fila de turnos</button>
   <button class="nl" id="nl-leadsource" onclick="navigateToTool('leadsource')"><span>📍</span>How They Found Us / Cómo nos encontraron</button>
   <button class="nl" id="nl-clientes" onclick="navigateToTool('clientes')" style="display:none"><span>📈</span>Customer counter / Contador de clientes</button>
   <button class="nl" onclick="navigateToTool('notas')"><span>📝</span>My notes / Mis notas</button>
@@ -1058,7 +1059,7 @@ async function loadDashboard() {
   // Everyone sees Certifications, Evaluation and the Org Chart. The Pre-Screener and
   // "How They Found Us" are store tools: only Sales / Store Management, admins, and the owners (Ted, Karen).
   const canSeeStoreTools = ['sales', 'store_management', 'senior_management'].includes(emp.departamento) || emp.es_admin || /^(ted|karen)\s+rosenberg/i.test(emp.nombre_completo || '');
-  ['card-prescreen', 'card-leadsource', 'nl-prescreen', 'nl-leadsource'].forEach(id => { const c = document.getElementById(id); if (c) c.style.display = canSeeStoreTools ? '' : 'none'; });
+  ['card-prescreen', 'card-leadsource', 'nl-prescreen', 'nl-leadsource', 'nl-board'].forEach(id => { const c = document.getElementById(id); if (c) c.style.display = canSeeStoreTools ? '' : 'none'; });
   try{ DH.rpc('clientes_resumen').then(r=>{ const n=document.getElementById('nl-clientes'); if(n&&r&&r.puede_reporte) n.style.display=''; }).catch(()=>{}); }catch(e){}
   const isMgr = emp.es_admin || ['manager','admin'].includes(emp.rol) || /^(ted|karen)\s+rosenberg/i.test(emp.nombre_completo || '');
   ['nl-hub', 'nl-teams', 'grp-mgr'].forEach(id => { const c = document.getElementById(id); if (c) c.style.display = isMgr ? '' : 'none'; });
@@ -1275,6 +1276,7 @@ const TOOL_URLS = {
   prescreen: 'https://rodrigomora-daniels.github.io/daniels-credit-simulator/',
   leadsource: 'Daniels_Lead_Source_Form.html',
   clientes: 'clientes.html',
+  board: 'board.html',
   organigrama: 'Daniels_Organigrama.html',
   recursos: 'recursos.html',
   promociones: 'promociones.html',

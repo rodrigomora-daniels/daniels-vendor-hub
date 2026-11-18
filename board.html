@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1B3A6B">
+<title>My Workspace — Daniels Board</title>
+<style>
+  :root{--navy:#1B3A6B;--gold:#C8922A;--lt:#D6E4F7;--ink:#1E2735;--gray:#6B6B6B;--red:#C0392B;--green:#2E7D32;--line:#dfe5ee}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#EEF1F6;color:var(--ink);-webkit-tap-highlight-color:transparent}
+  header{background:var(--navy);border-bottom:3px solid var(--gold);padding:12px 20px;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  header h1{font:700 19px Georgia,'Times New Roman',serif}
+  header .st{font-size:13px;color:var(--lt)}
+  main{max-width:980px;margin:0 auto;padding:14px 12px 80px}
+  .err{background:#fdecea;color:var(--red);border-radius:8px;padding:10px 12px;font-size:15px;margin-bottom:12px;line-height:1.45}
+  .ok{background:#e3f4e5;color:var(--green)}
+  .hide{display:none!important}
+  .top{display:grid;grid-template-columns:1.4fr 1fr;gap:12px;margin-bottom:12px}
+  @media(max-width:700px){.top{grid-template-columns:1fr}}
+  .card{background:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 1px 0 var(--line),0 10px 26px -22px rgba(18,40,74,.5)}
+  .next{background:var(--navy);color:#fff}
+  .next .k{font-size:13px;color:var(--lt);font-weight:700}
+  .next .n{font:700 30px/1.15 Georgia,'Times New Roman',serif;margin:2px 0 10px;overflow-wrap:anywhere}
+  .sum{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch}
+  .sum div{flex:1 1 70px;text-align:center;background:#F4F6FA;border-radius:10px;padding:8px 6px}
+  .sum b{display:block;font:700 26px/1.1 Georgia,serif;color:var(--navy)} .sum span{font-size:12px;font-weight:700;color:var(--gray)}
+  .btn{border:0;border-radius:12px;min-height:56px;padding:0 20px;font:700 17px 'Segoe UI',Arial,sans-serif;cursor:pointer;color:#fff;background:var(--navy)}
+  .btn.g{background:var(--green)} .btn.r{background:var(--red)} .btn.gold{background:var(--gold)}
+  .btn.ghost{background:#fff;color:var(--navy);border:2px solid #c5ccd8}
+  .btn.sm{min-height:44px;font-size:14px;padding:0 14px}
+  .btn[disabled]{opacity:.5}
+  button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+  .me{border-left:10px solid #9aa3b2}
+  .me.disponible{border-color:var(--green)} .me.ocupado{border-color:var(--red)}
+  .me .big{font:700 24px/1.2 Georgia,serif;margin-bottom:2px}
+  .me .sub{font-size:14px;color:var(--gray);margin-bottom:12px}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .row .btn{flex:1 1 150px}
+  .acts{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .acts .btn{flex:1 1 180px}
+  h2{font:700 15px 'Segoe UI',Arial,sans-serif;color:var(--navy);margin:16px 2px 8px}
+  .q{display:flex;flex-direction:column;gap:8px}
+  .p{display:grid;grid-template-columns:42px 1fr auto;gap:10px;align-items:center;background:#fff;border-radius:12px;padding:10px 12px;border-left:10px solid #9aa3b2;box-shadow:0 1px 0 var(--line)}
+  .p.disponible{border-color:var(--green)} .p.ocupado{border-color:var(--red)}
+  .p .pos{font:700 22px Georgia,serif;color:var(--navy);text-align:center}
+  .p .nm{font-weight:700;font-size:17px;overflow-wrap:anywhere}
+  .p .in{font-size:13px;color:var(--gray);margin-top:2px}
+  .p .tag{display:inline-block;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:700;color:#fff;margin-right:6px}
+  .tag.disponible{background:var(--green)} .tag.ocupado{background:var(--red)} .tag.off{background:#7b8494}
+  .p.first{background:#F1F8F2}
+  .p .mine{font-size:11px;font-weight:700;color:var(--gold);margin-left:6px}
+  .p.off{opacity:.75}
+  .ov{position:fixed;inset:0;background:rgba(18,40,74,.55);display:flex;align-items:flex-end;justify-content:center;z-index:50;padding:0}
+  @media(min-width:700px){.ov{align-items:center;padding:20px}}
+  .dlg{background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:640px;max-height:92vh;overflow:auto;padding:16px}
+  @media(min-width:700px){.dlg{border-radius:16px}}
+  .dlg h3{font:700 19px Georgia,serif;color:var(--navy);margin-bottom:4px}
+  .dlg .d{font-size:14px;color:var(--gray);margin-bottom:12px}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+  .tile{border:2px solid #cfd6e2;background:#fff;border-radius:12px;min-height:60px;padding:8px 10px;font:700 14px 'Segoe UI',Arial,sans-serif;color:var(--navy);cursor:pointer;text-align:center;line-height:1.25}
+  .tile.sel{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .dlg textarea{width:100%;font:inherit;font-size:16px;padding:10px;border:1px solid #cfd6e2;border-radius:10px;margin-top:10px;min-height:60px}
+  .dlg .foot{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}.dlg .foot .btn{flex:1 1 140px}
+  .dlg .foot.col{flex-direction:column}.dlg .foot.col .btn{flex:none}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:var(--ink);color:#fff;border-radius:12px;padding:12px 18px;font-size:15px;z-index:60;max-width:92vw;text-align:center}
+  .empty{color:var(--gray);padding:10px 2px;font-size:14px}
+</style>
+<meta name="dh-i18n" content="on">
+<script src="dh-chrome.js" defer></script>
+</head>
+<body>
+<header><h1>Daniels Board</h1><div class="st" id="hd"></div></header>
+<main>
+  <div id="err" class="err hide" role="alert"></div>
+  <div class="top">
+    <div class="card next" id="next" data-no-i18n></div>
+    <div class="card"><div class="sum" id="sum" data-no-i18n></div></div>
+  </div>
+  <div id="mecard" data-no-i18n></div>
+  <div class="acts" id="acts" data-no-i18n></div>
+  <h2 data-no-i18n id="h-q"></h2>
+  <div class="q" id="q" data-no-i18n></div>
+  <h2 data-no-i18n id="h-o"></h2>
+  <div class="q" id="o" data-no-i18n></div>
+</main>
+<script src="dh-session.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LANG=()=>{try{return localStorage.getItem('dh_lang')==='es'?'es':'en'}catch(e){return 'en'}};
+const T=(en,es)=>LANG()==='es'?es:en;
+const tr=s=>(window.DH&&DH.i18n)?DH.i18n.pick(s):s;
+let S=null, OFF=0, BUSY=false, DLG=false;
+
+const SRC_ES={'Billboard':'Espectacular','Daniels Website':'Sitio web de Daniels','Existing Client':'Cliente existente','Facebook':'Facebook','Google Search':'Búsqueda en Google','Instagram':'Instagram','Other':'Otro','Payments':'Pagos','Referred by Family Member':'Referido por familiar','Referred by Friend':'Referido por amigo','TV Commercial':'Comercial de TV','Text Campaign':'Campaña de texto','Walked By / Passing Location':'Pasó por la tienda','Wrap Flyer':'Volante'};
+const srcL=s=>LANG()==='es'?(SRC_ES[s]||s):s;
+const MOT={break:['Break','Descanso'],lunch:['Lunch','Lunch'],admin:['Admin','Administrativo'],otro:['Other','Otro'],cliente:['With customer','Con cliente'],be_back:['With be-back','Con be-back'],pago:['Payment','Pago'],proveedor:['Vendor','Proveedor']};
+const motL=m=>MOT[m]?T(MOT[m][0],MOT[m][1]):'';
+const ERR={nadie_disponible:['Nobody is available right now.','No hay nadie disponible por ahora.'],no_disponible:['That person is not available.','Esa persona no está disponible.'],forbidden:['Only a manager can do that.','Solo un gerente puede hacer eso.'],up_abierto:['Finish the current customer first.','Termina primero con el cliente actual.'],fuente:['Pick how the customer found us.','Elige cómo nos encontró el cliente.'],nota:['Add a short note for "Other".','Agrega una nota corta para "Otro".'],resultado:['Pick Sale or No sale.','Elige Venta o Sin venta.'],no_roster:['You are not on this store’s sales list.','No estás en la lista de vendedores de esta tienda.']};
+const errL=c=>ERR[c]?T(ERR[c][0],ERR[c][1]):T('Something went wrong. Try again.','Algo salió mal. Intenta de nuevo.');
+
+function showErr(t,ok){const e=$('err');if(!t){e.classList.add('hide');return}e.textContent=t;e.className='err'+(ok?' ok':'');}
+function toast(t){const d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),3500)}
+const now=()=>Date.now()+OFF;
+function dur(iso){const s=Math.max(0,Math.floor((now()-Date.parse(iso))/1000));const h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h?h+':'+String(m).padStart(2,'0')+' h':m+' min'}
+
+async function call(name,args){
+  if(BUSY)return null; BUSY=true;
+  try{const r=await DH.rpc(name,args||{});BUSY=false;if(r&&r.error){showErr(errL(r.error));await load();return null}showErr('');return r||{}}
+  catch(e){BUSY=false;showErr(T('No connection. Try again.','Sin conexión. Intenta de nuevo.'));return null}
+}
+async function load(){
+  try{
+    const r=await DH.rpc('board_estado',{});
+    if(!r||r.error){showErr(r&&r.error==='forbidden'?T('The board is only for store staff.','El board es solo para el personal de tienda.'):errL());return}
+    S=r; OFF=Date.parse(r.ahora)-Date.now(); if(!DLG)render(); showErr('');
+  }catch(e){showErr(T('No connection. Retrying…','Sin conexión. Reintentando…'))}
+}
+
+function render(){
+  const p=S.personas, yo=S.yo;
+  $('hd').textContent=S.tienda;
+  const sig=S.siguiente;
+  $('next').innerHTML=`<div class="k">${esc(T('Next up','Sigue'))}</div><div class="n" data-no-i18n>${sig?esc(sig.nombre):esc(T('Nobody available','Nadie disponible'))}</div><button class="btn gold" id="b-new">${esc(T('New customer','Cliente nuevo'))}</button>`;
+  $('b-new').onclick=()=>pickSource({title:T('New customer','Cliente nuevo'),desc:sig?T('Goes to ','Le toca a ')+sig.nombre:T('Nobody is available yet.','Todavía no hay nadie disponible.'),go:(f,n)=>assign('cliente',f,n,null)});
+  $('sum').innerHTML=`<div><b>${S.hoy.ups}</b><span>${esc(T('Customers today','Clientes hoy'))}</span></div><div><b>${S.hoy.ventas}</b><span>${esc(T('Sales','Ventas'))}</span></div><div><b>${S.hoy.look}</b><span>${esc(T('No sale','Sin venta'))}</span></div>`;
+  // my card
+  const mc=$('mecard'); const ac=$('acts');
+  if(yo){
+    const pos=p.filter(x=>x.estado==='disponible').findIndex(x=>x.roster_id===yo.roster_id)+1;
+    let cls=yo.estado, big='', sub='', btns='';
+    if(yo.estado==='off'){big=T('You are clocked out','Estás fuera');sub=T('Tap to join the line.','Toca para entrar a la fila.');btns=`<button class="btn g" data-a="disp">${esc(T('I’m available','Estoy disponible'))}</button>`}
+    else if(yo.estado==='disponible'){big=T('Available','Disponible')+' · #'+pos;sub=pos===1?T('You are next.','Tú sigues.'):T('People ahead of you: ','Personas antes de ti: ')+(pos-1);
+      btns=`<button class="btn r" data-a="occ" data-m="break">${esc(T('Break','Descanso'))}</button><button class="btn r" data-a="occ" data-m="lunch">Lunch</button><button class="btn r" data-a="occ" data-m="admin">${esc(T('Admin','Administrativo'))}</button><button class="btn r" data-a="occ" data-m="otro">${esc(T('Other','Otro'))}</button><button class="btn ghost" data-a="off">${esc(T('Clock out','Terminar turno'))}</button>`}
+    else if(yo.up_id){const tipo=yo.motivo; big=T('Not available — ','No disponible — ')+motL(tipo);sub=T('For ','Desde hace ')+dur(yo.desde);
+      btns=(tipo==='cliente'||tipo==='be_back')?`<button class="btn g" data-a="close" data-r="venta">${esc(T('Sale','Venta'))}</button><button class="btn r" data-a="close" data-r="look">${esc(T('No sale (Look)','Sin venta (Look)'))}</button>`:`<button class="btn g" data-a="close" data-r="">${esc(T('Done','Terminé'))}</button>`}
+    else{big=T('Not available — ','No disponible — ')+motL(yo.motivo);sub=T('For ','Desde hace ')+dur(yo.desde);btns=`<button class="btn g" data-a="disp">${esc(T('I’m back','Ya regresé'))}</button>`}
+    mc.innerHTML=`<div class="card me ${cls}"><div class="big" data-no-i18n>${esc(big)}</div><div class="sub" data-no-i18n>${esc(sub)}</div><div class="row">${btns}</div></div>`;
+    mc.querySelectorAll('button').forEach(b=>b.onclick=()=>mine(b.dataset));
+    ac.innerHTML=(yo.estado==='disponible')?`<button class="btn ghost" id="b-bb">${esc(T('Be-back (returning customer)','Be-back (cliente que regresa)'))}</button><button class="btn ghost" id="b-pay">${esc(T('Payment customer','Cliente de pago'))}</button><button class="btn ghost" id="b-ven">${esc(T('Vendor / solicitor','Proveedor / solicitante'))}</button>`:'';
+    if(yo.estado==='disponible'){
+      $('b-bb').onclick=()=>pickSource({title:'Be-back',desc:T('A customer who returned and asked for you. You keep your place in line.','Un cliente que regresó y te pidió a ti. Conservas tu lugar en la fila.'),go:(f,n)=>assign('be_back',f,n,yo.roster_id)});
+      $('b-pay').onclick=async()=>{const r=await call('board_tomar',{p_tipo:'pago',p_roster:yo.roster_id});if(r){toast(T('Payment customer started. You keep your place.','Cliente de pago iniciado. Conservas tu lugar.'));load()}};
+      $('b-ven').onclick=async()=>{const r=await call('board_tomar',{p_tipo:'proveedor',p_roster:yo.roster_id});if(r){toast(T('Vendor started. You keep your place.','Proveedor iniciado. Conservas tu lugar.'));load()}};
+    }
+  }else{mc.innerHTML='';ac.innerHTML=''}
+  // list
+  $('h-q').textContent=T('Line','Fila');
+  const disp=p.filter(x=>x.estado==='disponible'), occ=p.filter(x=>x.estado==='ocupado'), off=p.filter(x=>x.estado==='off');
+  const card=(x,i)=>{const mine=yo&&x.roster_id===yo.roster_id;
+    const info=x.estado==='off'?`<span class="tag off">${esc(T('Off','Fuera'))}</span>`:x.estado==='disponible'?`<span class="tag disponible">${esc(T('Available','Disponible'))}</span>${esc(dur(x.desde))}`:`<span class="tag ocupado">${esc(motL(x.motivo))}</span>${esc(dur(x.desde))}`;
+    return `<div class="p ${x.estado}${i===0&&x.estado==='disponible'?' first':''}" data-id="${x.roster_id}"><div class="pos">${x.estado==='disponible'?i+1:''}</div><div><div class="nm" data-no-i18n>${esc(x.nombre)}${mine?`<span class="mine">${esc(T('YOU','TÚ'))}</span>`:''}</div><div class="in" data-no-i18n>${info} · ${esc(T('Customers today: ','Clientes hoy: '))}${x.ups_hoy}</div></div>${S.gerente?`<button class="btn ghost sm" data-m="${x.roster_id}">${esc(T('Manage','Gestionar'))}</button>`:'<span></span>'}</div>`};
+  $('q').innerHTML=(disp.length?disp.map(card).join(''):`<div class="empty" data-no-i18n>${esc(T('Nobody is in line.','Nadie en la fila.'))}</div>`)+(occ.length?`<h2 data-no-i18n>${esc(T('Not available','No disponibles'))}</h2>`+occ.map(card).join(''):'');
+  $('h-o').textContent=T('Clocked out','Fuera de turno');
+  $('o').innerHTML=off.length?off.map(card).join(''):'';
+  document.querySelectorAll('[data-m]').forEach(b=>{if(b.closest('.p'))b.onclick=()=>manage(b.dataset.m)});
+}
+async function mine(d){
+  const yo=S.yo; let r;
+  if(d.a==='disp')r=await call('board_cambiar',{p_estado:'disponible'});
+  else if(d.a==='off')r=await call('board_cambiar',{p_estado:'off'});
+  else if(d.a==='occ')r=await call('board_cambiar',{p_estado:'ocupado',p_motivo:d.m});
+  else if(d.a==='close')r=await call('board_cerrar',{p_up:yo.up_id,p_resultado:d.r||null});
+  if(r)load();
+}
+function overlay(html){DLG=true;const o=document.createElement('div');o.className='ov';o.innerHTML=`<div class="dlg" data-no-i18n role="dialog" aria-modal="true">${html}</div>`;document.body.appendChild(o);o.onclick=e=>{if(e.target===o)closeO()};o._close=()=>{o.remove();DLG=false;load()};return o}
+function closeO(){const o=document.querySelector('.ov');if(o)o._close()}
+function pickSource(opt){
+  const o=overlay(`<h3 data-no-i18n>${esc(opt.title)}</h3><div class="d" data-no-i18n>${esc(opt.desc||'')} · ${esc(T('How did the customer find us?','¿Cómo nos encontró el cliente?'))}</div><div class="tiles">${S.fuentes.filter(f=>f!=='Payments').map(f=>`<button class="tile" data-f="${esc(f)}" data-no-i18n>${esc(srcL(f))}</button>`).join('')}</div><textarea id="nt" class="hide" placeholder="${esc(T('What is it? (short note)','¿Cuál es? (nota corta)'))}"></textarea><div class="foot"><button class="btn ghost" id="x">${esc(T('Cancel','Cancelar'))}</button><button class="btn g" id="go" disabled>${esc(T('Confirm','Confirmar'))}</button></div>`);
+  let f=null;
+  o.querySelectorAll('.tile').forEach(t=>t.onclick=()=>{f=t.dataset.f;o.querySelectorAll('.tile').forEach(x=>x.classList.toggle('sel',x===t));o.querySelector('#nt').classList.toggle('hide',f!=='Other');o.querySelector('#go').disabled=false});
+  o.querySelector('#x').onclick=closeO;
+  o.querySelector('#go').onclick=async()=>{const n=o.querySelector('#nt').value.trim();if(f==='Other'&&!n){showErr(errL('nota'));return}o.querySelector('#go').disabled=true;const r=await opt.go(f,n);if(r)o._close();else o.querySelector('#go').disabled=false};
+}
+async function assign(tipo,f,n,rid){
+  const r=await call('board_tomar',{p_tipo:tipo,p_fuente:f,p_nota:n||null,p_roster:rid});
+  if(r){toast(T('Assigned to ','Asignado a ')+r.nombre)}
+  return r;
+}
+function manage(id){
+  const x=S.personas.find(z=>z.roster_id===id); if(!x)return;
+  let b='';
+  if(x.estado==='ocupado'&&x.up&&x.up.id){b+=(x.up.tipo==='cliente'||x.up.tipo==='be_back')?`<button class="btn g" data-c="close" data-r="venta">${esc(T('Close: Sale','Cerrar: Venta'))}</button><button class="btn r" data-c="close" data-r="look">${esc(T('Close: No sale','Cerrar: Sin venta'))}</button>`:`<button class="btn g" data-c="close" data-r="">${esc(T('Close (done)','Cerrar (terminó)'))}</button>`}
+  else{
+    if(x.estado!=='disponible')b+=`<button class="btn g" data-c="disp">${esc(T('Mark available','Marcar disponible'))}</button>`;
+    if(x.estado==='disponible')b+=`<button class="btn gold" data-c="skip">${esc(T('Give next customer to this person (skips the line)','Darle el próximo cliente a esta persona (salta la fila)'))}</button>`;
+    ['break','lunch','admin','otro'].forEach(m=>{if(!(x.estado==='ocupado'&&x.motivo===m))b+=`<button class="btn r sm" data-c="occ" data-m="${m}">${esc(motL(m))}</button>`});
+    if(x.estado!=='off')b+=`<button class="btn ghost" data-c="off">${esc(T('Clock out','Terminar turno'))}</button>`;
+  }
+  const o=overlay(`<h3 data-no-i18n>${esc(x.nombre)}</h3><div class="d" data-no-i18n>${x.cuenta?'':esc(T('No account yet — you can set their status from here.','Sin cuenta todavía — puedes cambiar su estado desde aquí.'))}</div><div class="foot col">${b}<button class="btn ghost" id="x">${esc(T('Cancel','Cancelar'))}</button></div>`);
+  o.querySelector('#x').onclick=closeO;
+  o.querySelectorAll('[data-c]').forEach(el=>el.onclick=async()=>{
+    const c=el.dataset.c; let r;
+    if(c==='skip'){o._close();pickSource({title:x.nombre,desc:T('Skips the line (recorded).','Salta la fila (queda registrado).'),go:(f,n)=>assign('cliente',f,n,id)});return}
+    if(c==='disp')r=await call('board_cambiar',{p_estado:'disponible',p_roster:id});
+    else if(c==='off')r=await call('board_cambiar',{p_estado:'off',p_roster:id});
+    else if(c==='occ')r=await call('board_cambiar',{p_estado:'ocupado',p_motivo:el.dataset.m,p_roster:id});
+    else if(c==='close')r=await call('board_cerrar',{p_up:x.up.id,p_resultado:el.dataset.r||null});
+    if(r)o._close();
+  });
+}
+(function init(){
+  if(!DH.token()){location.href='index.html';return}
+  load(); setInterval(()=>{if(!document.hidden&&!DLG&&!BUSY)load()},4000);
+  setInterval(()=>{if(S&&!DLG&&!document.hidden)render()},30000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)load()});
+})();
+</script>
+</body>
+</html>
