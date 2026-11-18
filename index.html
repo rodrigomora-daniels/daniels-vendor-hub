@@ -199,6 +199,7 @@
   .wp-foot{padding:10px 20px 12px;text-align:center;position:sticky;bottom:0;background:#fff;}
   .wp-foot .wp-help{font-size:11px;color:#777;margin-top:8px;}
 </style>
+<meta name="dh-i18n" content="on">
 </head>
 <body>
 
@@ -339,7 +340,7 @@
     <div class="tab-panel active" id="tab-home">
       <div id="news-hero" onclick="openNews()" role="button" tabindex="0" aria-label="Open news">
         <div class="nh-top"><span>📰 News / Noticias</span><span class="nh-more" id="nh-more">Tap to open / Toca para abrir ⤢</span></div>
-        <h3 id="nh-title"></h3><div class="nh-body" id="nh-body"></div>
+        <h3 id="nh-title" data-no-i18n></h3><div class="nh-body" id="nh-body" data-no-i18n></div>
       </div>
       <div id="news-full" onclick="if(event.target===this)closeNews()"><div class="nf-panel">
         <div class="nf-head"><h2>📰 News / Noticias</h2><button class="nf-x" onclick="closeNews()" aria-label="Close">✕</button></div>
@@ -1122,7 +1123,7 @@ function openNews(){
   var f=document.getElementById('news-full'), h=document.getElementById('news-hero'), panel=f.querySelector('.nf-panel');
   document.getElementById('nf-list').innerHTML=NEWS_ITEMS.map(function(n){
     var u=n.imagen_archivo_id&&NEWS_URLS[n.imagen_archivo_id];
-    return '<div class="nf-post">'+(u?'<img loading="lazy" alt="" src="'+nhEsc(u.url)+'">':'')+(n.fijada?'<small>📌 </small>':'')+'<h3>'+nhEsc(n.titulo)+'</h3><div class="by">'+nhFmt(n.publicada_en)+(n.autor?' · '+nhEsc(n.autor):'')+'</div><div class="b">'+nhEsc(n.cuerpo)+'</div></div>';
+    return '<div class="nf-post">'+(u?'<img loading="lazy" alt="" src="'+nhEsc(u.url)+'">':'')+(n.fijada?'<small>📌 </small>':'')+'<h3 data-no-i18n>'+nhEsc(n.titulo)+'</h3><div class="by">'+nhFmt(n.publicada_en)+(n.autor?' · '+nhEsc(n.autor):'')+'</div><div class="b" data-no-i18n>'+nhEsc(n.cuerpo)+'</div></div>';
   }).join('');
   var rc=h.getBoundingClientRect();
   f.classList.add('show'); document.body.style.overflow='hidden';

@@ -37,6 +37,7 @@
   #lb .bar{display:flex;justify-content:flex-end;padding:10px 16px} #lb .bar button{background:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer}
   #lb .stage{flex:1;overflow:auto;display:flex;align-items:flex-start;justify-content:center} #lb img{max-width:100%;height:auto;touch-action:pinch-zoom}
 </style>
+<meta name="dh-i18n" content="on">
 </head>
 <body>
 <header><h1>📰 News / Noticias</h1><a href="index.html">← Home / Inicio</a></header>
@@ -80,8 +81,8 @@ function render(){
     const u=n.imagen_archivo_id&&URLS[n.imagen_archivo_id];
     return `<div class="post">${u?`<img loading="lazy" src="${esc(u.url)}" alt="" onclick="zoom('${n.id}')">`:''}<div class="in">
       <div>${n.fijada?'<span class="tag pin">📌 Pinned</span>':''}${n.estado==='programada'?'<span class="tag warn">Scheduled</span>':''}${n.estado==='vencida'?'<span class="tag off">Expired</span>':''}${n.estado==='oculta'?'<span class="tag off">Hidden</span>':''}${n.roles?`<span class="tag">${esc(n.roles.join(', '))}</span>`:''}</div>
-      <h2>${esc(n.titulo)}</h2><div class="by">${fmt(n.publicada_en)}${n.autor?' · '+esc(n.autor):''}${n.expira_en?' · until '+fmt(n.expira_en):''}</div>
-      <div class="body">${esc(n.cuerpo)}</div>
+      <h2 data-no-i18n>${esc(n.titulo)}</h2><div class="by">${fmt(n.publicada_en)}${n.autor?' · '+esc(n.autor):''}${n.expira_en?' · until '+fmt(n.expira_en):''}</div>
+      <div class="body" data-no-i18n>${esc(n.cuerpo)}</div>
       ${D.puede_publicar?`<div style="margin-top:12px"><button class="btn ghost sm" onclick="edit('${n.id}')">Edit</button></div>`:''}</div></div>`;
   }).join('');
 }

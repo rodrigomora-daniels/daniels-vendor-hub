@@ -27,6 +27,7 @@
   .row{display:flex;gap:10px;flex-wrap:wrap} .row>*{flex:1;min-width:150px}
   .hide{display:none} .msg{padding:10px;border-radius:8px;margin-bottom:10px;font-size:13px;background:#fdecea;color:var(--red)}
 </style>
+<meta name="dh-i18n" content="on">
 </head>
 <body>
 <header><h1>📚 Resources / Recursos</h1><a href="index.html">← Home / Inicio</a></header>
@@ -45,6 +46,7 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let D=null;
 function err(t){const m=$('msg');m.textContent=t;m.classList.remove('hide');}
+window.addEventListener('dh-lang',()=>{if(D)render();});
 async function init(){
   if(!DH.token()){location.href='index.html';return;}
   try{D=await DH.rpc('recursos_listar');}catch(e){err('Could not load resources. / No se pudieron cargar los recursos.');return;}
@@ -70,7 +72,7 @@ function render(){
   const cats={}; items.forEach(i=>(cats[i.categoria]=cats[i.categoria]||[]).push(i));
   const names=Object.keys(cats).sort((x,y)=>catRank(x)-catRank(y)||x.localeCompare(y));
   names.forEach(c=>cats[c].sort((x,y)=>(x.orden||0)-(y.orden||0)||x.titulo.localeCompare(y.titulo)));
-  const index=names.length>1?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">${names.map(c=>`<a href="#${slug(c)}" style="text-decoration:none;background:#fff;border:1px solid #d6dbe6;border-radius:20px;padding:6px 12px;font-size:12px;font-weight:700;color:var(--navy)">${catIcon(c)} ${esc(c.split(' / ')[0].split(' (')[0])} <span style="color:var(--gray);font-weight:400">${cats[c].length}</span></a>`).join('')}</div>`:'';
+  const index=names.length>1?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">${names.map(c=>`<a href="#${slug(c)}" style="text-decoration:none;background:#fff;border:1px solid #d6dbe6;border-radius:20px;padding:6px 12px;font-size:12px;font-weight:700;color:var(--navy)">${catIcon(c)} ${esc(DH.i18n.pick(c).replace(/\s*\(.*\)/,''))} <span style="color:var(--gray);font-weight:400">${cats[c].length}</span></a>`).join('')}</div>`:'';
   let html=names.map(c=>`<div class="cat" id="${slug(c)}" style="scroll-margin-top:12px"><h2 style="display:flex;align-items:center;gap:8px;border-bottom:2px solid var(--gold);padding-bottom:6px;margin-bottom:10px">${catIcon(c)} ${esc(c)} <span class="tag" style="margin-left:auto">${cats[c].length}</span></h2>${cats[c].map(i=>`<div class="item"><div class="ico">${fileIcon(i)}</div><div class="t"><b>${esc(i.titulo)}</b><small>${esc(i.descripcion||'')}${i.roles?` <em>· ${esc(i.roles.join(', '))}</em>`:''}</small></div><span class="tag">${esc(i.idioma)}</span><span class="tag" style="background:#eee;color:#555">${fileKind(i)}</span>${i.restringido?'<span class="tag" style="background:#fde8e8;color:#b03030">🔒 Restricted</span>':''}${i.activo?'':'<span class="tag off">hidden</span>'}${D.puede_editar?`<button class="btn ghost sm" onclick="edit('${i.id}')">Edit</button>`:''}${i.archivo_id?`<button class="btn" onclick="openFile('${i.id}')">${/^application\/pdf$|^image/.test(i.mime||'')?'Open / Abrir':'Download / Descargar'}</button>`:`<a class="btn" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer">Open / Abrir</a>`}</div>`).join('')}</div>`).join('');
   if(!html)html='<div class="card">Nothing found. / No se encontró nada.</div>';
   html=index+html;
