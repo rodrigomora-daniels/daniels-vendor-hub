@@ -1,3 +1,12 @@
+/* Phones stuck in "Desktop site" mode render a ~980px-wide page (tiny text, desktop sidebar).
+   On a real phone screen, ask the browser for the phone's own width so the mobile layout applies. */
+(function(){try{
+  var sw=Math.min(screen.width||0,screen.height||0), coarse=window.matchMedia&&matchMedia('(pointer:coarse)').matches;
+  if(coarse&&sw>0&&sw<=500&&window.innerWidth>=800){
+    var m=document.querySelector('meta[name=viewport]'); if(!m){m=document.createElement('meta');m.name='viewport';document.head.appendChild(m);}
+    m.setAttribute('content','width='+sw+', initial-scale=1');
+  }
+}catch(e){}})();
 /* DH — server-issued session helper (Phase 1, used only by /next/ pages).
    The token lives in sessionStorage (cleared when the tab closes) and is sent as p_token to the
    p_token overloads of the RPCs. The browser never sends an employee id as proof of identity. */
