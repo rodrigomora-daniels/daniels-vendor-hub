@@ -49,6 +49,19 @@
   .acc .bd{display:none;padding:4px 16px 18px;border-top:1px solid #eef0f4}
   .acc.open .bd{display:block}
   .acc .none{color:var(--gray);font-size:13px;padding:14px 2px}
+  .vt{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+  .cal{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.07);padding:14px 14px 10px}
+  .cal .nav{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .cal .nav h2{font:600 22px 'Segoe UI',Arial,sans-serif;color:#262626;flex:1}
+  .cal .nav button{border:1px solid #ccc;background:#fff;border-radius:8px;padding:6px 12px;font-weight:700;cursor:pointer}
+  .cal .dow,.cal .days{display:grid;grid-template-columns:repeat(7,1fr)}
+  .cal .dow div{font:700 11px Arial,sans-serif;letter-spacing:1px;text-transform:uppercase;color:#777;padding:4px 6px;border-bottom:2px solid var(--navy)}
+  .cal .wk{position:relative;border-bottom:1px solid #e5e8ee;background:repeating-linear-gradient(90deg,transparent 0,transparent calc(100%/7 - 1px),#e5e8ee calc(100%/7 - 1px),#e5e8ee calc(100%/7))}
+  .cal .days div{padding:4px 6px;font:600 12px Arial,sans-serif;color:#555;min-height:24px}
+  .cal .days div.o{color:#bbb} .cal .days div.t span{background:var(--navy);color:#fff;border-radius:10px;padding:1px 7px}
+  .cal .bars{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:24px;gap:3px 0;padding:0 2px 8px;min-height:30px}
+  .cal .bar{margin:0 2px;border-radius:5px;color:#fff;font:600 12px/24px Arial,sans-serif;padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;border:0;text-align:left}
+  .cal .lg{display:flex;gap:6px 14px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:#555} .cal .lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px}
   .empty{background:#fff;border-radius:12px;padding:24px;text-align:center;color:var(--gray)}
 </style>
 <meta name="dh-i18n" content="on">
@@ -72,7 +85,30 @@ let D=null, URLS={}, TAB='vigente';
 const TABS=[['vigente','Current / Vigentes'],['programada','Upcoming / Próximas'],['vencida','Past / Anteriores'],['oculta','Hidden / Ocultas']];
 const ROLES=['vendedor','staff','manager','director'];
 const SECS=['Current week Mailers','Spiders and Aldi Signs','Future WRAP Mailers','Spectrum Commercials','Insert & Billboard','Social Media Post & Current Running Product List','Holiday List Coming soon','Campaign Calendar'];
-let OPEN=null;
+let OPEN=null, VIEW='list';
+const _n=new Date(new Date().toLocaleString('en-US',{timeZone:'America/Los_Angeles'}));
+let CAL={y:_n.getFullYear(),m:_n.getMonth()};
+const COLORS=['#1B3A6B','#C8922A','#2E7D32','#8E44AD','#C0392B','#16808D','#D35400','#566573'];
+const dIdx=t=>{const[y,m,d]=t.split('-').map(Number);return Math.floor(Date.UTC(y,m-1,d)/864e5);};
+function calGo(n){if(n===0){CAL={y:_n.getFullYear(),m:_n.getMonth()};}else{CAL.m+=n;if(CAL.m<0){CAL.m=11;CAL.y--;}if(CAL.m>11){CAL.m=0;CAL.y++;}}render();}
+function calHTML(){
+  const lg=DH.i18n&&DH.i18n.lang==='es'?'es-US':'en-US', first=new Date(Date.UTC(CAL.y,CAL.m,1)), dim=new Date(Date.UTC(CAL.y,CAL.m+1,0)).getUTCDate();
+  const s0=Math.floor(first/864e5)-first.getUTCDay(), weeks=Math.ceil((first.getUTCDay()+dim)/7);
+  const today=Math.floor(Date.UTC(_n.getFullYear(),_n.getMonth(),_n.getDate())/864e5);
+  const names=[...SECS,...new Set((D.items||[]).map(i=>i.seccion).filter(x=>x&&!SECS.includes(x)))];
+  const col=i=>COLORS[Math.max(0,names.indexOf(i.seccion))%COLORS.length];
+  const its=(D.items||[]).filter(i=>i.estado!=='oculta'&&i.vigente_desde).map(i=>({i,a:dIdx(i.vigente_desde),b:i.vigente_hasta?dIdx(i.vigente_hasta):dIdx(i.vigente_desde)+3650})).sort((x,y)=>x.a-y.a||x.b-y.b);
+  const dow=[0,1,2,3,4,5,6].map(k=>new Date(Date.UTC(2023,0,1+k)).toLocaleDateString(lg,{weekday:'short',timeZone:'UTC'}));
+  let h=`<div class="cal"><div class="nav"><button onclick="calGo(-1)" aria-label="Previous">‹</button><h2 data-no-i18n>${first.toLocaleDateString(lg,{month:'long',year:'numeric',timeZone:'UTC'})}</h2><button onclick="calGo(0)">Today / Hoy</button><button onclick="calGo(1)" aria-label="Next">›</button></div><div class="dow" data-no-i18n>${dow.map(d=>`<div>${d}</div>`).join('')}</div>`;
+  for(let w=0;w<weeks;w++){
+    const ws=s0+7*w, we=ws+6, lanes=[];
+    const bars=its.filter(x=>x.a<=we&&x.b>=ws).map(x=>{const c1=Math.max(x.a,ws)-ws+1,c2=Math.min(x.b,we)-ws+2;let l=lanes.findIndex(e=>e<c1);if(l<0){l=lanes.length;lanes.push(0);}lanes[l]=c2-1;return `<button class="bar" style="grid-column:${c1}/${c2};grid-row:${l+1};background:${col(x.i)}" title="${esc(x.i.titulo)}${x.i.seccion?' · '+esc(x.i.seccion):''}" onclick="openItem('${x.i.id}')" data-no-i18n>${esc(x.i.titulo)}</button>`;}).join('');
+    h+=`<div class="wk"><div class="days" data-no-i18n>${[0,1,2,3,4,5,6].map(k=>{const t=new Date((ws+k)*864e5),o=t.getUTCMonth()!==CAL.m;return `<div class="${o?'o':''} ${ws+k===today?'t':''}"><span>${t.getUTCDate()}</span></div>`;}).join('')}</div><div class="bars">${bars}</div></div>`;
+  }
+  const used=names.filter(n=>its.some(x=>x.i.seccion===n));
+  h+=`<div class="lg" data-no-i18n>${used.map(n=>`<span><i style="background:${COLORS[names.indexOf(n)%COLORS.length]}"></i>${esc(n)}</span>`).join('')}</div></div>`;
+  return h;
+}
 function err(t){const m=$('msg');m.textContent=t;m.className='msg';}
 function ok(t){const m=$('msg');m.textContent=t;m.className='msg ok';setTimeout(()=>m.classList.add('hide'),4000);}
 function fmt(d){if(!d)return '';const[y,m,dd]=d.split('-');return `${m}/${dd}/${y}`;}
@@ -92,7 +128,9 @@ async function load(){
 function render(){
   const counts={};(D.items||[]).forEach(i=>counts[i.estado]=(counts[i.estado]||0)+1);
   const tabs=TABS.filter(t=>t[0]==='vigente'||t[0]==='vencida'||D.puede_publicar);
-  $('tabs').innerHTML=tabs.map(t=>`<button class="tab ${t[0]===TAB?'on':''}" onclick="TAB='${t[0]}';OPEN=null;render()">${t[1]}${counts[t[0]]?' ('+counts[t[0]]+')':''}</button>`).join('');
+  const vt=`<div class="vt" style="flex-basis:100%"><button class="tab ${VIEW==='list'?'on':''}" onclick="VIEW='list';render()">☰ By section / Por sección</button><button class="tab ${VIEW==='cal'?'on':''}" onclick="VIEW='cal';render()">📅 Calendar / Calendario</button></div>`;
+  if(VIEW==='cal'){$('tabs').innerHTML=vt;$('grid').className='';$('grid').innerHTML=calHTML();return;}
+  $('tabs').innerHTML=vt+tabs.map(t=>`<button class="tab ${t[0]===TAB?'on':''}" onclick="TAB='${t[0]}';OPEN=null;render()">${t[1]}${counts[t[0]]?' ('+counts[t[0]]+')':''}</button>`).join('');
   const inTab=(D.items||[]).filter(i=>i.estado===TAB);
   const extra=[...new Set(inTab.map(i=>i.seccion).filter(x=>x&&!SECS.includes(x)))];
   const names=[...SECS,...extra,...(inTab.some(i=>!i.seccion)?['']:[])];
