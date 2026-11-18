@@ -15,11 +15,37 @@
   .tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
   .tab{padding:9px 16px;border-radius:20px;border:1px solid #ccc;background:#fff;font-weight:700;font-size:13px;cursor:pointer;color:#444}
   .tab.on{background:var(--navy);color:#fff;border-color:var(--navy)}
-  .post{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:16px}
-  .post img{width:100%;max-height:420px;object-fit:cover;display:block;cursor:pointer}
-  .post .in{padding:16px 18px} .post h2{color:var(--navy);font-size:18px;margin-bottom:4px}
-  .post .by{font-size:12px;color:var(--gray);margin-bottom:10px}
-  .post .body{font-size:14px;line-height:1.55;white-space:pre-wrap;word-wrap:break-word}
+  body{background:#f7f3ea}
+  main{max-width:1000px}
+  .mast{text-align:center;padding:22px 0 0;margin-bottom:22px}
+  .mast .kick{font:700 11px Arial,sans-serif;letter-spacing:3px;color:var(--gold);text-transform:uppercase}
+  .mast h2{font:700 44px/1.05 Georgia,'Times New Roman',serif;color:var(--navy);margin:6px 0 10px;letter-spacing:-.5px}
+  .mast .dl{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;border-top:3px solid var(--navy);border-bottom:1px solid var(--navy);padding:6px 2px;font:700 11px Arial,sans-serif;letter-spacing:1.5px;color:#4a4a4a;text-transform:uppercase}
+  .mast .dl span:last-child{color:var(--gold)}
+  .tabs{justify-content:center;margin:0 0 18px}
+  .tab{border-radius:0;border:0;border-bottom:2px solid transparent;background:none;padding:6px 10px;font:700 11px Arial,sans-serif;letter-spacing:1.2px;text-transform:uppercase;color:#777}
+  .tab.on{background:none;color:var(--navy);border-bottom-color:var(--gold)}
+  .st{font-family:Georgia,'Times New Roman',serif;color:#262626}
+  .st .kick{font:700 10.5px Arial,sans-serif;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
+  .st h3{font:700 22px/1.2 Georgia,'Times New Roman',serif;color:var(--navy);margin-bottom:6px}
+  .st .by{font:12px Arial,sans-serif;color:#8a8577;letter-spacing:.4px;margin-bottom:10px;text-transform:uppercase}
+  .st .tx{font-size:16px;line-height:1.65;white-space:pre-wrap;word-wrap:break-word}
+  .st img{width:100%;display:block;cursor:zoom-in;object-fit:cover;margin-bottom:12px}
+  .lead{background:#fff;border-top:4px solid var(--navy);box-shadow:0 1px 0 #e3dccb,0 12px 30px -18px rgba(27,58,107,.35);padding:26px 28px 24px;margin-bottom:26px}
+  .lead h3{font-size:34px;line-height:1.12;margin-bottom:8px}
+  .lead img{aspect-ratio:16/8;margin-bottom:16px}
+  .lead .by{margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #e3dccb}
+  .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:0 28px}
+  .side{padding:18px 0;border-top:1px solid #cfc6b0}
+  .side img{aspect-ratio:3/2}
+  .side .tx.clamp{max-height:7.2em;overflow:hidden;-webkit-mask-image:linear-gradient(#000 60%,transparent);mask-image:linear-gradient(#000 60%,transparent)}
+  .more{background:none;border:0;color:var(--navy);font:700 12px Arial,sans-serif;letter-spacing:.5px;cursor:pointer;padding:6px 0;text-transform:uppercase;border-bottom:2px solid var(--gold)}
+  .secs{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin-top:4px}
+  .sec{border:1px solid #e3dccb;border-top:3px solid var(--gold);background:#fdfbf6;padding:12px 14px}
+  .sec b{display:block;font:700 12px Arial,sans-serif;letter-spacing:1.4px;text-transform:uppercase;color:var(--navy);margin-bottom:6px}
+  .sec div{font-size:15px;line-height:1.55}
+  .adm{margin-top:10px}
+  @media(max-width:760px){.mast h2{font-size:32px}.grid2{grid-template-columns:1fr}.lead{padding:18px 16px}.lead h3{font-size:26px}}
   .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;background:var(--lt);color:var(--navy);font-weight:700;margin-right:4px}
   .tag.pin{background:#fdf1d8;color:#7a5b00} .tag.off{background:#eee;color:#777} .tag.warn{background:#fff3cd;color:#7a5b00}
   .btn{padding:8px 14px;border-radius:8px;border:none;font-weight:700;font-size:13px;cursor:pointer;background:var(--navy);color:#fff;text-decoration:none;display:inline-block}
@@ -43,6 +69,7 @@
 <header><h1>📰 News / Noticias</h1><a href="index.html">← Home / Inicio</a></header>
 <main>
   <div id="msg" class="msg hide"></div>
+  <div class="mast"><div class="kick">Daniel's Home Center</div><h2>Company News / Noticias de la empresa</h2><div class="dl" data-no-i18n><span id="mdate"></span><span id="mcount"></span></div></div>
   <div class="tabs" id="tabs"></div>
   <div id="pubbar" class="hide" style="margin-bottom:12px"><button class="btn" onclick="edit(null)">+ New post / Nueva noticia</button></div>
   <div id="edit" class="card hide"></div>
@@ -71,24 +98,44 @@ async function load(){
   $('pubbar').classList.toggle('hide',!D.puede_publicar);
   render();
 }
+function blocks(t){ // light formatting: "UPPERCASE HEADING" + lines => little boxed sections
+  const parts=String(t||'').split(/\n{2,}/).map(x=>x.trim()).filter(Boolean);
+  const isHead=x=>/^[A-Z0-9][A-Z0-9 '&’\-]{3,}(\s·\s.*)?$/.test(x.split('\n')[0]) && x.split('\n').length>1;
+  return {secs:parts.filter(isHead).length>=3 && parts.every(isHead), parts};
+}
+function body(n,clamp){
+  const bl=blocks(n.cuerpo);
+  if(bl.secs&&!clamp) return '<div class="secs">'+bl.parts.map(x=>{const ls=x.split('\n');return `<div class="sec"><b>${esc(ls[0])}</b><div>${ls.slice(1).map(esc).join('<br>')}</div></div>`;}).join('')+'</div>';
+  return `<div class="tx${clamp?' clamp':''}">${esc(n.cuerpo)}</div>`;
+}
+function tags(n){return (n.estado==='programada'?'<span class="tag warn">Scheduled</span>':'')+(n.estado==='vencida'?'<span class="tag off">Expired</span>':'')+(n.estado==='oculta'?'<span class="tag off">Hidden</span>':'')+(n.roles?`<span class="tag">${esc(n.roles.join(', '))}</span>`:'');}
+function story(n,lead){
+  const u=n.imagen_archivo_id&&URLS[n.imagen_archivo_id];
+  const long=!lead&&String(n.cuerpo||'').length>260;
+  return `<article class="st ${lead?'lead':'side'}" id="s-${n.id}">${u?`<img loading="lazy" src="${esc(u.url)}" alt="" onclick="zoom('${n.id}')">`:''}
+    <div class="kick">${n.fijada?'📌 Featured / Destacada':(lead?'Latest / Reciente':'News / Noticia')} ${tags(n)}</div>
+    <h3 data-no-i18n>${esc(n.titulo)}</h3>
+    <div class="by" data-no-i18n>${fmt(n.publicada_en)}${n.autor?' · '+esc(n.autor):''}${n.expira_en?' · until '+fmt(n.expira_en):''}</div>
+    <div data-no-i18n>${body(n,long)}</div>
+    ${long?`<button class="more" onclick="more('${n.id}')">Read more / Leer más</button>`:''}
+    ${D.puede_publicar?`<div class="adm"><button class="btn ghost sm" onclick="edit('${n.id}')">Edit</button></div>`:''}</article>`;
+}
+function more(id){const n=D.items.find(x=>x.id===id),el=$('s-'+id);if(!el)return;el.outerHTML=story(n,false).replace('class="st side"','class="st side open"').replace(/<button class="more"[\s\S]*?<\/button>/,'').replace('class="tx clamp"','class="tx"');}
 function render(){
+  const lg=(window.DH&&DH.i18n&&DH.i18n.lang)||'en';
+  const md=$('mdate'); if(md) md.textContent=new Date().toLocaleDateString(lg==='es'?'es-US':'en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric',timeZone:'America/Los_Angeles'});
   const counts={};(D.items||[]).forEach(i=>counts[i.estado]=(counts[i.estado]||0)+1);
   const tabs=TABS.filter(t=>t[0]==='vigente'||D.puede_publicar);
   $('tabs').innerHTML=tabs.length>1?tabs.map(t=>`<button class="tab ${t[0]===TAB?'on':''}" onclick="TAB='${t[0]}';render()">${t[1]}${counts[t[0]]?' ('+counts[t[0]]+')':''}</button>`).join(''):'';
   const items=(D.items||[]).filter(i=>i.estado===TAB);
+  const mc=$('mcount'); if(mc) mc.textContent=items.length?items.length+(items.length===1?' story':' stories'):'';
   if(!items.length){$('list').innerHTML='<div class="empty">No news yet. / Todavía no hay noticias.</div>';return;}
-  $('list').innerHTML=items.map(n=>{
-    const u=n.imagen_archivo_id&&URLS[n.imagen_archivo_id];
-    return `<div class="post">${u?`<img loading="lazy" src="${esc(u.url)}" alt="" onclick="zoom('${n.id}')">`:''}<div class="in">
-      <div>${n.fijada?'<span class="tag pin">📌 Pinned</span>':''}${n.estado==='programada'?'<span class="tag warn">Scheduled</span>':''}${n.estado==='vencida'?'<span class="tag off">Expired</span>':''}${n.estado==='oculta'?'<span class="tag off">Hidden</span>':''}${n.roles?`<span class="tag">${esc(n.roles.join(', '))}</span>`:''}</div>
-      <h2 data-no-i18n>${esc(n.titulo)}</h2><div class="by">${fmt(n.publicada_en)}${n.autor?' · '+esc(n.autor):''}${n.expira_en?' · until '+fmt(n.expira_en):''}</div>
-      <div class="body" data-no-i18n>${esc(n.cuerpo)}</div>
-      ${D.puede_publicar?`<div style="margin-top:12px"><button class="btn ghost sm" onclick="edit('${n.id}')">Edit</button></div>`:''}</div></div>`;
-  }).join('');
+  $('list').innerHTML=story(items[0],true)+(items.length>1?`<div class="grid2">${items.slice(1).map(n=>story(n,false)).join('')}</div>`:'');
 }
 function zoom(id){const n=D.items.find(x=>x.id===id),u=URLS[n.imagen_archivo_id];if(!u)return;$('lbi').src=u.url;$('lb').classList.remove('hide');document.body.style.overflow='hidden';}
 function closeLb(){$('lb').classList.add('hide');$('lbi').src='';document.body.style.overflow='';}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLb();});
+window.addEventListener('dh-lang',()=>{if(D)render();});
 
 function edit(id){
   const today=new Date().toLocaleDateString('en-CA',{timeZone:'America/Los_Angeles'});
