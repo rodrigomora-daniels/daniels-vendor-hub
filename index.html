@@ -384,6 +384,7 @@
   <button class="nl" onclick="navigateToTool('promociones')"><span>📣</span>Promotions / Promociones</button>
   <button class="nl" onclick="navigateToTool('calendario')"><span>📅</span>Commercial calendar / Calendario comercial</button>
   <button class="nl" onclick="navigateToTool('recursos')"><span>📚</span>Resources / Recursos</button>
+  <button class="nl" onclick="navigateToTool('capacitacion')"><span>🧭</span>Training / Capacitación</button>
   <button class="nl" onclick="navigateToTool('mensajes')"><span>💬</span>Messages / Mensajes<b class="bdg" id="msg-bdg" style="display:none"></b></button>
   <div class="grp">My work / Mi trabajo</div>
   <button class="nl" onclick="navigateToEvaluacion()"><span>📋</span>My Evaluation / Mi Evaluación</button>
@@ -502,6 +503,11 @@
           <div class="home-card-icon">📰</div>
           <h3>News / Noticias</h3>
           <p>Company news and recognitions. / Noticias y reconocimientos de la empresa.</p>
+        </div>
+        <div class="home-card" onclick="navigateToTool('capacitacion')">
+          <div class="home-card-icon">🧭</div>
+          <h3>Training / Capacitación</h3>
+          <p>Your first-week plan, videos, scripts and manuals, all in one place. / Tu plan de la primera semana, videos, guiones y manuales en un solo lugar.</p>
         </div>
         <div class="home-card" onclick="navigateToTool('calendario')">
           <div class="home-card-icon">📅</div>
@@ -1193,6 +1199,7 @@ const TOOL_URLS = {
   recursos: 'recursos.html',
   promociones: 'promociones.html',
   calendario: 'calendario.html',
+  capacitacion: 'capacitacion.html',
   noticias: 'noticias.html',
   mensajes: 'mensajes.html',
   notas: 'notas.html'
@@ -1310,7 +1317,7 @@ function goToExam(tier) {
     return;
   }
   const emp = await DH.restore();
-  if (emp) { session.empleado = emp; await loadDashboard(); }
+  if (emp) { session.empleado = emp; await loadDashboard(); if (/[?&]go=certifications/.test(location.search)) { try { switchTab('certifications'); } catch (e) {} } }
 })();
 
 // Allow Enter key to submit login

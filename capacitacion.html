@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1B3A6B">
+<title>My Workspace — Training / Capacitación</title>
+<style>
+  :root{--navy:#1B3A6B;--rail:#12284A;--gold:#C8922A;--lt:#D6E4F7;--ink:#1E2735;--gray:#5F6B7A;--paper:#FBF7EE;--ok:#2E7D32}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#EEF1F6;color:var(--ink)}
+  header{background:var(--navy);border-bottom:3px solid var(--gold);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;color:#fff}
+  header h1{font-size:18px} header a{color:var(--lt);font-size:13px;text-decoration:none}
+  main{max-width:1120px;margin:0 auto;padding:18px 16px 70px}
+  button{font-family:inherit} :focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .hero{background:var(--rail);color:#fff;border-radius:10px;padding:26px 28px;border-left:6px solid var(--gold);display:grid;grid-template-columns:1fr auto;gap:18px 30px;align-items:end;box-shadow:0 16px 36px -24px rgba(18,40,74,.8)}
+  .hero h2{font:700 clamp(30px,5vw,52px)/1.05 Georgia,'Times New Roman',serif;letter-spacing:-.5px}
+  .hero p{margin-top:10px;color:#cfe0f7;max-width:62ch;line-height:1.5;font-size:16px}
+  .prog{min-width:190px;text-align:right}.prog b{display:block;font:700 40px/1 Georgia,serif;color:#E8C878}.prog span{font-size:14px;color:#cfe0f7}
+  .prog i{display:block;height:6px;border-radius:3px;background:rgba(255,255,255,.18);margin-top:8px;overflow:hidden}.prog i u{display:block;height:100%;background:var(--gold);border-radius:3px;transition:width .3s}
+  .rules{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0 4px}
+  .rules div{background:#fff;border-radius:8px;padding:12px 14px;font-size:14px;line-height:1.35;border-top:3px solid var(--gold);font-weight:600}
+  .seg{display:flex;gap:8px;margin:18px 0 14px;flex-wrap:wrap}
+  .seg button{border:1px solid #cfd6e2;background:#fff;border-radius:22px;min-height:44px;padding:0 20px;font-weight:700;font-size:15px;cursor:pointer;color:var(--ink)}
+  .seg button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+  /* hang tags */
+  .tags{position:relative;display:flex;gap:12px;overflow-x:auto;padding:26px 4px 14px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+  .tags:before{content:"";position:absolute;left:0;right:0;top:14px;border-top:2px dashed #9fb0c8}
+  .tag{position:relative;flex:0 0 138px;scroll-snap-align:start;background:var(--paper);border:1px solid #d9cfb8;border-radius:6px 6px 10px 10px;padding:26px 12px 12px;text-align:left;cursor:pointer;color:var(--ink);min-height:112px;clip-path:polygon(14px 0,calc(100% - 14px) 0,100% 14px,100% 100%,0 100%,0 14px);transition:transform .15s}
+  .tag:before{content:"";position:absolute;top:8px;left:50%;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:#EEF1F6;border:2px solid #b9a98a}
+  .tag .n{font:700 30px/1 Georgia,serif;color:var(--navy)} .tag .t{display:block;margin-top:6px;font-size:13px;line-height:1.25;font-weight:600}
+  .tag:hover{transform:translateY(2px)}
+  .tag.on{background:var(--navy);color:#fff;border-color:var(--navy)} .tag.on .n{color:#E8C878} .tag.on:before{border-color:var(--gold)}
+  .tag .ck{position:absolute;right:8px;top:24px;width:22px;height:22px;border-radius:50%;background:var(--ok);color:#fff;font-size:13px;display:none;align-items:center;justify-content:center;font-weight:700}
+  .tag.done .ck{display:flex}
+  .day{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;margin-top:6px}
+  .card{background:#fff;border-radius:10px;padding:22px 24px;box-shadow:0 1px 0 #dfe5ee}
+  .day h3{font:700 clamp(24px,3.4vw,34px)/1.15 Georgia,serif;color:var(--navy);margin-bottom:8px}
+  .obj{font-size:17px;line-height:1.5;color:#33404f;margin-bottom:16px}
+  .blk{border-top:1px solid #e6e9ef;padding:14px 0 4px}
+  .blk h4{font-size:15px;color:var(--navy);margin-bottom:8px}
+  .blk h5{font-size:14px;margin:10px 0 4px}
+  .blk ul{list-style:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 18px}
+  .blk li{font-size:15px;line-height:1.4;padding-left:18px;position:relative}
+  .blk li:before{content:"";position:absolute;left:2px;top:.55em;width:7px;height:7px;border-radius:2px;background:var(--gold)}
+  .quote{font:italic 600 19px/1.4 Georgia,serif;color:var(--navy);border-left:4px solid var(--gold);padding:4px 0 4px 14px;margin:12px 0}
+  .note{background:#F4F6FA;border-radius:8px;padding:10px 12px;font-size:14px;color:var(--gray);margin:10px 0;line-height:1.45}
+  .out{background:#EAF5EC;border-left:5px solid var(--ok);border-radius:8px;padding:12px 14px;margin-top:14px;font-size:15px;font-weight:600;line-height:1.4}
+  .out small{display:block;color:var(--ok);font-weight:700;margin-bottom:2px}
+  .acts{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+  .btn{border:1px solid #cfd6e2;background:#fff;border-radius:10px;min-height:46px;padding:0 18px;font-weight:700;font-size:15px;cursor:pointer;color:var(--ink);display:inline-flex;align-items:center;gap:8px;text-decoration:none}
+  .btn.p{background:var(--navy);border-color:var(--navy);color:#fff}.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+  .side h4{font-size:15px;color:var(--navy);margin-bottom:10px}
+  .vid{display:flex;gap:12px;width:100%;text-align:left;border:0;background:none;padding:8px 0;border-top:1px solid #eef0f4;cursor:pointer;align-items:center;min-height:68px}
+  .vid:first-of-type{border-top:0}
+  .vid .th{position:relative;flex:0 0 112px;aspect-ratio:16/9;border-radius:6px;overflow:hidden;background:#222}
+  .vid img{width:100%;height:100%;object-fit:cover;display:block}
+  .vid .th:after{content:"▶";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;background:rgba(0,0,0,.28)}
+  .vid b{font-size:14px;line-height:1.3;color:var(--ink)} .vid small{display:block;color:var(--gray);font-size:12px;margin-top:2px}
+  .lib{display:flex;gap:10px;align-items:center;width:100%;border:0;background:#F4F6FA;border-radius:8px;padding:10px 12px;margin-bottom:8px;text-align:left;cursor:pointer;min-height:48px;font-size:14px;font-weight:600;color:var(--ink)}
+  .lib span:first-child{font-size:20px}.lib span:last-child{font-size:14px}
+  .sp{margin-bottom:16px}
+  .stages{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .stage{background:#fff;border-radius:10px;padding:22px;border-top:5px solid var(--navy)}
+  .stage .w{font:700 34px/1 Georgia,serif;color:var(--navy)} .stage h4{margin:8px 0 10px;font-size:16px}
+  .kp{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px}
+  .kp div{background:var(--rail);color:#fff;border-radius:10px;padding:18px;font:700 17px/1.25 Georgia,serif;border-bottom:4px solid var(--gold)}
+  .grp{margin:16px 0 6px;font-size:15px;font-weight:700;color:var(--navy)}
+  .rl{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+  .rl .lib{margin:0;background:#fff}
+  .modal{position:fixed;inset:0;background:rgba(8,18,38,.88);z-index:60;display:none;flex-direction:column;align-items:center;justify-content:center;padding:14px}
+  .modal.show{display:flex}.modal .box{width:min(960px,100%)}
+  .modal .bar{display:flex;justify-content:space-between;align-items:center;color:#fff;margin-bottom:8px;gap:10px}.modal .bar b{font-size:15px}
+  .modal .bar button{background:#fff;border:0;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;min-height:44px}
+  .modal .fr{position:relative;aspect-ratio:16/9;background:#000;border-radius:8px;overflow:hidden}.modal iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+  .modal small{color:#b9c8df;display:block;margin-top:8px;font-size:13px}
+
+  .cks{display:grid;gap:8px;margin-top:4px}
+  .ck2{display:flex;gap:12px;align-items:center;width:100%;text-align:left;border:1px solid #d9dfe9;background:#fff;border-radius:10px;padding:10px 12px;min-height:50px;cursor:pointer;font-size:15px;line-height:1.35;color:var(--ink)}
+  .ck2 i{flex:0 0 26px;height:26px;border-radius:7px;border:2px solid #aab6c8;display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:700;color:#fff}
+  .ck2.on{background:#EAF5EC;border-color:#b6d9bb}.ck2.on i{background:var(--ok);border-color:var(--ok)}
+  .say{display:grid;gap:8px}
+  .say p{background:#F4F6FA;border-left:4px solid var(--gold);border-radius:4px 10px 10px 4px;padding:10px 14px;font-size:15px;line-height:1.45}
+  ol.four{list-style:none;counter-reset:s;display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px}
+  ol.four li{counter-increment:s;background:var(--rail);color:#fff;border-radius:10px;padding:14px 14px 14px 48px;position:relative;font-weight:600;font-size:15px;line-height:1.35}
+  ol.four li:before{content:counter(s);position:absolute;left:12px;top:10px;font:700 26px Georgia,serif;color:#E8C878}
+  .obj2{border-top:1px solid #e6e9ef;padding:10px 0}.obj2 b{color:var(--navy);font-size:15px}.obj2 p{margin-top:4px;font-size:15px;line-height:1.45;color:#33404f}
+  .kp small{display:block;margin-top:8px;font:400 13px/1.4 'Segoe UI',Arial,sans-serif;color:#cfe0f7}
+  @media(max-width:860px){ol.four{grid-template-columns:1fr}}
+  .hide{display:none!important}
+  @media(max-width:860px){.hero{grid-template-columns:1fr}.prog{text-align:left}.rules{grid-template-columns:1fr 1fr}.day{grid-template-columns:1fr}.stages{grid-template-columns:1fr}.kp{grid-template-columns:1fr 1fr}.blk ul{grid-template-columns:1fr}.card{padding:18px}}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<meta name="dh-i18n" content="on">
+</head>
+<body>
+<header><h1>🎓 Training / Capacitación</h1><a href="index.html">← Home / Inicio</a></header>
+<main data-no-i18n id="app"></main>
+<div class="modal" id="vm" onclick="if(event.target===this)closeV()"><div class="box"><div class="bar"><b id="vt"></b><button onclick="closeV()" id="vc"></button></div><div class="fr" id="vf"></div><small id="vs"></small></div></div>
+<script src="dh-session.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LG=()=>(window.DH&&DH.i18n&&DH.i18n.lang==='es')?'es':'en';
+const T=o=>o==null?'':(typeof o==='string'?o:(o[LG()]||o.en));
+const A=o=>Array.isArray(o)?o:(o[LG()]||o.en);
+const X=(en,es)=>({en,es});
+const UI={
+ title:X('Your first week at Daniels','Tu primera semana en Daniels'),
+ intro:X('Please read carefully before you start. Each part builds on the previous one, and it is built to take you from learning mode to real performance on the sales floor.','Lee con atención antes de empezar. Cada parte se apoya en la anterior y está hecha para llevarte del aprendizaje al desempeño real en el piso de ventas.'),
+ mission:X('We don’t just sell products — we help customers build their homes.','No solo vendemos productos: ayudamos a los clientes a construir su hogar.'),
+ done:X('days completed','días completados'),
+ tabs:[X('Week 1','Semana 1'),X('Weeks 2–8','Semanas 2–8'),X('Manuals & policies','Manuales y políticas'),X('Glossary','Glosario')],selfcheck:X('Self-check: can you do this?','Autoevaluación: ¿puedes hacer esto?'),say:X('Say it like this','Dilo así'),playbook:X('Handle objections in 4 steps','Maneja objeciones en 4 pasos'),common:X('Five objections you will hear','Cinco objeciones que vas a escuchar'),habits:X('Habits of top associates','Hábitos de los mejores asociados'),watch:X('Watch: handling objections (in English)','Mira: manejo de objeciones (en inglés)'),
+ rules:[X('Do not skip steps','No te saltes pasos'),X('Do not assume prior knowledge','No asumas conocimientos previos'),X('Do not move on before finishing each section','No avances sin terminar cada sección'),X('Unclear? Ask your Manager Mentor first','¿Algo no está claro? Pregunta primero a tu Manager Mentor')],
+ day:X('Day','Día'),training:X('Training','Capacitación'),shadow:X('Shadowing','Acompañamiento'),practice:X('Practice','Práctica'),outcome:X('By the end of this day','Al terminar este día'),
+ videos:X('Videos (in English)','Videos (en inglés)'),manuals:X('Manuals for this day','Manuales de este día'),
+ mark:X('Mark day as done','Marcar día como completado'),undo:X('Done · tap to undo','Completado · toca para deshacer'),next:X('Next day','Siguiente día'),
+ close:X('Close ✕','Cerrar ✕'),open:X('Open','Abrir'),
+ goal:X('By the end of Week 1 you will be able to:','Al terminar la semana 1 podrás:'),
+ structure:X('Every day combines three parts','Cada día combina tres partes'),
+ stages:X('After week 1: keep growing','Después de la semana 1: sigue creciendo'),
+ track:X('What we track','Qué medimos'),
+ all:X('See all resources','Ver todos los recursos'),
+ notFound:X('This manual is not available right now.','Este manual no está disponible por ahora.')
+};
+const GOAL=[X('Understand Daniels policies, culture and expectations','Entender las políticas, la cultura y las expectativas de Daniels'),X('Run a basic sales flow with confidence','Ejecutar con seguridad un flujo de ventas básico'),X('Use the tools (website and systems) to support the sale','Usar las herramientas (sitio web y sistemas) para apoyar la venta'),X('Handle the credit process correctly','Manejar correctamente el proceso de crédito'),X('Treat customers professionally, in person and by phone','Atender a los clientes con profesionalismo, en persona y por teléfono')];
+const STRUCT=[[X('Training','Capacitación'),X('Learn the content in the Workspace','Aprende el contenido en el Workspace')],[X('Shadowing','Acompañamiento'),X('Learn from real interactions','Aprende de interacciones reales')],[X('Floor practice','Práctica en el piso'),X('Apply it with a Manager Mentor','Aplícalo con un Manager Mentor')]];
+const VID={
+ hOhqI41XP4I:X('How to log in to InfinityX and main menu overview','Cómo iniciar sesión en InfinityX y vista general del menú principal'),
+ niBChllmB5k:X('How to do a return to stock','Cómo hacer una devolución a inventario'),
+ J_ShdwOf7V4:X('How to deliver a customer pickup (will call)','Cómo entregar un pedido que el cliente recoge (will call)'),
+ jEWQdjBrS3M:X('How to make a sale with 3rd-party financing (not integrated)','Cómo hacer una venta con financiamiento de terceros (no integrado)'),
+ r7o3DpMfsFI:X('Protection plans vs. warranties, explained','Planes de protección vs. garantías, explicado'),
+ UXnCLcAvUz8:X('Furniture care and product demonstrations: introduction','Cuidado de muebles y demostraciones de producto: introducción'),
+ JQ8MXLeJ2Ho:X('Caring for wood furniture, part 1','Cuidado de muebles de madera, parte 1'),
+ '6sI5UtOYWj0':X('Leather furniture care demonstrations, part 1','Demostraciones de cuidado de muebles de piel, parte 1'),
+ rYFE27jC5dM:X('How to clean fabric upholstered furniture','Cómo limpiar muebles tapizados en tela')
+};
+const SRC={hOhqI41XP4I:'InfinityX',niBChllmB5k:'InfinityX',J_ShdwOf7V4:'InfinityX',jEWQdjBrS3M:'InfinityX',r7o3DpMfsFI:'Circle Furniture',UXnCLcAvUz8:'Guardian Protection Products',JQ8MXLeJ2Ho:'Guardian Protection Products','6sI5UtOYWj0':'Guardian Protection Products',rYFE27jC5dM:'Guardian Protection Products'};
+const G=(t,items,note)=>({t,items,note});
+const DAYS=[
+{short:X('Foundation & safety','Fundamentos y seguridad'),title:X('Company foundation & workplace safety','Fundamentos de la empresa y seguridad laboral'),
+ obj:X('Build a strong foundation in company expectations, behavior and safety.','Construir una base sólida sobre las expectativas de la empresa, la conducta y la seguridad.'),
+ training:[G(X('Employee Handbook','Manual del empleado'),{en:['Code of conduct','Attendance & punctuality','Professional image standards','Workplace expectations'],es:['Código de conducta','Asistencia y puntualidad','Estándares de imagen profesional','Expectativas en el trabajo']}),
+  G(X('Workplace safety (OSHA)','Seguridad en el trabajo (OSHA)'),{en:['Awareness of hazards on the sales floor','Safe interaction with warehouse operations','Proper reporting of unsafe conditions'],es:['Conciencia de los peligros en el piso de ventas','Interacción segura con las operaciones del almacén','Cómo reportar condiciones inseguras']})],
+ shadow:X('Observe store operations and team dynamics.','Observa la operación de la tienda y la dinámica del equipo.'),
+ out:X('You understand expectations, behavior standards and safety basics.','Entiendes las expectativas, los estándares de conducta y lo básico de seguridad.'),
+ vids:['hOhqI41XP4I'],lib:['Employee Handbook','OSHA Safety Manual 2025','Manual de Seguridad OSHA 2025']},
+{short:X('Sales framework','Proceso de ventas'),title:X('Sales framework & customer interaction','Proceso de ventas e interacción con el cliente'),
+ obj:X('Learn how Daniels sells and how to guide a customer conversation.','Aprende cómo vende Daniels y cómo guiar la conversación con el cliente.'),
+ training:[G(X('Sales process: core flow','Proceso de ventas: flujo central'),{en:['Greeting','Pre-screening (new vs. existing customer)','Needs discovery','Good → Better → Best','Bundle introduction','Financing positioning'],es:['Saludo','Pre-calificación (cliente nuevo o existente)','Descubrir necesidades','Bueno → Mejor → Óptimo','Presentar el paquete','Posicionar el financiamiento']}),
+  G(X('The website as a sales tool','El sitio web como herramienta de venta'),{en:['Navigate product categories','Locate promotions and terms','Search for products that are not in the store'],es:['Navegar las categorías de productos','Encontrar promociones y términos','Buscar productos que no están en la tienda']})],
+ quote:X('If it’s not on the floor, it’s still sellable.','Si no está en el piso, igual se puede vender.'),
+ shadow:X('Observe full sales interactions.','Observa interacciones de venta completas.'),
+ practice:X('Customer greeting and basic discovery questions.','Saludo al cliente y preguntas básicas de descubrimiento.'),
+ out:X('You can start a customer interaction with confidence.','Puedes iniciar con confianza la interacción con un cliente.'),
+ vids:[],lib:['Sales Training Manual 2026 (v3.4)','Manual de Entrenamiento de Ventas 2026 (v3.4)']},
+{short:X('Policies & phone','Políticas y teléfono'),title:X('Policies & phone handling (Calls 103)','Políticas y manejo del teléfono (Calls 103)'),
+ obj:X('Handle customer questions correctly without creating risk.','Responde correctamente las preguntas del cliente sin crear riesgos.'),
+ training:[G(X('Key policies','Políticas clave'),{en:['Returns (including restocking conditions)','Price match','Delivery expectations and timelines'],es:['Devoluciones (incluye condiciones de restocking)','Igualación de precios','Expectativas y tiempos de entrega']}),
+  G(X('Phone handling · Calls 103','Manejo del teléfono · Calls 103'),{en:['Product inquiries','Delivery questions','Existing order support'],es:['Consultas de producto','Preguntas de entrega','Apoyo con pedidos existentes']}),
+  G(X('Call structure','Estructura de la llamada'),{en:['Professional greeting','Identify the customer','Confirm the need','Provide a solution or escalate'],es:['Saludo profesional','Identifica al cliente','Confirma la necesidad','Da la solución o escala']})],
+ note:X('Retailers like Ashley Furniture use structured phone handling to protect conversion rates.','Minoristas como Ashley Furniture usan un manejo telefónico estructurado para proteger la conversión.'),
+ shadow:X('Listen to live or recorded calls.','Escucha llamadas en vivo o grabadas.'),
+ practice:X('Role-play phone scenarios.','Practica escenarios telefónicos en juego de roles.'),
+ out:X('You handle basic inquiries confidently and correctly.','Atiendes consultas básicas con seguridad y de forma correcta.'),
+ vids:['niBChllmB5k','J_ShdwOf7V4','jEWQdjBrS3M'],lib:['Return Policy SOP (v3, 11/17/2025)','Price Match Policy (v1, 12/08/2025)','Haul Away Policy (02/02/2026)']},
+{short:X('Product & attachments','Producto y complementos'),title:X('Product knowledge & attachments','Conocimiento de producto y complementos'),
+ obj:X('Understand how to increase ticket value and profitability.','Entiende cómo aumentar el valor del ticket y la rentabilidad.'),
+ training:[G(X('Product knowledge','Conocimiento de producto'),{en:['Core categories (furniture, appliances)','Understanding value tiers'],es:['Categorías principales (muebles, electrodomésticos)','Entender los niveles de valor']}),
+  G(X('Protection plans (Guardian concept)','Planes de protección (concepto Guardian)'),{en:['Covers accidental damage and wear','Builds customer confidence'],es:['Cubre daños accidentales y desgaste','Genera confianza en el cliente']})],
+ quote:X('Protect your investment, not just the product.','Protege tu inversión, no solo el producto.'),
+ note:X('Retailers like Rooms To Go rely heavily on protection plans, delivery services and add-ons.','Minoristas como Rooms To Go dependen mucho de planes de protección, servicios de entrega y complementos.'),
+ shadow:X('Observe how attachments are introduced during the sale.','Observa cómo se presentan los complementos durante la venta.'),
+ practice:X('Deliver the protection pitch.','Presenta la oferta de protección.'),
+ out:X('You understand how value and profit are built.','Entiendes cómo se construyen el valor y la utilidad.'),
+ vids:['r7o3DpMfsFI','UXnCLcAvUz8','JQ8MXLeJ2Ho','6sI5UtOYWj0','rYFE27jC5dM'],lib:['Appliance Chart','Adjustable Beds and Mix','Mattress Sales Training Playbook 2026','Mattress Sales Associate Cheat Sheet 2026']},
+{short:X('Credit & systems','Crédito y sistemas'),title:X('Credit process & sales systems','Proceso de crédito y sistemas de venta'),crit:true,
+ obj:X('Complete a sale using financing and our systems. This is the most important day of the week.','Completa una venta usando financiamiento y nuestros sistemas. Es el día más importante de la semana.'),
+ training:[G(X('Credit process (sales role)','Proceso de crédito (rol de ventas)'),{en:['Bring the customer to the desk','Present financing options','Collect the required documents','Submit the application','Review the approval','Complete or adjust the sale'],es:['Lleva al cliente al escritorio','Presenta las opciones de financiamiento','Reúne los documentos requeridos','Envía la solicitud','Revisa la aprobación','Completa o ajusta la venta']},X('Daniels emphasizes flexible financing options to support customers.','Daniels destaca las opciones flexibles de financiamiento para apoyar a los clientes.')),
+  G(X('Required documents','Documentos requeridos'),{en:['ID','Signed application','Income / address verification'],es:['Identificación','Solicitud firmada','Comprobante de ingresos y domicilio']}),
+  G(X('System training: Infinity ERP','Capacitación del sistema: Infinity ERP'),{en:['Create the customer','Build the quote','Apply financing','Convert to sale'],es:['Crear al cliente','Armar la cotización','Aplicar el financiamiento','Convertir en venta']})],
+ shadow:X('Observe a full credit transaction.','Observa una transacción de crédito completa.'),
+ practice:X('Simulated full sale.','Venta completa simulada.'),
+ out:X('You understand how to close a transaction.','Entiendes cómo cerrar una transacción.'),
+ vids:[],lib:['Sales Associate Credit Guide (v1.2)','Guía de Crédito para Asesores de Ventas (v1.2)','Quick Approval Guide X090 (EN/ES)','Infinity Getting Started','Infinity Sales Desktop'],
+ cta:{url:'https://rodrigomora-daniels.github.io/daniels-credit-simulator/',t:X('Open the Pre-Screener','Abrir el Pre-Calificador'),ext:true}},
+{short:X('Assisted selling','Venta asistida'),title:X('Assisted selling on the live floor','Venta asistida en el piso'),
+ obj:X('Apply your training in real interactions, with guidance.','Aplica tu capacitación en interacciones reales, con guía.'),
+ training:[G(X('Floor execution','Ejecución en el piso'),{en:['Assist customers','Lead parts of the interaction'],es:['Apoya a los clientes','Lidera partes de la interacción']}),
+  G(X('Your Manager Mentor','Tu Manager Mentor'),{en:['Corrects you in real time','Reinforces the process','Guides your decisions'],es:['Te corrige en tiempo real','Refuerza el proceso','Guía tus decisiones']}),
+  G(X('Focus areas','Áreas de enfoque'),{en:['Follow the sales flow','Keep control of the conversation','Introduce bundles and financing'],es:['Sigue el flujo de ventas','Mantén el control de la conversación','Presenta paquetes y financiamiento']})],
+ out:X('You take part effectively in real sales.','Participas con eficacia en ventas reales.'),vids:[],lib:['Sales Training Manual 2026 (v3.4)','Manual de Entrenamiento de Ventas 2026 (v3.4)']},
+{short:X('Independence & evaluation','Independencia y evaluación'),title:X('Controlled independence & evaluation','Independencia controlada y evaluación'),
+ obj:X('Perform on your own, with a structured evaluation.','Trabaja por tu cuenta, con una evaluación estructurada.'),
+ training:[G(X('Floor execution','Ejecución en el piso'),{en:['Handle customer interactions on your own'],es:['Atiende interacciones con clientes por tu cuenta']}),
+  G(X('How you are evaluated','Cómo te evaluamos'),{en:['Follows the sales process','Uses discovery','Introduces bundles','Offers financing','Attempts attachments'],es:['Sigue el proceso de ventas','Usa el descubrimiento','Presenta paquetes','Ofrece financiamiento','Intenta complementos']}),
+  G(X('Your Manager Mentor','Tu Manager Mentor'),{en:['Reviews your performance','Gives you feedback'],es:['Revisa tu desempeño','Te da retroalimentación']})],
+ out:X('You are ready to keep developing on the floor.','Estás listo para seguir desarrollándote en el piso.'),vids:[],lib:[],
+ cta:{url:'index.html?go=certifications',t:X('Go to Certifications','Ir a Certificaciones')}}
+];
+const WEEKS=[[X('Weeks 2–3','Semanas 2–3'),X('Reinforce','Refuerzo'),{en:['Reinforce the fundamentals','Continuous coaching'],es:['Refuerza los fundamentos','Coaching continuo']}],
+ [X('Weeks 4–6','Semanas 4–6'),X('Sell harder','Vende mejor'),{en:['Objection handling','Closing techniques'],es:['Manejo de objeciones','Técnicas de cierre']}],
+ [X('Weeks 7–8','Semanas 7–8'),X('Build the ticket','Construye el ticket'),{en:['Attachments','Bundles','Consistency'],es:['Complementos','Paquetes','Constancia']}]];
+const KPI=[X('Attachment rate','Tasa de complementos'),X('Financing rate','Tasa de financiamiento'),X('Bundle %','% de paquetes'),X('Close rate','Tasa de cierre')];
+
+/* ---- Added: self-checks, scripts, objections playbook, KPI definitions, glossary ---- */
+const L=(en,es)=>({en,es});
+const CHK=[
+ [X('I can explain the attendance, punctuality and professional image rules.','Puedo explicar las reglas de asistencia, puntualidad e imagen profesional.'),X('I know how to report an unsafe condition.','Sé cómo reportar una condición insegura.'),X('I know who my Manager Mentor is.','Sé quién es mi Manager Mentor.')],
+ [X('I can greet a customer without saying “Can I help you?”','Puedo saludar a un cliente sin decir “¿Le puedo ayudar?”'),X('I can ask at least three discovery questions.','Puedo hacer al menos tres preguntas de descubrimiento.'),X('I can present Good → Better → Best.','Puedo presentar Bueno → Mejor → Óptimo.'),X('I can find a product on the website that is not on the floor.','Puedo encontrar en el sitio web un producto que no está en el piso.')],
+ [X('I can explain the return and price-match policies in my own words.','Puedo explicar con mis palabras las políticas de devolución e igualación de precios.'),X('I can answer a call using the four-step structure.','Puedo contestar una llamada con la estructura de cuatro pasos.'),X('I know when to escalate a call.','Sé cuándo escalar una llamada.')],
+ [X('I can explain the difference between a protection plan and a warranty.','Puedo explicar la diferencia entre un plan de protección y una garantía.'),X('I can give the protection pitch in 30 seconds.','Puedo dar la oferta de protección en 30 segundos.'),X('I know the value tiers of our main furniture and appliance categories.','Conozco los niveles de valor de nuestras principales categorías de muebles y electrodomésticos.')],
+ [X('I can list the documents a customer needs.','Puedo listar los documentos que necesita el cliente.'),X('I can build a quote and convert it to a sale in Infinity.','Puedo armar una cotización y convertirla en venta en Infinity.'),X('I can explain the financing options clearly.','Puedo explicar con claridad las opciones de financiamiento.')],
+ [X('I led part of a real customer conversation.','Lideré una parte de una conversación real con un cliente.'),X('I introduced a bundle and financing.','Presenté un paquete y el financiamiento.'),X('I asked my Manager Mentor for feedback.','Pedí retroalimentación a mi Manager Mentor.')],
+ [X('I handled customers on my own.','Atendí clientes por mi cuenta.'),X('I used discovery, bundles, financing and attachments.','Usé descubrimiento, paquetes, financiamiento y complementos.'),X('I reviewed my evaluation with my Manager Mentor.','Revisé mi evaluación con mi Manager Mentor.')]
+];
+const SCR={
+ 1:[[X('Greet and pre-screen','Saluda y pre-califica'),{en:['“Welcome to Daniels! I’m [name]. What room are you working on today?”','“Have you shopped with us before?” (new or existing customer)','“Tell me who will use it and what you have now, so I can show you the right pieces.”'],es:['“¡Bienvenido a Daniels! Soy [nombre]. ¿En qué cuarto estás trabajando hoy?”','“¿Ya había comprado con nosotros?” (cliente nuevo o existente)','“Cuéntame quién lo va a usar y qué tienes ahora, para mostrarte lo indicado.”']}],
+    [X('Discovery questions','Preguntas de descubrimiento'),{en:['What are you replacing, and what is not working about it?','Who uses it every day: kids, pets, guests?','How big is the room and what is the style around it?','When do you need it in your home?'],es:['¿Qué estás reemplazando y qué es lo que no funciona?','¿Quién lo usa todos los días: niños, mascotas, visitas?','¿Qué tamaño tiene el cuarto y cuál es el estilo del resto?','¿Para cuándo lo necesitas en tu casa?']}],
+    [X('Good → Better → Best','Bueno → Mejor → Óptimo'),{en:['Show three options in the same style, from the base price to the premium.','Explain each difference in one sentence: size, material, comfort, warranty.','Ask: “Which one feels right for your home?” Then introduce the bundle.'],es:['Muestra tres opciones del mismo estilo, del precio base al premium.','Explica cada diferencia en una frase: tamaño, material, comodidad, garantía.','Pregunta: “¿Cuál se siente mejor para tu hogar?” Luego presenta el paquete.']}]],
+ 2:[[X('Answering a call','Contestar una llamada'),{en:['“Thank you for calling Daniels, this is [name]. How can I help you?”','“May I have your name and the order number or phone number on the account?”','Repeat it back: “So you’re asking about the delivery date for your sofa, is that right?”','Solve it, or escalate: “I’ll connect you with [department] and stay on the line until they answer.”'],es:['“Gracias por llamar a Daniels, habla [nombre]. ¿En qué le puedo ayudar?”','“¿Me da su nombre y el número de pedido o el teléfono de la cuenta?”','Repite lo que entendiste: “Entonces pregunta por la fecha de entrega de su sala, ¿correcto?”','Resuélvelo o escálalo: “Lo comunico con [departamento] y me quedo en la línea hasta que contesten.”']}]],
+ 3:[[X('Protection pitch (30 seconds)','Oferta de protección (30 segundos)'),{en:['“This is a big investment for your home. The protection plan covers accidental damage and normal wear.”','“If something happens, it’s one call and we take care of it. Many families add it for peace of mind, especially with kids or pets.”','“Let’s add it to your order so everything is covered from day one.”','Never say it is mandatory, and never promise more than the printed terms of the plan.'],es:['“Esta es una gran inversión para su hogar. El plan de protección cubre daños accidentales y desgaste normal.”','“Si algo pasa, es una llamada y nosotros nos encargamos. Muchas familias lo agregan por tranquilidad, sobre todo con niños o mascotas.”','“Lo agregamos a su pedido para que todo quede cubierto desde el primer día.”','Nunca digas que es obligatorio ni prometas más de lo que dicen los términos impresos del plan.']}]],
+ 4:[[X('Financing conversation','Conversación de financiamiento'),{en:['“We have flexible financing options. Let’s see which one fits your budget. It only takes a few minutes.”','Offer the application to every customer. Do not decide for them whether they will qualify.','“To start, I’ll need your ID, a signed application and proof of income and address.”','Never promise approval before the application is reviewed. If the amount changes, explain the options calmly.'],es:['“Tenemos opciones de financiamiento flexibles. Veamos cuál se ajusta a su presupuesto. Solo toma unos minutos.”','Ofrece la solicitud a todos los clientes. No decidas por ellos si van a calificar.','“Para empezar necesito su identificación, una solicitud firmada y comprobante de ingresos y domicilio.”','Nunca prometas la aprobación antes de que se revise la solicitud. Si el monto cambia, explica las opciones con calma.']}]]
+};
+const OBJ4=[X('Listen without interrupting','Escucha sin interrumpir'),X('Acknowledge: “I understand.”','Reconoce: “Te entiendo.”'),X('Clarify: ask what is behind it','Aclara: pregunta qué hay detrás'),X('Answer, then ask for the next step','Responde y pide el siguiente paso')];
+const OBJS=[
+ [X('“I need to think about it.”','“Lo tengo que pensar.”'),X('Ask what they need to decide. Offer to hold the quote and agree on a day and time to follow up.','Pregunta qué necesitan decidir. Ofrece guardar la cotización y acuerden día y hora para dar seguimiento.')],
+ [X('“It’s too expensive.”','“Está muy caro.”'),X('Go back to what matters to them. Show the Good option, or a financing plan with a lower monthly payment, before talking about discounts.','Regresa a lo que les importa. Muestra la opción Bueno o un plan de financiamiento con pago mensual menor, antes de hablar de descuentos.')],
+ [X('“I need to talk to my spouse.”','“Tengo que hablarlo con mi pareja.”'),X('Offer to send photos and the quote, invite them back together, and set a time.','Ofrece enviar fotos y la cotización, invítalos a volver juntos y fijen una hora.')],
+ [X('“I’ll look online.”','“Voy a buscar en línea.”'),X('Welcome the comparison. Remind them of delivery, service and financing, and give them your card.','Acepta que comparen. Recuérdales la entrega, el servicio y el financiamiento, y entrégales tu tarjeta.')],
+ [X('“I’m worried about my credit.”','“Me preocupa mi crédito.”'),X('Explain that every customer can apply and that there are options. Do not promise approval before the review.','Explica que todos los clientes pueden aplicar y que hay opciones. No prometas la aprobación antes de la revisión.')]];
+const HABITS=[X('Greet every customer in the first minute, and ask before you show.','Saluda a cada cliente en el primer minuto y pregunta antes de mostrar.'),X('Sell the room, not just the piece.','Vende el cuarto completo, no solo la pieza.'),X('Always show three options and explain the difference in one sentence each.','Muestra siempre tres opciones y explica la diferencia en una frase cada una.'),X('Offer protection and financing in every sale, in your own words.','Ofrece protección y financiamiento en cada venta, con tus propias palabras.'),X('Follow up on every “I’ll think about it” with a day and time.','Da seguimiento a cada “lo voy a pensar” con día y hora.')];
+const MORE_VIDS=['9jNdyq-jkhI','l1YNYLaJ-HQ'];
+VID['9jNdyq-jkhI']=X('How to overcome any sales objection','Cómo superar cualquier objeción de venta');SRC['9jNdyq-jkhI']='Patrick Dang';
+VID['l1YNYLaJ-HQ']=X('Customer says “I want to think about it”: what to do','El cliente dice “lo quiero pensar”: qué hacer');SRC['l1YNYLaJ-HQ']='Tanner Chidester';
+VID.rYFE27jC5dM=X('How to clean fabric upholstered furniture, part 1','Cómo limpiar muebles tapizados en tela, parte 1');
+const KDEF=[X('Share of sales that include a true accessory on the same invoice (mirror, lamp, rug, stand, pillows, protective cover). Sets and standalone items do not count.','Porcentaje de ventas que incluyen un accesorio verdadero en la misma factura (espejo, lámpara, tapete, base, almohadas, protector). Los sets y los productos que se venden solos no cuentan.'),X('Share of your sales that were financed with Daniels financing.','Porcentaje de tus ventas que se financiaron con el financiamiento de Daniels.'),X('Share of your sales that include a bundle.','Porcentaje de tus ventas que incluyen un paquete.'),X('Sales divided by the customers you worked with.','Ventas entre los clientes que atendiste.')];
+const GLOS=[[X('Attachment','Complemento'),X('A true accessory sold with a main product on the same invoice.','Un accesorio verdadero que se vende con un producto principal en la misma factura.')],[X('Bundle','Paquete'),X('A group of products sold together at one price.','Un grupo de productos que se venden juntos a un solo precio.')],[X('Good → Better → Best','Bueno → Mejor → Óptimo'),X('Showing three options of the same type at three price and quality levels.','Mostrar tres opciones del mismo tipo en tres niveles de precio y calidad.')],[X('Pre-screen','Pre-calificación'),X('The first questions that tell you if the customer is new or existing, before starting the paperwork.','Las primeras preguntas para saber si el cliente es nuevo o existente, antes de empezar el papeleo.')],[X('Quote','Cotización'),X('The list of products and prices you build in Infinity before it becomes a sale.','La lista de productos y precios que armas en Infinity antes de convertirla en venta.')],[X('Will call','Will call (recoger)'),X('An order the customer picks up at the store or warehouse instead of delivery.','Un pedido que el cliente recoge en la tienda o el almacén, en lugar de entrega.')],[X('Return to stock','Devolución a inventario'),X('Putting a returned item back into available inventory in Infinity.','Regresar un artículo devuelto al inventario disponible en Infinity.')],[X('Protection plan','Plan de protección'),X('Coverage for accidental damage and wear. It is not the same as the manufacturer’s warranty.','Cobertura contra daños accidentales y desgaste. No es lo mismo que la garantía del fabricante.')],[X('Manager Mentor','Manager Mentor'),X('The manager who guides, observes and evaluates you during onboarding.','El gerente que te guía, observa y evalúa durante el onboarding.')],[X('Calls 103','Calls 103'),X('Our phone-handling training: greet, identify, confirm, solve or escalate.','Nuestra capacitación de manejo telefónico: saluda, identifica, confirma, resuelve o escala.')]];
+
+const MAN_CATS=[['Safety',X('Safety','Seguridad')],['Training',X('Training manuals','Manuales de capacitación')],['Credit',X('Credit & approvals','Crédito y aprobaciones')],['Infinity',X('Infinity (financing system)','Infinity (sistema de financiamiento)')],['Policies',X('Policies','Políticas')],['Sales Resources',X('Sales resources','Recursos de ventas')]];
+
+let TAB=0, SEL=0, RES=[], DONE={};
+const eid=()=>{try{const e=DH.emp();return (e&&e.id)||'anon';}catch(x){return 'anon';}};
+const KEY=()=>'dh_train_'+eid();
+function loadDone(){try{DONE=JSON.parse(localStorage.getItem(KEY())||'{}');}catch(e){DONE={};}}
+function saveDone(){try{localStorage.setItem(KEY(),JSON.stringify(DONE));}catch(e){}}
+const byTitle=t=>RES.find(r=>r.titulo===t);
+async function openRes(id){
+  const it=RES.find(x=>x.id===id); if(!it)return;
+  if(!it.archivo_id&&it.url){window.open(it.url,'_blank','noopener');return;}
+  const w=window.open('','_blank');
+  try{const u=await DH.files.sign([it.archivo_id]);const f=u[it.archivo_id];if(!f)throw new Error('x');if(w){w.opener=null;w.location=f.url;}else location.href=f.url;}
+  catch(e){if(w)w.close();alert(T(UI.notFound));}
+}
+const icon=r=>{const m=r.mime||'';return /sheet|excel/.test(m)?'📊':/word/.test(m)?'📝':/presentation/.test(m)?'📽️':!r.archivo_id?'🔗':'📄';};
+const libBtn=r=>`<button class="lib" onclick="openRes('${r.id}')"><span>${icon(r)}</span><span>${esc(r.titulo)}</span></button>`;
+
+function render(){
+  const n=Object.keys(DONE).filter(k=>/^\d+$/.test(k)&&DONE[k]).length;
+  $('app').innerHTML=`<section class="hero"><div><h2>${esc(T(UI.title))}</h2><p>${esc(T(UI.intro))}</p><p style="font:italic 600 18px Georgia,serif;color:#E8C878;margin-top:12px">${esc(T(UI.mission))}</p></div>
+   <div class="prog"><b>${n}/7</b><span>${esc(T(UI.done))}</span><i><u style="width:${Math.round(n/7*100)}%"></u></i></div></section>
+   <div class="rules">${UI.rules.map(r=>`<div>${esc(T(r))}</div>`).join('')}</div>
+   <div class="seg" role="tablist">${UI.tabs.map((t,i)=>`<button class="${TAB===i?'on':''}" role="tab" aria-selected="${TAB===i}" onclick="TAB=${i};render()">${esc(T(t))}</button>`).join('')}</div>
+   ${TAB===0?week1():TAB===1?weeks():TAB===2?manuals():glossary()}`;
+}
+function week1(){
+  const d=DAYS[SEL];
+  const tags=DAYS.map((x,i)=>`<button class="tag ${SEL===i?'on':''} ${DONE[i]?'done':''}" onclick="SEL=${i};render();window.scrollTo({top:document.querySelector('.tags').offsetTop-60,behavior:'smooth'})" aria-label="${esc(T(UI.day))} ${i+1}: ${esc(T(x.title))}" aria-pressed="${SEL===i}"><span class="ck">✓</span><span class="n">${i+1}</span><span class="t">${esc(T(x.short))}</span></button>`).join('');
+  const groups=d.training.map(g=>`<div class="blk"><h4>${esc(T(g.t))}</h4>${g.note?`<div class="note">${esc(T(g.note))}</div>`:''}<ul>${A(g.items).map(i=>`<li>${esc(i)}</li>`).join('')}</ul></div>`).join('');
+  const chk=(CHK[SEL]||[]).map((c,i)=>{const k='c'+SEL+'_'+i;return `<button class="ck2 ${DONE[k]?'on':''}" onclick="tick('${k}')" aria-pressed="${!!DONE[k]}"><i>${DONE[k]?'✓':''}</i><span>${esc(T(c))}</span></button>`;}).join('');
+  const scr=(SCR[SEL]||[]).map(([t,l])=>`<div class="blk"><h4>💬 ${esc(T(UI.say))} · ${esc(T(t))}</h4><div class="say">${A(l).map(x=>`<p>${esc(x)}</p>`).join('')}</div></div>`).join('');
+  const sp=(k,v)=>v?`<div class="blk"><h4>${esc(T(UI[k]))}</h4><p style="font-size:15px;line-height:1.45">${esc(T(v))}</p></div>`:'';
+  const vids=d.vids.length?`<div class="sp"><h4>▶ ${esc(T(UI.videos))}</h4>${d.vids.map(id=>`<button class="vid" onclick="playV('${id}')"><span class="th"><img loading="lazy" alt="" src="https://i.ytimg.com/vi/${id}/mqdefault.jpg"></span><span><b>${esc(T(VID[id]))}</b><small>${esc(SRC[id]||'')}</small></span></button>`).join('')}</div>`:'';
+  const libs=d.lib.map(byTitle).filter(Boolean);
+  const lib=libs.length?`<div class="sp"><h4>📚 ${esc(T(UI.manuals))}</h4>${libs.map(libBtn).join('')}</div>`:'';
+  const cta=d.cta?`<a class="btn p" ${d.cta.ext?'target="_blank" rel="noopener"':''} href="${esc(d.cta.url)}">${esc(T(d.cta.t))}</a>`:'';
+  const first=SEL===0?`<div class="blk" style="border-top:0"><h4>${esc(T(UI.goal))}</h4><ul>${GOAL.map(g=>`<li>${esc(T(g))}</li>`).join('')}</ul></div><div class="blk"><h4>${esc(T(UI.structure))}</h4><ul>${STRUCT.map(s=>`<li><b>${esc(T(s[0]))}</b> · ${esc(T(s[1]))}</li>`).join('')}</ul></div>`:'';
+  return `<div class="tags" role="group">${tags}</div>
+  <div class="day"><article class="card"><h3>${esc(T(UI.day))} ${SEL+1} · ${esc(T(d.title))}</h3><p class="obj">${esc(T(d.obj))}</p>${first}${groups}${d.quote?`<div class="quote">“${esc(T(d.quote))}”</div>`:''}${d.note&&false?'':''}${sp('shadow',d.shadow)}${sp('practice',d.practice)}${scr}<div class="blk"><h4>✅ ${esc(T(UI.selfcheck))}</h4><div class="cks">${chk}</div></div>
+   <div class="out"><small>${esc(T(UI.outcome))}</small>${esc(T(d.out))}</div>
+   <div class="acts"><button class="btn ${DONE[SEL]?'ok':'p'}" onclick="toggleDone()">${DONE[SEL]?'✓ '+esc(T(UI.undo)):esc(T(UI.mark))}</button>${SEL<6?`<button class="btn" onclick="SEL=${SEL+1};render()">${esc(T(UI.next))} →</button>`:''}${cta}</div></article>
+  <aside class="card side">${vids}${lib}${!vids&&!lib?`<div class="note">${esc(T(d.shadow||d.out))}</div>`:''}</aside></div>`;
+}
+function weeks(){
+  return `<h3 class="grp" style="font-size:20px">${esc(T(UI.stages))}</h3><div class="stages">${WEEKS.map(w=>`<div class="stage"><div class="w">${esc(T(w[0]))}</div><h4>${esc(T(w[1]))}</h4><ul class="blk" style="list-style:none;display:block;padding:0;border:0">${A(w[2]).map(i=>`<li style="margin-bottom:6px;display:block">${esc(i)}</li>`).join('')}</ul></div>`).join('')}</div>
+  <div class="card" style="margin-top:16px"><h3 class="grp" style="font-size:20px;margin-top:0">${esc(T(UI.habits))}</h3><div class="blk" style="border:0;padding:0"><ul style="grid-template-columns:1fr">${HABITS.map(h=>`<li>${esc(T(h))}</li>`).join('')}</ul></div></div>
+  <div class="day" style="margin-top:16px"><div class="card"><h3 class="grp" style="font-size:20px;margin-top:0">${esc(T(UI.playbook))}</h3><ol class="four">${OBJ4.map(o=>`<li>${esc(T(o))}</li>`).join('')}</ol>
+   <h4 style="margin:18px 0 8px;color:var(--navy)">${esc(T(UI.common))}</h4>${OBJS.map(o=>`<div class="obj2"><b>${esc(T(o[0]))}</b><p>${esc(T(o[1]))}</p></div>`).join('')}</div>
+   <aside class="card side"><h4>▶ ${esc(T(UI.watch))}</h4>${MORE_VIDS.map(id=>`<button class="vid" onclick="playV('${id}')"><span class="th"><img loading="lazy" alt="" src="https://i.ytimg.com/vi/${id}/mqdefault.jpg"></span><span><b>${esc(T(VID[id]))}</b><small>${esc(SRC[id])}</small></span></button>`).join('')}</aside></div>
+  <h3 class="grp" style="font-size:20px;margin-top:22px">${esc(T(UI.track))}</h3><div class="kp">${KPI.map((k,i)=>`<div>${esc(T(k))}<small>${esc(T(KDEF[i]))}</small></div>`).join('')}</div>`;
+}
+function manuals(){
+  let h='';
+  MAN_CATS.forEach(([k,lab])=>{const its=RES.filter(r=>(r.categoria||'').startsWith(k)); if(!its.length)return; h+=`<div class="grp">${esc(T(lab))}</div><div class="rl">${its.map(libBtn).join('')}</div>`;});
+  return (h||`<div class="note">${esc(T(UI.notFound))}</div>`)+`<div class="acts"><a class="btn" href="recursos.html">${esc(T(UI.all))}</a></div>`;
+}
+function glossary(){return `<div class="rl" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr));margin-top:6px">${GLOS.map(g=>`<div class="card" style="padding:16px 18px"><b style="color:var(--navy);font-size:16px">${esc(T(g[0]))}</b><p style="margin-top:6px;font-size:15px;line-height:1.45">${esc(T(g[1]))}</p></div>`).join('')}</div>`;}
+function tick(k){DONE[k]=!DONE[k];saveDone();render();}
+function toggleDone(){DONE[SEL]=!DONE[SEL];saveDone();render();}
+function playV(id){
+  $('vt').textContent=T(VID[id]); $('vc').textContent=T(UI.close); $('vs').textContent=SRC[id]||'';
+  $('vf').innerHTML=`<iframe src="https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1" title="${esc(T(VID[id]))}" allow="accelerometer; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`;
+  $('vm').classList.add('show'); document.body.style.overflow='hidden';
+}
+function closeV(){$('vm').classList.remove('show');$('vf').innerHTML='';document.body.style.overflow='';}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeV();});
+window.addEventListener('dh-lang',()=>render());
+(async function init(){
+  if(!DH.token()){location.href='index.html';return;}
+  loadDone(); render();
+  try{const r=await DH.rpc('recursos_listar');RES=(r&&r.items)||[];}catch(e){RES=[];}
+  render();
+})();
+</script>
+</body>
+</html>
