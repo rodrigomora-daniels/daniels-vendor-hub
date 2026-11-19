@@ -190,7 +190,7 @@
         return '<div class="sal-card"><h4>' + esc(p.nombre) + '</h4><div class="meta">' + esc([p.puesto, p.ubicacion].filter(Boolean).join(' · ')) + '</div></div>';
       }).join('');
     }
-    if (r.promoFallback && r.promos && r.promos.length) h += '<div class="sal-note">' + esc(t('I cannot see inside the flyers for that product yet. These are the promotions running now; open one to see the models and prices.', 'Todavía no veo ese producto dentro de los flyers. Estas son las promociones vigentes ahora; abre una para ver modelos y precios.')) + '</div>';
+    if (false) h += '<div class="sal-note">' + esc(t('I cannot see inside the flyers for that product yet. These are the promotions running now; open one to see the models and prices.', 'Todavía no veo ese producto dentro de los flyers. Estas son las promociones vigentes ahora; abre una para ver modelos y precios.')) + '</div>';
     if (r.promos && r.promos.length) {
       h += '<div class="sal-sec">' + esc(r.browse ? t('Running now', 'Vigentes ahora') : t('Promotions', 'Promociones')) + '</div>' + r.promos.map(function (p, i) {
         var badge = p.estado === 'vigente' ? '<span class="sal-badge">' + esc(t('Active', 'Vigente')) + '</span>' : p.estado === 'programada' ? '<span class="sal-badge soon">' + esc(t('Starts ', 'Empieza ') + fmtDate(p.vigente_desde)) + '</span>' : '<span class="sal-badge old">' + esc(t('Ended', 'Terminada')) + '</span>';
@@ -285,11 +285,11 @@
       var webP = (wq && DH.salWeb) ? withTimeout(DH.salWeb(wq), 10000).then(function (w) { return w && w.items || []; }).catch(function () { return []; }) : Promise.resolve([]);
       var r = await withTimeout(DH.rpc('sal_buscar', { p_q: q }), 20000);
       r.web = await webP; r.saleMode = saleMode;
-      if (saleMode && !(r.promos && r.promos.length)) { try { r.promos = await withTimeout(DH.rpc('sal_promos_vigentes', {}), 8000); r.browse = true; r.promoFallback = !isPromoBrowse(q); } catch (e) {} }
+      if (saleMode && isPromoBrowse(q) && !(r.promos && r.promos.length)) { try { r.promos = await withTimeout(DH.rpc('sal_promos_vigentes', {}), 8000); r.browse = true; } catch (e) {} }
       clearTimeout(slowTimer);
       var html = renderResult(r, q);
       if (!html) {
-        setBubble(wait, '<b>' + esc(t('I found nothing about “', 'No encontré nada sobre “') + q + '”') + '</b><p>' + esc(t('Nothing in the library, channels, promotions or news that you can access. That does not prove it does not exist: try other words (for example the product name, a policy name or the SKU), or ask your manager.', 'Nada en la biblioteca, canales, promociones ni novedades a los que tienes acceso. Eso no prueba que no exista: prueba con otras palabras (por ejemplo el nombre del producto, de la política o el SKU), o pregunta a tu gerente.')) + '</p>', 'thinking');
+        setBubble(wait, '<b>' + esc(r.saleMode ? t('I could not find that promotion', 'No encontré esa promoción') : t('I found nothing about “', 'No encontré nada sobre “') + q + '”') + '</b><p>' + esc(r.saleMode ? t('It is not in the text of the published flyers and wraps, the promotions channel, or the product lists. Flyers that are only pictures may not be readable yet. Open Promotions to look at the flyers, or ask Marketing.', 'No aparece en el texto de los flyers y wraps publicados, en el canal de promociones ni en las listas de productos. Los flyers que son solo imagen pueden no ser legibles todavía. Abre Promociones para ver los flyers, o pregunta a Marketing.') : t('Nothing in the library, channels, promotions or news that you can access. That does not prove it does not exist: try other words (for example the product name, a policy name or the SKU), or ask your manager.', 'Nada en la biblioteca, canales, promociones ni novedades a los que tienes acceso. Eso no prueba que no exista: prueba con otras palabras (por ejemplo el nombre del producto, de la política o el SKU), o pregunta a tu gerente.')) + '</p>' + (r.saleMode ? '<div class="sal-act"><a class="sal-btn pri" href="promociones.html">' + esc(t('Open Promotions', 'Abrir Promociones')) + '</a></div>' : ''), 'thinking');
         setFace('thinking', 2500); chipsEl.style.display = '';   // offer the quick topics again
       } else {
         setBubble(wait, html, 'success'); bindResult(wait, r); setFace('success', 2500);
