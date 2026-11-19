@@ -219,12 +219,17 @@
       h += '<div class="sal-sec">' + esc(t('Product', 'Producto')) + '</div>' + r.web.map(function (w) {
         var img = w.image ? '<img src="' + esc(w.image) + '" alt="" loading="lazy" referrerpolicy="no-referrer" style="float:right;width:84px;height:84px;object-fit:contain;margin:0 0 6px 10px;border-radius:8px;background:#fff">' : '';
         var badge = '<span style="display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700;color:#fff;background:' + (w.available ? '#1E8E5A' : '#B3402F') + '">' + esc(w.available ? t('Available', 'Disponible') : t('Not available', 'No disponible')) + '</span>';
-        var sp = (w.specs || []).length ? '<ul style="margin:8px 0 0 18px;padding:0">' + w.specs.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ul>' : '';
+        var det = (w.details || []).length ? '<div style="display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:8px 0 0;font-size:13px">' + w.details.map(function (d) { return '<b style="color:#1B3A6B">' + esc(d.k) + '</b><span>' + esc(d.v) + '</span>'; }).join('') + '</div>' : '';
+        var sm = w.summary ? '<p style="margin:8px 0 0">' + esc(w.summary) + '</p>' : '';
+        var all = w.specs || [], first = all.slice(0, 6), more = all.slice(6);
+        var sp = all.length ? '<ul style="margin:8px 0 0 18px;padding:0">' + first.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ul>' +
+          (more.length ? '<details style="margin:4px 0 0 18px"><summary style="cursor:pointer;font-weight:700;color:#1B3A6B;min-height:32px">' + esc(t('Show all specs (', 'Ver todas las especificaciones (') + all.length + ')') + '</summary><ul style="margin:4px 0 0 0;padding-left:18px">' + more.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ul></details>' : '') : '';
+        var sub = [w.vendor, w.ptype].filter(Boolean).join(' · ');
         var opts = (w.options || []).filter(function (o) { return o.values && o.values.length; }).map(function (o) {
           return '<p><b>' + esc(o.name) + ' (' + o.values.length + '):</b> ' + esc(o.values.join(', ')) + '</p>';
         }).join('');
         var vav = (w.variants || []).length > 1 ? '<p>' + esc(t('By option: ', 'Por opción: ')) + esc(w.variants.map(function (v) { return v.title + (v.available ? ' ✓' : ' ✗'); }).join(' · ')) + '</p>' : '';
-        return '<div class="sal-card" style="overflow:hidden">' + img + '<h4>' + esc(w.title) + '</h4><div class="meta">' + badge + '</div>' + opts + vav + sp + '</div>';
+        return '<div class="sal-card" style="overflow:hidden">' + img + '<h4>' + esc(w.title) + '</h4><div class="meta">' + badge + (sub ? ' ' + esc(sub) : '') + '</div>' + sm + det + opts + vav + sp + '</div>';
       }).join('');
     }
     if (!h) return '';
