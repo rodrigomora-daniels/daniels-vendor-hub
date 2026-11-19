@@ -99,6 +99,14 @@
   #holview i.nd{position:absolute;top:calc(50% - 15px);left:calc(50% + 26px);width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 2px #fff;pointer-events:none}
   #holview td.hn:last-child .tip{left:auto;right:6px;transform:translate(0,4px) scale(.96);transform-origin:bottom right}
   #holview td.hn:last-child:hover .tip,#holview td.hn:last-child:focus .tip,#holview td.hn:last-child.open .tip{transform:translate(0,0) scale(1)}
+  #repview{display:none}
+  body.pr>*:not(#repview){display:none!important}
+  body.pr #repview{display:block;padding:16px;background:#fff;color:#111;font-family:inherit}
+  #repview h1{font-size:20px;margin:0 0 4px}#repview p{margin:0 0 12px;font-size:12px;color:#444}
+  #repview table{border-collapse:collapse;width:100%;min-width:0;table-layout:auto}
+  #repview th,#repview td{border:1px solid #999;padding:6px 8px;font-size:12px;text-align:center;position:static;background:#fff;color:#111}
+  #repview th{background:#e8ecf3;color:#111}#repview small{color:#333!important;font-size:11px;font-weight:400;opacity:1;display:inline}#repview td:first-child{text-align:left;font-weight:600}
+  @page{size:landscape;margin:12mm}
   #holview .tip{position:absolute;left:50%;bottom:calc(100% - 6px);transform:translate(-50%,4px) scale(.96);transform-origin:bottom center;background:#14213d;color:#fff;font-size:12.5px;line-height:1.35;padding:7px 10px;border-radius:8px;width:max-content;max-width:210px;opacity:0;pointer-events:none;transition:opacity .15s ease-out,transform .15s ease-out;z-index:6;box-shadow:0 6px 18px rgba(0,0,0,.25);text-align:left;font-weight:500}
   #holview td.hn:hover .tip,#holview td.hn:focus-within .tip,#holview td.hn:focus .tip,#holview td.hn.open .tip{opacity:1;transform:translate(-50%,0) scale(1)}
   @media (prefers-reduced-motion:reduce){#holview .tip{transition:none}}
@@ -475,7 +483,7 @@ function holTable(){
     return `<th data-no-i18n>${ed?`<button class="ed" style="color:inherit;font:inherit;padding:0" onclick="editDate(${f.orden})">${esc(holName(f))}</button>`:esc(holName(f))}<small>${esc(holDate(f.fecha))}</small>${ed?`<small><button class="ed" onclick="editHours(${f.orden})">${esc(hrs)} ✎</button></small>`:`<small>${esc(hrs)}</small>`}</th>`;}).join('')}</tr>`;
   const body=(HOL.filas||[]).map(f=>`<tr class="${f.id===HOL.mia?'me':''}"><td data-no-i18n>${ed?`<button class="ed nm2" onclick="editDept(${f.id})">${esc(f.depto)}${f.id===HOL.mia?' ★':''} ✎</button>`:esc(f.depto)+(f.id===HOL.mia?' ★':'')}${f.nota?`<br><small style="font-weight:400;color:#6a7484">${esc(f.nota)}</small>`:''}</td>${f.estados.map((x,i)=>{const nt=(f.notas||[])[i];const tip=nt?`<span class="tip" role="tooltip" data-no-i18n>${esc(nt)}</span>`:'';const dot=nt?'<i class="nd" aria-hidden="true"></i>':'';return `<td class="${nt?'hn':''}" ${nt?'tabindex="0" onclick="this.classList.toggle(\'open\')"':''}>${ed?`<button class="ed cell" onclick="editCell(${f.id},${i})" aria-label="${esc(f.depto)}">${holSt(x)}${dot}</button>`:holSt(x)+dot}${tip}</td>`;}).join('')}</tr>`).join('');
   const note=ed?(es?'Puedes editarlo: toca un estado, un horario o el nombre de un departamento. Los cambios los ve todo el equipo al instante.':'You can edit it: tap a status, an hours line or a department name. Everyone sees changes right away.'):(es?'Solo informativo; no se edita aquí.':'For information only; not edited here.');
-  return `<div class="hn">${esc(es?'2026 DHC — horario de feriados por departamento. ':'2026 DHC holiday schedule by department. ')}${esc(note)} ${esc(es?'ON = trabaja, OFF = libre, “—” = no especificado. Tu departamento está resaltado (★).':'ON = working, OFF = day off, “—” = not specified. Your department is highlighted (★).')}${HOL.todas?'':esc(es?' Solo ves tu departamento.':' You only see your own department.')}</div>${ed?`<div style="margin:0 0 12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="editDept(null)">+ ${esc(tr('Add department / Agregar departamento'))}</button><button class="btn" onclick="editDate(null)">+ ${esc(tr('Add date / Agregar fecha'))}</button></div>`:''}<div class="tw"><table>${head}${body}</table></div>`;
+  return `<div class="hn">${esc(es?'2026 DHC — horario de feriados por departamento. ':'2026 DHC holiday schedule by department. ')}${esc(note)} ${esc(es?'ON = trabaja, OFF = libre, “—” = no especificado. Tu departamento está resaltado (★).':'ON = working, OFF = day off, “—” = not specified. Your department is highlighted (★).')}${HOL.todas?'':esc(es?' Solo ves tu departamento.':' You only see your own department.')}</div><div class="noprint" style="margin:0 0 12px;display:flex;gap:8px;flex-wrap:wrap">${ed?`<button class="btn" onclick="editDept(null)">+ ${esc(tr('Add department / Agregar departamento'))}</button><button class="btn" onclick="editDate(null)">+ ${esc(tr('Add date / Agregar fecha'))}</button>`:''}<button class="btn" onclick="holReport()">📊 ${esc(tr('Report: Excel / PDF / Reporte: Excel / PDF'))}</button></div><div class="tw"><table>${head}${body}</table></div>`;
 }
 async function holSave(name,args){
   const r=await call(name,args); if(!r)return false;
@@ -501,6 +509,56 @@ function editDate(orden){
     <label for="f-h">${esc(tr('Store hours / Horario de tiendas'))}</label><input id="f-h" maxlength="20" value="${esc(fe&&fe.horario||'')}" placeholder="10-4  /  CLOSED">
     <div class="sub">${esc(tr('Leave hours empty if not specified. New dates start with every department “not specified”. / Deja el horario vacío si no está especificado. Las fechas nuevas inician sin estado para todos los departamentos.'))}</div>
     <div class="acts"><button class="btn pri" onclick="holSave('feriados_fecha_set',{p_orden:${orden==null?'null':orden},p_en:$('f-n1').value,p_es:$('f-n2').value,p_fecha:$('f-dt').value||null,p_horario:$('f-h').value})">${esc(tr('Save / Guardar'))}</button>${fe?`<button class="btn d" onclick="if(confirm(tr('Delete this date column for all departments? / ¿Borrar esta fecha para todos los departamentos?')))holSave('feriados_fecha_borrar',{p_orden:${orden}})">${esc(tr('Delete / Borrar'))}</button>`:''}<button class="btn" onclick="closeDlg()">${esc(tr('Cancel / Cancelar'))}</button></div>`);
+}
+
+function holRange(){
+  const a=($('r-a')||{}).value||'', b=($('r-b')||{}).value||'';
+  const idx=[]; (HOL.fechas||[]).forEach((f,i)=>{if((!a||f.fecha>=a)&&(!b||f.fecha<=b))idx.push(i);});
+  return {a,b,idx};
+}
+function holReport(){
+  const fs=HOL.fechas||[]; if(!fs.length)return;
+  const mn=fs.reduce((m,f)=>f.fecha<m?f.fecha:m,fs[0].fecha), mx=fs.reduce((m,f)=>f.fecha>m?f.fecha:m,fs[0].fecha);
+  showDlg(`<h2>${esc(tr('Department schedule report / Reporte de horario por departamento'))}</h2><div id="f-e" class="err hide"></div>
+    <div class="sub">${esc(tr('Choose a time frame. Leave empty to include every date. / Elige un periodo. Déjalo vacío para incluir todas las fechas.'))}</div>
+    <label for="r-a">${esc(tr('From / Desde'))}</label><input id="r-a" type="date" value="${esc(mn)}">
+    <label for="r-b">${esc(tr('To / Hasta'))}</label><input id="r-b" type="date" value="${esc(mx)}">
+    <div class="sub">${esc(HOL.todas?tr('Includes every department you can see. / Incluye todos los departamentos que puedes ver.'):tr('Includes your department only. / Incluye solo tu departamento.'))}</div>
+    <div class="acts"><button class="btn pri" onclick="holExcel(this)">${esc(tr('Download Excel / Descargar Excel'))}</button><button class="btn" onclick="holPrint()">${esc(tr('Print / Save PDF / Imprimir / Guardar PDF'))}</button><button class="btn" onclick="closeDlg()">${esc(tr('Cancel / Cancelar'))}</button></div>`);
+}
+const holStTxt=x=>x||'—';
+async function holExcel(btn){
+  const r=holRange(); if(!r.idx.length){errBox(tr('No dates in that time frame. / No hay fechas en ese periodo.'));return;}
+  if(r.a&&r.b&&r.a>r.b){errBox(tr('“From” must be before “To”. / “Desde” debe ser antes de “Hasta”.'));return;}
+  btn.disabled=true;
+  try{await loadXL();}catch(e){errBox(tr('Could not load the Excel tool. Check your connection. / No se pudo cargar la herramienta de Excel. Revisa tu conexión.'));btn.disabled=false;return;}
+  const fs=r.idx.map(i=>HOL.fechas[i]), es=holEs();
+  const rows=[[es?'Horario de feriados por departamento — DHC':'DHC holiday schedule by department'],[(es?'Periodo: ':'Time frame: ')+fs[0].fecha+' → '+fs[fs.length-1].fecha+'   |   '+(es?'Generado: ':'Generated: ')+new Date().toLocaleString()],[],
+    [es?'Departamento':'Department',...fs.map(f=>holName(f)+' ('+f.fecha+')')],
+    [es?'Horario de tiendas':'Store hours',...fs.map(f=>f.horario||'')]];
+  const notes=[[es?'Departamento':'Department',es?'Fecha':'Date',es?'Nota':'Note']];
+  (HOL.filas||[]).forEach(f=>{
+    rows.push([f.depto+(f.nota?' ('+f.nota+')':''),...r.idx.map(i=>holStTxt(f.estados[i]))]);
+    r.idx.forEach(i=>{const n=(f.notas||[])[i]; if(n)notes.push([f.depto,holName(HOL.fechas[i])+' ('+HOL.fechas[i].fecha+')',n]);});
+  });
+  const ws=XLSX.utils.aoa_to_sheet(rows); ws['!cols']=[{wch:34},...fs.map(()=>({wch:20}))];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,es?'Horario':'Schedule');
+  if(notes.length>1){const wn=XLSX.utils.aoa_to_sheet(notes); wn['!cols']=[{wch:34},{wch:30},{wch:60}]; XLSX.utils.book_append_sheet(wb,wn,es?'Notas':'Notes');}
+  XLSX.writeFile(wb,'department-schedule-'+fs[0].fecha+'_to_'+fs[fs.length-1].fecha+'.xlsx');
+  closeDlg();
+}
+function holPrint(){
+  const r=holRange(); if(!r.idx.length){errBox(tr('No dates in that time frame. / No hay fechas en ese periodo.'));return;}
+  if(r.a&&r.b&&r.a>r.b){errBox(tr('“From” must be before “To”. / “Desde” debe ser antes de “Hasta”.'));return;}
+  const fs=r.idx.map(i=>HOL.fechas[i]), es=holEs();
+  let rep=$('repview'); if(!rep){rep=document.createElement('div');rep.id='repview';document.body.appendChild(rep);}
+  const th=fs.map(f=>`<th>${esc(holName(f))}<br><small>${esc(holDate(f.fecha))}</small><br><small>${esc(f.horario||'')}</small></th>`).join('');
+  const nts=[];
+  const trs=(HOL.filas||[]).map(f=>`<tr><td>${esc(f.depto)}${f.nota?`<br><small>${esc(f.nota)}</small>`:''}</td>${r.idx.map(i=>{const n=(f.notas||[])[i];if(n)nts.push(`${f.depto} — ${holName(HOL.fechas[i])}: ${n}`);return `<td>${esc(holStTxt(f.estados[i]))}${n?' *':''}</td>`;}).join('')}</tr>`).join('');
+  rep.innerHTML=`<h1>${esc(es?'Horario de feriados por departamento — DHC':'DHC holiday schedule by department')}</h1><p>${esc((es?'Periodo: ':'Time frame: ')+fs[0].fecha+' → '+fs[fs.length-1].fecha+'  ·  '+(es?'Generado: ':'Generated: ')+new Date().toLocaleString())}</p><table><tr><th>${esc(es?'Departamento':'Department')}</th>${th}</tr>${trs}</table>${nts.length?`<p><b>${esc(es?'Notas':'Notes')}</b></p><ul>${nts.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>`:''}`;
+  closeDlg(); document.body.classList.add('pr');
+  const done=()=>{document.body.classList.remove('pr');window.removeEventListener('afterprint',done);};
+  window.addEventListener('afterprint',done); setTimeout(()=>window.print(),150);
 }
 function editDept(fid){
   const f=fid?(HOL.filas||[]).find(x=>x.id===fid):null;
