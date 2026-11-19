@@ -88,6 +88,10 @@
   #holview th,#holview td{padding:8px 10px;border-bottom:1px solid #eef0f4;text-align:center}
   #holview th:first-child,#holview td:first-child{text-align:left;position:sticky;left:0;background:#fff}
   #holview th small{display:block;font-weight:400;color:#6a7484}
+  #holview button.ed{border:0;background:none;color:inherit;font:inherit;cursor:pointer;padding:2px 4px;border-radius:6px;text-align:inherit}
+  #holview button.ed:hover{background:#eef2fa}
+  #holview button.cell{padding:2px}
+  #holview button.nm2{font-weight:600;text-align:left}
   #holview tr.me td{background:#FFF8EC;font-weight:700}
   #holview tr.me td:first-child{box-shadow:inset 4px 0 0 var(--gold)}
   .dlg{position:fixed;inset:0;background:rgba(10,22,45,.6);z-index:50;display:none;align-items:flex-end;justify-content:center}
@@ -119,7 +123,7 @@
 <body>
 <header><h1>🗓️ Schedule / Horarios</h1><a href="index.html">← Home / Inicio</a></header>
 <main>
-  <div class="tabs noprint" id="vtabs" role="tablist"><button class="on" id="tb-s" onclick="tab('s')">🗓️ Store schedule / Horario de tienda</button><button id="tb-h" onclick="tab('h')">🎄 Holidays by department / Feriados por departamento</button></div>
+  <div class="tabs noprint" id="vtabs" role="tablist"><button class="on" id="tb-s" onclick="tab('s')">🗓️ Store schedule / Horario de tienda</button><button id="tb-h" onclick="tab('h')">🏢 Department schedule / Horario por departamento</button></div>
   <div id="storeview">
   <div class="stores hide" id="stores"></div>
   <div class="wk"><h2 id="wt" data-no-i18n></h2>
@@ -453,9 +457,39 @@ async function loadHol(){try{HOL=await DH.rpc('feriados_ver');}catch(e){HOL=null
 function holTable(){
   const es=holEs();
   if(!HOL)return `<div class="empty">${esc(tr('Could not load. / No se pudo cargar.'))}</div>`;
-  const head=`<tr><th>${es?'Departamento':'Department'}</th>${(HOL.fechas||[]).map(f=>`<th data-no-i18n>${esc(holName(f))}<small>${esc(holDate(f.fecha))}</small><small>${esc(f.horario?(f.horario==='CLOSED'?(es?'Cerrado':'Closed'):(es?'Horario ':'Hours ')+f.horario):'')}</small></th>`).join('')}</tr>`;
-  const body=(HOL.filas||[]).map(f=>`<tr class="${f.id===HOL.mia?'me':''}"><td data-no-i18n>${esc(f.depto)}${f.id===HOL.mia?' ★':''}${f.nota?`<br><small style="font-weight:400;color:#6a7484">${esc(f.nota)}</small>`:''}</td>${f.estados.map(x=>`<td>${holSt(x)}</td>`).join('')}</tr>`).join('');
-  return `<div class="hn">${esc(es?'2026 DHC — horario de feriados por departamento. Solo informativo; no se edita aquí. ON = trabaja, OFF = libre, “—” = no especificado. Tu departamento está resaltado (★).':'2026 DHC holiday schedule by department. For information only; not edited here. ON = working, OFF = day off, “—” = not specified. Your department is highlighted (★).')}${HOL.todas?'':esc(es?' Solo ves tu departamento.':' You only see your own department.')}</div><div class="tw"><table>${head}${body}</table></div>`;
+  const ed=!!HOL.puede_editar;
+  const head=`<tr><th>${es?'Departamento':'Department'}</th>${(HOL.fechas||[]).map(f=>{
+    const hrs=f.horario?(f.horario==='CLOSED'?(es?'Cerrado':'Closed'):(es?'Horario ':'Hours ')+f.horario):(ed?(es?'+ horario':'+ hours'):'');
+    return `<th data-no-i18n>${esc(holName(f))}<small>${esc(holDate(f.fecha))}</small>${ed?`<small><button class="ed" onclick="editHours(${f.orden})">${esc(hrs)} ✎</button></small>`:`<small>${esc(hrs)}</small>`}</th>`;}).join('')}</tr>`;
+  const body=(HOL.filas||[]).map(f=>`<tr class="${f.id===HOL.mia?'me':''}"><td data-no-i18n>${ed?`<button class="ed nm2" onclick="editDept(${f.id})">${esc(f.depto)}${f.id===HOL.mia?' ★':''} ✎</button>`:esc(f.depto)+(f.id===HOL.mia?' ★':'')}${f.nota?`<br><small style="font-weight:400;color:#6a7484">${esc(f.nota)}</small>`:''}</td>${f.estados.map((x,i)=>`<td>${ed?`<button class="ed cell" onclick="editCell(${f.id},${i})" aria-label="${esc(f.depto)}">${holSt(x)}</button>`:holSt(x)}</td>`).join('')}</tr>`).join('');
+  const note=ed?(es?'Puedes editarlo: toca un estado, un horario o el nombre de un departamento. Los cambios los ve todo el equipo al instante.':'You can edit it: tap a status, an hours line or a department name. Everyone sees changes right away.'):(es?'Solo informativo; no se edita aquí.':'For information only; not edited here.');
+  return `<div class="hn">${esc(es?'2026 DHC — horario de feriados por departamento. ':'2026 DHC holiday schedule by department. ')}${esc(note)} ${esc(es?'ON = trabaja, OFF = libre, “—” = no especificado. Tu departamento está resaltado (★).':'ON = working, OFF = day off, “—” = not specified. Your department is highlighted (★).')}${HOL.todas?'':esc(es?' Solo ves tu departamento.':' You only see your own department.')}</div><div class="tw"><table>${head}${body}</table></div>${ed?`<div style="margin-top:12px"><button class="btn" onclick="editDept(null)">+ ${esc(tr('Add department / Agregar departamento'))}</button></div>`:''}`;
+}
+async function holSave(name,args){
+  const r=await call(name,args); if(!r)return false;
+  closeDlg(); await loadHol(); if(!$('holview').classList.contains('hide'))$('holview').innerHTML=holTable(); return true;
+}
+function editCell(fid,i){
+  const f=(HOL.filas||[]).find(x=>x.id===fid), fe=(HOL.fechas||[])[i]; if(!f||!fe)return;
+  const opts=[['ON',tr('ON — working / trabaja')],['OFF',tr('OFF — day off / libre')],['ON CALL',tr('ON CALL — on call / de guardia')],['CLOSED',tr('CLOSED — store closed / CERRADO — tienda cerrada')],['',tr('Not specified / No especificado')]];
+  showDlg(`<h2 data-no-i18n>${esc(f.depto)}</h2><div class="sub" data-no-i18n>${esc(holName(fe))} · ${esc(holDate(fe.fecha))}</div><div id="f-e" class="err hide"></div>
+    <div style="display:grid;gap:8px;margin:10px 0">${opts.map(o=>`<button class="btn ${f.estados[i]===(o[0]||null)?'pri':''}" data-v="${esc(o[0])}" onclick="holSave('feriados_celda_set',{p_fila:${fid},p_idx:${i},p_valor:this.dataset.v})">${esc(o[1])}</button>`).join('')}</div>
+    <div class="acts"><button class="btn" onclick="closeDlg()">${esc(tr('Cancel / Cancelar'))}</button></div>`);
+}
+function editHours(orden){
+  const fe=(HOL.fechas||[]).find(x=>x.orden===orden); if(!fe)return;
+  showDlg(`<h2 data-no-i18n>${esc(holName(fe))}</h2><div class="sub" data-no-i18n>${esc(holDate(fe.fecha))}</div><div id="f-e" class="err hide"></div>
+    <label for="f-h">${esc(tr('Store hours / Horario de tiendas'))}</label><input id="f-h" maxlength="20" value="${esc(fe.horario||'')}" placeholder="10-4  /  CLOSED">
+    <div class="sub">${esc(tr('Leave empty if not specified. / Déjalo vacío si no está especificado.'))}</div>
+    <div class="acts"><button class="btn pri" onclick="holSave('feriados_horario_set',{p_orden:${orden},p_horario:$('f-h').value})">${esc(tr('Save / Guardar'))}</button><button class="btn" onclick="closeDlg()">${esc(tr('Cancel / Cancelar'))}</button></div>`);
+}
+function editDept(fid){
+  const f=fid?(HOL.filas||[]).find(x=>x.id===fid):null;
+  showDlg(`<h2>${esc(tr(f?'Edit department / Editar departamento':'Add department / Agregar departamento'))}</h2><div id="f-e" class="err hide"></div>
+    <label for="f-d">${esc(tr('Name / Nombre'))}</label><input id="f-d" maxlength="80" value="${esc(f?f.depto:'')}">
+    <label for="f-n">${esc(tr('Note (optional) / Nota (opcional)'))}</label><input id="f-n" maxlength="200" value="${esc(f&&f.nota||'')}">
+    ${f?'':`<div class="sub">${esc(tr('A new department appears in the table for managers. To show it on someone’s own schedule, ask Claude to link it to the right people. / Un departamento nuevo aparece en la tabla para los gerentes. Para que salga en el horario personal de alguien, pídele a Claude que lo ligue a las personas.'))}</div>`}
+    <div class="acts"><button class="btn pri" onclick="holSave('feriados_fila_set',{p_fila:${f?f.id:'null'},p_depto:$('f-d').value,p_nota:$('f-n').value})">${esc(tr('Save / Guardar'))}</button>${f?`<button class="btn d" onclick="if(confirm(tr('Delete this department row? / ¿Borrar esta fila?')))holSave('feriados_fila_borrar',{p_fila:${f.id}})">${esc(tr('Delete / Borrar'))}</button>`:''}<button class="btn" onclick="closeDlg()">${esc(tr('Cancel / Cancelar'))}</button></div>`);
 }
 function tab(k){
   const hol=k==='h';
@@ -470,7 +504,7 @@ async function openPerson(rid){
   const week=`<div class="mine" style="margin:8px 0 12px"><div class="row">${S.dias.map((d,i)=>{const c=(r.celdas||{})[d.d];
     const body=!c?'—':c.libre?esc(tr('OFF / LIBRE')):shiftLines(c.t).map(esc).join('<br>');
     return `<div class="c ${d.d===T?'t':''} ${c&&c.libre?'o':''}"><b data-no-i18n>${esc(dn[i])} ${esc(fd(d.d,{day:'numeric'}))}</b>${body}</div>`;}).join('')}</div></div>`;
-  const edit=`<button class="btn" onclick="closeDlg();tab('h')">🎄 ${esc(tr('Holidays by department / Feriados por departamento'))}</button>`+(S.puede_editar?`<button class="btn" onclick="openRow('${r.id}')">${esc(tr('Edit person / Editar persona'))}</button>`:'');
+  const edit=`<button class="btn" onclick="closeDlg();tab('h')">🏢 ${esc(tr('Department schedule / Horario por departamento'))}</button>`+(S.puede_editar?`<button class="btn" onclick="openRow('${r.id}')">${esc(tr('Edit person / Editar persona'))}</button>`:'');
   showDlg(`<h2 data-no-i18n>${esc(r.nombre)}</h2><div class="sub">${esc(tr('This week / Esta semana'))} · ${esc(S.tienda)}</div>${week}<div id="pp-h"></div><div class="acts">${edit}<button class="btn" onclick="closeDlg()">${esc(tr('Close / Cerrar'))}</button></div>`);
   if(!r.roster_id)return;
   let p=null; try{p=await DH.rpc('feriados_persona',{p_roster:r.roster_id});}catch(e){}
