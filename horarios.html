@@ -560,13 +560,33 @@ function holPrint(){
   const done=()=>{document.body.classList.remove('pr');window.removeEventListener('afterprint',done);};
   window.addEventListener('afterprint',done); setTimeout(()=>window.print(),150);
 }
+
+let PPL_T=null;
+async function pplLoad(fid){
+  const box=$('f-ppl'); if(!box)return;
+  const l=await call('feriados_personas_ver',{p_fila:fid}); if(!l)return;
+  window.__pfid=fid;
+  box.innerHTML=l.length?l.map(p=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #eef0f4" data-no-i18n><span>${esc(p.nombre)}<small style="display:block;color:#6a7484">${esc([p.puesto,p.ubicacion].filter(Boolean).join(' · '))}</small></span><button class="btn d" style="padding:4px 10px" onclick="pplDel('${p.roster_id}')">✕</button></div>`).join(''):`<div class="sub">${esc(tr('Nobody yet — only editors see this row. / Nadie todavía: solo los editores ven esta fila.'))}</div>`;
+}
+function pplSearch(q){
+  clearTimeout(PPL_T);
+  PPL_T=setTimeout(async()=>{
+    const out=$('f-pr'); if(!out)return;
+    if((q||'').trim().length<2){out.innerHTML='';return;}
+    const r=await call('feriados_roster_buscar',{p_q:q}); if(!r)return;
+    out.innerHTML=r.map(p=>`<button class="btn" style="display:block;width:100%;text-align:left;margin-top:4px" data-no-i18n onclick="pplAdd('${p.roster_id}')">+ ${esc(p.nombre)} <small style="color:#6a7484">${esc([p.puesto,p.ubicacion].filter(Boolean).join(' · '))}</small></button>`).join('')||`<div class="sub">${esc(tr('No matches. / Sin resultados.'))}</div>`;
+  },250);
+}
+async function pplAdd(rid){const ok=await call('feriados_persona_add',{p_fila:window.__pfid,p_roster:rid}); if(!ok)return; $('f-ps').value=''; $('f-pr').innerHTML=''; pplLoad(window.__pfid);}
+async function pplDel(rid){const ok=await call('feriados_persona_quitar',{p_fila:window.__pfid,p_roster:rid}); if(!ok)return; pplLoad(window.__pfid);}
 function editDept(fid){
   const f=fid?(HOL.filas||[]).find(x=>x.id===fid):null;
   showDlg(`<h2>${esc(tr(f?'Edit department / Editar departamento':'Add department / Agregar departamento'))}</h2><div id="f-e" class="err hide"></div>
     <label for="f-d">${esc(tr('Name / Nombre'))}</label><input id="f-d" maxlength="80" value="${esc(f?f.depto:'')}">
     <label for="f-n">${esc(tr('Note (optional) / Nota (opcional)'))}</label><input id="f-n" maxlength="200" value="${esc(f&&f.nota||'')}">
-    ${f?'':`<div class="sub">${esc(tr('A new department appears in the table for managers. To show it on someone’s own schedule, ask Claude to link it to the right people. / Un departamento nuevo aparece en la tabla para los gerentes. Para que salga en el horario personal de alguien, pídele a Claude que lo ligue a las personas.'))}</div>`}
+    ${f?'<div class="sub" style="margin-top:10px"><b>'+esc(tr('Who can see this row / Quién puede ver esta fila'))+'</b><br>'+esc(tr('Only the people listed here (and editors) can open the department schedule. / Solo las personas de esta lista (y los editores) pueden abrir el horario por departamento.'))+'</div><div id="f-ppl"></div><input id="f-ps" placeholder="'+esc(tr('Add a person: type a name / Agregar persona: escribe un nombre'))+'" oninput="pplSearch(this.value)" autocomplete="off"><div id="f-pr"></div>':`<div class="sub">${esc(tr('After saving, open the department to choose who can see it. Until you add people, only editors see it. / Después de guardar, abre el departamento para elegir quién puede verlo. Mientras no agregues personas, solo los editores lo ven.'))}</div>`}
     <div class="acts"><button class="btn pri" onclick="holSave('feriados_fila_set',{p_fila:${f?f.id:'null'},p_depto:$('f-d').value,p_nota:$('f-n').value})">${esc(tr('Save / Guardar'))}</button>${f?`<button class="btn d" onclick="if(confirm(tr('Delete this department row? / ¿Borrar esta fila?')))holSave('feriados_fila_borrar',{p_fila:${f.id}})">${esc(tr('Delete / Borrar'))}</button>`:''}<button class="btn" onclick="closeDlg()">${esc(tr('Cancel / Cancelar'))}</button></div>`);
+  if(f)pplLoad(f.id);
 }
 function tab(k){
   const hol=k==='h';
@@ -595,7 +615,8 @@ async function openPerson(rid){
   if(!DH.token()){location.href='index.html';return;}
   $('ld').textContent=tr('Loading… / Cargando…');
   await Promise.all([load(),loadHol()]);
-  if(location.hash==='#feriados')tab('h');
+  if(HOL&&HOL.acceso===false){const t=$('vtabs');if(t)t.classList.add('hide');if(location.hash==='#feriados'){try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}}}
+  else if(location.hash==='#feriados')tab('h');
 })();
 </script>
 </body>
