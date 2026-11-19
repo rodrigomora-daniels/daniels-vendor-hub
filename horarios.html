@@ -95,6 +95,7 @@
   #holview button.ed{border:0;background:none;color:inherit;font:inherit;cursor:pointer;padding:2px 4px;border-radius:6px;text-align:inherit}
   #holview button.ed:hover{background:#eef2fa}
   #holview button.cell{padding:2px}
+  #holview small.cn{display:block;font-weight:400;font-size:12px;color:#5a6575;margin-top:4px;line-height:1.25;max-width:150px;margin-left:auto;margin-right:auto}
   #holview button.nm2{font-weight:600;text-align:left}
   #holview tr.me td{background:#FFF8EC;font-weight:700}
   #holview tr.me td:first-child{box-shadow:inset 4px 0 0 var(--gold)}
@@ -465,7 +466,7 @@ function holTable(){
   const head=`<tr><th>${es?'Departamento':'Department'}</th>${(HOL.fechas||[]).map(f=>{
     const hrs=f.horario?(f.horario==='CLOSED'?(es?'Cerrado':'Closed'):(es?'Horario ':'Hours ')+f.horario):(ed?(es?'+ horario':'+ hours'):'');
     return `<th data-no-i18n>${esc(holName(f))}<small>${esc(holDate(f.fecha))}</small>${ed?`<small><button class="ed" onclick="editHours(${f.orden})">${esc(hrs)} ✎</button></small>`:`<small>${esc(hrs)}</small>`}</th>`;}).join('')}</tr>`;
-  const body=(HOL.filas||[]).map(f=>`<tr class="${f.id===HOL.mia?'me':''}"><td data-no-i18n>${ed?`<button class="ed nm2" onclick="editDept(${f.id})">${esc(f.depto)}${f.id===HOL.mia?' ★':''} ✎</button>`:esc(f.depto)+(f.id===HOL.mia?' ★':'')}${f.nota?`<br><small style="font-weight:400;color:#6a7484">${esc(f.nota)}</small>`:''}</td>${f.estados.map((x,i)=>`<td>${ed?`<button class="ed cell" onclick="editCell(${f.id},${i})" aria-label="${esc(f.depto)}">${holSt(x)}</button>`:holSt(x)}</td>`).join('')}</tr>`).join('');
+  const body=(HOL.filas||[]).map(f=>`<tr class="${f.id===HOL.mia?'me':''}"><td data-no-i18n>${ed?`<button class="ed nm2" onclick="editDept(${f.id})">${esc(f.depto)}${f.id===HOL.mia?' ★':''} ✎</button>`:esc(f.depto)+(f.id===HOL.mia?' ★':'')}${f.nota?`<br><small style="font-weight:400;color:#6a7484">${esc(f.nota)}</small>`:''}</td>${f.estados.map((x,i)=>{const nt=(f.notas||[])[i];const nh=nt?`<small class="cn" data-no-i18n>${esc(nt)}</small>`:'';return `<td>${ed?`<button class="ed cell" onclick="editCell(${f.id},${i})" aria-label="${esc(f.depto)}">${holSt(x)}${nh}</button>`:holSt(x)+nh}</td>`;}).join('')}</tr>`).join('');
   const note=ed?(es?'Puedes editarlo: toca un estado, un horario o el nombre de un departamento. Los cambios los ve todo el equipo al instante.':'You can edit it: tap a status, an hours line or a department name. Everyone sees changes right away.'):(es?'Solo informativo; no se edita aquí.':'For information only; not edited here.');
   return `<div class="hn">${esc(es?'2026 DHC — horario de feriados por departamento. ':'2026 DHC holiday schedule by department. ')}${esc(note)} ${esc(es?'ON = trabaja, OFF = libre, “—” = no especificado. Tu departamento está resaltado (★).':'ON = working, OFF = day off, “—” = not specified. Your department is highlighted (★).')}${HOL.todas?'':esc(es?' Solo ves tu departamento.':' You only see your own department.')}</div><div class="tw"><table>${head}${body}</table></div>${ed?`<div style="margin-top:12px"><button class="btn" onclick="editDept(null)">+ ${esc(tr('Add department / Agregar departamento'))}</button></div>`:''}`;
 }
@@ -477,7 +478,9 @@ function editCell(fid,i){
   const f=(HOL.filas||[]).find(x=>x.id===fid), fe=(HOL.fechas||[])[i]; if(!f||!fe)return;
   const opts=[['ON',tr('ON — working / trabaja')],['OFF',tr('OFF — day off / libre')],['ON CALL',tr('ON CALL — on call / de guardia')],['CLOSED',tr('CLOSED — store closed / CERRADO — tienda cerrada')],['',tr('Not specified / No especificado')]];
   showDlg(`<h2 data-no-i18n>${esc(f.depto)}</h2><div class="sub" data-no-i18n>${esc(holName(fe))} · ${esc(holDate(fe.fecha))}</div><div id="f-e" class="err hide"></div>
-    <div style="display:grid;gap:8px;margin:10px 0">${opts.map(o=>`<button class="btn ${f.estados[i]===(o[0]||null)?'pri':''}" data-v="${esc(o[0])}" onclick="holSave('feriados_celda_set',{p_fila:${fid},p_idx:${i},p_valor:this.dataset.v})">${esc(o[1])}</button>`).join('')}</div>
+    <label for="f-nc">${esc(tr('Note for this cell (optional) / Nota para esta celda (opcional)'))}</label><input id="f-nc" maxlength="140" value="${esc((f.notas||[])[i]||'')}" placeholder="${esc(tr('e.g. Rosie: vacation / ej. Rosie: vacaciones'))}">
+    <div class="sub">${esc(tr('Pick a status to save it with the note. / Elige un estado para guardarlo con la nota.'))}</div>
+    <div style="display:grid;gap:8px;margin:10px 0">${opts.map(o=>`<button class="btn ${f.estados[i]===(o[0]||null)?'pri':''}" data-v="${esc(o[0])}" onclick="holSave('feriados_celda_set',{p_fila:${fid},p_idx:${i},p_valor:this.dataset.v,p_nota:$('f-nc').value})">${esc(o[1])}</button>`).join('')}</div>
     <div class="acts"><button class="btn" onclick="closeDlg()">${esc(tr('Cancel / Cancelar'))}</button></div>`);
 }
 function editHours(orden){
@@ -515,7 +518,7 @@ async function openPerson(rid){
   if(!p||!p.permitido||!p.fila||!$('pp-h'))return;
   const up=(p.fechas||[]).map((f,i)=>({f,i})).filter(x=>x.f.fecha>=T);
   if(!up.length)return;
-  $('pp-h').innerHTML=`<h3 style="font:700 15px 'Segoe UI',Arial,sans-serif;margin:6px 0">🎄 ${esc(tr('Holidays / Feriados'))}</h3><div class="hc-row">${up.map(x=>`<div class="hc-d"><b data-no-i18n>${esc(holName(x.f))}</b><small data-no-i18n>${esc(holDate(x.f.fecha))}${x.f.horario&&x.f.horario!=='CLOSED'?' · '+esc(x.f.horario):''}</small>${holSt(p.fila.estados[x.i])}</div>`).join('')}</div>${p.fila.nota?`<div class="sub" data-no-i18n>${esc(p.fila.nota)}</div>`:''}`;
+  $('pp-h').innerHTML=`<h3 style="font:700 15px 'Segoe UI',Arial,sans-serif;margin:6px 0">🎄 ${esc(tr('Holidays / Feriados'))}</h3><div class="hc-row">${up.map(x=>`<div class="hc-d"><b data-no-i18n>${esc(holName(x.f))}</b><small data-no-i18n>${esc(holDate(x.f.fecha))}${x.f.horario&&x.f.horario!=='CLOSED'?' · '+esc(x.f.horario):''}</small>${holSt(p.fila.estados[x.i])}${(p.fila.notas||[])[x.i]?`<small data-no-i18n style="margin:6px 0 0">${esc(p.fila.notas[x.i])}</small>`:''}</div>`).join('')}</div>${p.fila.nota?`<div class="sub" data-no-i18n>${esc(p.fila.nota)}</div>`:''}`;
 }
 
 (async function init(){
