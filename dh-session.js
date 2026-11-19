@@ -98,6 +98,7 @@
     if (!res.ok || !out || out.error) { var er = new Error((out && out.error) || ('HTTP ' + res.status)); er.code = out && out.error; throw er; }
     return out;
   }
+  DH.salWeb = function (q) { return fn({ q: q }, 'sal-web'); };
   DH.files = {
     // ids -> { id: { url, mime, nombre } }; links last 1 hour
     sign: async function (ids) {

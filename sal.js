@@ -184,6 +184,14 @@
         return '<div class="sal-card"><h4>' + esc(n.titulo) + '</h4><div class="meta">' + esc(fmtDate(n.publicada_en)) + '</div><p>' + esc(n.cuerpo) + '</p><div class="sal-act"><a class="sal-btn" href="noticias.html">' + esc(t('Open', 'Abrir')) + '</a></div></div>';
       }).join('');
     }
+    if (r.web && r.web.length) {
+      h += '<div class="sal-sec">' + esc(t('On the Daniel\'s website', 'En el sitio web de Daniel\'s')) + '</div>' + r.web.map(function (w) {
+        var pr = w.price != null ? '$' + w.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
+        var was = w.was ? ' <s style="opacity:.6">$' + w.was.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</s>' : '';
+        return '<div class="sal-card"><h4>' + esc(w.title) + '</h4><div class="meta">' + esc(pr) + was + ' · ' + esc(w.available ? t('Shows as available online', 'Aparece disponible en línea') : t('Shows as out of stock online', 'Aparece agotado en línea')) + '</div>' +
+          '<div class="sal-act"><a class="sal-btn" target="_blank" rel="noopener" href="' + esc(w.url) + '">' + esc(t('Open on the website', 'Abrir en el sitio')) + '</a></div></div>';
+      }).join('') + '<div class="sal-note">' + esc(t('Website data (about 80% accurate): availability is online only, with no quantity or store. Confirm in Infinity before promising stock.', 'Datos del sitio web (aprox. 80% exactos): la disponibilidad es solo en línea, sin cantidad ni tienda. Confirma en Infinity antes de prometer existencia.')) + '</div>';
+    }
     if (!h) return '';
     return h + '<div class="sal-note">' + esc(t('These are the passages and posts I found that you can access. Check the source before you act on it.', 'Esto es lo que encontré y a lo que tienes acceso. Revisa la fuente antes de actuar.')) + '</div>';
   }
@@ -211,15 +219,27 @@
 
   /* ---------- ask ---------- */
   function withTimeout(p, ms) { return Promise.race([p, new Promise(function (_, no) { setTimeout(function () { no(new Error('timeout')); }, ms); })]); }
+  /* Product lookups on the website only when the question looks like a product / SKU / stock question. */
+  function webQuery(q) {
+    var stock = /\b(price|prices|stock|available|availability|inventory|have|sku|in stock|precio|precios|existencia|inventario|hay|tienen|tienes|disponible|cuesta|cuanto|how much)\b/i;
+    var hasNum = /[a-z]*\d[a-z0-9*\-]*/i.test(q) && /\d{3,}|\d+[a-z]+\d*|[a-z]+\d+/i.test(q);
+    var words = q.trim().split(/\s+/).length;
+    if (!(stock.test(q) || hasNum || words <= 3)) return '';
+    var c = q.replace(/\b(do we have|do you have|is there|how much is|how much|what is the price of|price of|in stock|available|stock|inventory|sku|price|cuanto cuesta|cuesta|tienen|tenemos|hay|existencia de|existencia|precio de|precio|inventario|disponible|de|del|the|a|an|el|la|los|las|un|una)\b/gi, ' ').replace(/[?¿!¡,]/g, ' ').replace(/\s+/g, ' ').trim();
+    return c.length >= 3 ? c : '';
+  }
   async function ask(q) {
     q = String(q || '').trim(); if (q.length < 2 || busy) return;
     busy = true; lastQ = q; sendBtn.disabled = true; input.value = ''; chipsEl.style.display = 'none';
     addMe(q); setFace('search');
-    var wait = addSal(esc(t('Searching the library, channels and promotions', 'Buscando en la biblioteca, canales y promociones')) + '<span class="sal-dots" aria-hidden="true"><i></i><i></i><i></i></span>', 'search');
+    var wait = addSal(esc(t('Searching the library, channels, promotions and the website', 'Buscando en la biblioteca, canales, promociones y el sitio web')) + '<span class="sal-dots" aria-hidden="true"><i></i><i></i><i></i></span>', 'search');
     clearTimeout(slowTimer);
     slowTimer = setTimeout(function () { setFace('thinking'); setBubble(wait, esc(t('Still looking, one moment', 'Sigo buscando, un momento')) + '<span class="sal-dots" aria-hidden="true"><i></i><i></i><i></i></span>', 'thinking'); }, 1800);
     try {
+      var wq = webQuery(q);
+      var webP = (wq && DH.salWeb) ? withTimeout(DH.salWeb(wq), 8000).then(function (w) { return w && w.items || []; }).catch(function () { return []; }) : Promise.resolve([]);
       var r = await withTimeout(DH.rpc('sal_buscar', { p_q: q }), 20000);
+      r.web = await webP;
       clearTimeout(slowTimer);
       var html = renderResult(r, q);
       if (!html) {
