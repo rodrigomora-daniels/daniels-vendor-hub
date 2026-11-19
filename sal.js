@@ -202,24 +202,24 @@
       }).join('');
     }
     if (r.web && r.web.length) {
-      h += '<div class="sal-sec">' + esc((r.saleMode ? t('Sale items on the Daniel\'s website', 'En oferta en el sitio web de Daniel\'s') : t('On the Daniel\'s website', 'En el sitio web de Daniel\'s'))) + '</div>' + r.web.map(function (w) {
-        var pr = w.price != null ? '$' + w.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
-        var was = w.was ? ' <s style="opacity:.6">$' + w.was.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</s>' : '';
-        var opts = (w.options || []).filter(function (o) { return o.values && o.values.length && !/^title$/i.test(o.name); }).map(function (o) {
+      h += '<div class="sal-sec">' + esc(t('Product', 'Producto')) + '</div>' + r.web.map(function (w) {
+        var img = w.image ? '<img src="' + esc(w.image) + '" alt="" loading="lazy" referrerpolicy="no-referrer" style="float:right;width:84px;height:84px;object-fit:contain;margin:0 0 6px 10px;border-radius:8px;background:#fff">' : '';
+        var badge = '<span style="display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700;color:#fff;background:' + (w.available ? '#1E8E5A' : '#B3402F') + '">' + esc(w.available ? t('Available', 'Disponible') : t('Not available', 'No disponible')) + '</span>';
+        var sp = (w.specs || []).length ? '<ul style="margin:8px 0 0 18px;padding:0">' + w.specs.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ul>' : '';
+        var opts = (w.options || []).filter(function (o) { return o.values && o.values.length; }).map(function (o) {
           return '<p><b>' + esc(o.name) + ' (' + o.values.length + '):</b> ' + esc(o.values.join(', ')) + '</p>';
         }).join('');
-        var vav = (w.variants || []).length > 1 ? '<p>' + esc(t('Online availability by option: ', 'Disponibilidad en línea por opción: ')) + esc(w.variants.map(function (v) { return v.title + (v.available ? ' ✓' : ' ✗'); }).join(' · ')) + '</p>' : '';
-        return '<div class="sal-card"><h4>' + esc(w.title) + '</h4><div class="meta">' + esc(pr) + was + ' · ' + esc(w.available ? t('Shows as available online', 'Aparece disponible en línea') : t('Shows as out of stock online', 'Aparece agotado en línea')) + '</div>' + opts + vav +
-          '<div class="sal-act"><a class="sal-btn" target="_blank" rel="noopener" href="' + esc(w.url) + '">' + esc(t('Open on the website', 'Abrir en el sitio')) + '</a></div></div>';
+        var vav = (w.variants || []).length > 1 ? '<p>' + esc(t('By option: ', 'Por opción: ')) + esc(w.variants.map(function (v) { return v.title + (v.available ? ' ✓' : ' ✗'); }).join(' · ')) + '</p>' : '';
+        return '<div class="sal-card" style="overflow:hidden">' + img + '<h4>' + esc(w.title) + '</h4><div class="meta">' + badge + '</div>' + opts + vav + sp + '</div>';
       }).join('');
     }
     if (!h) return '';
     if (r.saleMode) {   // promotions (flyers) first, then the website's sale items, then the rest
-      var parts = h.split('<div class="sal-sec">'), pre = parts.shift(), rank = function (p) { return /^(Promotions|Promociones|Running now|Vigentes ahora)/.test(p) ? 0 : /^(Sale items|En oferta)/.test(p) ? 1 : 2; };
+      var parts = h.split('<div class="sal-sec">'), pre = parts.shift(), rank = function (p) { return /^(Promotions|Promociones|Running now|Vigentes ahora)/.test(p) ? 0 : /^(Product|Producto)/.test(p) ? 1 : 2; };
       parts.sort(function (x, y) { return rank(x) - rank(y); });
       h = pre + parts.map(function (p) { return '<div class="sal-sec">' + p; }).join('');
     }
-    return h + '<div class="sal-note">' + esc((r.web && r.web.length) ? t('SAL can make mistakes. Availability comes from the website; check Infinity to be sure.', 'SAL puede cometer errores. La disponibilidad viene del sitio web; consulta Infinity para estar seguro.') : t('SAL can make mistakes.', 'SAL puede cometer errores.')) + '</div>';
+    return h + '<div class="sal-note">' + esc((r.web && r.web.length) ? t('SAL can make mistakes. Availability comes from the website; check Infinity to be sure. Prices and promotions: use the store tag and the published flyers.', 'SAL puede cometer errores. La disponibilidad viene del sitio web; consulta Infinity para estar seguro. Precios y promociones: usa la etiqueta de tienda y los flyers publicados.') : t('SAL can make mistakes.', 'SAL puede cometer errores.')) + '</div>';
   }
 
   function bindResult(node, r) {
@@ -273,8 +273,8 @@
     slowTimer = setTimeout(function () { setFace('thinking'); setBubble(wait, esc(t('Still looking, one moment', 'Sigo buscando, un momento')) + '<span class="sal-dots" aria-hidden="true"><i></i><i></i><i></i></span>', 'thinking'); }, 1800);
     try {
       var wq = webQuery(q), saleMode = PROMO_RE.test(q);
-      if (saleMode) wq = q;
-      var webP = (wq && DH.salWeb) ? withTimeout(DH.salWeb(wq, /colou?r|colores|tama[nñ]o|sizes?|opcion|options|variant|modelos|medidas/i.test(q), saleMode ? 'sale' : ''), 10000).then(function (w) { return w && w.items || []; }).catch(function () { return []; }) : Promise.resolve([]);
+      if (saleMode && !/\d/.test(q)) wq = '';   // promo question: flyers only (the website is not the source for promotions)
+      var webP = (wq && DH.salWeb) ? withTimeout(DH.salWeb(wq), 10000).then(function (w) { return w && w.items || []; }).catch(function () { return []; }) : Promise.resolve([]);
       var r = await withTimeout(DH.rpc('sal_buscar', { p_q: q }), 20000);
       r.web = await webP; r.saleMode = saleMode;
       if (saleMode && isPromoBrowse(q) && !(r.promos && r.promos.length)) { try { r.promos = await withTimeout(DH.rpc('sal_promos_vigentes', {}), 8000); r.browse = true; } catch (e) {} }

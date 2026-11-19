@@ -72,13 +72,14 @@
 <main>
   <div id="msg" class="msg hide"></div>
   <div class="tabs" id="tabs"></div>
-  <div id="pubbar" class="hide" style="margin-bottom:12px"><button class="btn" onclick="edit(null)">+ New promotion / Nueva promoción</button></div>
+  <div id="pubbar" class="hide" style="margin-bottom:12px"><button class="btn" onclick="edit(null)">+ New promotion / Nueva promoción</button> <button class="btn ghost" id="btn-ocr" onclick="readFlyers()">Read flyers for SAL / Leer flyers para SAL</button> <span id="ocr-st" style="font-size:12px;color:var(--gray)"></span></div>
   <div id="edit" class="card hide"></div>
   <div id="grid" class="grid"></div>
   <div id="perm" class="card hide" style="margin-top:20px"></div>
 </main>
 <div id="lb" class="hide"><div class="bar"><span id="lbt"></span><button onclick="closeLb()">Close / Cerrar ✕</button></div><div class="stage"><img id="lbi" alt=""><video id="lbv" controls playsinline style="display:none;max-width:100%;max-height:85vh;margin:auto"></video></div></div>
 <script src="dh-session.js"></script>
+<script src="sal-ocr.js" defer></script>
 <script>
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -187,6 +188,15 @@ function edit(id){
    <div style="margin-top:12px"><button class="btn" id="f-save" onclick="save('${id||''}')">Save / Guardar</button> <button class="btn ghost" onclick="$('edit').classList.add('hide')">Cancel</button></div>`;
   e.scrollIntoView({behavior:'smooth'});
 }
+async function readFlyers(){
+  const b=$('btn-ocr'), st=$('ocr-st'); if(!window.SalOcr){st.textContent='Loading… / Cargando…';return;}
+  b.disabled=true; st.textContent='Starting… / Iniciando… (first time takes a minute / la primera vez tarda un minuto)';
+  try{
+    const r=await SalOcr.run((i,n,t)=>{st.textContent=n?('Reading '+(i+1>n?n:i+1)+' of '+n+(t?': '+t:'')+' / Leyendo '+(i+1>n?n:i+1)+' de '+n):'';});
+    st.textContent=r.total?('Done: '+r.done+' read'+(r.failed?', '+r.failed+' failed':'')+'. / Listo: '+r.done+' leídos'+(r.failed?', '+r.failed+' fallaron':'')+'.'):'Nothing new to read. / Nada nuevo por leer.';
+  }catch(e){st.textContent='Could not read flyers. / No se pudieron leer los flyers.';}
+  b.disabled=false;
+}
 async function save(id){
   const btn=$('f-save'), file=$('f-f').files[0], cur=id?D.items.find(x=>x.id===id):null;
   if(!id&&!file){err('Choose a file. / Elige un archivo.');return;}
@@ -198,7 +208,9 @@ async function save(id){
     const archivo=file?await DH.files.upload('promo',file):cur.archivo_id;
     const r=await DH.rpc('admin_promo_guardar',{p_id:id||null,p_titulo:$('f-t').value,p_descripcion:$('f-d').value||null,p_archivo_id:archivo,p_desde:$('f-s').value||null,p_hasta:$('f-e').value||null,p_roles:roles,p_activo:$('f-a').checked,p_seccion:$('f-sec').value||null});
     if(r.error){err(r.detalle||r.error);btn.disabled=false;btn.textContent='Save / Guardar';return;}
-    $('edit').classList.add('hide'); ok('Saved. / Guardado.'); await load();
+    $('edit').classList.add('hide'); ok('Saved. / Guardado.');
+    if(file&&file.type&&file.type.startsWith('image/')&&window.SalOcr){SalOcr.one(archivo).catch(()=>{});}   // quiet: SAL learns the flyer text
+    await load();
   }catch(e){err(e.message||'Could not save.');btn.disabled=false;btn.textContent='Save / Guardar';}
 }
 
