@@ -77,11 +77,31 @@ function render(){
   let html=names.map(c=>`<div class="cat" id="${slug(c)}" style="scroll-margin-top:12px"><h2 style="display:flex;align-items:center;gap:8px;border-bottom:2px solid var(--gold);padding-bottom:6px;margin-bottom:10px">${catIcon(c)} ${esc(c)} <span class="tag" style="margin-left:auto">${cats[c].length}</span></h2>${cats[c].map(i=>`<div class="item"><div class="ico">${fileIcon(i)}</div><div class="t"><b>${esc(i.titulo)}</b><small>${esc(i.descripcion||'')}${i.roles?` <em>· ${esc(i.roles.join(', '))}</em>`:''}</small></div><span class="tag">${esc(i.idioma)}</span><span class="tag" style="background:#eee;color:#555">${fileKind(i)}</span>${i.restringido?'<span class="tag" style="background:#fde8e8;color:#b03030">🔒 Restricted</span>':''}${i.activo?'':'<span class="tag off">hidden</span>'}${D.puede_editar?`<button class="btn ghost sm" onclick="edit('${i.id}')">Edit</button>`:''}${i.archivo_id?`<button class="btn" onclick="openFile('${i.id}')">${/^application\/pdf$|^image/.test(i.mime||'')?'Open / Abrir':'Download / Descargar'}</button>`:`<a class="btn" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer">Open / Abrir</a>`}</div>`).join('')}</div>`).join('');
   if(!html)html='<div class="card">Nothing found. / No se encontró nada.</div>';
   html=index+html;
-  if(D.puede_editar)html='<div style="margin-bottom:12px"><button type="button" class="btn ghost" id="btn-add">+ Add resource</button> <button type="button" class="btn" id="btn-bulk">⬆ Bulk upload / Subida masiva</button></div>'+html;
+  if(D.puede_editar)html='<div style="margin-bottom:12px"><button type="button" class="btn ghost" id="btn-add">+ Add resource</button> <button type="button" class="btn" id="btn-bulk">⬆ Bulk upload / Subida masiva</button> <button type="button" class="btn ghost" id="btn-sal" title="Let Ask SAL read new or changed PDFs / Que Ask SAL lea PDFs nuevos o cambiados">🔎 Update SAL index / Actualizar índice de SAL</button> <small id="sal-st" data-no-i18n style="margin-left:6px;color:#5b6b82"></small></div>'+html;
   $('list').innerHTML=html;
   const ba=$('btn-add'), bb=$('btn-bulk');
   if(ba)ba.addEventListener('click',()=>edit(null));
   if(bb)bb.addEventListener('click',()=>{try{bulk();window.scrollTo({top:0,behavior:'smooth'});}catch(x){err('Error: '+x.message);}});
+  const bs=$('btn-sal'); if(bs)bs.addEventListener('click',salUpdate); salSay(SALMSG);
+}
+// ---------- Ask SAL index: PDFs are read page by page so SAL can search them ----------
+let SALMSG='';
+const T=s=>(DH.i18n?DH.i18n.pick(s):s);
+function salSay(t){SALMSG=t;const e=$('sal-st');if(e)e.textContent=t;}
+function salAuto(archivoId,mime){ if(archivoId&&mime==='application/pdf'&&DH.salIndexer)DH.salIndexer.index(archivoId).catch(()=>{}); }   // quiet, after a PDF is saved as a resource
+async function salUpdate(){
+  const b=$('btn-sal'); if(b)b.disabled=true;
+  try{
+    const todo=await DH.salIndexer.pending(false);
+    if(!todo.length){salSay(T('SAL is up to date. / SAL está al día.'));return;}
+    let ok=0,scan=0,bad=0;
+    for(let i=0;i<todo.length;i++){
+      salSay(T('Reading / Leyendo')+' '+(i+1)+'/'+todo.length+': '+todo[i].titulo);
+      try{const r=await DH.salIndexer.index(todo[i].archivo_id); if(r.ok){ok++; if(r.estado==='escaneado')scan++;}else bad++;}catch(e){bad++;}
+    }
+    salSay(T('Done / Listo')+': '+ok+' '+T('read / leídos')+(scan?', '+scan+' '+T('with almost no text (scanned?) / con casi nada de texto (¿escaneados?)'):'')+(bad?', '+bad+' '+T('failed / fallaron'):'')+'.');
+  }catch(e){salSay(T('Could not update the index. / No se pudo actualizar el índice.'));}
+  finally{const b2=$('btn-sal'); if(b2)b2.disabled=false;}
 }
 function edit(id){
   const r=id?D.items.find(x=>x.id===id):{titulo:'',categoria:'',idioma:'EN',url:'',descripcion:'',roles:null,orden:100,activo:true};
@@ -111,6 +131,7 @@ async function save(id){
     let archivo=file?await DH.files.upload('recurso',file):(cur&&cur.archivo_id&&!$('f-u').value.trim()?cur.archivo_id:null);
     const r=await DH.rpc('admin_recurso_guardar',{p_archivo_id:archivo,p_id:id||null,p_titulo:$('f-t').value,p_categoria:$('f-c').value,p_idioma:$('f-i').value,p_url:$('f-u').value,p_descripcion:$('f-d').value||null,p_roles:roles,p_orden:parseInt($('f-o').value)||100,p_activo:$('f-a').checked});
     if(r.error){err((r.detalle||r.error));if(btn)btn.disabled=false;return;}
+    salAuto(archivo,file&&file.type);
     $('msg').classList.add('hide'); $('edit').classList.add('hide'); D=await DH.rpc('recursos_listar'); render();
   }catch(e){err('Could not save: '+e.message);if(btn)btn.disabled=false;}
 }
@@ -221,6 +242,7 @@ async function bulkGo2(){
       const archivo=await DH.files.upload('recurso',r.file);
       const res=await DH.rpc('admin_recurso_guardar',{p_archivo_id:archivo,p_id:null,p_titulo:r.title,p_categoria:((r.cat||'').trim()||cat0),p_idioma:r.idioma,p_url:'',p_descripcion:null,p_roles:roles,p_orden:100+D.items.filter(i=>i.categoria===((r.cat||'').trim()||cat0)).length*10+n,p_activo:true});
       if(res.error)throw new Error(res.detalle||res.error);
+      salAuto(archivo,r.file&&r.file.type);
       r.state='ok';r.msg='Uploaded / Subido';n++;
     }catch(e){r.state='failed';r.msg=e.message||'Failed / Falló';}
     bulkRender();

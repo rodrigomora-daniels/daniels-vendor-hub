@@ -11,6 +11,7 @@
    The token lives in sessionStorage (cleared when the tab closes) and is sent as p_token to the
    p_token overloads of the RPCs. The browser never sends an employee id as proof of identity. */
 (function () {
+  var SELF_SRC = document.currentScript && document.currentScript.src;
   var SUPABASE_URL = 'https://ecfxeebhtgkbsdeuiueb.supabase.co';
   var SUPABASE_KEY = 'sb_publishable_oRxEOMLizp1kjlsRjWWaxg_muaaMHFt';
   var KT = 'dh_token', KE = 'dh_emp';
@@ -90,8 +91,8 @@
 
   // ---- Private files (Supabase Storage via the workspace-files edge function) ----
   var FN = SUPABASE_URL + '/functions/v1/workspace-files';
-  async function fn(payload) {
-    var res = await fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY }, body: JSON.stringify(Object.assign({ token: DH.token() }, payload)) });
+  async function fn(payload, slug) {
+    var res = await fetch(slug ? SUPABASE_URL + '/functions/v1/' + slug : FN, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY }, body: JSON.stringify(Object.assign({ token: DH.token() }, payload)) });
     var out = null; try { out = await res.json(); } catch (e) {}
     if (res.status === 401) { DH.expired(); throw new Error('Session expired'); }
     if (!res.ok || !out || out.error) { var er = new Error((out && out.error) || ('HTTP ' + res.status)); er.code = out && out.error; throw er; }
@@ -139,6 +140,12 @@
       if (!up.ok) throw new Error('Upload failed (' + up.status + '). / Falló la subida.');
       return r.archivo_id;
     }
+  };
+
+  // ---- SAL indexer (admins): reads library PDFs page by page so Ask SAL can search them ----
+  DH.salIndexer = {
+    pending: async function (all) { return (await fn({ action: 'pending', all: !!all }, 'sal-indexar')).items || []; },
+    index: async function (id) { return await fn({ action: 'index', archivo_id: id }, 'sal-indexar'); }
   };
 
   // ---- Site-wide language switch (EN / ES), remembered in this browser ----
@@ -224,6 +231,16 @@
     }
     DH.i18n = { pick: function (s) { return pick(s, lang); }, set: set, get lang() { return lang; } };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+  })();
+  // ---- Ask SAL: floating assistant, loaded after the page is idle (never on exams, the board or the lead form) ----
+  (function () {
+    if (/Certification|Evaluacion|board\.html|Lead_Source|offline|\/next\//i.test(location.pathname)) return;
+    function load() {
+      if (window.__salLoading) return; window.__salLoading = true;
+      var s = document.createElement('script'); s.src = SELF_SRC ? new URL('sal.js', SELF_SRC).href : 'sal.js'; s.defer = true; document.head.appendChild(s);
+    }
+    function go() { (window.requestIdleCallback || function (f) { setTimeout(f, 800); })(load, { timeout: 4000 }); }
+    if (document.readyState === 'complete') go(); else window.addEventListener('load', go);
   })();
   window.DH = DH;
 })();
