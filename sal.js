@@ -270,7 +270,7 @@
   async function ask(q) {
     q = String(q || '').trim(); if (q.length < 2 || busy) return;
     busy = true; lastQ = q; sendBtn.disabled = true; input.value = ''; chipsEl.style.display = 'none';
-    forced = detectLang(q); addMe(q); setFace('search');
+    forced = detectLang(q); logEl.innerHTML = ''; addMe(q); setFace('search');   // each question starts clean: the newest answer is at the top
     var wait = addSal(esc(t('Searching the library, channels, promotions and the website', 'Buscando en la biblioteca, canales, promociones y el sitio web')) + '<span class="sal-dots" aria-hidden="true"><i></i><i></i><i></i></span>', 'search');
     clearTimeout(slowTimer);
     slowTimer = setTimeout(function () { setFace('thinking'); setBubble(wait, esc(t('Still looking, one moment', 'Sigo buscando, un momento')) + '<span class="sal-dots" aria-hidden="true"><i></i><i></i><i></i></span>', 'thinking'); }, 1800);
@@ -288,7 +288,7 @@
         setFace('thinking', 2500);
       } else {
         setBubble(wait, html, 'success'); bindResult(wait, r); setFace('success', 2500);
-        wait.querySelector('.sal-b').scrollIntoView({ block: 'start', behavior: 'smooth' });
+        logEl.scrollTop = 0;
       }
     } catch (e) {
       clearTimeout(slowTimer);
