@@ -129,14 +129,17 @@ async function load(){
   render();
   if(D.puede_publicar&&!window.__ocrAuto){window.__ocrAuto=true;setTimeout(autoRead,2500);}   // SAL learns new/unread flyers on its own
 }
+async function readLists(){   // product lists (Excel / Word / PDF) attached to promotions: index their text for SAL first, so a slow flyer scan never blocks them
+  try{ if(window.DH&&DH.salIndexer){const todo=await DH.salIndexer.pending(false); for(const it of (todo||[])){try{await DH.salIndexer.index(it.archivo_id);}catch(e){}}} }catch(e){}
+}
+let LISTS_DONE=false;
 async function autoRead(){
+  if(!LISTS_DONE){LISTS_DONE=true;readLists();}
   if(!window.SalOcr){setTimeout(autoRead,1500);return;}
   const st=$('ocr-st');
   try{
     const r=await SalOcr.run((i,n,t)=>{if(n)st.textContent='SAL is reading flyers '+Math.min(i+1,n)+' of '+n+'… / SAL está leyendo flyers '+Math.min(i+1,n)+' de '+n+'…';});
     st.textContent=r.total?('SAL read '+r.done+' flyers. / SAL leyó '+r.done+' flyers.'):'';
-    // product lists (Excel / Word / PDF) attached to promotions: index their text for SAL (admins; quiet for everyone else)
-    if(window.DH&&DH.salIndexer){const todo=await DH.salIndexer.pending(false); for(const it of (todo||[])){try{await DH.salIndexer.index(it.archivo_id);}catch(e){}}}
   }catch(e){st.textContent='';}
 }
 function render(){
