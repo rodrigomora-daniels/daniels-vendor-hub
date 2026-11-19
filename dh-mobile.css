@@ -1,0 +1,19 @@
+/* Phone layout (<=700px). Tablets and desktop are untouched. Shared by every page. */
+@media (max-width:700px){
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+  body{font-size:16px;line-height:1.45;overflow-x:hidden}
+  img,video,canvas,svg{max-width:100%;height:auto}
+  input,select,textarea{font-size:16px!important;min-height:46px}
+  button,.btn,a.btn,[role=button],select{min-height:44px}
+  p,li,td,th,label{font-size:max(15px,1em)}
+  small,.meta,.sub{font-size:max(13px,1em)}
+  table{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  body > header,.top-bar,.site-header,.cockpit-header{flex-wrap:wrap;gap:8px;padding:10px 14px!important}
+  .dh-home{min-height:44px;margin-left:auto}
+  .dh-logo img{height:30px}
+  main,.wrap,.container,.page,.content,.dash-content{padding-left:14px!important;padding-right:14px!important;max-width:100%!important}
+  .card,.panel,.box{padding:14px!important}
+  .row,.toolbar,.filters,.tabs{flex-wrap:wrap}
+  dialog,.modal,.dlg{max-width:calc(100vw - 20px)!important}
+  h1{font-size:24px}h2{font-size:20px}h3{font-size:17px}
+}
