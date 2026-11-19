@@ -33,7 +33,7 @@
 <body>
 <header><h1>📚 Resources / Recursos</h1><a href="index.html">← Home / Inicio</a></header>
 <main>
-  <div class="note">Everything here opens straight from My Workspace — no Microsoft account needed. PDFs and images open in the browser; Excel/Word/PowerPoint files download. / Todo se abre directo desde My Workspace, sin cuenta Microsoft. Los PDF e imágenes se abren en el navegador; los archivos de Excel, Word y PowerPoint se descargan.</div>
+  <div class="note">Everything here opens straight from My Workspace — no Microsoft account needed. Files open here in view-only mode; downloads are limited to management. / Todo se abre directo desde My Workspace, sin cuenta Microsoft. Los PDF e imágenes se abren en el navegador; los archivos de Excel, Word y PowerPoint se descargan.</div>
   <div id="msg" class="msg hide"></div>
   <div style="font-size:10px;color:#aaa;text-align:right;margin:-8px 0 6px">page v10</div>
   <div class="bar"><input id="q" placeholder="Search / Buscar…" oninput="render()"><select id="lang" onchange="render()"><option value="">All languages / Todos los idiomas</option><option>EN</option><option>ES</option></select></div>
@@ -41,6 +41,7 @@
   <div id="list"></div>
 </main>
 <script src="dh-session.js?v=4"></script>
+<script src="dh-viewer.js" defer></script>
 <script src="jszip.min.js?v=4"></script>
 <script>
 const $=id=>document.getElementById(id);
@@ -53,10 +54,9 @@ async function init(){
   try{D=await DH.rpc('recursos_listar');}catch(e){err('Could not load resources. / No se pudieron cargar los recursos.');return;}
   render();
 }
-async function openFile(id){
-  const it=D.items.find(x=>x.id===id); const w=window.open('','_blank');
-  try{const u=await DH.files.sign([it.archivo_id]); const f=u[it.archivo_id]; if(!f)throw new Error('unavailable'); if(w){w.opener=null;w.location=f.url;}else{location.href=f.url;}}
-  catch(e){if(w)w.close();err('Could not open the file. / No se pudo abrir el archivo.');}
+function openFile(id){
+  const it=D.items.find(x=>x.id===id); if(!it||!window.DH||!DH.view){err('Could not open the file. / No se pudo abrir el archivo.');return;}
+  DH.view(it.archivo_id,{title:it.titulo});
 }
 const CAT_ORDER=['Sales Resources','Credit','Infinity','Training','Policies','Safety','Manager Tools'];
 const CAT_ICON={'Sales Resources':'🛋️','Credit':'💳','Infinity':'🏦','Training':'🎓','Policies':'📜','Safety':'🦺','Manager Tools':'🧰'};

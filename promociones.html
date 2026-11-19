@@ -80,6 +80,7 @@
 <div id="lb" class="hide"><div class="bar"><span id="lbt"></span><button onclick="closeLb()">Close / Cerrar ✕</button></div><div class="stage"><img id="lbi" alt=""><video id="lbv" controls playsinline style="display:none;max-width:100%;max-height:85vh;margin:auto"></video></div></div>
 <script src="dh-session.js"></script>
 <script src="sal-ocr.js" defer></script>
+<script src="dh-viewer.js" defer></script>
 <script>
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -154,18 +155,15 @@ function kindTh(m){m=m||'';
   return '<div class="pdf">📄<small>PDF</small></div>';}
 function tile(p){
     const u=URLS[p.archivo_id], isImg=p.mime&&p.mime.startsWith('image/');
-    const th=!u?'<div class="pdf">⚠️<small>Unavailable</small></div>':isImg?`<img loading="lazy" src="${esc(u.url)}" alt="${esc(p.titulo)}">`:kindTh(p.mime);
+    const th=isImg?(u?`<img loading="lazy" draggable="false" oncontextmenu="return false" src="${esc(u.url)}" alt="${esc(p.titulo)}">`:'<div class="pdf">⚠️<small>Unavailable</small></div>'):kindTh(p.mime);
     const st=p.estado==='vigente'?'<span class="tag ok">Active</span>':p.estado==='programada'?'<span class="tag warn">Upcoming</span>':p.estado==='vencida'?'<span class="tag off">Ended</span>':'<span class="tag off">Hidden</span>';
     const aud=p.roles?`<span class="tag">${esc(p.roles.join(', '))}</span>`:'';
     return `<div class="tile"><div class="thumb" onclick="openItem('${p.id}')">${th}</div><div class="meta"><b data-no-i18n>${esc(p.titulo)}</b><small data-no-i18n>${esc(p.descripcion||'')}</small><small>${range(p)}</small>${st} ${aud}</div>
       <div class="act"><button class="btn sm" onclick="openItem('${p.id}')">View / Ver</button>${D.puede_publicar?`<button class="btn ghost sm" onclick="edit('${p.id}')">Edit</button>`:''}</div></div>`;
 }
 function openItem(id){
-  const p=D.items.find(x=>x.id===id), u=URLS[p.archivo_id]; if(!u){err('File unavailable. / Archivo no disponible.');return;}
-  const isV=p.mime&&p.mime.startsWith('video/'), isI=p.mime&&p.mime.startsWith('image/');
-  if(!isV&&!isI){window.open(u.url,'_blank','noopener');return;}
-  $('lbt').textContent=p.titulo; $('lbi').style.display=isV?'none':''; $('lbv').style.display=isV?'':'none';
-  if(isV){$('lbv').src=u.url;}else{$('lbi').src=u.url;} $('lb').classList.remove('hide'); document.body.style.overflow='hidden';
+  const p=D.items.find(x=>x.id===id); if(!p||!window.DH||!DH.view){err('File unavailable. / Archivo no disponible.');return;}
+  DH.view(p.archivo_id,{title:p.titulo});
 }
 function closeLb(){$('lb').classList.add('hide');$('lbi').src='';try{$('lbv').pause();}catch(e){}$('lbv').removeAttribute('src');document.body.style.overflow='';}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLb();});

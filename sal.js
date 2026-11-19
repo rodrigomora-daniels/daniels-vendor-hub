@@ -136,18 +136,19 @@
   }
 
   /* ---------- opening files / pages ---------- */
+  var viewerP = null;
+  function loadViewer() {
+    if (window.DH && DH.view) return Promise.resolve();
+    if (!viewerP) viewerP = new Promise(function (ok, no) { var s = document.createElement('script'); s.src = 'dh-viewer.js'; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
+    return viewerP;
+  }
   async function openFile(archivoId, page, url, btn) {
     if (!archivoId) { if (url) window.open(url, '_blank', 'noopener'); return; }
-    var w = window.open('', '_blank');           // opened inside the tap so tablets don't block it
     var old = btn && btn.textContent; if (btn) { btn.disabled = true; btn.textContent = t('Opening…', 'Abriendo…'); }
     try {
-      var r = await DH.files.sign([archivoId]);
-      var f = r[archivoId];
-      if (!f || !f.url) throw new Error('none');
-      var go = f.url + (page && /pdf/.test(f.mime || '') ? '#page=' + page : '');
-      if (w) { w.location.href = go; } else { location.href = go; }
+      await loadViewer();
+      DH.view(archivoId, { page: page || 1 });
     } catch (e) {
-      if (w) w.close();
       addSal(esc(t('I could not open that file. It may have been removed, or you may not have access any more.', 'No pude abrir ese archivo. Puede que lo hayan quitado o que ya no tengas acceso.')), 'error');
       setFace('error', 2500);
     } finally { if (btn) { btn.disabled = false; btn.textContent = old; } }

@@ -110,6 +110,8 @@
       }
       return urls;
     },
+    // one file for the viewer (logged): { url, url_descarga?, mime, nombre, descargar, quien, texto }
+    open: function (id) { return fn({ action: 'open', id: id }); },
     // downscale big photos so flyers load fast on tablets (PDFs and small images pass through)
     prepare: async function (file) {
       if (!/^image\/(jpeg|png|webp)$/.test(file.type) || file.size < 400 * 1024) return file;
