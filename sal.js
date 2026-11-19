@@ -262,9 +262,8 @@
 
   /* ---------- Teach SAL: people with the "sal" permission write quick answers (shown first in results) ---------- */
   async function checkTeach() {
-    if (canTeach !== null) return;
-    try { canTeach = (await DH.rpc('sal_puede', {})) === true; } catch (e) { canTeach = false; }
-    teachBtn.hidden = !canTeach;
+    /* SAL answers only from the library and database; nobody writes answers for it. */
+    canTeach = false; teachBtn.hidden = true;
   }
   function teachClose() { root.classList.remove('teach'); teachBtn.classList.remove('on'); teachBtn.setAttribute('aria-pressed', 'false'); }
   async function teachOpen(prefill) {
