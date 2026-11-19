@@ -192,11 +192,17 @@
     }
     if (false) h += '<div class="sal-note">' + esc(t('I cannot see inside the flyers for that product yet. These are the promotions running now; open one to see the models and prices.', 'Todavía no veo ese producto dentro de los flyers. Estas son las promociones vigentes ahora; abre una para ver modelos y precios.')) + '</div>';
     if (r.promos && r.promos.length) {
-      h += '<div class="sal-sec">' + esc(r.browse ? t('Running now', 'Vigentes ahora') : t('Promotions', 'Promociones')) + '</div>' + r.promos.map(function (p, i) {
+      var card = function (p, i) {
         var badge = p.estado === 'vigente' ? '<span class="sal-badge">' + esc(t('Active', 'Vigente')) + '</span>' : p.estado === 'programada' ? '<span class="sal-badge soon">' + esc(t('Starts ', 'Empieza ') + fmtDate(p.vigente_desde)) + '</span>' : '<span class="sal-badge old">' + esc(t('Ended', 'Terminada')) + '</span>';
         return '<div class="sal-card"><h4>' + esc(p.titulo) + badge + '</h4><div class="meta">' + esc(fmtDate(p.vigente_desde) + (p.vigente_hasta ? ' – ' + fmtDate(p.vigente_hasta) : ' – ' + t('no end date', 'sin fecha final'))) + (p.seccion ? ' · ' + esc(p.seccion) : '') + '</div>' +
           (p.lineas ? '<p style="white-space:pre-line;font-size:13px">' + esc(p.lineas) + '</p>' : '') + (p.descripcion ? '<p>' + esc(p.descripcion) + '</p>' : '') + '<div class="sal-act"><button class="sal-btn pri" data-open="r' + i + '">' + esc(t('Open promo', 'Abrir promo')) + '</button></div></div>';
-      }).join('') + '<div class="sal-act"><a class="sal-btn" href="promociones.html">' + esc(t('All promotions', 'Todas las promociones')) + '</a></div>';
+      };
+      // "running now" only lists active promotions; the ones that have not started go under their own heading
+      var now = [], soon = [];
+      r.promos.forEach(function (p, i) { (p.estado === 'programada' ? soon : now).push(card(p, i)); });
+      if (now.length) h += '<div class="sal-sec">' + esc(r.browse ? t('Running now', 'Vigentes ahora') : t('Promotions', 'Promociones')) + '</div>' + now.join('');
+      if (soon.length) h += '<div class="sal-sec">' + esc(t('Coming soon (not active yet)', 'Próximas (todavía no vigentes)')) + '</div>' + soon.join('');
+      h += '<div class="sal-act"><a class="sal-btn" href="promociones.html">' + esc(t('All promotions', 'Todas las promociones')) + '</a></div>';
     }
     if (r.mensajes && r.mensajes.length) {
       h += '<div class="sal-sec">' + esc(t('In channels', 'En canales')) + '</div>' + r.mensajes.map(function (m) {
