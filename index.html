@@ -172,6 +172,29 @@
   #news-hero .nh-more{margin-top:auto;padding-top:12px;font:700 13px 'Segoe UI',Arial,sans-serif;color:var(--navy)}
   #news-hero .nh-more::after{content:' ›'}
   #news-hero img{width:100%;height:100%;min-height:200px;object-fit:cover;display:block}
+  /* Holiday schedule card + popup (read-only) */
+  #hol-card{margin-bottom:24px}
+  #hol-card .ps-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:10px}
+  #hol-card h2{font:700 19px 'Segoe UI',Arial,sans-serif;color:var(--navy)}
+  #hol-card .hc-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}
+  #hol-card .hc-d{flex:1 0 150px;background:#fff;border:1px solid #e3e7ee;border-radius:12px;padding:12px 14px;font-family:'Segoe UI',Arial,sans-serif;color:#1E2735;min-height:92px}
+  #hol-card .hc-d b{display:block;font-size:15px}
+  #hol-card .hc-d small{display:block;color:#6a7484;font-size:12.5px;margin:2px 0 8px}
+  .hst{display:inline-block;border-radius:999px;padding:3px 11px;font:700 13px 'Segoe UI',Arial,sans-serif;border:1.5px solid currentColor}
+  .hst.ON{color:#1E7B4B;background:#E4F3EA}.hst.OFF{color:#6a7484;background:#F0F2F6}.hst.ONCALL{color:#9A6A00;background:#FFF1CF}.hst.CLOSED{color:#B3402F;background:#FBE5E1}.hst.NA{color:#8a94a4;background:#fff;border-style:dashed}
+  #hol-card .hc-more{margin-top:10px;border:0;background:var(--navy);color:#fff;border-radius:8px;min-height:44px;padding:0 18px;font:700 14px 'Segoe UI',Arial,sans-serif;cursor:pointer}
+  #hol-dlg{position:fixed;inset:0;background:rgba(10,22,45,.6);z-index:300;display:none;align-items:center;justify-content:center;padding:12px}
+  #hol-dlg.show{display:flex}
+  #hol-dlg .hd{background:#fff;width:100%;max-width:980px;max-height:92vh;overflow:auto;border-radius:12px;padding:20px;font-family:'Segoe UI',Arial,sans-serif;color:#1E2735}
+  #hol-dlg h2{font:700 21px Georgia,serif;color:#1B3A6B;margin-bottom:4px}
+  #hol-dlg .hn{font-size:13px;color:#5a6575;margin-bottom:12px;line-height:1.4}
+  #hol-dlg table{border-collapse:collapse;width:100%;min-width:640px;font-size:14px}
+  #hol-dlg th,#hol-dlg td{padding:8px 10px;border-bottom:1px solid #eef0f4;text-align:center}
+  #hol-dlg th:first-child,#hol-dlg td:first-child{text-align:left;position:sticky;left:0;background:#fff}
+  #hol-dlg th small{display:block;font-weight:400;color:#6a7484}
+  #hol-dlg tr.me td{background:#FFF8EC;font-weight:700}
+  #hol-dlg tr.me td:first-child{box-shadow:inset 4px 0 0 var(--gold)}
+  #hol-dlg .hx{float:right;border:0;background:#eef0f4;border-radius:8px;min-width:44px;min-height:44px;font-size:18px;cursor:pointer}
   /* Promo strip: real flyers, big enough to read on a tablet */
   #promo-strip{margin-bottom:24px}
   #promo-strip .ps-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:10px}
@@ -583,6 +606,12 @@ document.addEventListener('DOMContentLoaded',function(){
         <img id="nh-img" alt="" style="display:none">
       </div>
       </div>
+      <section id="hol-card" style="display:none">
+        <div class="ps-head"><h2>Holiday schedule / Horario de feriados</h2></div>
+        <div class="hc-row" id="hc-row"></div>
+        <button class="hc-more" type="button" onclick="openHol()">Full schedule / Ver horario completo</button>
+      </section>
+      <div id="hol-dlg" onclick="if(event.target===this)closeHol()" role="dialog" aria-modal="true"><div class="hd" id="hol-box"></div></div>
       <section id="promo-strip" style="display:none">
         <div class="ps-head"><h2>Current promotions / Promociones vigentes</h2><a href="calendario.html">Calendar / Calendario</a> <a href="promociones.html">See all / Ver todas</a></div>
         <div class="ps-row" id="ps-row"></div>
@@ -1118,7 +1147,7 @@ function handleLogout() {
    DASHBOARD
    ════════════════════════════════════════════════════════════ */
 async function loadDashboard() {
-  loadAlertsCard(); loadGoalCard(); initPushCard(); loadNewsHero(); loadPromoStrip(); loadMsgBadge(); loadNotesToday();
+  loadAlertsCard(); loadGoalCard(); initPushCard(); loadNewsHero(); loadPromoStrip(); loadHolidays(); loadMsgBadge(); loadNotesToday();
   const emp = session.empleado;
 
   // If this employee has a temporary password, force the change screen first
@@ -1598,6 +1627,36 @@ async function loadPromoStrip(){
     box.style.display='block';
   }catch(e){}
 }
+var HOL=null;
+function holSt(x){var k=x==null||x===''?'NA':String(x).replace(/\s+/g,'');return '<span class="hst '+nhEsc(k)+'" data-no-i18n>'+nhEsc(x==null||x===''?'—':x)+'</span>';}
+function holLang(){return (document.documentElement.lang||'').toLowerCase().indexOf('es')===0||(localStorage.getItem('dh_lang')==='es');}
+function holName(f){return holLang()?f.es:f.en;}
+function holDate(d){try{return new Date(d+'T12:00:00').toLocaleDateString(holLang()?'es-US':'en-US',{weekday:'short',month:'short',day:'numeric'});}catch(e){return d;}}
+async function loadHolidays(){
+  try{
+    HOL=await DH.rpc('feriados_ver');
+    var box=document.getElementById('hol-card');
+    var mine=(HOL.filas||[]).filter(function(f){return f.id===HOL.mia;})[0];
+    var today=new Date().toISOString().slice(0,10);
+    var up=(HOL.fechas||[]).map(function(f,i){return {f:f,i:i};}).filter(function(x){return x.f.fecha>=today;});
+    if(!up.length){box.style.display='none';return;}
+    document.getElementById('hc-row').innerHTML=up.slice(0,4).map(function(x){
+      var st=mine?mine.estados[x.i]:null, h=x.f.horario;
+      return '<div class="hc-d"><b data-no-i18n>'+nhEsc(holName(x.f))+'</b><small data-no-i18n>'+nhEsc(holDate(x.f.fecha))+(h&&h!=='CLOSED'?' · '+nhEsc(h):'')+'</small>'+(mine?holSt(st):'<span class="hst NA" data-no-i18n>'+(HOL.todas?'See full schedule / Ver horario':'Not listed / Sin asignar')+'</span>')+'</div>';
+    }).join('');
+    box.style.display='block';
+  }catch(e){}
+}
+function openHol(){
+  if(!HOL)return;
+  var es=holLang(), rows=HOL.filas||[];
+  var head='<tr><th>'+(es?'Departamento':'Department')+'</th>'+(HOL.fechas||[]).map(function(f){return '<th data-no-i18n>'+nhEsc(holName(f))+'<small>'+nhEsc(holDate(f.fecha))+'</small><small>'+nhEsc(f.horario?(f.horario==='CLOSED'?(es?'Cerrado':'Closed'):(es?'Horario ':'Hours ')+f.horario):'')+'</small></th>';}).join('')+'</tr>';
+  var body=rows.map(function(f){return '<tr class="'+(f.id===HOL.mia?'me':'')+'"><td data-no-i18n>'+nhEsc(f.depto)+(f.id===HOL.mia?' ★':'')+(f.nota?'<br><small style="font-weight:400;color:#6a7484">'+nhEsc(f.nota)+'</small>':'')+'</td>'+f.estados.map(function(x){return '<td>'+holSt(x)+'</td>';}).join('')+'</tr>';}).join('');
+  document.getElementById('hol-box').innerHTML='<button class="hx" onclick="closeHol()" aria-label="Close">✕</button><h2>2026 Holiday schedule / Horario de feriados 2026</h2><div class="hn">'+(es?'Solo informativo; no se puede cambiar aquí. ON = trabaja, OFF = libre. “—” = no especificado. Tu departamento está resaltado (★).':'For information only; it cannot be changed here. ON = working, OFF = day off. “—” = not specified. Your department is highlighted (★).')+(HOL.todas?'':(es?' Solo ves tu departamento.':' You only see your own department.'))+'</div><div style="overflow-x:auto"><table>'+head+body+'</table></div>';
+  document.getElementById('hol-dlg').classList.add('show'); document.body.style.overflow='hidden';
+}
+function closeHol(){document.getElementById('hol-dlg').classList.remove('show');document.body.style.overflow='';}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeHol();});
 function openNews(){
   var f=document.getElementById('news-full'), h=document.getElementById('news-hero'), panel=f.querySelector('.nf-panel');
   document.getElementById('nf-list').innerHTML=NEWS_ITEMS.map(function(n){
