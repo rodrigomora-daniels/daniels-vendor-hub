@@ -210,10 +210,10 @@
         var vav = (w.variants || []).length > 1 ? '<p>' + esc(t('Online availability by option: ', 'Disponibilidad en línea por opción: ')) + esc(w.variants.map(function (v) { return v.title + (v.available ? ' ✓' : ' ✗'); }).join(' · ')) + '</p>' : '';
         return '<div class="sal-card"><h4>' + esc(w.title) + '</h4><div class="meta">' + esc(pr) + was + ' · ' + esc(w.available ? t('Shows as available online', 'Aparece disponible en línea') : t('Shows as out of stock online', 'Aparece agotado en línea')) + '</div>' + opts + vav +
           '<div class="sal-act"><a class="sal-btn" target="_blank" rel="noopener" href="' + esc(w.url) + '">' + esc(t('Open on the website', 'Abrir en el sitio')) + '</a></div></div>';
-      }).join('') + '<div class="sal-note">' + esc(t('Website data (about 80% accurate): availability is online only, with no quantity or store. Confirm in Infinity before promising stock.', 'Datos del sitio web (aprox. 80% exactos): la disponibilidad es solo en línea, sin cantidad ni tienda. Confirma en Infinity antes de prometer existencia.')) + '</div>';
+      }).join('');
     }
     if (!h) return '';
-    return h + '<div class="sal-note">' + esc(t('These are the passages and posts I found that you can access. Check the source before you act on it.', 'Esto es lo que encontré y a lo que tienes acceso. Revisa la fuente antes de actuar.')) + '</div>';
+    return h + '<div class="sal-note">' + esc((r.web && r.web.length) ? t('SAL can make mistakes. Availability comes from the website; check Infinity to be sure.', 'SAL puede cometer errores. La disponibilidad viene del sitio web; consulta Infinity para estar seguro.') : t('SAL can make mistakes.', 'SAL puede cometer errores.')) + '</div>';
   }
 
   function bindResult(node, r) {
