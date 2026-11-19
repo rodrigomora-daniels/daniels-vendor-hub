@@ -9,7 +9,9 @@
   var DH = window.DH;
   var SRC = document.currentScript && document.currentScript.src;
   var ART = SRC ? new URL('sal/', SRC).href : 'sal/';
+  var ARTS = ART + 'static/';
   var FACE = { idle: 'sal-idle.svg', thinking: 'sal-thinking.svg', search: 'sal-search.svg', typing: 'sal-typing.svg', success: 'sal-success.svg', error: 'sal-error.svg' };
+  var teachBtn, tv, canTeach = null, TD = null;
   var root, fab, tip, panel, logEl, form, input, sendBtn, faceEl, chipsEl, subEl, titleEl, xBtn;
   var busy = false, faceTimer = 0, typingTimer = 0, slowTimer = 0, lastQ = '', mounted = false, greeted = false;
 
@@ -55,8 +57,10 @@
     '#sal-fab:focus-visible,#sal-root button:focus-visible,#sal-root input:focus-visible,#sal-root a:focus-visible{outline:3px solid var(--t);outline-offset:2px}' +
     '#sal-fab.hi{animation:salhi 1.3s ease 1.2s 1}@keyframes salhi{0%,100%{transform:none}20%{transform:translateY(-8px) rotate(-6deg)}40%{transform:translateY(0) rotate(5deg)}60%{transform:translateY(-4px) rotate(-3deg)}}' +
     '#sal-tip{position:fixed;right:max(88px,calc(env(safe-area-inset-right) + 88px));bottom:max(30px,calc(env(safe-area-inset-bottom) + 30px));background:var(--n);color:#fff;font-weight:600;padding:8px 14px;border-radius:18px 18px 4px 18px;box-shadow:0 4px 14px rgba(11,45,92,.3);opacity:0;transform:translateY(6px);transition:opacity .25s,transform .25s;pointer-events:none;white-space:nowrap}#sal-tip.on{opacity:1;transform:none}' +
-    '#sal-panel{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:max(90px,calc(env(safe-area-inset-bottom) + 90px));width:min(400px,calc(100vw - 24px));height:min(640px,calc(100dvh - 112px));background:var(--o);border-radius:18px;box-shadow:0 18px 50px rgba(11,45,92,.35);display:flex;flex-direction:column;overflow:hidden;opacity:0;transform:translateY(14px) scale(.98);transform-origin:bottom right;visibility:hidden;transition:opacity .2s ease,transform .2s ease,visibility 0s linear .2s}' +
-    '#sal-panel.open{opacity:1;transform:none;visibility:visible;transition:opacity .2s ease,transform .2s ease}' +
+    '#sal-panel{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:max(90px,calc(env(safe-area-inset-bottom) + 90px));width:min(400px,calc(100vw - 24px));height:min(640px,calc(100dvh - 112px));background:var(--o);border-radius:18px;box-shadow:0 18px 50px rgba(11,45,92,.35);display:flex;flex-direction:column;overflow:hidden;opacity:0;transform:scale(.08);transform-origin:calc(100% - 31px) calc(100% + 43px);visibility:hidden;transition:transform .24s cubic-bezier(.5,0,1,1),opacity .18s ease,visibility 0s linear .24s}' +
+    '#sal-panel.open{opacity:1;transform:none;visibility:visible;transition:transform .45s cubic-bezier(.34,1.5,.5,1),opacity .2s ease}' +
+    '#sal-panel.open #sal-hd,#sal-panel.open #sal-log,#sal-panel.open #sal-chips,#sal-panel.open #sal-form,#sal-panel.open #sal-tv{animation:salfade .35s ease .14s both}@keyframes salfade{from{opacity:0}to{opacity:1}}' +
+    '#sal-root.open #sal-fab{transform:scale(.86)}' +
     '#sal-hd{display:flex;align-items:center;gap:10px;background:var(--n);color:#fff;padding:10px 12px 10px 14px;flex:none}' +
     '#sal-face{height:46px;width:auto;flex:none;background:#fff;border-radius:50%;padding:4px 6px 0;border:2px solid var(--t)}#sal-face.pop{animation:salpop .28s ease}@keyframes salpop{0%{transform:scale(.85)}60%{transform:scale(1.08)}100%{transform:none}}' +
     '#sal-hd h2{margin:0;font:700 18px Georgia,serif;letter-spacing:.2px}#sal-hd p{margin:0;font-size:12px;color:#BFE9F2}#sal-hd .tx{flex:1;min-width:0}' +
@@ -78,8 +82,16 @@
     '#sal-form{display:flex;gap:8px;padding:8px 12px calc(10px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #D9E3EF;flex:none}' +
     '#sal-q{flex:1;min-width:0;height:44px;border:1.5px solid #B7C6DA;border-radius:22px;padding:0 16px;font:15px "Segoe UI",Arial,sans-serif;background:var(--o);color:var(--tx)}#sal-q:focus{border-color:var(--t);background:#fff;outline:none;box-shadow:0 0 0 3px rgba(0,217,217,.25)}' +
     '#sal-send{flex:none;width:44px;height:44px;border-radius:50%;border:0;background:var(--n);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}#sal-send:disabled{opacity:.45;cursor:default}#sal-send:not(:disabled):hover{background:#12407f}' +
-    '@media (max-width:520px){#sal-panel{right:0;bottom:0;width:100vw;height:100dvh;border-radius:0}#sal-root.open #sal-fab,#sal-root.open #sal-tip{display:none}}' +
+    '@media (max-width:520px){#sal-panel{right:0;bottom:0;width:100vw;height:100dvh;border-radius:0;transform-origin:calc(100% - 47px) calc(100% - 47px)}#sal-root.open #sal-fab,#sal-root.open #sal-tip{display:none}}' +
     '@media (prefers-reduced-motion:reduce){#sal-root *{animation:none!important;transition:none!important}}' +
+    '#sal-teach{flex:none;width:44px;height:44px;border:0;border-radius:50%;background:transparent;color:#fff;font-size:20px;cursor:pointer}#sal-teach:hover,#sal-teach.on{background:rgba(255,255,255,.18)}' +
+    '#sal-tv{flex:1;overflow:auto;padding:12px;display:none;flex-direction:column;gap:10px}#sal-root.teach #sal-tv{display:flex}#sal-root.teach #sal-log,#sal-root.teach #sal-chips,#sal-root.teach #sal-form{display:none}' +
+    '#sal-tv h3{margin:2px 0 0;font:700 15px Georgia,serif;color:var(--n)}#sal-tv label{display:block;font:700 12px "Segoe UI",Arial,sans-serif;color:#33465f;margin:8px 0 3px}' +
+    '#sal-tv input[type=text],#sal-tv input[type=number],#sal-tv textarea,#sal-tv select{width:100%;border:1.5px solid #B7C6DA;border-radius:10px;padding:9px 11px;font:14px "Segoe UI",Arial,sans-serif;background:#fff;color:var(--tx)}#sal-tv textarea{min-height:110px;resize:vertical}' +
+    '#sal-tv input:focus,#sal-tv textarea:focus,#sal-tv select:focus{border-color:var(--t);outline:none;box-shadow:0 0 0 3px rgba(0,217,217,.25)}' +
+    '.sal-ask{display:flex;gap:6px;align-items:center;justify-content:space-between;background:#fff;border:1px dashed #9FB4CF;border-radius:10px;padding:6px 8px;font-size:13px}.sal-ask b{font-weight:600;overflow-wrap:anywhere}' +
+    '.sal-row{display:flex;gap:8px;align-items:center;justify-content:space-between;background:#fff;border:1px solid #D9E3EF;border-radius:10px;padding:8px 10px;font-size:13px}.sal-row .t{min-width:0;overflow-wrap:anywhere}.sal-row small{display:block;color:#5B6B82}' +
+    '.sal-err{color:#b3261e;font-size:12.5px;font-weight:600;margin-top:6px}' +
     '@media print{#sal-root{display:none!important}}';
 
   /* ---------- state face ---------- */
@@ -100,12 +112,12 @@
   }
   function addSal(html, face) {
     var d = document.createElement('div'); d.className = 'sal-m';
-    d.innerHTML = '<img class="av" alt="" src="' + ART + (FACE[face || 'idle']) + '"><div class="sal-b">' + html + '</div>';
+    d.innerHTML = '<img class="av" alt="" src="' + ARTS + (FACE[face || 'idle']) + '"><div class="sal-b">' + html + '</div>';
     logEl.appendChild(d); scrollEnd(); return d;
   }
   function setBubble(node, html, face) {
     node.querySelector('.sal-b').innerHTML = html;
-    node.querySelector('img.av').setAttribute('src', ART + FACE[face || 'idle']); scrollEnd();
+    node.querySelector('img.av').setAttribute('src', ARTS + FACE[face || 'idle']); scrollEnd();
   }
 
   /* ---------- opening files / pages ---------- */
@@ -232,6 +244,7 @@
     titleEl.textContent = 'Ask SAL';
     subEl.textContent = t('Your Daniels assistant', 'Tu asistente de Daniels');
     xBtn.setAttribute('aria-label', t('Close Ask SAL', 'Cerrar Ask SAL'));
+    teachBtn.setAttribute('aria-label', t('Teach SAL a quick answer', 'Enseñarle una respuesta rápida a SAL')); teachBtn.setAttribute('title', teachBtn.getAttribute('aria-label'));
     fab.setAttribute('aria-label', t('Ask SAL', 'Ask SAL'));
     input.setAttribute('placeholder', t('Ask SAL… e.g. price match, refund, SKU', 'Pregúntale a SAL… ej. price match, reembolso, SKU'));
     input.setAttribute('aria-label', t('Type your question', 'Escribe tu pregunta'));
@@ -246,14 +259,75 @@
     var e = DH.emp && DH.emp(); var nm = e && (e.nombre_completo || e.nombre || '').split(' ')[0];
     addSal('<b>' + esc(t('Hi' + (nm ? ', ' + nm : '') + '! I am SAL.', '¡Hola' + (nm ? ', ' + nm : '') + '! Soy SAL.')) + '</b><p>' + esc(t('Ask me about policies, Infinity steps, promotions or what was posted in the channels. I only show what is in the workspace, and I tell you when I find nothing.', 'Pregúntame por políticas, pasos de Infinity, promociones o lo que se publicó en los canales. Solo muestro lo que está en el workspace y te digo cuando no encuentro nada.')) + '</p>', 'idle');
   }
+
+  /* ---------- Teach SAL: people with the "sal" permission write quick answers (shown first in results) ---------- */
+  async function checkTeach() {
+    if (canTeach !== null) return;
+    try { canTeach = (await DH.rpc('sal_puede', {})) === true; } catch (e) { canTeach = false; }
+    teachBtn.hidden = !canTeach;
+  }
+  function teachClose() { root.classList.remove('teach'); teachBtn.classList.remove('on'); teachBtn.setAttribute('aria-pressed', 'false'); }
+  async function teachOpen(prefill) {
+    root.classList.add('teach'); teachBtn.classList.add('on'); teachBtn.setAttribute('aria-pressed', 'true'); setFace('thinking');
+    tv.innerHTML = '<p>' + esc(t('Loading…', 'Cargando…')) + '</p>';
+    try { TD = await DH.rpc('sal_respuestas_listar', {}); } catch (e) { tv.innerHTML = '<p class="sal-err">' + esc(t('Could not load. Try again.', 'No se pudo cargar. Intenta de nuevo.')) + '</p>'; setFace('error', 2500); return; }
+    setFace('idle'); teachList(prefill);
+  }
+  function teachList(prefill) {
+    var h = '<h3>' + esc(t('Teach SAL', 'Enseñar a SAL')) + '</h3><p style="margin:0;font-size:12.5px;color:#5B6B82">' + esc(t('Quick answers appear first when someone asks. Write them in plain words and point to the source document.', 'Las respuestas rápidas salen primero cuando alguien pregunta. Escríbelas con palabras sencillas y señala el documento fuente.')) + '</p>' +
+      '<div class="sal-act"><button type="button" class="sal-btn pri" data-t="new">+ ' + esc(t('New quick answer', 'Nueva respuesta rápida')) + '</button><button type="button" class="sal-btn" data-t="back">' + esc(t('Back to chat', 'Volver al chat')) + '</button></div>';
+    if (TD.sin_resultado && TD.sin_resultado.length) {
+      h += '<div class="sal-sec">' + esc(t('People asked and SAL found nothing (30 days)', 'Preguntaron y SAL no encontró nada (30 días)')) + '</div>' + TD.sin_resultado.map(function (x, i) {
+        return '<div class="sal-ask"><b>' + esc(x.q) + ' <span style="color:#5B6B82;font-weight:400">×' + x.n + '</span></b><button type="button" class="sal-btn" data-t="ans" data-i="' + i + '">' + esc(t('Answer', 'Responder')) + '</button></div>'; }).join('');
+    }
+    h += '<div class="sal-sec">' + esc(t('Your quick answers', 'Tus respuestas rápidas')) + ' (' + (TD.items || []).length + ')</div>';
+    h += (TD.items || []).map(function (a, i) {
+      return '<div class="sal-row"><div class="t"><b>' + esc(a.titulo) + '</b>' + (a.activo ? '' : ' <span class="sal-badge old">' + esc(t('Hidden', 'Oculta')) + '</span>') + '<small>' + esc(a.recurso ? a.recurso + (a.pagina ? ' · ' + t('page ', 'pág. ') + a.pagina : '') : t('No source linked', 'Sin fuente')) + '</small></div>' +
+        '<button type="button" class="sal-btn" data-t="edit" data-i="' + i + '">' + esc(t('Edit', 'Editar')) + '</button></div>'; }).join('') || '<p style="font-size:13px;color:#5B6B82">' + esc(t('None yet.', 'Todavía no hay.')) + '</p>';
+    tv.innerHTML = h; tv.scrollTop = 0;
+    if (prefill) teachForm(null, prefill);
+  }
+  function teachForm(a, prefillTitle) {
+    a = a || { titulo: prefillTitle || '', palabras: '', respuesta: '', recurso_id: null, pagina: '', activo: true };
+    var opts = '<option value="">' + esc(t('No source (answer only)', 'Sin fuente (solo la respuesta)')) + '</option>' + (TD.recursos || []).map(function (r) { return '<option value="' + esc(r.id) + '"' + (r.id === a.recurso_id ? ' selected' : '') + '>' + esc(r.titulo) + '</option>'; }).join('');
+    tv.innerHTML = '<h3>' + esc(a.id ? t('Edit quick answer', 'Editar respuesta rápida') : t('New quick answer', 'Nueva respuesta rápida')) + '</h3>' +
+      '<form id="sal-tf" autocomplete="off"><label for="tf-t">' + esc(t('What do people ask? (the question or task)', '¿Qué preguntan? (la pregunta o tarea)')) + '</label><input type="text" id="tf-t" maxlength="200" value="' + esc(a.titulo) + '">' +
+      '<label for="tf-k">' + esc(t('Other words people use (optional, English and Spanish)', 'Otras palabras que usan (opcional, inglés y español)')) + '</label><input type="text" id="tf-k" maxlength="400" value="' + esc(a.palabras || '') + '">' +
+      '<label for="tf-a">' + esc(t('Answer', 'Respuesta')) + '</label><textarea id="tf-a" maxlength="3000">' + esc(a.respuesta) + '</textarea>' +
+      '<label for="tf-r">' + esc(t('Source document', 'Documento fuente')) + '</label><select id="tf-r">' + opts + '</select>' +
+      '<label for="tf-p">' + esc(t('Page in the document (optional)', 'Página del documento (opcional)')) + '</label><input type="number" id="tf-p" min="1" max="999" inputmode="numeric" value="' + esc(a.pagina || '') + '">' +
+      '<label style="display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" id="tf-v"' + (a.activo ? ' checked' : '') + ' style="width:auto"> ' + esc(t('Visible to everyone who can see the source', 'Visible para todos los que ven la fuente')) + '</label>' +
+      '<div class="sal-err" id="tf-e" role="alert" hidden></div>' +
+      '<div class="sal-act"><button type="submit" class="sal-btn pri">' + esc(t('Save', 'Guardar')) + '</button><button type="button" class="sal-btn" data-t="cancel">' + esc(t('Cancel', 'Cancelar')) + '</button>' +
+      (a.id ? '<button type="button" class="sal-btn" data-t="del" style="margin-left:auto;color:#b3261e;border-color:#b3261e">' + esc(t('Delete', 'Borrar')) + '</button>' : '') + '</div></form>';
+    var f = tv.querySelector('#sal-tf'); tv.scrollTop = 0; setTimeout(function () { var x = tv.querySelector('#tf-t'); if (x) x.focus(); }, 30);
+    f.addEventListener('submit', async function (e) {
+      e.preventDefault(); var er = tv.querySelector('#tf-e'); er.hidden = true; var b = f.querySelector('button[type=submit]'); b.disabled = true;
+      try {
+        var r = await DH.rpc('sal_respuesta_guardar', { p_id: a.id || null, p_titulo: tv.querySelector('#tf-t').value, p_palabras: tv.querySelector('#tf-k').value, p_respuesta: tv.querySelector('#tf-a').value,
+          p_recurso_id: tv.querySelector('#tf-r').value || null, p_pagina: parseInt(tv.querySelector('#tf-p').value, 10) || null, p_activo: tv.querySelector('#tf-v').checked });
+        if (r && r.error) { er.textContent = r.error === 'title' ? t('Write what people ask (at least 3 letters).', 'Escribe qué preguntan (al menos 3 letras).') : r.error === 'answer' ? t('Write the answer.', 'Escribe la respuesta.') : t('Could not save.', 'No se pudo guardar.'); er.hidden = false; b.disabled = false; return; }
+        setFace('success', 2000); await teachOpen();
+      } catch (x) { er.textContent = t('Could not save. Try again.', 'No se pudo guardar. Intenta de nuevo.'); er.hidden = false; b.disabled = false; setFace('error', 2000); }
+    });
+    tv.querySelector('[data-t=del]') && tv.querySelector('[data-t=del]').addEventListener('click', function () {
+      var d = this; if (d.getAttribute('data-sure') !== '1') { d.setAttribute('data-sure', '1'); d.textContent = t('Tap again to delete', 'Toca otra vez para borrar'); return; }
+      DH.rpc('sal_respuesta_borrar', { p_id: a.id }).then(function () { setFace('success', 1500); teachOpen(); }).catch(function () { var er = tv.querySelector('#tf-e'); er.textContent = t('Could not delete.', 'No se pudo borrar.'); er.hidden = false; });
+    });
+  }
+  function teachClick(e) {
+    var b = e.target.closest && e.target.closest('button[data-t]'); if (!b) return; var k = b.getAttribute('data-t'), i = +b.getAttribute('data-i');
+    if (k === 'new') teachForm(null); else if (k === 'edit') teachForm(TD.items[i]); else if (k === 'ans') teachForm(null, TD.sin_resultado[i].q);
+    else if (k === 'cancel') teachList(); else if (k === 'back') { teachClose(); input.focus(); }
+  }
   function open() {
     mounted && (panel.classList.add('open'), root.classList.add('open'), fab.setAttribute('aria-expanded', 'true'));
     tip.classList.remove('on'); try { localStorage.setItem('dh_sal_seen', '1'); } catch (e) {}
-    greet(); setFace('idle');
+    greet(); setFace('idle'); checkTeach();
     setTimeout(function () { input.focus(); }, 60);
   }
   function close() {
-    panel.classList.remove('open'); root.classList.remove('open'); fab.setAttribute('aria-expanded', 'false'); fab.focus();
+    panel.classList.remove('open'); root.classList.remove('open'); teachClose(); fab.setAttribute('aria-expanded', 'false'); fab.focus();
   }
   function toggle() { panel.classList.contains('open') ? close() : open(); }
 
@@ -266,19 +340,22 @@
       '<button type="button" id="sal-fab" aria-haspopup="dialog" aria-expanded="false" aria-controls="sal-panel"><img alt="" src="' + ART + FACE.idle + '"></button>' +
       '<div id="sal-tip" aria-hidden="true"></div>' +
       '<section id="sal-panel" role="dialog" aria-labelledby="sal-title">' +
-      '<header id="sal-hd"><img id="sal-face" alt="" src="' + ART + FACE.idle + '"><div class="tx"><h2 id="sal-title"></h2><p id="sal-sub"></p></div><button type="button" id="sal-x">&times;</button></header>' +
+      '<header id="sal-hd"><img id="sal-face" alt="" src="' + ART + FACE.idle + '"><div class="tx"><h2 id="sal-title"></h2><p id="sal-sub"></p></div><button type="button" id="sal-teach" hidden>&#9998;</button><button type="button" id="sal-x">&times;</button></header>' +
       '<div id="sal-log" role="log" aria-live="polite" aria-relevant="additions"></div>' +
+      '<div id="sal-tv" role="region"></div>' +
       '<div id="sal-chips"></div>' +
       '<form id="sal-form" autocomplete="off"><input id="sal-q" type="text" maxlength="200" enterkeyhint="search" autocapitalize="off" spellcheck="false"><button type="submit" id="sal-send"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20.5 21 12 3 3.5v6.7l12 1.8-12 1.8z" fill="currentColor"/></svg></button></form>' +
       '</section>';
     document.body.appendChild(root);
     fab = root.querySelector('#sal-fab'); tip = root.querySelector('#sal-tip'); panel = root.querySelector('#sal-panel'); logEl = root.querySelector('#sal-log');
     form = root.querySelector('#sal-form'); input = root.querySelector('#sal-q'); sendBtn = root.querySelector('#sal-send'); faceEl = root.querySelector('#sal-face');
-    chipsEl = root.querySelector('#sal-chips'); subEl = root.querySelector('#sal-sub'); titleEl = root.querySelector('#sal-title'); xBtn = root.querySelector('#sal-x');
+    chipsEl = root.querySelector('#sal-chips'); teachBtn = root.querySelector('#sal-teach'); tv = root.querySelector('#sal-tv'); subEl = root.querySelector('#sal-sub'); titleEl = root.querySelector('#sal-title'); xBtn = root.querySelector('#sal-x');
     texts();
     // messages page has its own send bar at the bottom right: sit above it
     if (/mensajes\.html/.test(location.pathname)) fab.style.bottom = 'max(84px,calc(env(safe-area-inset-bottom) + 84px))';
     fab.addEventListener('click', toggle);
+    teachBtn.addEventListener('click', function () { root.classList.contains('teach') ? teachClose() : teachOpen(); });
+    tv.addEventListener('click', teachClick);
     xBtn.addEventListener('click', close);
     panel.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.stopPropagation(); close(); } });
     form.addEventListener('submit', function (e) { e.preventDefault(); ask(input.value); });
