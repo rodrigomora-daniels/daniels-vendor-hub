@@ -155,6 +155,7 @@
 
   /* ---------- render a search result ---------- */
   function renderResult(r, q) {
+    if (r.saleMode && r.promos && r.promos.length && r.paginas) r.paginas = r.paginas.slice(0, 2);   // promo question: flyers first, fewer policy pages
     var h = '', navs = navMatches(q);
     if (r.corregido) h += '<div class="sal-note">' + esc(t('Showing results for “', 'Mostrando resultados para “') + r.corregido + '” ' + t('(I fixed the spelling).', '(corregí la ortografía).')) + '</div>';
     if (navs.length) {
@@ -201,7 +202,7 @@
       }).join('');
     }
     if (r.web && r.web.length) {
-      h += '<div class="sal-sec">' + esc(t('On the Daniel\'s website', 'En el sitio web de Daniel\'s')) + '</div>' + r.web.map(function (w) {
+      h += '<div class="sal-sec">' + esc((r.saleMode ? t('Sale items on the Daniel\'s website', 'En oferta en el sitio web de Daniel\'s') : t('On the Daniel\'s website', 'En el sitio web de Daniel\'s'))) + '</div>' + r.web.map(function (w) {
         var pr = w.price != null ? '$' + w.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
         var was = w.was ? ' <s style="opacity:.6">$' + w.was.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</s>' : '';
         var opts = (w.options || []).filter(function (o) { return o.values && o.values.length && !/^title$/i.test(o.name); }).map(function (o) {
@@ -213,6 +214,11 @@
       }).join('');
     }
     if (!h) return '';
+    if (r.saleMode) {   // promotions (flyers) first, then the website's sale items, then the rest
+      var parts = h.split('<div class="sal-sec">'), pre = parts.shift(), rank = function (p) { return /^(Promotions|Promociones)/.test(p) ? 0 : /^(Sale items|En oferta)/.test(p) ? 1 : 2; };
+      parts.sort(function (x, y) { return rank(x) - rank(y); });
+      h = pre + parts.map(function (p) { return '<div class="sal-sec">' + p; }).join('');
+    }
     return h + '<div class="sal-note">' + esc((r.web && r.web.length) ? t('SAL can make mistakes. Availability comes from the website; check Infinity to be sure.', 'SAL puede cometer errores. La disponibilidad viene del sitio web; consulta Infinity para estar seguro.') : t('SAL can make mistakes.', 'SAL puede cometer errores.')) + '</div>';
   }
 
@@ -251,6 +257,7 @@
     if (sku.length) return sku[0];              // a SKU / model alone matches best
     return c.length >= 3 ? c : '';
   }
+  var PROMO_RE = /promo|oferta|descuent|discount|\bdeals?\b|black\s*fr|blackfr|\bbf\b|\bsale\b|rebaj|cyber/i;
   async function ask(q) {
     q = String(q || '').trim(); if (q.length < 2 || busy) return;
     busy = true; lastQ = q; sendBtn.disabled = true; input.value = ''; chipsEl.style.display = 'none';
@@ -259,10 +266,11 @@
     clearTimeout(slowTimer);
     slowTimer = setTimeout(function () { setFace('thinking'); setBubble(wait, esc(t('Still looking, one moment', 'Sigo buscando, un momento')) + '<span class="sal-dots" aria-hidden="true"><i></i><i></i><i></i></span>', 'thinking'); }, 1800);
     try {
-      var wq = webQuery(q);
-      var webP = (wq && DH.salWeb) ? withTimeout(DH.salWeb(wq, /colou?r|colores|tama[nñ]o|sizes?|opcion|options|variant|modelos|medidas/i.test(q)), 10000).then(function (w) { return w && w.items || []; }).catch(function () { return []; }) : Promise.resolve([]);
+      var wq = webQuery(q), saleMode = PROMO_RE.test(q);
+      if (saleMode) wq = q;
+      var webP = (wq && DH.salWeb) ? withTimeout(DH.salWeb(wq, /colou?r|colores|tama[nñ]o|sizes?|opcion|options|variant|modelos|medidas/i.test(q), saleMode ? 'sale' : ''), 10000).then(function (w) { return w && w.items || []; }).catch(function () { return []; }) : Promise.resolve([]);
       var r = await withTimeout(DH.rpc('sal_buscar', { p_q: q }), 20000);
-      r.web = await webP;
+      r.web = await webP; r.saleMode = saleMode;
       clearTimeout(slowTimer);
       var html = renderResult(r, q);
       if (!html) {
