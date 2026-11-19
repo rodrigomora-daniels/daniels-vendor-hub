@@ -399,10 +399,13 @@ document.addEventListener('DOMContentLoaded',function(){
     </div>
     <div class="login-card">
       <div class="error-msg" id="login-error"></div>
+      <button type="button" class="btn" id="btn-firsttime" onclick="goToScreen('signup')" style="width:100%;min-height:54px;margin-bottom:6px;background:var(--gold);color:#fff;font-size:16px;font-weight:700;border:0;border-radius:10px;cursor:pointer">🆕 First time? I have a welcome code<br><span style="font-size:13px;font-weight:600">¿Primera vez? Tengo un código de bienvenida</span></button>
+      <div style="text-align:center;font-size:12px;color:var(--mgray);margin:0 0 12px">Already have an account? Sign in below. / ¿Ya tienes cuenta? Entra aquí abajo.</div>
+      <div id="login-code-hint" style="display:none;background:var(--ltblue);border-left:4px solid var(--navy);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:var(--navy);line-height:1.45"></div>
       <form id="login-form" onsubmit="handleLogin();return false" autocomplete="on"><label class="field-label">Username / Usuario</label>
-      <input type="text" class="field-input" id="login-username" name="username" placeholder="e.g. jlopez" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="text">
+      <input type="text" class="field-input" id="login-username" name="username" oninput="codeInLogin(this)" placeholder="e.g. jlopez" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="text">
       <label class="field-label">Password / Contraseña</label>
-      <input type="password" class="field-input" id="login-password" name="password" placeholder="••••••••" autocomplete="current-password">
+      <input type="password" class="field-input" id="login-password" name="password" oninput="codeInLogin(this)" placeholder="••••••••" autocomplete="current-password">
       <label id="remember-row" style="display:flex;align-items:center;gap:10px;min-height:48px;margin:2px 0 8px;font-size:14px;color:var(--mgray);cursor:pointer"><input type="checkbox" id="login-remember" checked style="width:22px;height:22px;accent-color:#1B3A6B"> <span>Keep me signed in on this device / Mantenerme conectado en este dispositivo</span></label>
       <button type="submit" class="btn btn-primary" id="btn-login">Sign In / Iniciar Sesión</button></form>
       <div style="text-align:center;font-size:12px;color:var(--mgray);margin-top:12px;">Have a reset code from your manager? Use <strong>Sign Up</strong> below — it also handles password resets.<br>¿Tienes un código de tu gerente? Usa <strong>Registrarse</strong> abajo — también sirve para restablecer tu contraseña.</div>
@@ -825,6 +828,18 @@ let session = { empleado: null, history: [], resets: [] };
 /* ════════════════════════════════════════════════════════════
    LOGIN
    ════════════════════════════════════════════════════════════ */
+/* A welcome / reset code typed into the Sign In boxes: send the person to Create Account with the code already filled in. */
+const CODE_RE=/^\s*(DHC|RESET)[\-\u2010-\u2015\u2212]\s*[A-Z0-9]{4,10}\s*$/i;
+function codeInLogin(el){
+  const v=(el.value||'');
+  if(!CODE_RE.test(v)) return false;
+  const code=v.trim().replace(/[\u2010-\u2015\u2212]/g,'-').replace(/\s+/g,'').toUpperCase();
+  document.getElementById('login-username').value=''; document.getElementById('login-password').value='';
+  const er=document.getElementById('login-error'); if(er) er.classList.remove('show');
+  goToScreen('signup');
+  const sc=document.getElementById('signup-code'); if(sc){sc.value=code; try{checkSignupCode();}catch(e){}}
+  return true;
+}
 async function handleLogin() {
   const username = document.getElementById('login-username').value.trim();
   const password = document.getElementById('login-password').value;
@@ -832,6 +847,8 @@ async function handleLogin() {
   const btn = document.getElementById('btn-login');
 
   errEl.classList.remove('show');
+  if (CODE_RE.test(username)) { codeInLogin(document.getElementById('login-username')); return; }
+  if (CODE_RE.test(password)) { codeInLogin(document.getElementById('login-password')); return; }
 
   if (!username || !password) {
     errEl.textContent = 'Please enter both username and password. / Escribe tu usuario y contraseña.';
