@@ -62,6 +62,23 @@
   tfoot td{background:#F4F6FA;font:700 16px Georgia,serif;color:var(--rail);padding:9px 4px}
   tfoot td.nm{font:600 13px 'Segoe UI',Arial,sans-serif}
   .addrow{padding:10px 12px;border-top:1px solid #e3e7ee}
+  #hol{background:#fff;border:1px solid #e3e7ee;border-radius:12px;padding:14px 16px;margin-bottom:14px}
+  #hol .hh{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+  #hol h2{font:700 18px 'Segoe UI',Arial,sans-serif;color:var(--navy);margin:0}
+    .hc-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:2px}
+  .hc-d{flex:1 0 140px;border:1px solid #e3e7ee;border-radius:10px;padding:10px 12px;background:#fafbfd}
+  .hc-d b{display:block;font-size:14.5px}
+  .hc-d small{display:block;color:#6a7484;font-size:12.5px;margin:2px 0 7px}
+  .hst{display:inline-block;border-radius:999px;padding:3px 11px;font:700 13px 'Segoe UI',Arial,sans-serif;border:1.5px solid currentColor}
+  .hst.ON{color:#1E7B4B;background:#E4F3EA}.hst.OFF{color:#6a7484;background:#F0F2F6}.hst.ONCALL{color:#9A6A00;background:#FFF1CF}.hst.CLOSED{color:#B3402F;background:#FBE5E1}.hst.NA{color:#8a94a4;background:#fff;border-style:dashed}
+  .dlg .p.wide{max-width:980px;overflow-x:auto}
+  .dlg .p.wide .hn{font-size:13px;color:#5a6575;margin-bottom:12px;line-height:1.4}
+  .dlg .p.wide table{border-collapse:collapse;width:100%;min-width:640px;font-size:14px}
+  .dlg .p.wide th,.dlg .p.wide td{padding:8px 10px;border-bottom:1px solid #eef0f4;text-align:center}
+  .dlg .p.wide th:first-child,.dlg .p.wide td:first-child{text-align:left;position:sticky;left:0;background:#fff}
+  .dlg .p.wide th small{display:block;font-weight:400;color:#6a7484}
+  .dlg .p.wide tr.me td{background:#FFF8EC;font-weight:700}
+  .dlg .p.wide tr.me td:first-child{box-shadow:inset 4px 0 0 var(--gold)}
   .dlg{position:fixed;inset:0;background:rgba(10,22,45,.6);z-index:50;display:none;align-items:flex-end;justify-content:center}
   .dlg.show{display:flex}
   .dlg .p{background:#fff;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;border-radius:14px 14px 0 0;padding:20px 20px 22px}
@@ -147,9 +164,9 @@ function render(){
       <button class="btn" onclick="copyPrev()">${esc(tr('Copy previous week / Copiar semana anterior'))}</button>
       <button class="btn" onclick="openImport()">${esc(tr('Upload Excel / Subir Excel'))}</button>
       <button class="btn" onclick="openHist()">${esc(tr('Change log / Historial de cambios'))}</button>`:'')
-      +`<button class="btn" onclick="window.print()">${esc(tr('Print / Imprimir'))}</button>`
+      +`<button class="btn" onclick="openHol()">🎄 ${esc(tr('Holiday schedule / Feriados'))}</button><button class="btn" onclick="window.print()">${esc(tr('Print / Imprimir'))}</button>`
       +(S.puede_gestores?`<button class="btn" onclick="openGest()">${esc(tr('Who can edit / Quién puede editar'))}</button>`:'');
-  }else{tl.classList.remove('hide');tl.innerHTML=`<button class="btn" onclick="window.print()">${esc(tr('Print / Imprimir'))}</button>`;}
+  }else{tl.classList.remove('hide');tl.innerHTML=`<button class="btn" onclick="openHol()">🎄 ${esc(tr('Holiday schedule / Feriados'))}</button><button class="btn" onclick="window.print()">${esc(tr('Print / Imprimir'))}</button>`;}
   const rows=S.filas||[];
   if(!rows.length&&!S.puede_editar){
     $('view').innerHTML='<div class="empty">'+esc(tr(S.publicado?'Nothing scheduled this week. / No hay nada programado esta semana.':'This week’s schedule is not published yet. Ask your manager. / El horario de esta semana aún no está publicado. Pregunta a tu gerente.'))+'</div>';return;}
@@ -165,7 +182,7 @@ function render(){
   h+=`<div class="sc"><table><thead><tr><th class="nm">${esc(tr('Name / Nombre'))}</th>${days.map((d,i)=>`<th class="${d.d===T?'t':''}" data-no-i18n>${esc(dn[i])}<small>${esc(fd(d.d,{month:'short',day:'numeric'}))}</small>${(d.fiestas||[]).length?`<div class="fe">${d.fiestas.map(holidayBadge).join('')}</div>`:''}</th>`).join('')}</tr></thead><tbody>`;
   rows.forEach(r=>{
     const me=mine&&mine.id===r.id;
-    h+=`<tr><td class="nm ${me?'me':''}">${S.puede_editar?`<button class="nm" onclick="openRow('${r.id}')" data-no-i18n>${esc(r.nombre)}${r.abrev?`<small>${esc(r.abrev)}</small>`:''}</button>`:`<span data-no-i18n>${esc(r.nombre)}${r.abrev?`<small>${esc(r.abrev)}</small>`:''}</span>`}</td>`;
+    h+=`<tr><td class="nm ${me?'me':''}"><button class="nm" onclick="openPerson('${r.id}')" data-no-i18n>${esc(r.nombre)}${r.abrev?`<small>${esc(r.abrev)}</small>`:''}</button></td>`;
     days.forEach(d=>{
       const c=(r.celdas||{})[d.d], cls=(d.d===T?'today ':'')+(me?'me':'');
       let inner,sty='',cc='cell';
@@ -205,7 +222,7 @@ async function openHist(){
     <div class="hist">${items.length?items.map(i=>`<div class="hr"><div class="hw" data-no-i18n>${esc(dt(i.t))} · <b>${esc(i.actor)}</b></div><div class="hx" data-no-i18n>${line(i)}</div></div>`).join(''):`<div class="sub">${esc(tr('No changes recorded yet. / Aún no hay cambios registrados.'))}</div>`}</div>
     <div style="margin-top:14px"><button class="btn" onclick="closeDlg()">${esc(tr('Close / Cerrar'))}</button></div>`);
 }
-function closeDlg(){$('dlg').classList.remove('show');EDIT=null;}
+function closeDlg(){$('dlg').classList.remove('show');$('dp').classList.remove('wide');EDIT=null;}
 function showDlg(html){$('dp').innerHTML=html;$('dlg').classList.add('show');}
 const errBox=m=>{const e=$('f-e');if(e){e.textContent=m;e.classList.remove('hide');}};
 async function call(name,args){
@@ -411,6 +428,38 @@ async function openGest(){
 async function gSet(r,t,on){if(!r)return;const x=await call('horarios_gestor_set',{p_roster:r,p_tienda:t,p_on:on});if(x)openGest();}
 
 window.addEventListener('dh-lang',()=>{if(S)render();});
+/* ---- Holiday schedule (read-only; master table, your own row highlighted) ---- */
+let HOL=null;
+function holSt(x){const k=x==null||x===''?'NA':String(x).replace(/\s+/g,'');return `<span class="hst ${esc(k)}" data-no-i18n>${esc(x==null||x===''?'—':x)}</span>`;}
+const holEs=()=>L()==='es-US';
+const holName=f=>holEs()?f.es:f.en;
+const holDate=d=>fd(d,{weekday:'short',month:'short',day:'numeric'});
+async function loadHol(){try{HOL=await DH.rpc('feriados_ver');}catch(e){HOL=null;}}
+function openHol(){
+  if(!HOL)return; const es=holEs();
+  const head=`<tr><th>${es?'Departamento':'Department'}</th>${(HOL.fechas||[]).map(f=>`<th data-no-i18n>${esc(holName(f))}<small>${esc(holDate(f.fecha))}</small><small>${esc(f.horario?(f.horario==='CLOSED'?(es?'Cerrado':'Closed'):(es?'Horario ':'Hours ')+f.horario):'')}</small></th>`).join('')}</tr>`;
+  const body=(HOL.filas||[]).map(f=>`<tr class="${f.id===HOL.mia?'me':''}"><td data-no-i18n>${esc(f.depto)}${f.id===HOL.mia?' ★':''}${f.nota?`<br><small style="font-weight:400;color:#6a7484">${esc(f.nota)}</small>`:''}</td>${f.estados.map(x=>`<td>${holSt(x)}</td>`).join('')}</tr>`).join('');
+  showDlg(`<h2>${esc(tr('2026 Holiday schedule / Horario de feriados 2026'))}</h2><div class="hn">${esc(es?'Solo informativo; no se puede cambiar aquí. ON = trabaja, OFF = libre. “—” = no especificado. Tu departamento está resaltado (★).':'For information only; it cannot be changed here. ON = working, OFF = day off. “—” = not specified. Your department is highlighted (★).')}${HOL.todas?'':esc(es?' Solo ves tu departamento.':' You only see your own department.')}</div><table>${head}${body}</table><div class="acts"><button class="btn" onclick="closeDlg()">${esc(tr('Close / Cerrar'))}</button></div>`);
+  $('dp').classList.add('wide');
+}
+
+async function openPerson(rid){
+  const r=(S.filas||[]).find(x=>x.id===rid); if(!r)return;
+  const T=todayS(), dn=DAYN(), es=holEs();
+  const week=`<div class="mine" style="margin:8px 0 12px"><div class="row">${S.dias.map((d,i)=>{const c=(r.celdas||{})[d.d];
+    const body=!c?'—':c.libre?esc(tr('OFF / LIBRE')):shiftLines(c.t).map(esc).join('<br>');
+    return `<div class="c ${d.d===T?'t':''} ${c&&c.libre?'o':''}"><b data-no-i18n>${esc(dn[i])} ${esc(fd(d.d,{day:'numeric'}))}</b>${body}</div>`;}).join('')}</div></div>`;
+  const edit=S.puede_editar?`<button class="btn" onclick="openRow('${r.id}')">${esc(tr('Edit person / Editar persona'))}</button>`:'';
+  showDlg(`<h2 data-no-i18n>${esc(r.nombre)}</h2><div class="sub">${esc(tr('This week / Esta semana'))} · ${esc(S.tienda)}</div>${week}<div id="pp-h"></div><div class="acts">${edit}<button class="btn" onclick="closeDlg()">${esc(tr('Close / Cerrar'))}</button></div>`);
+  if(!r.roster_id)return;
+  let p=null; try{p=await DH.rpc('feriados_persona',{p_roster:r.roster_id});}catch(e){}
+  if(!p||!p.permitido||!p.fila||!$('pp-h'))return;
+  const up=(p.fechas||[]).map((f,i)=>({f,i})).filter(x=>x.f.fecha>=T);
+  if(!up.length)return;
+  $('pp-h').innerHTML=`<h3 style="font:700 15px 'Segoe UI',Arial,sans-serif;margin:6px 0">🎄 ${esc(tr('Holidays / Feriados'))}</h3><div class="hc-row">${up.map(x=>`<div class="hc-d"><b data-no-i18n>${esc(holName(x.f))}</b><small data-no-i18n>${esc(holDate(x.f.fecha))}${x.f.horario&&x.f.horario!=='CLOSED'?' · '+esc(x.f.horario):''}</small>${holSt(p.fila.estados[x.i])}</div>`).join('')}</div>${p.fila.nota?`<div class="sub" data-no-i18n>${esc(p.fila.nota)}</div>`:''}`;
+}
+loadHol();
+
 (async function init(){
   if(!DH.token()){location.href='index.html';return;}
   $('ld').textContent=tr('Loading… / Cargando…');
