@@ -1,9 +1,9 @@
 /* My Workspace — minimal service worker.
    - Makes the app installable (PWA).
-   - NETWORK-FIRST for our own pages: users always get the latest deploy when online;
+   - NETWORK-FIRST for our own pages: users always get the latest deploy when online (bypassing the browser's 10-minute HTTP cache);
      the cached copy is only a fallback when the connection drops.
    - Never touches Supabase or any other cross-origin request, and never caches POSTs. */
-const CACHE = 'dhc-v47';
+const CACHE = 'dhc-v48';
 const PRECACHE = ['offline.html', 'manifest.json', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -22,7 +22,7 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;          // Supabase, fonts, etc.: go straight to network
   e.respondWith(
-    fetch(req).then(res => {
+    fetch(req, { cache: 'no-cache' }).then(res => {
       if (res && res.ok && res.type === 'basic') {
         const copy = res.clone();
         caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
