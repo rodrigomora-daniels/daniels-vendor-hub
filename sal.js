@@ -93,7 +93,7 @@
     '.sal-act{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.sal-btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 12px;border-radius:18px;border:1.5px solid var(--n);background:#fff;color:var(--n);font:600 12.5px "Segoe UI",Arial,sans-serif;cursor:pointer;text-decoration:none}.sal-btn:hover{background:var(--o)}.sal-btn.pri{background:var(--n);color:#fff}.sal-btn.pri:hover{background:#12407f}' +
     '.sal-badge{display:inline-block;font:700 10.5px Arial,sans-serif;padding:2px 8px;border-radius:10px;background:#D6F5F5;color:#05526b;margin-left:6px;vertical-align:middle}.sal-badge.old{background:#E5E7EB;color:#4B5563}.sal-badge.soon{background:#FDF1C9;color:#7a5a00}' +
     '.sal-b p{margin:5px 0 0}.sal-note{font-size:11.5px;color:#5B6B82;margin-top:10px;border-top:1px dashed #D0DAE8;padding-top:6px}' +
-    '#sal-chips{display:flex;flex-wrap:wrap;gap:6px;max-height:112px;overflow:auto;padding:0 12px 8px;flex:none}#sal-chips button{min-height:36px;border-radius:18px;border:1.5px solid #B7C6DA;background:#fff;color:var(--n);font:600 12.5px "Segoe UI",Arial,sans-serif;padding:0 12px;cursor:pointer;white-space:nowrap}#sal-chips button:hover{border-color:var(--t);background:#F0FFFF}' +
+    '#sal-chips{display:flex;flex-wrap:wrap;gap:6px;max-height:112px;overflow:auto;padding:0 12px 8px;flex:none}#sal-chips button.big{font-weight:700;border-color:#0B2D5C;min-height:44px}#sal-chips button{min-height:36px;border-radius:18px;border:1.5px solid #B7C6DA;background:#fff;color:var(--n);font:600 12.5px "Segoe UI",Arial,sans-serif;padding:0 12px;cursor:pointer;white-space:nowrap}#sal-chips button:hover{border-color:var(--t);background:#F0FFFF}' +
     '#sal-form{display:flex;gap:8px;padding:8px 12px calc(10px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #D9E3EF;flex:none}' +
     '#sal-q{flex:1;min-width:0;height:44px;border:1.5px solid #B7C6DA;border-radius:22px;padding:0 16px;font:15px "Segoe UI",Arial,sans-serif;background:var(--o);color:var(--tx)}#sal-q:focus{border-color:var(--t);background:#fff;outline:none;box-shadow:0 0 0 3px rgba(0,217,217,.25)}' +
     '#sal-send{flex:none;width:44px;height:44px;border-radius:50%;border:0;background:var(--n);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}#sal-send:disabled{opacity:.45;cursor:default}#sal-send:not(:disabled):hover{background:#12407f}' +
@@ -309,9 +309,9 @@
     input.setAttribute('aria-label', t('Type your question', 'Escribe tu pregunta'));
     sendBtn.setAttribute('aria-label', t('Send', 'Enviar'));
     var q = L() === 'es'
-      ? ['Política de price match', '¿Cómo proceso una devolución?', 'Cancelar y reembolsar en Infinity', 'Política de haul away', '¿Hay promociones vigentes?', '¿Dónde está mi horario?']
-      : ['Price match policy', 'How do I process a return?', 'Cancel and refund in Infinity', 'Haul away policy', 'Any promotions right now?', 'Where is my schedule?'];
-    chipsEl.innerHTML = q.map(function (x) { return '<button type="button">' + esc(x) + '</button>'; }).join('');
+      ? [['📣 Promociones de hoy', '¿Hay promociones vigentes?'], ['🔎 Buscar un producto o SKU', '@product'], ['Política de price match', 'Política de price match'], ['¿Cómo proceso una devolución?', '¿Cómo proceso una devolución?'], ['Cancelar y reembolsar en Infinity', 'Cancelar y reembolsar en Infinity'], ['¿Dónde está mi horario?', '¿Dónde está mi horario?']]
+      : [['📣 Promotions today', 'Any promotions right now?'], ['🔎 Look up a product or SKU', '@product'], ['Price match policy', 'Price match policy'], ['How do I process a return?', 'How do I process a return?'], ['Cancel and refund in Infinity', 'Cancel and refund in Infinity'], ['Where is my schedule?', 'Where is my schedule?']];
+    chipsEl.innerHTML = q.map(function (x, i) { return '<button type="button" data-q="' + esc(x[1]) + '"' + (i < 2 ? ' class="big"' : '') + '>' + esc(x[0]) + '</button>'; }).join('');
   }
   function greet() {
     if (greeted) return; greeted = true;
@@ -417,7 +417,11 @@
     xBtn.addEventListener('click', close);
     panel.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.stopPropagation(); close(); } });
     form.addEventListener('submit', function (e) { e.preventDefault(); ask(input.value); });
-    chipsEl.addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) ask(b.textContent); });
+    chipsEl.addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return; var q = b.getAttribute('data-q') || b.textContent;
+      if (q === '@product') { input.setAttribute('placeholder', t('Type the product name or SKU…', 'Escribe el nombre del producto o el SKU…')); input.focus(); return; }
+      ask(q);
+    });
     input.addEventListener('input', function () {
       if (busy) return; clearTimeout(typingTimer);
       if (input.value.trim()) { setFace('typing'); typingTimer = setTimeout(function () { if (!busy) setFace('idle'); }, 1600); } else setFace('idle');
