@@ -40,3 +40,38 @@
   document.addEventListener('DOMContentLoaded', rewrite);
   window.addEventListener('load', function () { rewrite(); setTimeout(rewrite, 1500); setTimeout(rewrite, 4000); });
 })();
+
+/* Installed app (PWA window): there is no browser reload button, so add one at the top-left of every page.
+   It asks the service worker to check for a new version first, then reloads. ?standalone=1 shows it in a normal tab (testing). */
+(function () {
+  'use strict';
+  var forced = /[?&]standalone=1/.test(location.search);
+  var app = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  if (!app && !forced) return;
+  function reload() {
+    var done = function () { location.reload(); };
+    try {
+      if (navigator.serviceWorker && navigator.serviceWorker.getRegistration) {
+        navigator.serviceWorker.getRegistration().then(function (r) { return r && r.update(); }).then(done, done);
+        setTimeout(done, 2500);   // never leave the button hanging
+      } else done();
+    } catch (e) { done(); }
+  }
+  function mount() {
+    if (document.getElementById('dh-reload')) return;
+    var st = document.createElement('style');
+    st.textContent = '#dh-reload{flex:none;display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;margin-right:10px;border-radius:8px;border:1px solid rgba(214,228,247,.65);background:transparent;color:#D6E4F7;font:700 20px/1 Arial,sans-serif;cursor:pointer;padding:0}' +
+      '#dh-reload:hover{background:rgba(255,255,255,.12)}#dh-reload:focus-visible{outline:2px solid #C8922A;outline-offset:2px}#dh-reload.spin{animation:dhspin .8s linear infinite}@keyframes dhspin{to{transform:rotate(360deg)}}' +
+      '#dh-reload.fl{position:absolute;top:8px;left:8px;z-index:20;width:34px;height:34px;margin:0;font-size:18px}@media print{#dh-reload{display:none!important}}';
+    document.head.appendChild(st);
+    var b = document.createElement('button');
+    b.id = 'dh-reload'; b.type = 'button'; b.title = 'Reload / Recargar'; b.setAttribute('aria-label', 'Reload / Recargar'); b.textContent = '⟳';
+    b.addEventListener('click', function () { b.classList.add('spin'); reload(); });
+    var bar = document.querySelector('body > header, body > .top-bar, body > .site-header, .cockpit-header');
+    var side = document.querySelector('.side');
+    if (bar) bar.insertBefore(b, bar.firstChild);
+    else if (side) { side.style.paddingTop = '58px'; b.className = 'fl'; side.insertBefore(b, side.firstChild); }
+    else { b.className = 'fl'; b.style.position = 'fixed'; document.body.appendChild(b); }
+  }
+  window.addEventListener('load', function () { setTimeout(mount, 50); });
+})();
