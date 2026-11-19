@@ -433,14 +433,15 @@ document.addEventListener('DOMContentLoaded',function(){
       <label class="field-label">Invitation Code / Código de Invitación *</label>
       <input type="text" class="field-input" id="signup-code" placeholder="e.g. DANIELS2026-A7X3" autocomplete="off" oninput="onSignupCodeInput()">
       <label class="field-label">First Name / Nombre *</label>
-      <input type="text" class="field-input" id="signup-firstname" placeholder="e.g. Juan" autocomplete="off">
+      <input type="text" class="field-input" id="signup-firstname" placeholder="e.g. Juan" autocomplete="off" oninput="previewUsername()">
       <label class="field-label">Last Name / Apellido *</label>
-      <input type="text" class="field-input" id="signup-lastname" placeholder="e.g. Hernández" autocomplete="off">
+      <input type="text" class="field-input" id="signup-lastname" placeholder="e.g. Hernández" autocomplete="off" oninput="previewUsername()">
       <input type="hidden" id="signup-name">
       <label class="field-label">Employee ID / ID de Empleado *</label>
       <input type="text" class="field-input" id="signup-empid" placeholder="e.g. DHC-002" autocomplete="off">
-      <label class="field-label">Choose a Username / Elige un Usuario *</label>
-      <input type="text" class="field-input" id="signup-username" placeholder="e.g. mgarcia" autocomplete="off">
+      <label class="field-label">Your Username (automatic) / Tu Usuario (automático)</label>
+      <input type="text" class="field-input" id="signup-username" placeholder="Created from your name / Se crea con tu nombre" autocomplete="off" readonly style="background:#eef1f6;font-weight:700">
+      <div style="font-size:12px;color:var(--mgray);margin:-6px 0 12px">First letter of your first name + your last name. If it is taken, a number is added. / Primera letra de tu nombre + tu apellido. Si ya existe, se agrega un número.</div>
       <!-- Department is assigned by Super Admin after registration — default: sales -->
       <input type="hidden" id="signup-departamento" value="sales">
       <label class="field-label">Your Store / Tu Tienda *</label>
@@ -921,10 +922,11 @@ function showPersonalBanner(info) {
   signupResetMode = false;
   const b = document.getElementById('signup-reset-banner');
   b.style.display = 'block';
-  document.getElementById('signup-reset-banner-text').innerHTML = `👋 Welcome, <strong>${info.nombre}</strong>! This code is personal to you (${info.puesto || ''}${info.ubicacion ? ' · ' + info.ubicacion : ''}). Just pick a username and a password below — that's it.<br>👋 ¡Bienvenido(a), <strong>${info.nombre}</strong>! Este código es personal. Solo elige un usuario y una contraseña abajo.`;
+  document.getElementById('signup-reset-banner-text').innerHTML = `👋 Welcome, <strong>${info.nombre}</strong>! This code is personal to you (${info.puesto || ''}${info.ubicacion ? ' · ' + info.ubicacion : ''}). Your username is created for you; just pick a password below — that's it.<br>👋 ¡Bienvenido(a), <strong>${info.nombre}</strong>! Este código es personal. Tu usuario se crea solo; únicamente elige una contraseña abajo.`;
   const parts = (info.nombre || '').trim().split(/\s+/);
   document.getElementById('signup-firstname').value = parts[0] || '';
   document.getElementById('signup-lastname').value = parts.slice(1).join(' ') || '';
+  previewUsername();
   ['signup-firstname', 'signup-lastname'].forEach(id => document.getElementById(id).disabled = true);
   ['signup-empid', 'signup-tienda'].forEach(id => { const el = document.getElementById(id); el.value = ''; const lb = el.previousElementSibling; el.style.display = 'none'; if (lb) lb.style.display = 'none'; });
   document.getElementById('btn-signup').textContent = 'Create My Account / Crear Mi Cuenta';
@@ -965,6 +967,18 @@ function hideResetBanner() {
   document.getElementById('btn-signup').textContent = 'Create Account / Crear Cuenta';
 }
 
+/* Usernames are generated from the name (server enforces it; this is only the preview). */
+function usernameBase(first, last){
+  const clean=x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z]/g,'');
+  const lastTok=String(last||'').trim().split(/\s+/).pop();
+  const b=clean(String(first||'').trim().split(/\s+/)[0]).slice(0,1)+clean(lastTok);
+  return b||'';
+}
+function previewUsername(){
+  if (signupResetMode) return;
+  const u=document.getElementById('signup-username');
+  u.value=usernameBase(document.getElementById('signup-firstname').value, document.getElementById('signup-lastname').value);
+}
 function titleCase(str) {
   return str.replace(/\S+/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
 }
@@ -990,7 +1004,7 @@ async function handleSignup() {
     errEl.classList.add('show');
     return;
   }
-  if (!code || (!signupPersonalMode && !empId) || !username || (!signupResetMode && !signupPersonalMode && !tienda) || !pw1 || !pw2) {
+  if (!code || (!signupPersonalMode && !empId) || (!signupResetMode && !signupPersonalMode && !tienda) || !pw1 || !pw2) {
     errEl.textContent = 'Please fill in all required fields, including your store. / Completa todos los campos requeridos, incluida tu tienda.';
     errEl.classList.add('show');
     return;
@@ -1029,14 +1043,14 @@ async function handleSignup() {
     }
 
     const isReset = (result.message || '').toLowerCase().includes('reset');
-    let actualUsername = (isReset && resetInfo && resetInfo.username) ? resetInfo.username : username;
+    let actualUsername = result.username || ((isReset && resetInfo && resetInfo.username) ? resetInfo.username : username);
 
     // Store the department/store for brand-new accounts (not password resets). There is no session yet,
     // so sign in once with the credentials just chosen, assign the store with the token, then sign out.
     // Personal-code accounts already get store/department from the roster, so they skip this.
     if (!isReset && !signupPersonalMode) {
       try {
-        const emp = await DH.login(username, pw1, !!(document.getElementById('login-remember')||{}).checked);
+        const emp = await DH.login(actualUsername, pw1, !!(document.getElementById('login-remember')||{}).checked);
         if (emp) {
           await DH.rpc('registro_asignar_tienda', { p_tienda: tienda });
           await DH.logout();
