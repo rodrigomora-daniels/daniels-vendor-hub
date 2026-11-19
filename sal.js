@@ -195,7 +195,7 @@
       var card = function (p, i) {
         var badge = p.estado === 'vigente' ? '<span class="sal-badge">' + esc(t('Active', 'Vigente')) + '</span>' : p.estado === 'programada' ? '<span class="sal-badge soon">' + esc(t('Starts ', 'Empieza ') + fmtDate(p.vigente_desde)) + '</span>' : '<span class="sal-badge old">' + esc(t('Ended', 'Terminada')) + '</span>';
         return '<div class="sal-card"><h4>' + esc(p.titulo) + badge + '</h4><div class="meta">' + esc(fmtDate(p.vigente_desde) + (p.vigente_hasta ? ' – ' + fmtDate(p.vigente_hasta) : ' – ' + t('no end date', 'sin fecha final'))) + (p.seccion ? ' · ' + esc(p.seccion) : '') + '</div>' +
-          (p.lineas ? '<p style="white-space:pre-line;font-size:13px">' + esc(p.lineas) + '</p>' : '') + (p.descripcion ? '<p>' + esc(p.descripcion) + '</p>' : '') + '<div class="sal-act"><button class="sal-btn pri" data-open="r' + i + '">' + esc(t('Open promo', 'Abrir promo')) + '</button></div></div>';
+          (p.lineas ? '<p class="meta" style="margin:6px 0 2px">' + esc(t('Text read from the flyer (may have errors):', 'Texto leído del flyer (puede tener errores):')) + '</p><p style="white-space:pre-line;font-size:13px;margin:0">' + esc(String(p.lineas).replace(/^[\s\-–•|]+/gm, '').replace(/[“”"°¢¥]+/g, ' ').replace(/ {2,}/g, ' ')) + '</p>' : '') + (p.descripcion ? '<p>' + esc(p.descripcion) + '</p>' : '') + '<div class="sal-act"><button class="sal-btn pri" data-open="r' + i + '">' + esc(t('Open promo', 'Abrir promo')) + '</button></div></div>';
       };
       // "running now" only lists active promotions; the ones that have not started go under their own heading
       var now = [], soon = [];
