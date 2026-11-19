@@ -79,6 +79,17 @@
   .dlg .p.wide th small{display:block;font-weight:400;color:#6a7484}
   .dlg .p.wide tr.me td{background:#FFF8EC;font-weight:700}
   .dlg .p.wide tr.me td:first-child{box-shadow:inset 4px 0 0 var(--gold)}
+  .tabs{display:flex;gap:8px;margin:0 0 12px;flex-wrap:wrap}
+  .tabs button{border:1px solid #c5ccd8;background:#fff;color:var(--navy);border-radius:999px;padding:10px 16px;font-weight:700;font-size:14px;min-height:44px;cursor:pointer}
+  .tabs button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  #holview .hn{font-size:13px;color:#5a6575;margin:4px 0 12px;line-height:1.4}
+  #holview .tw{overflow-x:auto;background:#fff;border:1px solid #e3e7ee;border-radius:12px;padding:6px 10px}
+  #holview table{border-collapse:collapse;width:100%;min-width:640px;font-size:14px}
+  #holview th,#holview td{padding:8px 10px;border-bottom:1px solid #eef0f4;text-align:center}
+  #holview th:first-child,#holview td:first-child{text-align:left;position:sticky;left:0;background:#fff}
+  #holview th small{display:block;font-weight:400;color:#6a7484}
+  #holview tr.me td{background:#FFF8EC;font-weight:700}
+  #holview tr.me td:first-child{box-shadow:inset 4px 0 0 var(--gold)}
   .dlg{position:fixed;inset:0;background:rgba(10,22,45,.6);z-index:50;display:none;align-items:flex-end;justify-content:center}
   .dlg.show{display:flex}
   .dlg .p{background:#fff;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;border-radius:14px 14px 0 0;padding:20px 20px 22px}
@@ -108,6 +119,8 @@
 <body>
 <header><h1>🗓️ Schedule / Horarios</h1><a href="index.html">← Home / Inicio</a></header>
 <main>
+  <div class="tabs noprint" id="vtabs" role="tablist"><button class="on" id="tb-s" onclick="tab('s')">🗓️ Store schedule / Horario de tienda</button><button id="tb-h" onclick="tab('h')">🎄 Holidays by department / Feriados por departamento</button></div>
+  <div id="storeview">
   <div class="stores hide" id="stores"></div>
   <div class="wk"><h2 id="wt" data-no-i18n></h2>
     <button class="btn" onclick="nav(-7)" aria-label="Previous week">◀</button>
@@ -117,6 +130,8 @@
   </div>
   <div class="tools hide" id="tools"></div>
   <div id="view"><div class="empty" id="ld"></div></div>
+  </div>
+  <div id="holview" class="hide"></div>
 </main>
 <div class="dlg" id="dlg" onclick="if(event.target===this)closeDlg()" role="dialog" aria-modal="true"><div class="p" id="dp"></div></div>
 <script src="dh-session.js"></script>
@@ -164,9 +179,9 @@ function render(){
       <button class="btn" onclick="copyPrev()">${esc(tr('Copy previous week / Copiar semana anterior'))}</button>
       <button class="btn" onclick="openImport()">${esc(tr('Upload Excel / Subir Excel'))}</button>
       <button class="btn" onclick="openHist()">${esc(tr('Change log / Historial de cambios'))}</button>`:'')
-      +`<button class="btn" onclick="openHol()">🎄 ${esc(tr('Holiday schedule / Feriados'))}</button><button class="btn" onclick="window.print()">${esc(tr('Print / Imprimir'))}</button>`
+      +`<button class="btn" onclick="window.print()">${esc(tr('Print / Imprimir'))}</button>`
       +(S.puede_gestores?`<button class="btn" onclick="openGest()">${esc(tr('Who can edit / Quién puede editar'))}</button>`:'');
-  }else{tl.classList.remove('hide');tl.innerHTML=`<button class="btn" onclick="openHol()">🎄 ${esc(tr('Holiday schedule / Feriados'))}</button><button class="btn" onclick="window.print()">${esc(tr('Print / Imprimir'))}</button>`;}
+  }else{tl.classList.remove('hide');tl.innerHTML=`<button class="btn" onclick="window.print()">${esc(tr('Print / Imprimir'))}</button>`;}
   const rows=S.filas||[];
   if(!rows.length&&!S.puede_editar){
     $('view').innerHTML='<div class="empty">'+esc(tr(S.publicado?'Nothing scheduled this week. / No hay nada programado esta semana.':'This week’s schedule is not published yet. Ask your manager. / El horario de esta semana aún no está publicado. Pregunta a tu gerente.'))+'</div>';return;}
@@ -427,7 +442,7 @@ async function openGest(){
 }
 async function gSet(r,t,on){if(!r)return;const x=await call('horarios_gestor_set',{p_roster:r,p_tienda:t,p_on:on});if(x)openGest();}
 
-window.addEventListener('dh-lang',()=>{if(S)render();});
+window.addEventListener('dh-lang',()=>{if(S)render();if(!$('holview').classList.contains('hide'))$('holview').innerHTML=holTable();});
 /* ---- Holiday schedule (read-only; master table, your own row highlighted) ---- */
 let HOL=null;
 function holSt(x){const k=x==null||x===''?'NA':String(x).replace(/\s+/g,'');return `<span class="hst ${esc(k)}" data-no-i18n>${esc(x==null||x===''?'—':x)}</span>`;}
@@ -435,21 +450,27 @@ const holEs=()=>L()==='es-US';
 const holName=f=>holEs()?f.es:f.en;
 const holDate=d=>fd(d,{weekday:'short',month:'short',day:'numeric'});
 async function loadHol(){try{HOL=await DH.rpc('feriados_ver');}catch(e){HOL=null;}}
-function openHol(){
-  if(!HOL)return; const es=holEs();
+function holTable(){
+  const es=holEs();
+  if(!HOL)return `<div class="empty">${esc(tr('Could not load. / No se pudo cargar.'))}</div>`;
   const head=`<tr><th>${es?'Departamento':'Department'}</th>${(HOL.fechas||[]).map(f=>`<th data-no-i18n>${esc(holName(f))}<small>${esc(holDate(f.fecha))}</small><small>${esc(f.horario?(f.horario==='CLOSED'?(es?'Cerrado':'Closed'):(es?'Horario ':'Hours ')+f.horario):'')}</small></th>`).join('')}</tr>`;
   const body=(HOL.filas||[]).map(f=>`<tr class="${f.id===HOL.mia?'me':''}"><td data-no-i18n>${esc(f.depto)}${f.id===HOL.mia?' ★':''}${f.nota?`<br><small style="font-weight:400;color:#6a7484">${esc(f.nota)}</small>`:''}</td>${f.estados.map(x=>`<td>${holSt(x)}</td>`).join('')}</tr>`).join('');
-  showDlg(`<h2>${esc(tr('2026 Holiday schedule / Horario de feriados 2026'))}</h2><div class="hn">${esc(es?'Solo informativo; no se puede cambiar aquí. ON = trabaja, OFF = libre. “—” = no especificado. Tu departamento está resaltado (★).':'For information only; it cannot be changed here. ON = working, OFF = day off. “—” = not specified. Your department is highlighted (★).')}${HOL.todas?'':esc(es?' Solo ves tu departamento.':' You only see your own department.')}</div><table>${head}${body}</table><div class="acts"><button class="btn" onclick="closeDlg()">${esc(tr('Close / Cerrar'))}</button></div>`);
-  $('dp').classList.add('wide');
+  return `<div class="hn">${esc(es?'2026 DHC — horario de feriados por departamento. Solo informativo; no se edita aquí. ON = trabaja, OFF = libre, “—” = no especificado. Tu departamento está resaltado (★).':'2026 DHC holiday schedule by department. For information only; not edited here. ON = working, OFF = day off, “—” = not specified. Your department is highlighted (★).')}${HOL.todas?'':esc(es?' Solo ves tu departamento.':' You only see your own department.')}</div><div class="tw"><table>${head}${body}</table></div>`;
 }
-
+function tab(k){
+  const hol=k==='h';
+  $('storeview').classList.toggle('hide',hol); $('holview').classList.toggle('hide',!hol);
+  $('tb-s').classList.toggle('on',!hol); $('tb-h').classList.toggle('on',hol);
+  if(hol){$('holview').innerHTML=holTable();}
+  try{history.replaceState(null,'',hol?'#feriados':location.pathname+location.search);}catch(e){}
+}
 async function openPerson(rid){
   const r=(S.filas||[]).find(x=>x.id===rid); if(!r)return;
   const T=todayS(), dn=DAYN(), es=holEs();
   const week=`<div class="mine" style="margin:8px 0 12px"><div class="row">${S.dias.map((d,i)=>{const c=(r.celdas||{})[d.d];
     const body=!c?'—':c.libre?esc(tr('OFF / LIBRE')):shiftLines(c.t).map(esc).join('<br>');
     return `<div class="c ${d.d===T?'t':''} ${c&&c.libre?'o':''}"><b data-no-i18n>${esc(dn[i])} ${esc(fd(d.d,{day:'numeric'}))}</b>${body}</div>`;}).join('')}</div></div>`;
-  const edit=S.puede_editar?`<button class="btn" onclick="openRow('${r.id}')">${esc(tr('Edit person / Editar persona'))}</button>`:'';
+  const edit=`<button class="btn" onclick="closeDlg();tab('h')">🎄 ${esc(tr('Holidays by department / Feriados por departamento'))}</button>`+(S.puede_editar?`<button class="btn" onclick="openRow('${r.id}')">${esc(tr('Edit person / Editar persona'))}</button>`:'');
   showDlg(`<h2 data-no-i18n>${esc(r.nombre)}</h2><div class="sub">${esc(tr('This week / Esta semana'))} · ${esc(S.tienda)}</div>${week}<div id="pp-h"></div><div class="acts">${edit}<button class="btn" onclick="closeDlg()">${esc(tr('Close / Cerrar'))}</button></div>`);
   if(!r.roster_id)return;
   let p=null; try{p=await DH.rpc('feriados_persona',{p_roster:r.roster_id});}catch(e){}
@@ -458,12 +479,12 @@ async function openPerson(rid){
   if(!up.length)return;
   $('pp-h').innerHTML=`<h3 style="font:700 15px 'Segoe UI',Arial,sans-serif;margin:6px 0">🎄 ${esc(tr('Holidays / Feriados'))}</h3><div class="hc-row">${up.map(x=>`<div class="hc-d"><b data-no-i18n>${esc(holName(x.f))}</b><small data-no-i18n>${esc(holDate(x.f.fecha))}${x.f.horario&&x.f.horario!=='CLOSED'?' · '+esc(x.f.horario):''}</small>${holSt(p.fila.estados[x.i])}</div>`).join('')}</div>${p.fila.nota?`<div class="sub" data-no-i18n>${esc(p.fila.nota)}</div>`:''}`;
 }
-loadHol();
 
 (async function init(){
   if(!DH.token()){location.href='index.html';return;}
   $('ld').textContent=tr('Loading… / Cargando…');
-  await load();
+  await Promise.all([load(),loadHol()]);
+  if(location.hash==='#feriados')tab('h');
 })();
 </script>
 </body>
