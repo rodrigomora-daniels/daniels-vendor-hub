@@ -226,6 +226,9 @@
     var words = q.trim().split(/\s+/).length;
     if (!(stock.test(q) || hasNum || words <= 3)) return '';
     var c = q.replace(/\b(do we have|do you have|is there|how much is|how much|what is the price of|price of|in stock|available|stock|inventory|sku|price|cuanto cuesta|cuesta|tienen|tenemos|hay|existencia de|existencia|precio de|precio|inventario|disponible|de|del|the|a|an|el|la|los|las|un|una)\b/gi, ' ').replace(/[?¿!¡,]/g, ' ').replace(/\s+/g, ' ').trim();
+    c = c.replace(/\b(este|esta|esto|ese|esa|producto|productos|articulo|item|product|this|that|disponib\w*|availab\w*|tenemos|tienen|have|we|you|it|is|are|en|in|for|por|para|con|with|stock|existenc\w*)\b/gi, ' ').replace(/\s+/g, ' ').trim();
+    var sku = (q.match(/[A-Za-z0-9][A-Za-z0-9*\-_.\/]{4,}/g) || []).filter(function (x) { return /\d/.test(x); });
+    if (sku.length) return sku[0];              // a SKU / model alone matches best
     return c.length >= 3 ? c : '';
   }
   async function ask(q) {
