@@ -156,7 +156,8 @@
 
   /* ---------- render a search result ---------- */
   function renderResult(r, q) {
-    if (r.saleMode && r.promos && r.promos.length && r.paginas) r.paginas = r.paginas.slice(0, 2);   // promo question: flyers first, fewer policy pages
+    if (r.saleMode && r.promos && r.promos.length) { r.paginas = []; r.documentos = []; }   // promo question: promotions only, no policy pages
+    (r.paginas || []).forEach(function (p) { if (p.fragmento) p.fragmento = String(p.fragmento).replace(/[\uFFFD\uE000-\uF8FF\u25A1\u25AF]/g, ''); });
     var h = '', navs = navMatches(q);
     if (r.corregido) h += '<div class="sal-note">' + esc(t('Showing results for “', 'Mostrando resultados para “') + r.corregido + '” ' + t('(I fixed the spelling).', '(corregí la ortografía).')) + '</div>';
     if (navs.length) {
@@ -184,6 +185,7 @@
           '<div class="sal-act"><button class="sal-btn pri" data-open="d' + i + '">' + esc(t('Open', 'Abrir')) + '</button></div></div>';
       }).join('');
     }
+    if (r.promoFallback && r.promos && r.promos.length) h += '<div class="sal-note">' + esc(t('I cannot see inside the flyers for that product yet. These are the promotions running now; open one to see the models and prices.', 'Todavía no veo ese producto dentro de los flyers. Estas son las promociones vigentes ahora; abre una para ver modelos y precios.')) + '</div>';
     if (r.promos && r.promos.length) {
       h += '<div class="sal-sec">' + esc(r.browse ? t('Running now', 'Vigentes ahora') : t('Promotions', 'Promociones')) + '</div>' + r.promos.map(function (p, i) {
         var badge = p.estado === 'vigente' ? '<span class="sal-badge">' + esc(t('Active', 'Vigente')) + '</span>' : p.estado === 'programada' ? '<span class="sal-badge soon">' + esc(t('Starts ', 'Empieza ') + fmtDate(p.vigente_desde)) + '</span>' : '<span class="sal-badge old">' + esc(t('Ended', 'Terminada')) + '</span>';
@@ -278,7 +280,7 @@
       var webP = (wq && DH.salWeb) ? withTimeout(DH.salWeb(wq), 10000).then(function (w) { return w && w.items || []; }).catch(function () { return []; }) : Promise.resolve([]);
       var r = await withTimeout(DH.rpc('sal_buscar', { p_q: q }), 20000);
       r.web = await webP; r.saleMode = saleMode;
-      if (saleMode && isPromoBrowse(q) && !(r.promos && r.promos.length)) { try { r.promos = await withTimeout(DH.rpc('sal_promos_vigentes', {}), 8000); r.browse = true; } catch (e) {} }
+      if (saleMode && !(r.promos && r.promos.length)) { try { r.promos = await withTimeout(DH.rpc('sal_promos_vigentes', {}), 8000); r.browse = true; r.promoFallback = !isPromoBrowse(q); } catch (e) {} }
       clearTimeout(slowTimer);
       var html = renderResult(r, q);
       if (!html) {
