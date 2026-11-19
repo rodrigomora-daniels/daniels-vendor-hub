@@ -1591,7 +1591,9 @@ async function loadPromoStrip(){
     var urls={}; try{urls=await DH.files.sign(its.map(function(i){return i.archivo_id;}));}catch(e){}
     document.getElementById('ps-row').innerHTML=its.map(function(p){
       var u=urls[p.archivo_id], img=u&&p.mime&&p.mime.indexOf('image/')===0;
-      return '<a class="ps-item" href="promociones.html"><div class="th">'+(img?'<img loading="lazy" alt="" src="'+nhEsc(u.url)+'">':'📄')+'</div><b data-no-i18n>'+nhEsc(p.titulo)+'</b>'+(p.seccion?'<small data-no-i18n>'+nhEsc(p.seccion)+'</small>':'')+'</a>';
+      var m=p.mime||'', k=/spreadsheet|excel/.test(m)?['📊','Excel','#DDEFE3','#1E7B4B']:/video\//.test(m)?['🎬','Video','#E6E3F4','#4B3F9A']:/pdf/.test(m)?['📕','PDF','#F6E0DE','#B3402F']:/word|document/.test(m)?['📝','Word','#DFE8F6','#2B5BA8']:['📄','File','#E3E8F0','#5a6678'];
+      var th=img?'<img loading="lazy" alt="" draggable="false" oncontextmenu="return false" src="'+nhEsc(u.url)+'">':'<div style="display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;height:100%;justify-content:center;background:'+k[2]+';color:'+k[3]+'"><span style="font-size:52px;line-height:1">'+k[0]+'</span><span style="font:700 13px Arial,sans-serif">'+k[1]+'</span></div>';
+      return '<a class="ps-item" href="promociones.html"><div class="th">'+th+'</div><b data-no-i18n>'+nhEsc(p.titulo)+'</b>'+(p.seccion?'<small data-no-i18n>'+nhEsc(p.seccion)+'</small>':'')+'</a>';
     }).join('');
     box.style.display='block';
   }catch(e){}
