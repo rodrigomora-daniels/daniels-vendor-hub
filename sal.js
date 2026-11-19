@@ -185,6 +185,11 @@
           '<div class="sal-act"><button class="sal-btn pri" data-open="d' + i + '">' + esc(t('Open', 'Abrir')) + '</button></div></div>';
       }).join('');
     }
+    if (r.personas && r.personas.length) {
+      h += '<div class="sal-sec">' + esc(t('People', 'Personas')) + '</div>' + r.personas.map(function (p) {
+        return '<div class="sal-card"><h4>' + esc(p.nombre) + '</h4><div class="meta">' + esc([p.puesto, p.ubicacion].filter(Boolean).join(' · ')) + '</div></div>';
+      }).join('');
+    }
     if (r.promoFallback && r.promos && r.promos.length) h += '<div class="sal-note">' + esc(t('I cannot see inside the flyers for that product yet. These are the promotions running now; open one to see the models and prices.', 'Todavía no veo ese producto dentro de los flyers. Estas son las promociones vigentes ahora; abre una para ver modelos y precios.')) + '</div>';
     if (r.promos && r.promos.length) {
       h += '<div class="sal-sec">' + esc(r.browse ? t('Running now', 'Vigentes ahora') : t('Promotions', 'Promociones')) + '</div>' + r.promos.map(function (p, i) {
@@ -285,7 +290,7 @@
       var html = renderResult(r, q);
       if (!html) {
         setBubble(wait, '<b>' + esc(t('I found nothing about “', 'No encontré nada sobre “') + q + '”') + '</b><p>' + esc(t('Nothing in the library, channels, promotions or news that you can access. That does not prove it does not exist: try other words (for example the product name, a policy name or the SKU), or ask your manager.', 'Nada en la biblioteca, canales, promociones ni novedades a los que tienes acceso. Eso no prueba que no exista: prueba con otras palabras (por ejemplo el nombre del producto, de la política o el SKU), o pregunta a tu gerente.')) + '</p>', 'thinking');
-        setFace('thinking', 2500);
+        setFace('thinking', 2500); chipsEl.style.display = '';   // offer the quick topics again
       } else {
         setBubble(wait, html, 'success'); bindResult(wait, r); setFace('success', 2500);
         logEl.scrollTop = 0;
