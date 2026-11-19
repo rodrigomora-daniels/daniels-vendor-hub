@@ -38,13 +38,14 @@
   .mine .c b{display:block;font-size:12px;color:#E8C878;margin-bottom:3px}
   .mine .c.t{outline:2px solid var(--gold)}
   .mine .c.o{opacity:.55}
-  .sc{background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.08);overflow-x:auto}
+  .sc{background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.08);overflow:auto;max-height:calc(100vh - 120px)}
   table{border-collapse:separate;border-spacing:0;width:100%;min-width:860px;table-layout:fixed}
   th,td{border-bottom:1px solid #e3e7ee;border-right:1px solid #e3e7ee;padding:0;text-align:center;vertical-align:middle}
   th{background:var(--rail);color:#fff;padding:9px 4px;font-size:14px;line-height:1.25;position:sticky;top:0}
   th small{display:block;font-weight:400;color:#cfe0f7;font-size:12px}
   th.t{background:var(--gold);color:#12284A}th.t small{color:#12284A}
   th.nm,td.nm{width:170px;text-align:left;position:sticky;left:0;z-index:2}
+  th.nm{z-index:4}
   td.nm{background:#fff;padding:8px 10px;font-weight:700;font-size:14px;color:var(--rail)}
   td.nm small{display:block;color:var(--gray);font-weight:600;font-size:12px}
   td.nm.me{background:#FFF6DD;box-shadow:inset 4px 0 0 var(--gold)}
@@ -83,10 +84,13 @@
   .tabs button{border:1px solid #c5ccd8;background:#fff;color:var(--navy);border-radius:999px;padding:10px 16px;font-weight:700;font-size:14px;min-height:44px;cursor:pointer}
   .tabs button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
   #holview .hn{font-size:13px;color:#5a6575;margin:4px 0 12px;line-height:1.4}
-  #holview .tw{overflow-x:auto;background:#fff;border:1px solid #e3e7ee;border-radius:12px;padding:6px 10px}
+  #holview .tw{overflow:auto;max-height:calc(100vh - 150px);background:#fff;border:1px solid #e3e7ee;border-radius:12px;padding:0}
   #holview table{border-collapse:collapse;width:100%;min-width:640px;font-size:14px}
   #holview th,#holview td{padding:8px 10px;border-bottom:1px solid #eef0f4;text-align:center}
+  #holview th{position:sticky;top:0;z-index:2}
   #holview th:first-child,#holview td:first-child{text-align:left;position:sticky;left:0;background:#fff}
+  #holview th:first-child{background:var(--rail);color:#fff;z-index:4}
+  #holview td:first-child{z-index:1}
   #holview th small{display:block;font-weight:400;color:#6a7484}
   #holview button.ed{border:0;background:none;color:inherit;font:inherit;cursor:pointer;padding:2px 4px;border-radius:6px;text-align:inherit}
   #holview button.ed:hover{background:#eef2fa}
