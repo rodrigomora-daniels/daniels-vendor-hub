@@ -184,7 +184,7 @@
       }).join('');
     }
     if (r.promos && r.promos.length) {
-      h += '<div class="sal-sec">' + esc(t('Promotions', 'Promociones')) + '</div>' + r.promos.map(function (p, i) {
+      h += '<div class="sal-sec">' + esc(r.browse ? t('Running now', 'Vigentes ahora') : t('Promotions', 'Promociones')) + '</div>' + r.promos.map(function (p, i) {
         var badge = p.estado === 'vigente' ? '<span class="sal-badge">' + esc(t('Active', 'Vigente')) + '</span>' : p.estado === 'programada' ? '<span class="sal-badge soon">' + esc(t('Starts ', 'Empieza ') + fmtDate(p.vigente_desde)) + '</span>' : '<span class="sal-badge old">' + esc(t('Ended', 'Terminada')) + '</span>';
         return '<div class="sal-card"><h4>' + esc(p.titulo) + badge + '</h4><div class="meta">' + esc(fmtDate(p.vigente_desde) + (p.vigente_hasta ? ' – ' + fmtDate(p.vigente_hasta) : ' – ' + t('no end date', 'sin fecha final'))) + (p.seccion ? ' · ' + esc(p.seccion) : '') + '</div>' +
           (p.descripcion ? '<p>' + esc(p.descripcion) + '</p>' : '') + '<div class="sal-act"><button class="sal-btn pri" data-open="r' + i + '">' + esc(t('Open promo', 'Abrir promo')) + '</button></div></div>';
@@ -215,7 +215,7 @@
     }
     if (!h) return '';
     if (r.saleMode) {   // promotions (flyers) first, then the website's sale items, then the rest
-      var parts = h.split('<div class="sal-sec">'), pre = parts.shift(), rank = function (p) { return /^(Promotions|Promociones)/.test(p) ? 0 : /^(Sale items|En oferta)/.test(p) ? 1 : 2; };
+      var parts = h.split('<div class="sal-sec">'), pre = parts.shift(), rank = function (p) { return /^(Promotions|Promociones|Running now|Vigentes ahora)/.test(p) ? 0 : /^(Sale items|En oferta)/.test(p) ? 1 : 2; };
       parts.sort(function (x, y) { return rank(x) - rank(y); });
       h = pre + parts.map(function (p) { return '<div class="sal-sec">' + p; }).join('');
     }
@@ -257,6 +257,12 @@
     if (sku.length) return sku[0];              // a SKU / model alone matches best
     return c.length >= 3 ? c : '';
   }
+  /* "What are the promotions?" with no product named: show what is running right now. */
+  function isPromoBrowse(q) {
+    var left = String(q || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, ' ')
+      .replace(/\b(cuales|cual|que|hay|son|mas|most|more|promotion|promotions|tiene|tenemos|todas|all|las|los|la|el|de|del|en|para|por|hoy|ahora|actuales|actual|vigentes|vigente|importantes|importante|principales|mejores|mejor|nuevas|nuevos|tenemos|tienen|dame|dime|muestrame|quiero|ver|promo|promos|promocion|promociones|oferta|ofertas|descuento|descuentos|deal|deals|sale|black|friday|blackfriday|bf|cyber|monday|what|which|are|is|the|any|current|today|right|now|main|top|best|important|new|show|me|we|have|running|our|of|for|on|in|a|an)\b/g, ' ').replace(/\s+/g, ' ').trim();
+    return left === '';
+  }
   var PROMO_RE = /promo|oferta|descuent|discount|\bdeals?\b|black\s*fr|blackfr|\bbf\b|\bsale\b|rebaj|cyber/i;
   async function ask(q) {
     q = String(q || '').trim(); if (q.length < 2 || busy) return;
@@ -271,6 +277,7 @@
       var webP = (wq && DH.salWeb) ? withTimeout(DH.salWeb(wq, /colou?r|colores|tama[nñ]o|sizes?|opcion|options|variant|modelos|medidas/i.test(q), saleMode ? 'sale' : ''), 10000).then(function (w) { return w && w.items || []; }).catch(function () { return []; }) : Promise.resolve([]);
       var r = await withTimeout(DH.rpc('sal_buscar', { p_q: q }), 20000);
       r.web = await webP; r.saleMode = saleMode;
+      if (saleMode && isPromoBrowse(q) && !(r.promos && r.promos.length)) { try { r.promos = await withTimeout(DH.rpc('sal_promos_vigentes', {}), 8000); r.browse = true; } catch (e) {} }
       clearTimeout(slowTimer);
       var html = renderResult(r, q);
       if (!html) {
