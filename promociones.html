@@ -127,6 +127,15 @@ async function load(){
   try{URLS=await DH.files.sign(need);}catch(e){URLS={};err('Some images could not be loaded. / No se pudieron cargar algunas imágenes.');}
   $('pubbar').classList.toggle('hide',!D.puede_publicar);
   render();
+  if(D.puede_publicar&&!window.__ocrAuto){window.__ocrAuto=true;setTimeout(autoRead,2500);}   // SAL learns new/unread flyers on its own
+}
+async function autoRead(){
+  if(!window.SalOcr){setTimeout(autoRead,1500);return;}
+  const st=$('ocr-st');
+  try{
+    const r=await SalOcr.run((i,n,t)=>{if(n)st.textContent='SAL is reading flyers '+Math.min(i+1,n)+' of '+n+'… / SAL está leyendo flyers '+Math.min(i+1,n)+' de '+n+'…';});
+    st.textContent=r.total?('SAL read '+r.done+' flyers. / SAL leyó '+r.done+' flyers.'):'';
+  }catch(e){st.textContent='';}
 }
 function render(){
   const counts={};(D.items||[]).forEach(i=>counts[i.estado]=(counts[i.estado]||0)+1);
