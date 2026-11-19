@@ -15,7 +15,22 @@
   var root, fab, tip, panel, logEl, form, input, sendBtn, faceEl, chipsEl, subEl, titleEl, xBtn;
   var busy = false, faceTimer = 0, typingTimer = 0, slowTimer = 0, lastQ = '', mounted = false, greeted = false;
 
-  function L() { return (DH.i18n && DH.i18n.lang) === 'es' ? 'es' : 'en'; }
+  var forced = null;   // language of the question being answered (overrides the app language for that reply)
+  function L() { return forced || ((DH.i18n && DH.i18n.lang) === 'es' ? 'es' : 'en'); }
+  /* Guess the language a person typed in (misspellings and missing accents included). null = not sure: keep the app language. */
+  function detectLang(q) {
+    var s = ' ' + String(q || '').toLowerCase().replace(/[¿?¡!.,;:()]/g, ' ') + ' ';
+    var es = 0, en = 0;
+    if (/[ñáéíóúü]/.test(s)) es += 2;
+    var ES = ' que como cual cuales cuanto cuantos cuanta cuantas donde cuando quien por para con sin una un unos el la los las del al es esta este esto estos tiene tienen tenemos hay hago hacer puedo puede pueden necesito quiero busco dame dime ayuda venta ventas cliente clientes credito tienda precio precios existencia inventario colores color tamano medidas politica cancelar cancelacion devolucion reembolso entrega sobre mi mis su sus de en y o no si se me te lo le muy mas pero cuando '.split(' ');
+    var EN = ' what how which where when who why the a an is are do does can could would should i we you my our your this that these those have has there for with without need want find show tell help sale sales customer customers credit store price prices stock inventory colors color size sizes policy cancel cancellation return refund delivery about of in on and or not if it me to at by from '.split(' ');
+    s.trim().split(/\s+/).forEach(function (w) { if (ES.indexOf(' ' + w + ' ') >= 0 || ES.indexOf(w) >= 0) es++; if (EN.indexOf(w) >= 0) en++; });
+    // fuzzy hints for common misspellings
+    if (/cancel+a?c|cuant|tenem|dispon|precio|devolu|reembols|venta/.test(s)) es++;
+    if (/\b(avail|inventor|refun|policy|price)/.test(s)) en++;
+    if (es === en) return null;
+    return es > en ? 'es' : 'en';
+  }
   function t(en, es) { return L() === 'es' ? es : en; }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function hl(s) { return esc(s).replace(/&lt;&lt;/g, '<mark>').replace(/&gt;&gt;/g, '</mark>'); }
@@ -141,6 +156,7 @@
   /* ---------- render a search result ---------- */
   function renderResult(r, q) {
     var h = '', navs = navMatches(q);
+    if (r.corregido) h += '<div class="sal-note">' + esc(t('Showing results for “', 'Mostrando resultados para “') + r.corregido + '” ' + t('(I fixed the spelling).', '(corregí la ortografía).')) + '</div>';
     if (navs.length) {
       h += '<div class="sal-sec">' + esc(t('Go to', 'Ir a')) + '</div><div class="sal-act">' +
         navs.map(function (p) { return '<a class="sal-btn pri" href="' + esc(p.u) + '">' + esc(p[L()]) + '</a>'; }).join('') + '</div>';
@@ -188,7 +204,11 @@
       h += '<div class="sal-sec">' + esc(t('On the Daniel\'s website', 'En el sitio web de Daniel\'s')) + '</div>' + r.web.map(function (w) {
         var pr = w.price != null ? '$' + w.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
         var was = w.was ? ' <s style="opacity:.6">$' + w.was.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</s>' : '';
-        return '<div class="sal-card"><h4>' + esc(w.title) + '</h4><div class="meta">' + esc(pr) + was + ' · ' + esc(w.available ? t('Shows as available online', 'Aparece disponible en línea') : t('Shows as out of stock online', 'Aparece agotado en línea')) + '</div>' +
+        var opts = (w.options || []).filter(function (o) { return o.values && o.values.length && !/^title$/i.test(o.name); }).map(function (o) {
+          return '<p><b>' + esc(o.name) + ' (' + o.values.length + '):</b> ' + esc(o.values.join(', ')) + '</p>';
+        }).join('');
+        var vav = (w.variants || []).length > 1 ? '<p>' + esc(t('Online availability by option: ', 'Disponibilidad en línea por opción: ')) + esc(w.variants.map(function (v) { return v.title + (v.available ? ' ✓' : ' ✗'); }).join(' · ')) + '</p>' : '';
+        return '<div class="sal-card"><h4>' + esc(w.title) + '</h4><div class="meta">' + esc(pr) + was + ' · ' + esc(w.available ? t('Shows as available online', 'Aparece disponible en línea') : t('Shows as out of stock online', 'Aparece agotado en línea')) + '</div>' + opts + vav +
           '<div class="sal-act"><a class="sal-btn" target="_blank" rel="noopener" href="' + esc(w.url) + '">' + esc(t('Open on the website', 'Abrir en el sitio')) + '</a></div></div>';
       }).join('') + '<div class="sal-note">' + esc(t('Website data (about 80% accurate): availability is online only, with no quantity or store. Confirm in Infinity before promising stock.', 'Datos del sitio web (aprox. 80% exactos): la disponibilidad es solo en línea, sin cantidad ni tienda. Confirma en Infinity antes de prometer existencia.')) + '</div>';
     }
@@ -234,13 +254,13 @@
   async function ask(q) {
     q = String(q || '').trim(); if (q.length < 2 || busy) return;
     busy = true; lastQ = q; sendBtn.disabled = true; input.value = ''; chipsEl.style.display = 'none';
-    addMe(q); setFace('search');
+    forced = detectLang(q); addMe(q); setFace('search');
     var wait = addSal(esc(t('Searching the library, channels, promotions and the website', 'Buscando en la biblioteca, canales, promociones y el sitio web')) + '<span class="sal-dots" aria-hidden="true"><i></i><i></i><i></i></span>', 'search');
     clearTimeout(slowTimer);
     slowTimer = setTimeout(function () { setFace('thinking'); setBubble(wait, esc(t('Still looking, one moment', 'Sigo buscando, un momento')) + '<span class="sal-dots" aria-hidden="true"><i></i><i></i><i></i></span>', 'thinking'); }, 1800);
     try {
       var wq = webQuery(q);
-      var webP = (wq && DH.salWeb) ? withTimeout(DH.salWeb(wq), 8000).then(function (w) { return w && w.items || []; }).catch(function () { return []; }) : Promise.resolve([]);
+      var webP = (wq && DH.salWeb) ? withTimeout(DH.salWeb(wq, /colou?r|colores|tama[nñ]o|sizes?|opcion|options|variant|modelos|medidas/i.test(q)), 10000).then(function (w) { return w && w.items || []; }).catch(function () { return []; }) : Promise.resolve([]);
       var r = await withTimeout(DH.rpc('sal_buscar', { p_q: q }), 20000);
       r.web = await webP;
       clearTimeout(slowTimer);
@@ -259,7 +279,7 @@
         (expired ? '' : '<div class="sal-act"><button class="sal-btn pri" data-retry="1">' + esc(t('Try again', 'Intentar de nuevo')) + '</button></div>'), 'error');
       var rb = wait.querySelector('[data-retry]'); if (rb) rb.addEventListener('click', function () { wait.remove(); ask(lastQ); });
       setFace('error', 3000);
-    } finally { busy = false; sendBtn.disabled = false; if (panel.classList.contains('open') && window.matchMedia('(pointer:fine)').matches) input.focus(); }
+    } finally { forced = null; busy = false; sendBtn.disabled = false; if (panel.classList.contains('open') && window.matchMedia('(pointer:fine)').matches) input.focus(); }
   }
 
   /* ---------- chrome ---------- */
