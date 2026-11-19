@@ -399,12 +399,12 @@ document.addEventListener('DOMContentLoaded',function(){
     </div>
     <div class="login-card">
       <div class="error-msg" id="login-error"></div>
-      <label class="field-label">Username / Usuario</label>
-      <input type="text" class="field-input" id="login-username" placeholder="e.g. jlopez" autocomplete="off">
+      <form id="login-form" onsubmit="handleLogin();return false" autocomplete="on"><label class="field-label">Username / Usuario</label>
+      <input type="text" class="field-input" id="login-username" name="username" placeholder="e.g. jlopez" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="text">
       <label class="field-label">Password / Contraseña</label>
-      <input type="password" class="field-input" id="login-password" placeholder="••••••••">
+      <input type="password" class="field-input" id="login-password" name="password" placeholder="••••••••" autocomplete="current-password">
       <label id="remember-row" style="display:flex;align-items:center;gap:10px;min-height:48px;margin:2px 0 8px;font-size:14px;color:var(--mgray);cursor:pointer"><input type="checkbox" id="login-remember" checked style="width:22px;height:22px;accent-color:#1B3A6B"> <span>Keep me signed in on this device / Mantenerme conectado en este dispositivo</span></label>
-      <button class="btn btn-primary" id="btn-login" onclick="handleLogin()">Sign In / Iniciar Sesión</button>
+      <button type="submit" class="btn btn-primary" id="btn-login">Sign In / Iniciar Sesión</button></form>
       <div style="text-align:center;font-size:12px;color:var(--mgray);margin-top:12px;">Have a reset code from your manager? Use <strong>Sign Up</strong> below — it also handles password resets.<br>¿Tienes un código de tu gerente? Usa <strong>Registrarse</strong> abajo — también sirve para restablecer tu contraseña.</div>
       <div style="display:flex;justify-content:space-between;margin-top:10px;">
         <span class="btn-ghost" onclick="goToScreen('signup')" style="cursor:pointer">New / Resetting? Sign Up / ¿Nuevo o restablecer? Regístrate</span>
@@ -850,6 +850,7 @@ async function handleLogin() {
       throw new Error('Incorrect username or password. / Usuario o contraseña incorrectos.');
     }
     session.empleado = emp;
+    try { localStorage.setItem('dh_last_user', username); } catch (e) {}
 
     await loadDashboard();
 
@@ -1107,7 +1108,7 @@ function openAdminConsole() {
 function handleLogout() {
   DH.logout();
   session = { empleado: null, history: [], resets: [] };
-  document.getElementById('login-username').value = '';
+  document.getElementById('login-username').value = (function(){ try { return localStorage.getItem('dh_last_user') || ''; } catch (e) { return ''; } })();
   document.getElementById('login-password').value = '';
   document.body.classList.remove('dashboard-mode');
   goToScreen('login');
@@ -1627,9 +1628,13 @@ function goToExam(tier) {
 
 // Restore an existing session (coming back from another page, or a reload in the same tab).
 (async function restoreSession() {
+  try {   // remembered username: only the sign-in tap is left (the browser's password manager fills the password)
+    const lu = localStorage.getItem('dh_last_user'), u = document.getElementById('login-username');
+    if (lu && u && !u.value) { u.value = lu; setTimeout(function () { var p = document.getElementById('login-password'); if (p && !/[?&]signup/.test(location.search)) p.focus({ preventScroll: true }); }, 400); }
+  } catch (e) {}
   if (/[?&]expired=1/.test(location.search)) {
     const e = document.getElementById('login-error');
-    if (e) { e.textContent = 'Your session expired. Please sign in again. / Tu sesión expiró. Inicia sesión de nuevo.'; e.classList.add('show'); }
+    if (e) { e.textContent = 'For your security, please sign in again. It only takes a tap. / Por seguridad, inicia sesión de nuevo. Solo toma un toque.'; e.classList.add('show'); }
     return;
   }
   const emp = await DH.restore();
@@ -1637,9 +1642,7 @@ function goToExam(tier) {
 })();
 
 // Allow Enter key to submit login
-document.getElementById('login-password').addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') handleLogin();
-});
+// (Enter submits the login form, which calls handleLogin)
 </script>
 
 <div id="welcome-pop" lang="en" role="dialog" aria-modal="true" aria-labelledby="wp-title">
