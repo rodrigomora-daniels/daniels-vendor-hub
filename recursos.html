@@ -88,7 +88,7 @@ function render(){
 let SALMSG='';
 const T=s=>(DH.i18n?DH.i18n.pick(s):s);
 function salSay(t){SALMSG=t;const e=$('sal-st');if(e)e.textContent=t;}
-function salAuto(archivoId,mime){ if(archivoId&&mime==='application/pdf'&&DH.salIndexer)DH.salIndexer.index(archivoId).catch(()=>{}); }   // quiet, after a PDF is saved as a resource
+function salAuto(archivoId,mime){ if(archivoId&&/pdf|wordprocessingml|spreadsheetml|ms-excel/.test(mime||'')&&DH.salIndexer)DH.salIndexer.index(archivoId).catch(()=>{}); }   // quiet, after a PDF is saved as a resource
 async function salUpdate(){
   const b=$('btn-sal'); if(b)b.disabled=true;
   try{
