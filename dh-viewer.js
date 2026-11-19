@@ -23,7 +23,8 @@
       '#dhv .txt{max-width:820px;margin:0 auto;text-align:left;background:#fff;color:#1F2937;border-radius:10px;padding:16px 18px}' +
       '#dhv .txt h4{margin:14px 0 6px;color:#12284A}#dhv .txt pre{white-space:pre-wrap;word-break:break-word;font:14px/1.5 "Segoe UI",Arial,sans-serif;margin:0}' +
       '#dhv .note{max-width:820px;margin:0 auto 10px;font-size:13px;color:#C9D6EA;text-align:left}' +
-      '#dhv .wm{position:fixed;inset:0;pointer-events:none;z-index:2;opacity:.2;mix-blend-mode:multiply}' +
+      '#dhv .wm{position:fixed;inset:0;pointer-events:none;z-index:2;opacity:.3;mix-blend-mode:multiply}' +
+      '#dhv .shade{position:absolute;inset:0;z-index:5;background:#0E1A2E;display:none;align-items:center;justify-content:center;text-align:center;padding:24px;font-weight:700}#dhv.hide .shade{display:flex}#dhv.hide .body{visibility:hidden}' +
       '#dhv.vo .body,#dhv.vo .body *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}' +
       '@media print{body > *:not(#dhv){display:none!important}#dhv.vo{display:none!important}}';
     document.head.appendChild(s);
@@ -56,7 +57,7 @@
     if (target) target.scrollIntoView();
   }
 
-  function close() { if (root) { var v = root.querySelector('video'); try { if (v) v.pause(); } catch (e) {} root.remove(); root = null; document.body.style.overflow = ''; document.removeEventListener('keydown', onKey); } }
+  function close() { if (root) { if (root.__off) root.__off(); var v = root.querySelector('video'); try { if (v) v.pause(); } catch (e) {} root.remove(); root = null; document.body.style.overflow = ''; document.removeEventListener('keydown', onKey); } }
   function onKey(e) { if (e.key === 'Escape') close(); }
 
   // DH.view(archivoId, { title, page })
@@ -78,6 +79,22 @@
         root.addEventListener('dragstart', function (e) { e.preventDefault(); });
         root.addEventListener('copy', function (e) { e.preventDefault(); });
         root.appendChild(watermark(f.quien || ''));
+        // Deterrents (a web page cannot truly block screenshots): hide the content when the app loses focus or a
+        // screenshot key is pressed, and say plainly that capturing is not allowed and is traceable.
+        var shade = document.createElement('div'); shade.className = 'shade';
+        shade.textContent = T('Content hidden. Capturing or sharing these files is not permitted.', 'Contenido oculto. No se permite capturar ni compartir estos archivos.'); root.appendChild(shade);
+        var hideNow = function (ms) { root.classList.add('hide'); if (ms) setTimeout(function () { if (!document.hidden) root.classList.remove('hide'); }, ms); };
+        var onVis = function () { if (document.hidden) hideNow(0); else root.classList.remove('hide'); };
+        document.addEventListener('visibilitychange', onVis);
+        var onKeyCap = function (e) {
+          var k = (e.key || '').toLowerCase();
+          if (k === 'printscreen' || ((e.metaKey || e.ctrlKey) && e.shiftKey && (k === 's' || k === '3' || k === '4' || k === '5'))) {
+            hideNow(1800); try { navigator.clipboard.writeText(T('Capturing is not permitted.', 'No se permite capturar.')); } catch (x) {}
+          }
+        };
+        window.addEventListener('keyup', onKeyCap, true); window.addEventListener('keydown', onKeyCap, true);
+        root.__off = function () { document.removeEventListener('visibilitychange', onVis); window.removeEventListener('keyup', onKeyCap, true); window.removeEventListener('keydown', onKeyCap, true); };
+        var nb = document.createElement('div'); nb.className = 'note'; nb.style.cssText = 'text-align:center;margin:0 auto 10px'; nb.textContent = T('View only. Screenshots and sharing are not permitted; your name is printed on every page and each opening is logged.', 'Solo lectura. No se permiten capturas ni compartir; tu nombre aparece en cada página y cada apertura queda registrada.'); body.parentNode.insertBefore(nb, body);
       } else if (f.url_descarga) {
         root.querySelector('#dhv-act').innerHTML = '<a class="dl" href="' + esc(f.url_descarga) + '" rel="noopener">⬇ ' + esc(T('Download', 'Descargar')) + '</a>';
       }
