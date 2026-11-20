@@ -289,6 +289,12 @@
     forced = detectLang(q); logEl.innerHTML = ''; addMe(q); setFace('search');   // each question starts clean: the newest answer is at the top
     var chat = smallTalk(q);
     if (chat) { setFace('success', 1800); addSal(chat, 'success'); busy = false; sendBtn.disabled = false; root.classList.add('asked'); return; }
+    var pi = personalIntent(q);
+    if (pi) {
+      var w0 = addSal(esc(t('Checking your information', 'Revisando tu información')) + '<span class="sal-dots" aria-hidden="true"><i></i><i></i><i></i></span>', 'search');
+      try { var ph = await pi(); if (ph) { setBubble(w0, ph, 'success'); setFace('success', 2500); logEl.scrollTop = 0; forced = null; busy = false; sendBtn.disabled = false; return; } } catch (e) {}
+      w0.remove();   // could not answer from the person's data: fall through to the normal search
+    }
     var wait = addSal(esc(t('Searching the library, channels, promotions and the website', 'Buscando en la biblioteca, canales, promociones y el sitio web')) + '<span class="sal-dots" aria-hidden="true"><i></i><i></i><i></i></span>', 'search');
     clearTimeout(slowTimer);
     slowTimer = setTimeout(function () { setFace('thinking'); setBubble(wait, esc(t('Still looking, one moment', 'Sigo buscando, un momento')) + '<span class="sal-dots" aria-hidden="true"><i></i><i></i><i></i></span>', 'thinking'); }, 1800);
@@ -360,6 +366,77 @@
     var i = Math.floor(Math.random() * 2);
     return t(en[p][i], es[p][i]);
   }
+
+  /* ---------- Personal answers: schedule, holiday schedule, certifications (each uses the same permission-checked RPC as its own page) ---------- */
+  function norm(q) { return String(q || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9ñ ]/g, ' ').replace(/\s+/g, ' ').trim(); }
+  var LAZ = 'America/Los_Angeles';
+  function todayLA() { return new Date().toLocaleDateString('en-CA', { timeZone: LAZ }); }
+  function addDays(d, n) { var x = new Date(d + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); }
+  function fmtDay(d, o) { return new Date(d + 'T12:00:00Z').toLocaleDateString(L() === 'es' ? 'es-US' : 'en-US', Object.assign({ timeZone: 'UTC' }, o || { weekday: 'short', month: 'short', day: 'numeric' })); }
+  function fmtT(x) { var p = String(x).split(':'), h = +p[0], m = +p[1], ap = h >= 12 ? 'p' : 'a', h12 = h % 12 === 0 ? 12 : h % 12; return m ? h12 + ':' + (m < 10 ? '0' : '') + m + ap : h12 + ap; }
+  function shiftTxt(c) {
+    if (!c) return t('no shift listed', 'sin turno asignado');
+    if (c.libre) return t('OFF', 'LIBRE');
+    var a = c.t || []; return a.length === 4 ? fmtT(a[0]) + '–' + fmtT(a[1]) + ' & ' + fmtT(a[2]) + '–' + fmtT(a[3]) : a.length >= 2 ? fmtT(a[0]) + '–' + fmtT(a[1]) : t('no shift listed', 'sin turno asignado');
+  }
+  function openBtn(href, en, es) { return '<div class="sal-act"><a class="sal-btn pri" href="' + href + '">' + esc(t(en, es)) + '</a></div>'; }
+  function personalIntent(q) {
+    var s = norm(q);
+    var hol = /(feriado|holiday|thanksgiving|accion de gracias|black friday|christmas|navidad|nochebuena|new year|ano nuevo)/.test(s);
+    var sch = /(horario|schedule|turno|shift|\bwork\b|trabaj|me toca|toca entrar|a que hora|cuando entro|cuando salgo|what time do i|do i work|on call|libre|\boff\b)/.test(s);
+    if (hol && sch) return function () { return holidayAnswer(s); };
+    if (!hol && /(horario|schedule|turno|\bshift\b|a que hora (entro|salgo|trabajo|me toca)|cuando (entro|salgo|trabajo|me toca)|when do i (work|start|get off)|what time do i|do i work|me toca|mis horas|my hours|trabajo (hoy|manana))/.test(s) && !/(promo|policy|politica|refund|reembolso)/.test(s)) return function () { return scheduleAnswer(s); };
+    if (/(certificacion|certification|\btier ?[12]\b|mis intentos|my attempts|attempts left|intentos|\bexamen\b|\bexam\b|aprobe|did i pass)/.test(s)) return function () { return certAnswer(); };
+    return null;
+  }
+  async function scheduleAnswer(s) {
+    var off = /\b(manana|tomorrow)\b/.test(s) ? 1 : /\b(hoy|today)\b/.test(s) ? 0 : null;
+    var nextW = /(next week|proxima semana|semana que viene|siguiente semana|semana proxima)/.test(s);
+    var S = await withTimeout(DH.rpc('horarios_ver', { p_tienda: null, p_semana: null }), 10000);
+    if (!S || !(S.tiendas || []).length) return '<b>' + esc(t('No schedule yet', 'Aún no hay horario')) + '</b><p>' + esc(t('There is no schedule published for your location yet.', 'Todavía no hay un horario publicado para tu ubicación.')) + '</p>';
+    var target = off != null ? addDays(todayLA(), off) : null;
+    if (nextW) S = await withTimeout(DH.rpc('horarios_ver', { p_tienda: S.tienda, p_semana: addDays(S.semana, 7) }), 10000);
+    else if (target && !(S.dias || []).some(function (d) { return d.d === target; })) S = await withTimeout(DH.rpc('horarios_ver', { p_tienda: S.tienda, p_semana: target }), 10000);
+    var mine = (S.filas || []).filter(function (r) { return S.mi_roster_id && r.roster_id === S.mi_roster_id; })[0];
+    var link = openBtn('horarios.html', 'Open the full schedule', 'Abrir el horario completo');
+    if (!mine) return '<b>' + esc(t('I cannot find you in this schedule', 'No te encuentro en este horario')) + '</b><p>' + esc(t('You are not listed in the ' + S.tienda + ' schedule for that week. Ask your manager if this looks wrong.', 'No apareces en el horario de ' + S.tienda + ' de esa semana. Pregunta a tu gerente si esto parece un error.')) + '</p>' + link;
+    var nm = firstName(), days = S.dias || [];
+    if (target) {
+      var c = (mine.celdas || {})[target], lab = off === 0 ? t('Today', 'Hoy') : t('Tomorrow', 'Mañana');
+      var d = days.filter(function (x) { return x.d === target; })[0], fe = d && (d.fiestas || []).length ? '<p>🎉 ' + esc(d.fiestas.join(', ')) + '</p>' : '';
+      return '<b>' + esc(lab + ' (' + fmtDay(target) + '): ' + shiftTxt(c)) + '</b>' + (c && !c.libre && c.t ? '<p>' + esc(S.tienda) + '</p>' : '') + fe + link;
+    }
+    var T = todayLA();
+    var rows = days.map(function (d) { var c = (mine.celdas || {})[d.d]; return '<div' + (d.d === T ? ' style="font-weight:700"' : '') + '>' + esc(fmtDay(d.d) + ': ' + shiftTxt(c)) + (d.fiestas && d.fiestas.length ? ' 🎉' : '') + '</div>'; }).join('');
+    return '<b>' + esc(nextW ? t('Your schedule next week', 'Tu horario la próxima semana') : t('Your schedule this week', 'Tu horario esta semana')) + (nm ? ', ' + esc(nm) : '') + '</b><p>' + esc(S.tienda) + (S.publicado ? '' : ' · ' + esc(t('draft, not published yet', 'borrador, aún sin publicar'))) + '</p>' + rows + link;
+  }
+  async function holidayAnswer(s) {
+    var H = await withTimeout(DH.rpc('feriados_ver', {}), 10000);
+    if (!H || H.acceso === false) return '<b>' + esc(t('That schedule is not available for your role', 'Ese horario no está disponible para tu puesto')) + '</b><p>' + esc(t('The department holiday schedule is only shown to managers, supervisors and directors. Your store schedule has your own holiday shifts.', 'El horario de feriados por departamento solo lo ven gerentes, supervisores y directores. Tu horario de tienda trae tus turnos de feriados.')) + '</p>' + openBtn('horarios.html', 'Open my schedule', 'Abrir mi horario');
+    var dates = (H.fechas || []).filter(function (f) { return f.fecha >= todayLA(); }), key = null;
+    var kw = [['thanksgiving', /thanksgiving|accion de gracias/], ['black friday', /black friday/], ['christmas eve', /christmas eve|nochebuena/], ['christmas day', /christmas day|navidad|christmas(?! eve)/], ['new year', /new year|ano nuevo/]];
+    kw.forEach(function (k) { if (!key && k[1].test(s)) key = k[0]; });
+    var pick = key ? (H.fechas || []).filter(function (f) { return norm((f.en || '') + ' ' + (f.es || '')).indexOf(key) >= 0 || (key === 'christmas day' && /christmas|navidad/.test(norm(f.en + ' ' + f.es))) || (key === 'new year' && /new year|ano nuevo/.test(norm(f.en + ' ' + f.es))); }) : dates;
+    if (!pick.length) pick = dates;
+    var fila = (H.filas || []).filter(function (f) { var d = norm(f.depto); return d.length > 2 && s.indexOf(d) >= 0; })[0] || (H.filas || []).filter(function (f) { return f.id === H.mia; })[0];
+    var link = openBtn('horarios.html#feriados', 'Open the holiday schedule', 'Abrir el horario de feriados');
+    if (!fila) return '<b>' + esc(t('Holiday schedule', 'Horario de feriados')) + '</b><p>' + esc(t('I could not tell which department you mean. Say the department name (for example “Delivery holiday schedule”), or open it.', 'No supe a qué departamento te refieres. Escribe el nombre del departamento (por ejemplo “horario de feriados de Delivery”), o ábrelo.')) + '</p>' + link;
+    var idx = {}; (H.fechas || []).forEach(function (f, i) { idx[f.orden] = i; });
+    var lines = pick.map(function (f) { var st = (fila.estados || [])[(f.orden || 1) - 1], nt = (fila.notas || [])[(f.orden || 1) - 1]; return '<div>' + esc((L() === 'es' ? f.es : f.en) + ' · ' + fmtDay(f.fecha) + ': ' + (st || '—') + (nt ? ' (' + nt + ')' : '')) + '</div>'; }).join('');
+    return '<b>' + esc(fila.depto + ' — ' + t('holiday schedule', 'horario de feriados')) + '</b>' + lines + (fila.nota ? '<p>' + esc(fila.nota) + '</p>' : '') + link;
+  }
+  async function certAnswer() {
+    var est = await withTimeout(DH.rpc('certificacion_estado', {}), 10000);
+    if (!est || !est.length) return null;
+    var nm = firstName();
+    var lines = est.map(function (x) {
+      var name = x.certificacion === 'tier1' ? 'Tier 1' : x.certificacion === 'tier2' ? 'Tier 2' : x.certificacion;
+      var st = x.aprobado ? t('passed ✓', 'aprobado ✓') : x.restantes > 0 ? t('not passed yet — ' + x.restantes + ' attempt' + (x.restantes === 1 ? '' : 's') + ' left', 'aún sin aprobar — te quedan ' + x.restantes + ' intento' + (x.restantes === 1 ? '' : 's')) : t('not passed — no attempts left, ask your manager', 'sin aprobar — ya no tienes intentos, pregunta a tu gerente');
+      return '<div>' + esc(name + ': ' + st + ' (' + x.intentos + '/' + x.limite + ' ' + t('attempts used', 'intentos usados') + ')') + '</div>';
+    }).join('');
+    return '<b>' + esc(t('Your certifications', 'Tus certificaciones') + (nm ? ', ' + nm : '')) + '</b>' + lines + openBtn('index.html', 'Open my certifications', 'Abrir mis certificaciones');
+  }
+
   function smallTalk(q) {
     var s = String(q || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9ñ ]/g, ' ').replace(/\s+/g, ' ').trim();
     s = s.replace(/\b(sal|porfa|por favor|please|amigo|bro|wey|compa)\b/g, '').replace(/\s+/g, ' ').trim();
