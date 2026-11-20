@@ -137,6 +137,20 @@
   @media print{header,.stores,.tools,.addrow,.dlg,.banner.noprint{display:none!important}body{background:#fff}.sc{box-shadow:none;overflow:visible}table{min-width:0}th{position:static}}
   @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 
+
+  /* ===== All screens: fixed page, the table fills what is left and scrolls inside (freeze panes) ===== */
+  @media screen{
+    html,body{height:100%}
+    body{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
+    body>header{flex:none}
+    main{flex:1 1 auto;min-height:0;width:100%;display:flex;flex-direction:column;overflow-y:auto}
+    #vtabs{flex:none}
+    #storeview,#holview,#view{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+    .stores,.wk,.tools,.banner,.mine,#holview .hn,#holview>.noprint{flex:none}
+    .sc,#holview .tw{flex:1 1 auto;min-height:220px;max-height:none;overscroll-behavior:contain}
+    body.compact .stores,body.compact .tools,body.compact .mine,body.compact #view>.banner,body.compact .wk h2 small,body.compact #jump,body.compact #thisb,body.compact .wk .pill,body.compact #holview .hn,body.compact #holview>.noprint{display:none!important}
+    body.compact .wk h2{font-size:clamp(17px,2.4vw,24px)}
+  }
   /* ===== Phone: app-shell + freeze panes (<=700px). Desktop/tablet untouched. ===== */
   @media screen and (max-width:700px){
     html,body{height:100%}
@@ -675,7 +689,7 @@ async function openPerson(rid){
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   document.addEventListener('scroll',e=>{
-    const t=e.target; if(!mq.matches||!t||!t.classList||!(t.classList.contains('sc')||t.classList.contains('tw')))return;
+    const t=e.target; if(!t||!t.classList||!(t.classList.contains('sc')||t.classList.contains('tw')))return;
     if(t.scrollTop>60)document.body.classList.add('compact'); else if(t.scrollTop<=0)document.body.classList.remove('compact');
   },true);
   document.addEventListener('click',e=>{
