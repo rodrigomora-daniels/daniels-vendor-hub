@@ -485,7 +485,7 @@
 
   function greet() {
     if (greeted) return; greeted = true;
-    addSal('<b>' + esc(hello(firstName())) + '</b><p>' + esc(t('I am SAL. Ask me about policies, Infinity steps, promotions, products or what was posted in the channels. I only show what is in the workspace, with its source.', 'Soy SAL. Pregúntame por políticas, pasos de Infinity, promociones, productos o lo que se publicó en los canales. Solo muestro lo que hay en el workspace, con su fuente.')) + '</p>' + (Math.random() < 0.35 ? motiv() : ''));
+    addSal('<b>' + esc(hello(firstName())) + '</b><p>' + esc(t('I am SAL. Ask me about policies, Infinity steps, promotions, products or what was posted in the channels, or about your schedule and certifications.', 'Soy SAL. Pregúntame por políticas, pasos de Infinity, promociones, productos o lo que se publicó en los canales, o por tu horario y tus certificaciones.')) + '</p>' + (Math.random() < 0.35 ? motiv() : ''));
   }
 
   /* ---------- Teach SAL: people with the "sal" permission write quick answers (shown first in results) ---------- */
