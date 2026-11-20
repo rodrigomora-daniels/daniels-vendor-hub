@@ -60,6 +60,13 @@
   th{text-align:left;background:var(--gray);padding:9px 12px;color:var(--navy);font-weight:700;border-bottom:2px solid #e0ddd6;}
   td{padding:9px 12px;border-bottom:1px solid #f0ece2;vertical-align:middle;}
   tr:hover td{background:#fafafa;}
+  /* Frozen header + first column on every admin table (scrolls inside its own box) */
+  .tw{overflow:auto;max-height:calc(100vh - 170px);-webkit-overflow-scrolling:touch;position:relative;}
+  .tw table{display:table;max-width:none;min-width:100%;border-collapse:separate;border-spacing:0;}
+  .tw thead th{position:sticky;top:0;z-index:3;background:var(--gray);box-shadow:0 2px 0 #e0ddd6;}
+  .tw tbody td:first-child,.tw thead th:first-child{position:sticky;left:0;background:#fff;z-index:2;box-shadow:2px 0 0 #f0ece2;}
+  .tw thead th:first-child{z-index:4;background:var(--gray);}
+  .tw tr:hover td:first-child{background:#fafafa;}
   .pill{display:inline-block;padding:3px 9px;border-radius:10px;font-size:11px;font-weight:700;}
   .pill-green{background:#eaf7ea;color:var(--green);}
   .pill-red{background:#fdecea;color:var(--red);}
@@ -141,7 +148,7 @@
         <button class="btn btn-gold" onclick="exportCSV('employees')">⬇ Export CSV</button>
       </div>
       <input type="text" class="field-input" id="employee-search" placeholder="Search by name or username…" style="margin-bottom:14px" oninput="renderEmployeesTable(cachedData.employees)">
-      <div style="overflow-x:auto">
+      <div class="tw">
         <table id="tbl-employees">
           <thead>
             <tr>
@@ -166,7 +173,7 @@
         </div>
       </div>
       <p style="font-size:12px;color:var(--mgray);margin-bottom:14px;">This table is what the evaluation module reads to know who evaluates whom — not just a visual chart.</p>
-      <div style="overflow-x:auto">
+      <div class="tw">
         <table id="tbl-organigrama">
           <thead>
             <tr>
@@ -187,7 +194,7 @@
         <button class="btn btn-primary" id="btn-cycle-new-open" onclick="openNewCycleModal()">+ Open New Cycle</button>
       </div>
       <p style="font-size:12px;color:var(--mgray);margin-bottom:14px;">Only one cycle should be active at a time — the evaluation module reads whichever cycle has "activo = true". Close a cycle before opening a new one.</p>
-      <div style="overflow-x:auto">
+      <div class="tw">
         <table id="tbl-eval-cycles">
           <thead><tr><th>Name</th><th>Type</th><th>Start</th><th>End</th><th>Status</th><th></th></tr></thead>
           <tbody id="tbl-eval-cycles-body"><tr><td colspan="6" class="empty-state">Loading...</td></tr></tbody>
@@ -200,7 +207,7 @@
     <div class="section" id="section-mgr-feedback" style="display:none">
       <div class="section-hdr"><h2>💬 Anonymous Leadership Feedback</h2></div>
       <p style="font-size:12px;color:var(--mgray);margin-bottom:14px;">Reports rating their manager (sellers → store managers, store managers → director). Closed 1–5 behavior scale. Aggregated only; individual answers and respondents are never stored together. ⚠️ = fewer than 3 responses (not counted toward the final score).</p>
-      <div style="overflow-x:auto">
+      <div class="tw">
         <table>
           <thead><tr><th>Leader</th><th>Store</th><th>Responses</th><th>Clarity</th><th>Fairness</th><th>Development</th><th>Recognition</th><th>Availability</th><th>Respect</th><th>Example</th></tr></thead>
           <tbody id="tbl-mgr-feedback-body"><tr><td colspan="10" class="empty-state">Loading...</td></tr></tbody>
@@ -211,7 +218,7 @@
     <div class="section" id="section-eval-dist" style="display:none">
       <div class="section-hdr"><h2>⚖️ Rating Distribution by Evaluator</h2></div>
       <p style="font-size:12px;color:var(--mgray);margin-bottom:14px;">Supervisor evaluations this cycle. Flags evaluators who rate everyone high or almost the same (average ≥ 88, spread under 5 with 3+ evaluations) so scores stay comparable across teams. Leadership only.</p>
-      <div style="overflow-x:auto"><table>
+      <div class="tw"><table>
         <thead><tr><th>Evaluator</th><th>Evals</th><th>Average</th><th>Min–Max</th><th>Spread</th><th>% ≥ 90</th><th>% raise / promotion</th><th>Flag</th></tr></thead>
         <tbody id="tbl-eval-dist-body"><tr><td colspan="8" class="empty-state">Loading...</td></tr></tbody>
       </table></div>
@@ -239,13 +246,13 @@
         <input id="prog-f-q" oninput="renderProg()" placeholder="Search name…" style="padding:7px 9px;border:1px solid #ccc;border-radius:6px;font-size:13px;width:150px">
       </div>
       <p style="font-size:12px;color:var(--mgray);margin-bottom:10px;" id="prog-note"></p>
-      <div style="overflow-x:auto"><table><thead id="prog-head"></thead><tbody id="prog-body"><tr><td class="empty-state">Loading...</td></tr></tbody></table></div>
+      <div class="tw"><table><thead id="prog-head"></thead><tbody id="prog-body"><tr><td class="empty-state">Loading...</td></tr></tbody></table></div>
     </div>
 
     <div class="section" id="section-roster" style="display:none">
       <div class="section-hdr"><h2>🧭 Evaluation Hierarchy (who evaluates whom)</h2></div>
       <p style="font-size:12px;color:var(--mgray);margin-bottom:14px;">Everyone in the company, loaded from the org list. People link automatically when they sign up with their full name as written here. Not-yet-registered bosses are covered by the Super Admin. Toggle "In cycle" to include/exclude someone from this cycle.</p>
-      <div style="overflow-x:auto">
+      <div class="tw">
         <table>
           <thead><tr><th>Name</th><th>Position</th><th>Location</th><th>Class</th><th>Reports to</th><th>Reports</th><th>Account</th><th>In cycle</th></tr></thead>
           <tbody id="tbl-roster-body"><tr><td colspan="8" class="empty-state">Loading...</td></tr></tbody>
@@ -273,7 +280,7 @@
       </div>
       <div style="font-size:13px;color:var(--mgray);margin-bottom:14px;" id="codes-summary-line">Loading…</div>
       <div style="font-size:11px;color:var(--mgray);margin-bottom:8px;">Showing 10 most recent</div>
-      <div style="overflow-x:auto">
+      <div class="tw">
         <table id="tbl-codes">
           <thead><tr><th>Code</th><th>Status</th><th>Used By</th><th>Created</th></tr></thead>
           <tbody id="tbl-codes-body"><tr><td colspan="4" class="empty-state">Loading...</td></tr></tbody>
@@ -295,7 +302,7 @@
         <div class="kpi-card"><div class="lbl">This Week</div><div class="val" id="kpi-ls-week">—</div></div>
       </div>
       <div style="font-size:11px;color:var(--mgray);margin-bottom:8px;">Showing 10 most recent</div>
-      <div style="overflow-x:auto">
+      <div class="tw">
         <table id="tbl-leadsource">
           <thead><tr><th>Employee</th><th>Source</th><th>Note</th><th>Date</th></tr></thead>
           <tbody id="tbl-leadsource-body"><tr><td colspan="4" class="empty-state">Loading...</td></tr></tbody>
@@ -310,7 +317,7 @@
         <button class="btn btn-ghost" onclick="openAuditLogFullList()">View Full List</button>
       </div>
       <div style="font-size:11px;color:var(--mgray);margin-bottom:8px;">Showing 5 most recent</div>
-      <div style="overflow-x:auto">
+      <div class="tw">
         <table id="tbl-auditlog">
           <thead><tr><th>Admin</th><th>Action</th><th>Detail</th><th>Date</th></tr></thead>
           <tbody id="tbl-auditlog-body"><tr><td colspan="4" class="empty-state">Loading...</td></tr></tbody>
@@ -331,7 +338,7 @@
         <div class="kpi-card"><div class="lbl">Locked (3 strikes)</div><div class="val" id="kpi-cert-locked">—</div><div class="sub">need admin reset</div></div>
       </div>
       <input type="text" class="field-input" id="certattempts-search" placeholder="Search by employee name…" style="margin-bottom:14px" oninput="renderCertAttemptsTable(cachedData.certAttempts)">
-      <div style="overflow-x:auto">
+      <div class="tw">
         <table id="tbl-certattempts">
           <thead><tr><th>Employee</th><th>Cert</th><th>Attempt #</th><th>Status</th><th>Score</th><th>Time Used</th><th>Date</th><th>Actions</th></tr></thead>
           <tbody id="tbl-certattempts-body"><tr><td colspan="8" class="empty-state">Loading...</td></tr></tbody>
@@ -563,7 +570,7 @@
   <div class="modal-box" style="max-width:900px;max-height:85vh;overflow-y:auto;">
     <h3 id="full-list-title">Full List</h3>
     <div id="full-list-filters" style="display:flex;gap:10px;align-items:flex-end;margin-bottom:14px;flex-wrap:wrap;"></div>
-    <div style="overflow-x:auto">
+    <div class="tw">
       <table id="full-list-table">
         <thead id="full-list-thead"></thead>
         <tbody id="full-list-tbody"></tbody>
