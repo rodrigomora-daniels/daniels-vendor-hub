@@ -93,7 +93,7 @@
     '.sal-act{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.sal-btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 12px;border-radius:18px;border:1.5px solid var(--n);background:#fff;color:var(--n);font:600 12.5px "Segoe UI",Arial,sans-serif;cursor:pointer;text-decoration:none}.sal-btn:hover{background:var(--o)}.sal-btn.pri{background:var(--n);color:#fff}.sal-btn.pri:hover{background:#12407f}' +
     '.sal-badge{display:inline-block;font:700 10.5px Arial,sans-serif;padding:2px 8px;border-radius:10px;background:#D6F5F5;color:#05526b;margin-left:6px;vertical-align:middle}.sal-badge.old{background:#E5E7EB;color:#4B5563}.sal-badge.soon{background:#FDF1C9;color:#7a5a00}' +
     '.sal-b p{margin:5px 0 0}.sal-note{font-size:11.5px;color:#5B6B82;margin-top:10px;border-top:1px dashed #D0DAE8;padding-top:6px}' +
-    '#sal-chips{display:flex;flex-wrap:wrap;gap:6px;max-height:112px;overflow:auto;padding:0 12px 8px;flex:none}#sal-chips button.big{font-weight:700;border-color:#0B2D5C;min-height:44px}#sal-chips button{min-height:36px;border-radius:18px;border:1.5px solid #B7C6DA;background:#fff;color:var(--n);font:600 12.5px "Segoe UI",Arial,sans-serif;padding:0 12px;cursor:pointer;white-space:nowrap}#sal-chips button:hover{border-color:var(--t);background:#F0FFFF}' +
+    '#sal-root.asked #sal-chips{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;max-height:none;-webkit-overflow-scrolling:touch}#sal-chips{display:flex;flex-wrap:wrap;gap:6px;max-height:112px;overflow:auto;padding:0 12px 8px;flex:none}#sal-chips button.big{font-weight:700;border-color:#0B2D5C;min-height:44px}#sal-chips button{min-height:36px;border-radius:18px;border:1.5px solid #B7C6DA;background:#fff;color:var(--n);font:600 12.5px "Segoe UI",Arial,sans-serif;padding:0 12px;cursor:pointer;white-space:nowrap}#sal-chips button:hover{border-color:var(--t);background:#F0FFFF}' +
     '#sal-form{display:flex;gap:8px;padding:8px 12px calc(10px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #D9E3EF;flex:none}' +
     '#sal-q{flex:1;min-width:0;height:44px;border:1.5px solid #B7C6DA;border-radius:22px;padding:0 16px;font:15px "Segoe UI",Arial,sans-serif;background:var(--o);color:var(--tx)}#sal-q:focus{border-color:var(--t);background:#fff;outline:none;box-shadow:0 0 0 3px rgba(0,217,217,.25)}' +
     '#sal-send{flex:none;width:44px;height:44px;border-radius:50%;border:0;background:var(--n);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}#sal-send:disabled{opacity:.45;cursor:default}#sal-send:not(:disabled):hover{background:#12407f}' +
@@ -285,8 +285,10 @@
   var PROMO_RE = /promo|oferta|descuent|discount|\bdeals?\b|black\s*fr|blackfr|\bbf\b|\bsale\b|rebaj|cyber/i;
   async function ask(q) {
     q = String(q || '').trim(); if (q.length < 2 || busy) return;
-    busy = true; lastQ = q; sendBtn.disabled = true; input.value = ''; chipsEl.style.display = 'none';
+    busy = true; lastQ = q; sendBtn.disabled = true; input.value = ''; root.classList.add('asked');
     forced = detectLang(q); logEl.innerHTML = ''; addMe(q); setFace('search');   // each question starts clean: the newest answer is at the top
+    var chat = smallTalk(q);
+    if (chat) { setFace('success', 1800); addSal(chat, 'success'); busy = false; sendBtn.disabled = false; root.classList.add('asked'); return; }
     var wait = addSal(esc(t('Searching the library, channels, promotions and the website', 'Buscando en la biblioteca, canales, promociones y el sitio web')) + '<span class="sal-dots" aria-hidden="true"><i></i><i></i><i></i></span>', 'search');
     clearTimeout(slowTimer);
     slowTimer = setTimeout(function () { setFace('thinking'); setBubble(wait, esc(t('Still looking, one moment', 'Sigo buscando, un momento')) + '<span class="sal-dots" aria-hidden="true"><i></i><i></i><i></i></span>', 'thinking'); }, 1800);
@@ -331,10 +333,70 @@
       : [['📣 Promotions today', 'Any promotions right now?'], ['🔎 Look up a product or SKU', '@product'], ['Price match policy', 'Price match policy'], ['How do I process a return?', 'How do I process a return?'], ['Cancel and refund in Infinity', 'Cancel and refund in Infinity'], ['Where is my schedule?', 'Where is my schedule?']];
     chipsEl.innerHTML = q.map(function (x, i) { return '<button type="button" data-q="' + esc(x[1]) + '"' + (i < 2 ? ' class="big"' : '') + '>' + esc(x[0]) + '</button>'; }).join('');
   }
+
+  /* ---------- Personality: greetings, small talk and the odd motivating line (no AI; plain scripted replies) ---------- */
+  function pickOne(a) { return a[Math.floor(Math.random() * a.length)]; }
+  function firstName() { var e = DH.emp && DH.emp(); return e && String(e.nombre_completo || e.nombre || '').trim().split(/\s+/)[0] || ''; }
+  function dayPart() { var h = new Date().getHours(); return h < 5 ? 'night' : h < 12 ? 'morning' : h < 19 ? 'afternoon' : 'night'; }
+  var MOTIV = [
+    ['Every “no” gets you closer to the next “yes”.', 'Cada “no” te acerca al siguiente “sí”.'],
+    ['People remember how you made them feel, not the discount.', 'La gente recuerda cómo la hiciste sentir, no el descuento.'],
+    ['Small things done well, all day long, make a great day.', 'Las cosas pequeñas bien hechas todo el día hacen un gran día.'],
+    ['Smile first, talk about sofas second.', 'Primero sonríe, luego hablas de sofás.'],
+    ['A customer who feels listened to is already halfway sold.', 'Un cliente que se siente escuchado ya está a medio camino de comprar.'],
+    ['Ask one more good question before you quote the price.', 'Haz una pregunta buena más antes de dar el precio.'],
+    ['You are the reason someone’s home feels like home.', 'Tú eres la razón por la que la casa de alguien se siente hogar.'],
+    ['Good energy is contagious. Share it.', 'La buena energía se contagia. Compártela.'],
+    ['Progress, not perfection. One customer at a time.', 'Progreso, no perfección. Un cliente a la vez.'],
+    ['A tough morning does not decide the afternoon.', 'Una mañana difícil no decide la tarde.'],
+    ['Your best sale today could be the next person who walks in.', 'Tu mejor venta de hoy puede ser la próxima persona que entre.'],
+    ['Be the salesperson you would want to buy from.', 'Sé el vendedor al que tú le comprarías.']
+  ];
+  function motiv() { var m = pickOne(MOTIV); return '<p style="margin:8px 0 0;font-style:italic;color:#33465f">“' + esc(t(m[0], m[1])) + '”</p>'; }
+  function hello(nm) {
+    var p = dayPart(), n = nm ? ', ' + nm : '';
+    var en = { morning: ['Good morning' + n + '!', 'Morning' + n + '! Coffee first, then customers.'], afternoon: ['Good afternoon' + n + '!', 'Hey' + n + '! Hope the day is treating you well.'], night: ['Good evening' + n + '!', 'Hey' + n + '! Still going strong.'] };
+    var es = { morning: ['¡Buenos días' + n + '!', '¡Buen día' + n + '! Primero el café, luego los clientes.'], afternoon: ['¡Buenas tardes' + n + '!', '¡Hola' + n + '! Ojalá el día te esté tratando bien.'], night: ['¡Buenas noches' + n + '!', '¡Hola' + n + '! Todavía con todo.'] };
+    var i = Math.floor(Math.random() * 2);
+    return t(en[p][i], es[p][i]);
+  }
+  function smallTalk(q) {
+    var s = String(q || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9ñ ]/g, ' ').replace(/\s+/g, ' ').trim();
+    s = s.replace(/\b(sal|porfa|por favor|please|amigo|bro|wey|compa)\b/g, '').replace(/\s+/g, ' ').trim();
+    var nm = firstName(), chip = '<div class="sal-note" style="border:0;margin-top:8px;padding:0">' + esc(t('Tell me what you need. I can look up policies, Infinity steps, promotions, products and what was posted in the channels.', 'Dime qué necesitas. Puedo buscar políticas, pasos de Infinity, promociones, productos y lo que se publicó en los canales.')) + '</div>';
+    var asks = [
+      [/^(hola|holi|holis|hello|hi|hey|hey there|buenas|buenos dias|buen dia|buenas tardes|buenas noches|good morning|good afternoon|good evening|morning|que onda|quiubo|quihubo|saludos|ola)$/, function () {
+        var lines = [t('How is your day going?', '¿Cómo va tu día?'), t('Ready to sell some furniture?', '¿Listo para vender muebles?'), t('What are we getting done today?', '¿Qué vamos a hacer hoy?'), t('I am ready when you are.', 'Estoy listo cuando tú lo estés.')];
+        return '<b>' + esc(hello(nm)) + '</b><p>' + esc(pickOne(lines)) + '</p>' + (Math.random() < 0.4 ? motiv() : '') + chip;
+      }],
+      [/^(como estas|como andas|como va|como te va|que tal|como amaneciste|how are you|how are you doing|how is it going|how is your day|whats up|what s up|sup|que hay de nuevo|todo bien)$/, function () {
+        return '<b>' + esc(pickOne([t('Doing great, thanks for asking!', '¡Muy bien, gracias por preguntar!'), t('All good here, ready to help!', '¡Todo bien por acá, listo para ayudar!')])) + '</b><p>' + esc(t('And you' + (nm ? ', ' + nm : '') + '? How is the day going?', '¿Y tú' + (nm ? ', ' + nm : '') + '? ¿Cómo va el día?')) + '</p>' + chip;
+      }],
+      [/^(gracias|muchas gracias|mil gracias|thanks|thank you|thx|ty|te lo agradezco|genial gracias|perfecto gracias|ok gracias)$/, function () {
+        return '<b>' + esc(pickOne([t('You got it!', '¡Con gusto!'), t('Anytime!', '¡Cuando quieras!'), t('My pleasure!', '¡Para eso estoy!')])) + '</b><p>' + esc(t('Anything else I can look up?', '¿Algo más que pueda buscar?')) + '</p>';
+      }],
+      [/^(adios|bye|chao|chau|hasta luego|nos vemos|good bye|goodbye|see you|see ya|me voy)$/, function () {
+        return '<b>' + esc(pickOne([t('See you soon' + (nm ? ', ' + nm : '') + '!', '¡Hasta pronto' + (nm ? ', ' + nm : '') + '!'), t('Take care and go make some sales!', '¡Cuídate y a vender!')])) + '</b>' + motiv();
+      }],
+      [/^(quien eres|que eres|quien es sal|who are you|what are you|que haces|que puedes hacer|what can you do|ayuda|help|ayudame|help me|como funcionas)$/, function () {
+        return '<b>' + esc(t('I am SAL, the workspace assistant.', 'Soy SAL, el asistente del workspace.')) + '</b><p>' + esc(t('I am not a chatbot that invents answers: I search what the company already published (library, Infinity steps, promotions, products on the website and the channels) and show you the source. If I cannot find it, I will say so.', 'No soy un chatbot que inventa respuestas: busco lo que la empresa ya publicó (biblioteca, pasos de Infinity, promociones, productos del sitio y los canales) y te muestro la fuente. Si no lo encuentro, te lo digo.')) + '</p>' + chip;
+      }],
+      [/^(motivame|motivate|motivate me|animo|dame animo|dame una frase|una frase|frase del dia|dame una frase motivadora|motivation|inspire me|inspirame|cheer me up|necesito animo)$/, function () {
+        return '<b>' + esc(t('Here you go' + (nm ? ', ' + nm : '') + ':', 'Va' + (nm ? ', ' + nm : '') + ':')) + '</b>' + motiv();
+      }]
+    ];
+    for (var i = 0; i < asks.length; i++) if (asks[i][0].test(s)) {
+      // answer in the language the person used
+      if (/\b(hola|holi|holis|ola|buenas|buenos|buen dia|que onda|quiubo|quihubo|saludos|como|que tal|que hay|todo bien|gracias|adios|chao|chau|hasta|nos vemos|me voy|quien|eres|ayuda|ayudame|motivame|animo|frase)\b/.test(s)) forced = 'es';
+      else if (/\b(hello|hi|hey|good|morning|afternoon|evening|how|whats|what|sup|thanks|thank|thx|ty|bye|goodbye|see|who|help|motivate|motivation|inspire|cheer)\b/.test(s)) forced = 'en';
+      return asks[i][1]();
+    }
+    return null;
+  }
+
   function greet() {
     if (greeted) return; greeted = true;
-    var e = DH.emp && DH.emp(); var nm = e && (e.nombre_completo || e.nombre || '').split(' ')[0];
-    addSal('<b>' + esc(t('Hi' + (nm ? ', ' + nm : '') + '! I am SAL.', '¡Hola' + (nm ? ', ' + nm : '') + '! Soy SAL.')) + '</b><p>' + esc(t('Ask me about policies, Infinity steps, promotions or what was posted in the channels. I only show what is in the workspace, and I tell you when I find nothing.', 'Pregúntame por políticas, pasos de Infinity, promociones o lo que se publicó en los canales. Solo muestro lo que está en el workspace y te digo cuando no encuentro nada.')) + '</p>', 'idle');
+    addSal('<b>' + esc(hello(firstName())) + '</b><p>' + esc(t('I am SAL. Ask me about policies, Infinity steps, promotions, products or what was posted in the channels. I only show what is in the workspace, with its source.', 'Soy SAL. Pregúntame por políticas, pasos de Infinity, promociones, productos o lo que se publicó en los canales. Solo muestro lo que hay en el workspace, con su fuente.')) + '</p>' + (Math.random() < 0.35 ? motiv() : ''));
   }
 
   /* ---------- Teach SAL: people with the "sal" permission write quick answers (shown first in results) ---------- */
@@ -396,24 +458,13 @@
     if (k === 'new') teachForm(null); else if (k === 'edit') teachForm(TD.items[i]); else if (k === 'ans') teachForm(null, TD.sin_resultado[i].q);
     else if (k === 'cancel') teachList(); else if (k === 'back') { teachClose(); input.focus(); }
   }
-  /* Phone keyboard: ask the browser to shrink the page (not just cover it) so the typing box stays visible (Chrome/Android; iOS scrolls it into view by itself). */
-  var vpMeta = null, vpOrig = null;
-  function vpKeyboard(on) {
-    try {
-      vpMeta = vpMeta || document.querySelector('meta[name=viewport]'); if (!vpMeta) return;
-      if (on) { vpOrig = vpMeta.getAttribute('content'); if (!/interactive-widget/.test(vpOrig)) vpMeta.setAttribute('content', vpOrig + ', interactive-widget=resizes-content'); }
-      else if (vpOrig != null) { vpMeta.setAttribute('content', vpOrig); vpOrig = null; }
-    } catch (e) {}
-  }
   function open() {
     mounted && (panel.classList.add('open'), root.classList.add('open'), fab.setAttribute('aria-expanded', 'true'));
-    if (window.innerWidth <= 520) vpKeyboard(true);
     tip.classList.remove('on'); try { localStorage.setItem('dh_sal_seen', '1'); } catch (e) {}
     greet(); setFace('idle'); checkTeach();
-    setTimeout(function () { input.focus(); }, 60);
+    if (!(window.matchMedia && matchMedia('(pointer:coarse)').matches)) setTimeout(function () { input.focus(); }, 60);   // phones/tablets: the keyboard only opens when you tap the box
   }
   function close() {
-    vpKeyboard(false);
     panel.classList.remove('open'); root.classList.remove('open'); teachClose(); fab.setAttribute('aria-expanded', 'false'); fab.focus();
   }
   function toggle() { panel.classList.contains('open') ? close() : open(); }
