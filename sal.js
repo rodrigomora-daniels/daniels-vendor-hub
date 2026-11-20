@@ -97,7 +97,8 @@
     '#sal-form{display:flex;gap:8px;padding:8px 12px calc(10px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #D9E3EF;flex:none}' +
     '#sal-q{flex:1;min-width:0;height:44px;border:1.5px solid #B7C6DA;border-radius:22px;padding:0 16px;font:15px "Segoe UI",Arial,sans-serif;background:var(--o);color:var(--tx)}#sal-q:focus{border-color:var(--t);background:#fff;outline:none;box-shadow:0 0 0 3px rgba(0,217,217,.25)}' +
     '#sal-send{flex:none;width:44px;height:44px;border-radius:50%;border:0;background:var(--n);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}#sal-send:disabled{opacity:.45;cursor:default}#sal-send:not(:disabled):hover{background:#12407f}' +
-    '@media (max-width:520px){#sal-panel{right:0;bottom:0;width:100vw;height:100dvh;border-radius:0;transform-origin:calc(100% - 47px) calc(100% - 47px)}#sal-root.open #sal-fab,#sal-root.open #sal-tip{display:none}}' +
+    '@media (max-width:520px){#sal-panel{left:0;right:0;top:var(--sal-top,0);bottom:auto;width:100%;max-width:100%;height:var(--sal-vh,100dvh);border-radius:0;transform-origin:calc(100% - 47px) calc(100% - 47px)}#sal-root.open #sal-fab,#sal-root.open #sal-tip{display:none}#sal-log,#sal-tv{overflow-x:hidden}.sal-b,.sal-card{max-width:100%;overflow:hidden}.sal-b table{display:block;max-width:100%;overflow-x:auto}.sal-b img{max-width:100%}.sal-b ul,.sal-b li{overflow-wrap:anywhere}}' +
+    'html.sal-lock,html.sal-lock body{overflow:hidden!important;overscroll-behavior:none}' +
     '@media (prefers-reduced-motion:reduce){#sal-root *{animation:none!important;transition:none!important}}' +
     '#sal-teach{flex:none;width:44px;height:44px;border:0;border-radius:50%;background:transparent;color:#fff;font-size:20px;cursor:pointer}#sal-teach:hover,#sal-teach.on{background:rgba(255,255,255,.18)}' +
     '#sal-tv{flex:1;overflow:auto;padding:12px;display:none;flex-direction:column;gap:10px}#sal-root.teach #sal-tv{display:flex}#sal-root.teach #sal-log,#sal-root.teach #sal-chips,#sal-root.teach #sal-form{display:none}' +
@@ -396,13 +397,20 @@
     if (k === 'new') teachForm(null); else if (k === 'edit') teachForm(TD.items[i]); else if (k === 'ans') teachForm(null, TD.sin_resultado[i].q);
     else if (k === 'cancel') teachList(); else if (k === 'back') { teachClose(); input.focus(); }
   }
+  function fit(e) {
+    var vv = window.visualViewport; if (!vv || !panel) return;
+    panel.style.setProperty('--sal-vh', Math.round(vv.height) + 'px'); panel.style.setProperty('--sal-top', Math.round(vv.offsetTop) + 'px');
+    if (e && e.type === 'resize' && window.innerWidth <= 520) scrollEnd();
+  }
   function open() {
     mounted && (panel.classList.add('open'), root.classList.add('open'), fab.setAttribute('aria-expanded', 'true'));
+    if (window.innerWidth <= 520) { document.documentElement.classList.add('sal-lock'); fit(); if (window.visualViewport) { window.visualViewport.addEventListener('resize', fit); window.visualViewport.addEventListener('scroll', fit); } }
     tip.classList.remove('on'); try { localStorage.setItem('dh_sal_seen', '1'); } catch (e) {}
     greet(); setFace('idle'); checkTeach();
     setTimeout(function () { input.focus(); }, 60);
   }
   function close() {
+    document.documentElement.classList.remove('sal-lock'); if (window.visualViewport) { window.visualViewport.removeEventListener('resize', fit); window.visualViewport.removeEventListener('scroll', fit); }
     panel.classList.remove('open'); root.classList.remove('open'); teachClose(); fab.setAttribute('aria-expanded', 'false'); fab.focus();
   }
   function toggle() { panel.classList.contains('open') ? close() : open(); }

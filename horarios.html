@@ -136,6 +136,58 @@
   .hist .hr{padding:9px 0;border-bottom:1px solid #eef0f4}.hist .hw{font-size:12px;color:var(--gray)}.hist .hx{font-size:15px;line-height:1.4;margin-top:2px}
   @media print{header,.stores,.tools,.addrow,.dlg,.banner.noprint{display:none!important}body{background:#fff}.sc{box-shadow:none;overflow:visible}table{min-width:0}th{position:static}}
   @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+
+  /* ===== Phone: app-shell + freeze panes (<=700px). Desktop/tablet untouched. ===== */
+  @media screen and (max-width:700px){
+    html,body{height:100%}
+    body{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
+    body>header{flex:none;flex-wrap:nowrap!important;gap:6px!important;padding:6px 10px!important}
+    body>header h1{font-size:15px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1 1 auto}
+    body>header .dh-logo img{height:24px}
+    body>header a,body>header .dh-home{min-height:36px!important;padding:6px 10px;font-size:12px;display:inline-flex;align-items:center;white-space:nowrap;margin-left:0}
+    #dh-reload{width:34px;height:34px;margin-right:2px}
+    main{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;padding:8px 8px 6px!important;overflow-y:auto}
+    #vtabs{flex:none;flex-wrap:nowrap;overflow-x:auto;gap:6px;margin:0 0 8px;-webkit-overflow-scrolling:touch}
+    #vtabs button{flex:none;min-height:36px;padding:6px 12px;font-size:13px;white-space:nowrap}
+    #storeview,#holview{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+    #view{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+    .stores,.tools{flex:none;flex-wrap:nowrap;overflow-x:auto;margin-bottom:6px;-webkit-overflow-scrolling:touch}
+    .stores button{flex:none;min-height:36px;padding:6px 14px;font-size:14px}
+    .tools .btn{flex:none;min-height:36px;padding:4px 12px;font-size:13px;white-space:nowrap}
+    .wk{flex:none;gap:6px;margin-bottom:6px}
+    .wk h2{flex:1 1 150px;font-size:18px}
+    .wk h2 small{font-size:12px;margin-top:2px}
+    .wk .btn{min-height:36px;padding:4px 10px;font-size:13px}
+    #jump{min-height:36px!important;max-width:150px;padding:2px 8px}
+    .banner{flex:none;padding:8px 10px;font-size:13px;margin-bottom:6px}
+    .mine{flex:none;padding:8px;margin-bottom:6px}
+    .mine h3{font-size:14px;margin-bottom:6px}
+    .mine .row{grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+    .mine .c{min-height:44px;padding:4px 1px;font-size:10.5px}
+    .mine .c b{font-size:10.5px;margin-bottom:1px}
+    .sc,#holview .tw{flex:1 1 auto;min-height:220px;max-height:none;border-radius:8px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+    .sc table,#holview .tw table{display:table;max-width:none;overflow:visible;min-width:560px}
+    .sc th{font-size:12px;padding:6px 2px}
+    .sc th small{font-size:10.5px}
+    th.nm,td.nm{width:92px}
+    td.nm{padding:6px;font-size:12.5px;line-height:1.25}
+    td.nm small{font-size:10.5px}
+    td.c{height:54px}
+    .cell{min-height:54px;font-size:11px;line-height:1.3}
+    .cell.off{font-size:12px}
+    #holview .tw table{min-width:600px}
+    #holview th{font-size:12px;padding:6px 3px}
+    #holview td{font-size:12px}
+    #holview th small,#holview th small button{color:#d6e4f7!important;font-size:11px}
+    #holview th:first-child,#holview td:first-child{min-width:112px;max-width:112px;font-size:12px}
+    #holview .hn{flex:none;font-size:12.5px;margin-bottom:6px;line-height:1.35}
+    #holview>.noprint{flex:none}
+    #holview .btn{min-height:36px;padding:4px 10px;font-size:13px}
+    /* once the table scrolls, collapse everything above it to one line */
+    body.compact .stores,body.compact .tools,body.compact .mine,body.compact #view>.banner,body.compact .wk h2 small,body.compact #jump,body.compact #thisb,body.compact .wk .pill,body.compact #holview .hn,body.compact #holview>.noprint{display:none!important}
+    body.compact .wk h2{font-size:15px}
+  }
+  @media print{body{display:block!important;height:auto!important;overflow:visible!important}main,#view,#storeview{display:block!important;overflow:visible!important}.sc{max-height:none!important}}
 </style>
 <meta name="dh-i18n" content="on">
 <script src="dh-chrome.js" defer></script>
@@ -590,7 +642,7 @@ function editDept(fid){
   if(f)pplLoad(f.id);
 }
 function tab(k){
-  const hol=k==='h';
+  const hol=k==='h'; document.body.classList.remove('compact'); if(window.dhTop)dhTop();
   $('storeview').classList.toggle('hide',hol); $('holview').classList.toggle('hide',!hol);
   $('tb-s').classList.toggle('on',!hol); $('tb-h').classList.toggle('on',hol);
   if(hol){$('holview').innerHTML=holTable();}
@@ -618,6 +670,18 @@ async function openPerson(rid){
   await Promise.all([load(),loadHol()]);
   if(HOL&&HOL.acceso===false){const t=$('vtabs');if(t)t.classList.add('hide');if(location.hash==='#feriados'){try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}}}
   else if(location.hash==='#feriados')tab('h');
+})();
+
+(function(){
+  const mq=window.matchMedia('(max-width:700px)');
+  document.addEventListener('scroll',e=>{
+    const t=e.target; if(!mq.matches||!t||!t.classList||!(t.classList.contains('sc')||t.classList.contains('tw')))return;
+    if(t.scrollTop>60)document.body.classList.add('compact'); else if(t.scrollTop<=0)document.body.classList.remove('compact');
+  },true);
+  document.addEventListener('click',e=>{
+    if(!document.body.classList.contains('compact')||!e.target.closest||!e.target.closest('.wk h2'))return;
+    const t=document.querySelector('#holview:not(.hide) .tw, #storeview:not(.hide) .sc'); if(t)t.scrollTop=0; document.body.classList.remove('compact');
+  });
 })();
 </script>
 </body>

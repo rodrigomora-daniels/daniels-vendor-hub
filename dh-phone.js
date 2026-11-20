@@ -75,3 +75,13 @@
   }
   window.addEventListener('load', function () { setTimeout(mount, 50); });
 })();
+
+/* Section switches always start at the top (window and the scrolling page containers). */
+window.dhTop = function () {
+  try {
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0; document.body.scrollTop = 0;
+    var c = document.querySelectorAll('main, .mainc, .content, .wrap');
+    for (var i = 0; i < c.length; i++) { if (c[i].scrollTop) c[i].scrollTop = 0; }
+  } catch (e) {}
+};

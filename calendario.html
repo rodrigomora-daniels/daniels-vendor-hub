@@ -221,7 +221,7 @@ function agenda(){
     h+=`<button class="it ${hth?'hero':''}" ${hth?`style="${tv(hth)}"`:''} onclick="show('${e.k}','${e.id}')"><i style="background:${TYPES[e.tipo][1]}"></i><span><span ${hth?'class="hb"':''} data-no-i18n>${hth?hth.em+' ':''}${hth?`<b>${esc(e.titulo)}</b>`:esc(e.titulo)}</span><small>${esc(tr(TYPES[e.tipo][0]))}${e.hasta!==e.desde?' · ':''}<span data-no-i18n>${e.hasta!==e.desde?esc(span(e)):''}</span></small></span>${im?`<img alt="" src="${esc(u.url)}">`:''}</button>`;});
   return h+'</div>';
 }
-function show(k,id){
+function show(k,id){if(window.dhTop)dhTop();
   const e=all().find(x=>x.k===k&&x.id===id)||null; if(!e)return; ASK=false;
   const u=e.k==='p'&&URLS[e.archivo], im=u&&e.mime&&e.mime.indexOf('image/')===0;
   const dth=e.tipo==='holiday'?theme(e.titulo):null;

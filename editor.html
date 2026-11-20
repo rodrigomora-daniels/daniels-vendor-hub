@@ -68,7 +68,7 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let LIST=null, CUR=null, F=null, ORG=null, PUEDE_ORG=false;
 function say(t,ok){const m=$('msg');m.textContent=t;m.className='msg show '+(ok?'ok':'err');window.scrollTo(0,0);setTimeout(()=>m.className='msg',ok?3500:9000);}
-function tab(t){['forms','org'].forEach(x=>{$('p-'+x).classList.toggle('hide',x!==t);$('t-'+x).classList.toggle('on',x===t);});if(t==='org'&&!ORG)loadOrg();}
+function tab(t){if(window.dhTop)dhTop();['forms','org'].forEach(x=>{$('p-'+x).classList.toggle('hide',x!==t);$('t-'+x).classList.toggle('on',x===t);});if(t==='org'&&!ORG)loadOrg();}
 const ERR={forbidden:'You do not have permission for this. / No tienes permiso para esto.',frozen:'Completed evaluations already use this form. HR can force the change.',unknown:'Not found.',duplicate:'That name already exists in the roster.'};
 function errText(r){return (ERR[r.error]||r.error)+(r.detalle?' — '+r.detalle:'');}
 

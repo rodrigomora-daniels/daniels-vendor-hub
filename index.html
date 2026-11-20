@@ -1414,6 +1414,7 @@ function navigateToEvaluacion() {
 }
 
 function switchTab(tabName) {
+  if (window.dhTop) dhTop();
   document.querySelectorAll('.side .nl').forEach(b => b.classList.remove('on'));
   const nb = document.getElementById(tabName === 'home' ? 'nl-home' : 'nl-' + tabName); if (nb) nb.classList.add('on');
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
