@@ -385,11 +385,23 @@
         return '<b>' + esc(t('Here you go' + (nm ? ', ' + nm : '') + ':', 'Va' + (nm ? ', ' + nm : '') + ':')) + '</b>' + motiv();
       }]
     ];
-    for (var i = 0; i < asks.length; i++) if (asks[i][0].test(s)) {
-      // answer in the language the person used
-      if (/\b(hola|holi|holis|ola|buenas|buenos|buen dia|que onda|quiubo|quihubo|saludos|como|que tal|que hay|todo bien|gracias|adios|chao|chau|hasta|nos vemos|me voy|quien|eres|ayuda|ayudame|motivame|animo|frase)\b/.test(s)) forced = 'es';
-      else if (/\b(hello|hi|hey|good|morning|afternoon|evening|how|whats|what|sup|thanks|thank|thx|ty|bye|goodbye|see|who|help|motivate|motivation|inspire|cheer)\b/.test(s)) forced = 'en';
-      return asks[i][1]();
+    var langOf = function (x) {   // answer in the language the person used
+      if (/\b(hola|holi|holis|ola|buenas|buenos|buen dia|que onda|quiubo|quihubo|saludos|como|que tal|que hay|todo bien|gracias|adios|chao|chau|hasta|nos vemos|me voy|quien|eres|ayuda|ayudame|motivame|animo|frase|dia|estas|andas)\b/.test(x)) forced = 'es';
+      else if (/\b(hello|hi|hey|good|morning|afternoon|evening|how|whats|what|sup|thanks|thank|thx|ty|bye|goodbye|see|who|help|motivate|motivation|inspire|cheer|day)\b/.test(x)) forced = 'en';
+    };
+    var run = function (x) {
+      for (var i = 0; i < asks.length; i++) if (asks[i][0].test(x)) return i;
+      return -1;
+    };
+    // "hoy", "today", "tu dia" do not change what the person is asking
+    var core = s.replace(/\b(hoy|today|tu dia|your day|el dia|esta manana|this morning)\b/g, '').replace(/\s+/g, ' ').trim();
+    var k = run(s); if (k < 0) k = run(core);
+    if (k >= 0) { langOf(s); return asks[k][1](); }
+    // greeting + something else: "hola como estas", "hello how are you", "buenas gracias"
+    var g = core.match(/^(hola|holi|holis|hello|hi|hey|buenas|buenos dias|buen dia|buenas tardes|buenas noches|good morning|good afternoon|good evening|morning|que onda|quiubo|saludos)\s+(.+)$/);
+    if (g) {
+      var k2 = run(g[2]);
+      if (k2 > 0) { langOf(s); return '<b>' + esc(hello(nm)) + '</b><p>' + asks[k2][1]() + '</p>'; }
     }
     return null;
   }
