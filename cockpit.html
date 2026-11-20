@@ -61,7 +61,7 @@
   td{padding:9px 12px;border-bottom:1px solid #f0ece2;vertical-align:middle;}
   tr:hover td{background:#fafafa;}
   /* Frozen header + first column on every admin table (scrolls inside its own box) */
-  .tw{overflow:auto;max-height:calc(100vh - 170px);-webkit-overflow-scrolling:touch;position:relative;}
+  .tw{overflow:auto;max-height:calc((100vh - 170px) / var(--dh-z,1));-webkit-overflow-scrolling:touch;position:relative;}
   .tw table{display:table;max-width:none;min-width:100%;border-collapse:separate;border-spacing:0;}
   .tw thead th{position:sticky;top:0;z-index:3;background:var(--gray);box-shadow:0 2px 0 #e0ddd6;}
   .tw tbody td:first-child,.tw thead th:first-child{position:sticky;left:0;background:#fff;z-index:2;box-shadow:2px 0 0 #f0ece2;}

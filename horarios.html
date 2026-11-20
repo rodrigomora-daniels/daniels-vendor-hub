@@ -141,7 +141,7 @@
   /* ===== All screens: fixed page, the table fills what is left and scrolls inside (freeze panes) ===== */
   @media screen{
     html,body{height:100%}
-    body{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
+    body{display:flex;flex-direction:column;height:calc(100vh / var(--dh-z,1));height:calc(100dvh / var(--dh-z,1));overflow:hidden}
     body>header{flex:none}
     main{flex:1 1 auto;min-height:0;width:100%;display:flex;flex-direction:column;overflow-y:auto}
     #vtabs{flex:none}
@@ -154,7 +154,7 @@
   /* ===== Phone: app-shell + freeze panes (<=700px). Desktop/tablet untouched. ===== */
   @media screen and (max-width:700px){
     html,body{height:100%}
-    body{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
+    body{display:flex;flex-direction:column;height:calc(100vh / var(--dh-z,1));height:calc(100dvh / var(--dh-z,1));overflow:hidden}
     body>header{flex:none;flex-wrap:nowrap!important;gap:6px!important;padding:6px 10px!important}
     body>header h1{font-size:15px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1 1 auto}
     body>header .dh-logo img{height:24px}
@@ -697,8 +697,9 @@ async function openPerson(rid){
     const SEL='.sc,#holview .tw'; let q=0;
     function fit(){ q=0; const m=document.querySelector('main');
       document.querySelectorAll(SEL).forEach(el=>{ if(!el.offsetParent)return;
-        const top=el.getBoundingClientRect().top+(m?m.scrollTop:0), vv=(window.visualViewport&&visualViewport.height)||innerHeight;
-        const h=Math.max(220,Math.floor(Math.min(vv,innerHeight)-top-8));
+        const z=parseFloat(document.documentElement.style.zoom)||1;   // "Desktop site" phones: html is zoomed, rects are in zoomed px, heights are in css px
+        const top=el.getBoundingClientRect().top+(m?m.scrollTop*z:0), vv=(window.visualViewport&&visualViewport.height)||innerHeight;
+        const h=Math.max(220,Math.floor((Math.min(vv,innerHeight)-top-8)/z));
         el.style.flex='none'; el.style.maxHeight='none'; el.style.height=h+'px'; }); }
     const sched=()=>{ if(!q)q=requestAnimationFrame(fit); };
     addEventListener('load',sched); addEventListener('resize',sched); addEventListener('orientationchange',sched);
@@ -716,7 +717,7 @@ async function openPerson(rid){
     const cs=(el,k)=>{try{return getComputedStyle(el)[k]}catch(e){return null}};
     function snap(tag){
       const t=q(), r=t?t.getBoundingClientRect():null, vv=window.visualViewport;
-      return {tag:tag,build:'v106',ua:navigator.userAgent,iw:innerWidth,ih:innerHeight,ow:window.outerWidth,oh:window.outerHeight,sw:screen.width,sh:screen.height,dpr:devicePixelRatio,
+      return {tag:tag,build:'v107',ua:navigator.userAgent,iw:innerWidth,ih:innerHeight,ow:window.outerWidth,oh:window.outerHeight,sw:screen.width,sh:screen.height,dpr:devicePixelRatio,
         vv:vv?{w:Math.round(vv.width),h:Math.round(vv.height),scale:vv.scale,ot:Math.round(vv.offsetTop)}:null,
         coarse:matchMedia('(pointer:coarse)').matches,standalone:matchMedia('(display-mode:standalone)').matches,
         view:document.querySelector('#holview:not(.hide)')?'dept':'store',compact:document.body.classList.contains('compact'),
@@ -739,7 +740,7 @@ async function openPerson(rid){
     const h=document.querySelector('body>header h1'); if(!h)return;
     let n=0,tm=0,box=null,iv=0;
     const q=()=>document.querySelector('#holview:not(.hide) .tw, #storeview:not(.hide) .sc'), m=document.querySelector('main');
-    const upd=()=>{const t=q(); if(!box)return; box.textContent=['build v106',innerWidth+'x'+innerHeight+' dpr '+devicePixelRatio+' zoom '+((window.visualViewport&&visualViewport.scale)||1).toFixed(2),'table '+(t?t.clientHeight+'/'+t.scrollHeight+' top '+Math.round(t.scrollTop):'none'),'main '+m.clientHeight+'/'+m.scrollHeight+' top '+Math.round(m.scrollTop),'touch '+(matchMedia('(pointer:coarse)').matches?'coarse':'fine'),'ta '+(t?getComputedStyle(t).touchAction:'-')].join('\n');};
+    const upd=()=>{const t=q(); if(!box)return; box.textContent=['build v107',innerWidth+'x'+innerHeight+' dpr '+devicePixelRatio+' zoom '+((window.visualViewport&&visualViewport.scale)||1).toFixed(2),'table '+(t?t.clientHeight+'/'+t.scrollHeight+' top '+Math.round(t.scrollTop):'none'),'main '+m.clientHeight+'/'+m.scrollHeight+' top '+Math.round(m.scrollTop),'touch '+(matchMedia('(pointer:coarse)').matches?'coarse':'fine'),'ta '+(t?getComputedStyle(t).touchAction:'-')].join('\n');};
     h.addEventListener('click',()=>{n++;clearTimeout(tm);tm=setTimeout(()=>n=0,1500); if(n<5)return; n=0;
       if(box){box.remove();box=null;clearInterval(iv);return;}
       box=document.createElement('pre'); box.style.cssText='position:fixed;left:6px;bottom:6px;z-index:99999;background:rgba(0,0,0,.82);color:#7CFC9A;font:11px/1.4 monospace;padding:8px 10px;border-radius:8px;margin:0;pointer-events:none;white-space:pre'; document.body.appendChild(box); upd(); iv=setInterval(upd,400);});
@@ -756,7 +757,7 @@ async function openPerson(rid){
       const x=e.touches[0].clientX,y=e.touches[0].clientY;
       if(lock==null&&(Math.abs(y-sy)>6||Math.abs(x-sx)>6))lock=Math.abs(y-sy)>=Math.abs(x-sx)?'y':'x';
       if(lock!=='y')return;
-      const dy=ly-y, dt=Math.max(e.timeStamp-lt,1); mv(el,dy); vy=dy/dt; ly=y; lt=e.timeStamp;
+      const zz=parseFloat(document.documentElement.style.zoom)||1, dy=(ly-y)/zz, dt=Math.max(e.timeStamp-lt,1); mv(el,dy); vy=dy/dt; ly=y; lt=e.timeStamp;
       if(e.cancelable)e.preventDefault();
     },{passive:false});
     const mv=(t,dy)=>{ const mx=t.scrollHeight-t.clientHeight, can=dy>0?t.scrollTop<mx-0.5:t.scrollTop>0.5; if(can){t.scrollTop+=dy;return true;} const m=document.querySelector('main'); if(m){const b=m.scrollTop; m.scrollTop+=dy; return m.scrollTop!==b;} return false; };

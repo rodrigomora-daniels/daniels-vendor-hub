@@ -20,6 +20,7 @@
   var root = document.documentElement;
   root.classList.add('dh-phone');
   root.style.zoom = String(w / VW);
+  root.style.setProperty('--dh-z', String(w / VW));   // viewport-height units must be divided by this on zoomed pages
   function rewrite() {
     Array.prototype.forEach.call(document.styleSheets, function (ss) {
       var rules; try { rules = ss.cssRules; } catch (e) { return; }
