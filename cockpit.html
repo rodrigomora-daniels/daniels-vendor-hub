@@ -663,6 +663,8 @@ function applyViewOnlyRestrictions() {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
+  // Viewers granted the "codigos" permission (Ted, Karen, Rey...) still get the invitation-codes section
+  DH.rpc('puede_generar_codigos').then(ok => { if (ok) { const el = document.getElementById('section-codes'); if (el) el.style.display = ''; } }).catch(() => {});
   const th = document.getElementById('th-employees-actions');
   if (th) th.style.display = 'none';
 }
