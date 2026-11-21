@@ -219,10 +219,10 @@
       h += '<div class="sal-sec">' + esc(t('Product', 'Producto')) + '</div>' + r.web.map(function (w) {
         var img = w.image ? '<img src="' + esc(w.image) + '" alt="" loading="lazy" referrerpolicy="no-referrer" style="float:right;width:84px;height:84px;object-fit:contain;margin:0 0 6px 10px;border-radius:8px;background:#fff">' : '';
         var badge = '<span style="display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700;color:#fff;background:' + (w.available ? '#1E8E5A' : '#B3402F') + '">' + esc(w.available ? t('Available', 'Disponible') : t('Not available', 'No disponible')) + '</span>';
-        var det = (w.details || []).length ? '<div style="display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:8px 0 0;font-size:13px">' + w.details.map(function (d) { return '<b style="color:#1B3A6B">' + esc(d.k) + '</b><span>' + esc(d.v) + '</span>'; }).join('') + '</div>' : '';
+        var det = (w.details || []).length ? '<div style="clear:both;display:grid;grid-template-columns:minmax(84px,38%) minmax(0,1fr);gap:4px 12px;margin:8px 0 0;font-size:13px;overflow-wrap:break-word;word-break:normal">' + w.details.map(function (d) { return '<b style="color:#1B3A6B;min-width:0;overflow-wrap:break-word;word-break:normal">' + esc(d.k) + '</b><span style="min-width:0;overflow-wrap:break-word;word-break:normal">' + esc(d.v) + '</span>'; }).join('') + '</div>' : '';
         var sm = w.summary ? '<p style="margin:8px 0 0">' + esc(w.summary) + '</p>' : '';
         var all = w.specs || [], first = all.slice(0, 6), more = all.slice(6);
-        var sp = all.length ? '<ul style="margin:8px 0 0 18px;padding:0">' + first.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ul>' +
+        var sp = all.length ? '<ul style="clear:both;margin:8px 0 0 18px;padding:0;overflow-wrap:break-word;word-break:normal">' + first.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ul>' +
           (more.length ? '<details style="margin:4px 0 0 18px"><summary style="cursor:pointer;font-weight:700;color:#1B3A6B;min-height:32px">' + esc(t('Show all specs (', 'Ver todas las especificaciones (') + all.length + ')') + '</summary><ul style="margin:4px 0 0 0;padding-left:18px">' + more.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ul></details>' : '') : '';
         var sub = [w.vendor, w.ptype].filter(Boolean).join(' · ');
         var opts = (w.options || []).filter(function (o) { return o.values && o.values.length; }).map(function (o) {
@@ -300,7 +300,7 @@
     slowTimer = setTimeout(function () { setFace('thinking'); setBubble(wait, esc(t('Still looking, one moment', 'Sigo buscando, un momento')) + '<span class="sal-dots" aria-hidden="true"><i></i><i></i><i></i></span>', 'thinking'); }, 1800);
     try {
       var wq = webQuery(q), saleMode = PROMO_RE.test(q);
-      if (saleMode && !/\d/.test(q)) wq = '';   // promo question: flyers only (the website is not the source for promotions)
+      if (saleMode && !(q.match(/[A-Za-z0-9*\-\/]{5,}/g) || []).some(function (x) { return /\d/.test(x); })) wq = '';   // promo question: flyers only (the website is not the source for promotions)
       var webP = (wq && DH.salWeb) ? withTimeout(DH.salWeb(wq), 10000).then(function (w) { return w && w.items || []; }).catch(function () { return []; }) : Promise.resolve([]);
       var r = await withTimeout(DH.rpc('sal_buscar', { p_q: q }), 20000);
       r.web = await webP; r.saleMode = saleMode;
