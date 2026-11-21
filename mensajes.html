@@ -174,6 +174,7 @@ async function fetchMsgs(full){
 function body(m){
   let h=esc(m.cuerpo);
   (m.menciones||[]).forEach(n=>{const e=esc('@'+n);h=h.split(e).join('<span class="mt">'+e+'</span>');});
+  h=h.replace(/(^|\s)(@(?:all|todos|todas))(?=\s|[.,;:!?)]|$)/gi,'$1<span class="mt">$2</span>');
   return h;
 }
 function appendMsgs(list){
@@ -279,6 +280,7 @@ function updatePop(){
   }
   const q=norm(a.q);
   PLIST=DIR.filter(x=>!q||norm(x.nombre).split(' ').some(w=>w.startsWith(q))||norm(x.nombre).startsWith(q)).slice(0,30);
+  if(!q||'all'.startsWith(q)||'todos'.startsWith(q)||'todas'.startsWith(q))PLIST.unshift({id:'__all',nombre:'all',puesto:tr('Everyone in this chat / Todos en este chat'),ubicacion:''});
   if(!PLIST.length){p.innerHTML='<button type="button" disabled data-no-i18n>'+esc(tr('No match. Only people with an account appear. / Sin coincidencias. Solo aparecen personas con cuenta.'))+'</button>';p.classList.remove('hide');PSEL=-1;return;}
   if(PSEL<0||PSEL>=PLIST.length)PSEL=0;
   p.innerHTML=popHTML();p.classList.remove('hide');
@@ -286,6 +288,7 @@ function updatePop(){
 function pickMention(i){
   const p=PLIST[i]; if(!p)return; const a=atQuery(), t=$('txt'); if(!a)return;
   const after=t.value.slice(t.selectionStart), ins='@'+p.nombre+' ';
+  if(p.id==='__all'){t.value=t.value.slice(0,a.start)+ins+after;const pp=a.start+ins.length;t.setSelectionRange(pp,pp);closePop();t.focus();t.dispatchEvent(new Event('input'));return;}
   t.value=t.value.slice(0,a.start)+ins+after; const pos=a.start+ins.length; t.setSelectionRange(pos,pos);
   MEN.set(p.nombre,p.id); closePop(); t.focus(); t.dispatchEvent(new Event('input'));
 }
