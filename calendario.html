@@ -132,7 +132,7 @@ const tr=s=>(window.DH&&DH.i18n)?DH.i18n.pick(s):s;
 const LA='America/Los_Angeles', L=()=>(DH.i18n&&DH.i18n.lang==='es')?'es-US':'en-US';
 const TYPES={campana:['Campaign / Campaña','#1B3A6B'],arte:['Artwork due / Entrega de arte','#7B4FA0'],compras:['Product list due / Lista de productos','#2E7D32'],tienda:['Store hours / Horario de tiendas','#0E7C86'],holiday:['Holiday / Feriado','#B8821F'],otro:['Other / Otro','#566573'],promo:['Flyers / Flyers','#C8922A']};
 const ORDER=['campana','arte','compras','tienda','holiday','otro','promo'];
-let D={items:[],puede_editar:false}, PR=[], URLS={}, OFF=new Set(), VIEW=window.matchMedia('(max-width:760px)').matches?'agenda':'month', EDIT=null, ASK=false;
+let D={items:[],puede_editar:false}, PR=[], URLS={}, OFF=new Set(), VIEW=(window.matchMedia('(max-width:760px)').matches||document.documentElement.classList.contains('dh-phone'))?'agenda':'month', EDIT=null, ASK=false;
 const dI=s=>{const[y,m,d]=s.split('-').map(Number);return Math.floor(Date.UTC(y,m-1,d)/864e5);};
 const iso=i=>new Date(i*864e5).toISOString().slice(0,10);
 const todayS=()=>new Date().toLocaleDateString('en-CA',{timeZone:LA});

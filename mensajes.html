@@ -131,7 +131,7 @@ function showErr(t){const e=$('err');if(!t){e.classList.add('hide');return;}e.te
 async function init(){
   if(!DH.token()){location.href='index.html';return;}
   await loadChans(true);
-  const want=location.hash.slice(1); const first=CH.find(c=>c.id===want)||(window.matchMedia('(max-width:760px)').matches?null:CH[0]);
+  const want=location.hash.slice(1); const first=CH.find(c=>c.id===want)||((window.matchMedia('(max-width:760px)').matches||document.documentElement.classList.contains('dh-phone'))?null:CH[0]);
   if(first)openChan(first.id);
   setInterval(()=>{if(!document.hidden)tick();},8000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)tick();});
