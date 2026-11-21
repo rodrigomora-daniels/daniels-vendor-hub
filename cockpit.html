@@ -1821,6 +1821,74 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',setup); else setup();
 })();
+
+/* ════════ Sortable + filterable admin tables (click a header to sort; newest first by default where there is a date) ════════ */
+(function () {
+  const DEF = { 'tbl-codes': ['Created', 'desc'], 'tbl-auditlog': ['Date', 'desc'], 'tbl-certattempts': ['Date', 'desc'], 'tbl-leadsource': ['Date', 'desc'], 'tbl-eval-cycles': ['Start', 'desc'], 'full-list-table': ['', ''] };
+  const state = new WeakMap(), filt = new WeakMap(), watched = new WeakSet();
+  const css = document.createElement('style');
+  css.textContent = '.tw th.srt,#full-list-table th.srt{cursor:pointer;user-select:none;}.tw th.srt:hover{text-decoration:underline;}th[data-dir="asc"]::after{content:" ▲";font-size:9px;}th[data-dir="desc"]::after{content:" ▼";font-size:9px;}.tbl-filter{margin:0 0 8px;padding:7px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;width:100%;max-width:280px;}';
+  document.head.appendChild(css);
+  function val(td) {
+    const t = (td ? td.textContent : '').trim();
+    if (/^\d{1,2}\/\d{1,2}\/\d{2,4}/.test(t) || /^\d{4}-\d{2}-\d{2}/.test(t)) { const d = Date.parse(t); if (!isNaN(d)) return d; }
+    if (t !== '' && /^[-$\d.,%\s]+$/.test(t)) { const n = parseFloat(t.replace(/[$,%\s]/g, '')); if (!isNaN(n)) return n; }
+    return t.toLowerCase();
+  }
+  function colIndexByName(table, name) {
+    const ths = table.tHead && table.tHead.rows[0] ? [...table.tHead.rows[0].cells] : [];
+    return ths.findIndex(th => th.textContent.trim().toLowerCase() === name.toLowerCase());
+  }
+  function mark(table) {
+    const st = state.get(table); if (!table.tHead || !table.tHead.rows[0]) return;
+    [...table.tHead.rows[0].cells].forEach((th, i) => {
+      const txt = th.textContent.trim();
+      th.classList.toggle('srt', !!txt && txt !== 'Actions');
+      if (st && st.col === i) th.setAttribute('data-dir', st.dir); else th.removeAttribute('data-dir');
+    });
+  }
+  function apply(table) {
+    const tb = table.tBodies[0]; if (!tb) return;
+    const q = (filt.get(table) || '').toLowerCase();
+    const rows = [...tb.rows];
+    if (rows.some(r => r.cells.length === 1 && r.cells[0].colSpan > 1)) return;
+    const st = state.get(table);
+    if (st) {
+      const f = st.dir === 'asc' ? 1 : -1;
+      rows.sort((a, b) => { const x = val(a.cells[st.col]), y = val(b.cells[st.col]); return (x < y ? -1 : x > y ? 1 : 0) * f; });
+      rows.forEach(r => tb.appendChild(r));
+    }
+    rows.forEach(r => { r.style.display = !q || r.textContent.toLowerCase().includes(q) ? '' : 'none'; });
+    mark(table);
+  }
+  function watch(table) {
+    const tb = table.tBodies[0]; if (!tb || watched.has(tb)) return; watched.add(tb);
+    const def = DEF[table.id];
+    if (def && def[0]) { const i = colIndexByName(table, def[0]); if (i >= 0) state.set(table, { col: i, dir: def[1] }); }
+    const obs = new MutationObserver(() => {
+      if (!state.get(table) && DEF[table.id] && DEF[table.id][0]) { const i = colIndexByName(table, DEF[table.id][0]); if (i >= 0) state.set(table, { col: i, dir: DEF[table.id][1] }); }
+      obs.disconnect(); apply(table); obs.observe(tb, { childList: true });
+    });
+    obs.observe(tb, { childList: true });
+    if (table.id !== 'tbl-employees' && !table.dataset.hasFilter && table.parentElement && table.parentElement.classList.contains('tw') && table.tHead && table.tHead.rows[0] && table.tHead.rows[0].cells.length >= 4) {
+      table.dataset.hasFilter = '1';
+      const inp = document.createElement('input'); inp.type = 'text'; inp.className = 'tbl-filter'; inp.placeholder = 'Filter… / Filtrar…';
+      inp.oninput = () => { filt.set(table, inp.value); obs.disconnect(); apply(table); obs.observe(tb, { childList: true }); };
+      table.parentElement.parentElement.insertBefore(inp, table.parentElement);
+    }
+    obs.disconnect(); apply(table); obs.observe(tb, { childList: true });
+  }
+  function scan() { document.querySelectorAll('.tw table, #full-list-table').forEach(watch); }
+  document.addEventListener('click', e => {
+    const th = e.target.closest && e.target.closest('th.srt'); if (!th) return;
+    const table = th.closest('table'); if (!table || !(table.closest('.tw') || table.id === 'full-list-table')) return;
+    const i = [...th.parentElement.cells].indexOf(th), st = state.get(table);
+    state.set(table, { col: i, dir: st && st.col === i && st.dir === 'asc' ? 'desc' : 'asc' });
+    apply(table);
+  });
+  new MutationObserver(scan).observe(document.body, { childList: true, subtree: true });
+  window.addEventListener('load', scan); scan();
+})();
 </script>
 </body>
 </html>
