@@ -186,6 +186,7 @@ const VALUES_QUESTIONS = [
 
 let currentDimIdx = 0;
 let responses = {};
+let dimNotes = {}, naDims = {};
 let evalMode = null;        // 'self' | 'supervisor'
 let selectedEvaluado = null; // employee being evaluated, in supervisor mode
 // Forms engine: question set comes from the database (per area, editable in editor.html). If anything fails, the built-in sets below are used.
@@ -423,7 +424,7 @@ async function showRecords() {
       <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;"><strong>${e(r.evaluado)}</strong><span style="color:var(--mgray);font-size:12px;">${e(r.ciclo)} · ${(r.fecha || '').slice(0, 10)}</span></div>
       <div style="font-size:12px;color:var(--mgray);margin:2px 0 8px;">Evaluator / Evaluador: ${e(r.evaluador)} · Final: <strong style="color:var(--navy);">${r.score_final ?? '—'}</strong> · KPI: ${r.kpi_pct ?? '—'}% · Behavior / Conducta: ${r.score_conducta ?? '—'}</div>
       ${(r.kpis || []).map(k => `<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>${e(k.nombre)}${k.extra ? ' <em>(extra)</em>' : ''} · ${k.peso ?? ''}%</span><span>${k.real} / ${k.meta} ${e(k.unidad)} → <strong>${k.pct ?? '—'}%</strong></span></div>`).join('')}
-      ${r.recomendacion || r.fortalezas || r.debilidades || r.comentarios ? `<div style="margin-top:8px;padding:8px 10px;background:#f7f5ef;border-left:3px solid var(--navy);border-radius:6px;font-size:12px;"><strong>🔒 Recommendation / Recomendación:</strong> ${e(({none:'No change / Sin cambio',raise:'Raise / Aumento',promotion:'Promotion / Promoción',transfer:'Transfer / Traslado',termination:'Termination / Terminación'})[r.recomendacion] || '—')}${r.aumento ? ' · $' + e(r.aumento) : ''}${r.fortalezas ? '<br><strong>Strengths:</strong> ' + e(r.fortalezas) : ''}${r.debilidades ? '<br><strong>To improve:</strong> ' + e(r.debilidades) : ''}${r.comentarios ? '<br><strong>Comments:</strong> ' + e(r.comentarios) : ''}</div>` : ''}
+      ${r.recomendacion || r.fortalezas || r.debilidades || r.comentarios || r.tendencia || (r.notas || []).length ? `<div style="margin-top:8px;padding:8px 10px;background:#f7f5ef;border-left:3px solid var(--navy);border-radius:6px;font-size:12px;"><strong>🔒 Recommendation / Recomendación:</strong> ${e(({none:'No change / Sin cambio',raise:'Raise / Aumento',promotion:'Promotion / Promoción',transfer:'Transfer / Traslado',termination:'Termination / Terminación'})[r.recomendacion] || '—')}${r.aumento ? ' · $' + e(r.aumento) : ''}${r.fortalezas ? '<br><strong>Strengths:</strong> ' + e(r.fortalezas) : ''}${r.debilidades ? '<br><strong>To improve:</strong> ' + e(r.debilidades) : ''}${r.comentarios ? '<br><strong>Comments:</strong> ' + e(r.comentarios) : ''}${r.ult_aumento_fecha || r.ult_aumento_monto ? '<br><strong>Last increase / Último aumento:</strong> ' + e(r.ult_aumento_fecha || '') + (r.ult_aumento_monto ? ' · $' + e(r.ult_aumento_monto) : '') : ''}${r.tendencia ? '<br><strong>Since last appraisal:</strong> ' + e(({mejoro:'Improved / Ha mejorado',igual:'Little or no change / Poco o ningún cambio',empeoro:'Has gone back / Ha empeorado'})[r.tendencia]) : ''}${r.apto_actual === true || r.apto_actual === false ? '<br><strong>Suited for current work:</strong> ' + (r.apto_actual ? 'Yes / Sí' : 'No') : ''}${r.apto_otro && r.apto_otro !== 'no' ? '<br><strong>Suited for other level:</strong> ' + e(r.apto_otro === 'menor' ? 'Lower / Menor' : 'Higher / Mayor') + (r.apto_expl ? ' — ' + e(r.apto_expl) : '') : ''}${(r.notas || []).length ? '<br><strong>Notes by factor / Notas por factor:</strong>' + r.notas.map(n => '<br>• ' + e(String(n.titulo || n.dimension).split(' / ')[0].slice(0, 60)) + ' (' + e(n.score) + '/5): ' + e(n.texto)).join('') : ''}</div>` : ''}
     </div>`).join('') : '<p>No records yet. / Aún no hay registros.</p>';
   content.innerHTML = `<div class="card"><h2>Evaluation Records / Registro de Evaluaciones</h2>${body}
     <button class="btn" style="margin-top:10px;background:transparent;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="location.reload()">← Back / Regresar</button></div>`;
@@ -796,7 +797,7 @@ async function submitManagerFeedback() {
 async function startSelfAssessment() {
   evalMode = 'self';
   currentDimIdx = 0;
-  responses = {};
+  responses = {}; dimNotes = {}; naDims = {};
   const content = document.getElementById('app-content');
 
   let existing = [];
@@ -833,7 +834,7 @@ async function startSupervisorSearch() {
   evalMode = 'supervisor';
   selectedEvaluado = null;
   currentDimIdx = 0;
-  responses = {};
+  responses = {}; dimNotes = {}; naDims = {};
   quotaData = { metrics: [], pct_promedio: null };
 
   const content = document.getElementById('app-content');
@@ -998,7 +999,7 @@ async function startPeerEval() {
   evalMode = 'peer';
   selectedEvaluado = null;
   currentDimIdx = 0;
-  responses = {};
+  responses = {}; dimNotes = {}; naDims = {};
   const content = document.getElementById('app-content');
   content.innerHTML = `<div class="card"><p style="text-align:center;color:var(--mgray);padding:20px 0;">Loading... / Cargando...</p></div>`;
   let peers = [], done = [];
@@ -1028,7 +1029,7 @@ function selectPeer(id) {
   if (!selectedEvaluado) return;
   evalMode = 'peer';
   currentDimIdx = 0;
-  responses = {};
+  responses = {}; dimNotes = {}; naDims = {};
   renderQuestionScreen();
 }
 
@@ -1153,12 +1154,12 @@ function renderQuotaScreen() {
 }
 
 const RECO_LABELS = { none: 'No change / Sin cambio', raise: 'Raise / Aumento', promotion: 'Promotion / Promoción', transfer: 'Transfer / Traslado', termination: 'Termination / Terminación' };
-let recoData = { tipo: 'none', aumento: '', fortalezas: '', debilidades: '', comentarios: '' };
+let recoData = { tipo: 'none', aumento: '', fortalezas: '', debilidades: '', comentarios: '', ult_fecha: '', ult_monto: '', tendencia: '', apto_actual: '', apto_otro: '', apto_expl: '' };
 function skipKpis() {
   quotaData = { metrics: [], pct_promedio: null, skipped: true };
-  recoData = { tipo: 'none', aumento: '', fortalezas: '', debilidades: '', comentarios: '' };
+  recoData = { tipo: 'none', aumento: '', fortalezas: '', debilidades: '', comentarios: '', ult_fecha: '', ult_monto: '', tendencia: '', apto_actual: '', apto_otro: '', apto_expl: '' };
   currentDimIdx = 0;
-  responses = {};
+  responses = {}; dimNotes = {}; naDims = {};
   renderQuestionScreen();
 }
 async function confirmQuota() {
@@ -1167,9 +1168,9 @@ async function confirmQuota() {
   if (!active.length || bad) { document.getElementById('quota-error').classList.add('show'); return; }
   const ew = effWeights();
   quotaData = { metrics: metricRows.map((r, i) => ({ r, w: ew[i] })).filter(x => x.r.custom ? (x.r.nombre || '').trim() : true).map(x => ({ nombre: x.r.nombre.trim(), unidad: (x.r.unidad || '').trim(), meta: parseFloat(x.r.meta), real: parseFloat(x.r.real), peso: Number(x.r.peso), plantilla_id: x.r.plantilla_id || null, direccion: x.r.dir || 'up' })), pct_promedio: metricsAverage() };
-  recoData = { tipo: 'none', aumento: '', fortalezas: '', debilidades: '', comentarios: '' };
+  recoData = { tipo: 'none', aumento: '', fortalezas: '', debilidades: '', comentarios: '', ult_fecha: '', ult_monto: '', tendencia: '', apto_actual: '', apto_otro: '', apto_expl: '' };
   currentDimIdx = 0;
-  responses = {};
+  responses = {}; dimNotes = {}; naDims = {};
   renderQuestionScreen();
 }
 
@@ -1233,6 +1234,8 @@ function renderQuestionScreen() {
       <div class="dim-title"><span class="dim-num">${currentDimIdx + 1}</span>${dim.title}</div>
       <div class="dim-q">${dim.q}</div>
       ${optsHtml}
+      ${evalMode === 'supervisor' && dim.opcional ? `<div class="bars-option${naDims[dim.key] ? ' selected' : ''}" onclick="selectNA('${dim.key}')"><div class="num">–</div><div class="txt">Not applicable / No aplica</div></div>` : ''}
+      ${evalMode === 'supervisor' ? `<label style="font-size:12px;font-weight:700;color:var(--navy);display:block;margin-top:10px;">Comments (optional) / Comentarios (opcional)</label><textarea rows="2" maxlength="500" oninput="dimNotes['${dim.key}']=this.value" style="padding:9px 10px;border:2px solid #e8e4dc;border-radius:8px;font-size:13px;width:100%;font-family:inherit;">${String(dimNotes[dim.key] || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')}</textarea>` : ''}
       <div class="error-msg" id="dim-error">Please select an option before continuing. / Por favor selecciona una opción antes de continuar.</div>
       <button class="btn btn-primary" id="btn-next" style="margin-top:18px" onclick="nextDimension()">
         ${currentDimIdx === dims.length - 1 ? 'Review & Submit / Revisar y Enviar' : 'Next / Siguiente →'}
@@ -1241,14 +1244,18 @@ function renderQuestionScreen() {
 }
 
 function selectOption(key, value) {
-  responses[key] = value;
+  responses[key] = value; delete naDims[key];
+  renderQuestionScreen();
+}
+function selectNA(key) {
+  delete responses[key]; naDims[key] = true;
   renderQuestionScreen();
 }
 
 function nextDimension() {
   const dims = currentDimSet();
   const dim = dims[currentDimIdx];
-  if (responses[dim.key] === undefined) {
+  if (responses[dim.key] === undefined && !naDims[dim.key]) {
     document.getElementById('dim-error').classList.add('show');
     return;
   }
@@ -1277,7 +1284,20 @@ function renderRecoScreen() {
       <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:6px;">Do you recommend a change in this person's status? / ¿Recomiendas un cambio en el estatus de esta persona?</div>
       ${opts}
       <div id="reco-amt" style="display:${showAmt ? 'block' : 'none'};margin:6px 0 10px;"><label style="font-size:12px;font-weight:700;color:var(--navy);">Proposed increase ($) / Aumento propuesto ($)</label><input type="number" min="0" step="any" value="${esc(recoData.aumento)}" oninput="recoData.aumento=this.value" style="${fld}"></div>
-      <label style="font-size:12px;font-weight:700;color:var(--navy);display:block;margin-top:10px;">Strengths / Fortalezas</label>
+      <div style="font-size:14px;font-weight:700;color:var(--navy);margin:14px 0 6px;">Context / Contexto</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:140px;"><label style="font-size:12px;font-weight:700;color:var(--navy);">Last increase — date / Último aumento — fecha</label><input type="date" value="${esc(recoData.ult_fecha)}" oninput="recoData.ult_fecha=this.value" style="${fld}"></div>
+        <div style="flex:1;min-width:140px;"><label style="font-size:12px;font-weight:700;color:var(--navy);">Amount ($) / Monto ($)</label><input type="number" min="0" step="any" value="${esc(recoData.ult_monto)}" oninput="recoData.ult_monto=this.value" style="${fld}"></div>
+      </div>
+      <div style="font-size:12px;font-weight:700;color:var(--navy);margin:10px 0 4px;">Since the last appraisal, this person has… / Desde la última evaluación, esta persona…</div>
+      ${[['mejoro','Improved / Ha mejorado'],['igual','Little or no change / Poco o ningún cambio'],['empeoro','Has gone back / Ha empeorado']].map(x => `<div class="bars-option${recoData.tendencia === x[0] ? ' selected' : ''}" onclick="recoData.tendencia='${x[0]}';renderRecoScreen()" style="padding:8px 12px;margin-bottom:5px;"><div class="txt">${x[1]}</div></div>`).join('')}
+      <div style="font-size:12px;font-weight:700;color:var(--navy);margin:12px 0 4px;">Is this person suited for the type of work they are doing now? / ¿Esta persona es adecuada para el trabajo que hace ahora?</div>
+      ${[['yes','Yes / Sí'],['no','No']].map(x => `<div class="bars-option${recoData.apto_actual === x[0] ? ' selected' : ''}" onclick="recoData.apto_actual='${x[0]}';renderRecoScreen()" style="padding:8px 12px;margin-bottom:5px;"><div class="txt">${x[1]}</div></div>`).join('')}
+      <div style="font-size:12px;font-weight:700;color:var(--navy);margin:12px 0 4px;">Would this person be suited for other, lower or higher level work? / ¿Sería adecuada para otro trabajo de nivel menor o mayor?</div>
+      ${[['no','No'],['menor','Lower level / Nivel menor'],['mayor','Higher level / Nivel mayor']].map(x => `<div class="bars-option${recoData.apto_otro === x[0] ? ' selected' : ''}" onclick="recoData.apto_otro='${x[0]}';renderRecoScreen()" style="padding:8px 12px;margin-bottom:5px;"><div class="txt">${x[1]}</div></div>`).join('')}
+      <label style="font-size:12px;font-weight:700;color:var(--navy);display:block;margin-top:8px;">Explain (optional) / Explica (opcional)</label>
+      <textarea rows="2" maxlength="1000" oninput="recoData.apto_expl=this.value" style="${fld}">${esc(recoData.apto_expl)}</textarea>
+      <label style="font-size:12px;font-weight:700;color:var(--navy);display:block;margin-top:14px;">Strengths / Fortalezas</label>
       <textarea rows="2" maxlength="2000" oninput="recoData.fortalezas=this.value" style="${fld}">${esc(recoData.fortalezas)}</textarea>
       <label style="font-size:12px;font-weight:700;color:var(--navy);display:block;margin-top:10px;">Areas to improve and what is being done about it / Áreas de mejora y qué se está haciendo</label>
       <textarea rows="2" maxlength="2000" oninput="recoData.debilidades=this.value" style="${fld}">${esc(recoData.debilidades)}</textarea>
@@ -1302,7 +1322,7 @@ function renderReviewScreen() {
   const dims = currentDimSet();
   const rows = dims.map(dim => {
     const raw = responses[dim.key];
-    const display = isRatedMode() ? raw + '/5' : String.fromCharCode(65 + raw);
+    const display = naDims[dim.key] ? 'N/A' : isRatedMode() ? raw + '/5' : String.fromCharCode(65 + raw);
     return `
     <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0ece2;font-size:13px;">
       <span style="color:var(--dkgray)">${dim.title}</span>
@@ -1381,12 +1401,13 @@ async function submitEvaluation() {
       completada_at: new Date().toISOString()
     };
     if (isSupervisor) {
-      const scores = dims.map(d => responses[d.key]);
+      const ans = dims.filter(d => responses[d.key] !== undefined);
+      const scores = ans.map(d => responses[d.key]);
       let conductual = Math.round(((scores.reduce((a, b) => a + b, 0) / scores.length) - 1) / 4 * 100);
       if (dbForm) {
         // weighted by the form's own weights (peso_pct); the server recomputes this value and is the one that counts
-        const tw = dims.reduce((a, d) => a + (+d.peso_pct || 1), 0);
-        conductual = Math.round(dims.reduce((a, d) => a + (+d.peso_pct || 1) * ((responses[d.key] - 1) / 4 * 100), 0) / tw);
+        const tw = ans.reduce((a, d) => a + (+d.peso_pct || 1), 0);
+        conductual = Math.round(ans.reduce((a, d) => a + (+d.peso_pct || 1) * ((responses[d.key] - 1) / 4 * 100), 0) / tw);
         evalPayload.usa_form = true;
       }
       const cuota = quotaData.skipped ? null : Math.round(Math.min(quotaData.pct_promedio, 100));
@@ -1396,6 +1417,12 @@ async function submitEvaluation() {
       evalPayload.fortalezas = recoData.fortalezas || null;
       evalPayload.debilidades = recoData.debilidades || null;
       evalPayload.comentarios = recoData.comentarios || null;
+      evalPayload.ultimo_aumento_fecha = recoData.ult_fecha || null;
+      evalPayload.ultimo_aumento_monto = recoData.ult_monto !== '' ? recoData.ult_monto : null;
+      evalPayload.tendencia = recoData.tendencia || null;
+      evalPayload.apto_actual = recoData.apto_actual === '' ? null : recoData.apto_actual === 'yes';
+      evalPayload.apto_otro = recoData.apto_otro || null;
+      evalPayload.apto_otro_expl = recoData.apto_expl || null;
       evalPayload.score_conductual = conductual;
       evalPayload.score_cuota = cuota;
       const w = evalWeights(evalRoleOf(selectedEvaluado));
@@ -1420,11 +1447,12 @@ async function submitEvaluation() {
       evalPayload.score_final = selfScore;
     }
 
-    const respuestaRows = dims.map(dim => ({
+    const respuestaRows = dims.filter(dim => responses[dim.key] !== undefined).map(dim => ({
       dimension: dim.key,
       pregunta_key: dim.key,
       pregunta_texto: dim.q,
-      respuesta_score: responses[dim.key]
+      respuesta_score: responses[dim.key],
+      respuesta_texto: isSupervisor ? (dimNotes[dim.key] || null) : null
     }));
     // One server call saves the evaluation and its answers; the server sets the evaluator from the session.
     const evaluacionId = await DH.rpc('evaluacion_guardar', { p_eval: evalPayload, p_respuestas: respuestaRows });
