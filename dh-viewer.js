@@ -13,7 +13,7 @@
     if (document.getElementById('dhv-css')) return;
     var s = document.createElement('style'); s.id = 'dhv-css';
     s.textContent = '#dhv{position:fixed;inset:0;z-index:100000;background:#0E1A2E;display:flex;flex-direction:column;font:15px/1.45 "Segoe UI",Arial,sans-serif;color:#fff}' +
-      '#dhv .bar{flex:none;display:flex;align-items:center;gap:10px;padding:10px 14px;background:#12284A;border-bottom:2px solid #C8922A}' +
+      '#dhv .bar{flex:none;display:flex;align-items:center;gap:10px;padding:max(10px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) 10px max(14px,env(safe-area-inset-left));background:#12284A;border-bottom:2px solid #C8922A}' +
       '#dhv .bar b{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:16px}' +
       '#dhv .bar button,#dhv .bar a{min-height:44px;min-width:44px;padding:0 16px;border-radius:10px;border:1px solid rgba(255,255,255,.4);background:transparent;color:#fff;font:700 14px Arial,sans-serif;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;cursor:pointer}' +
       '#dhv .bar a.dl{background:#C8922A;border-color:#C8922A;color:#12284A}' +
@@ -57,16 +57,20 @@
     if (target) target.scrollIntoView();
   }
 
-  function close() { if (root) { if (root.__off) root.__off(); var v = root.querySelector('video'); try { if (v) v.pause(); } catch (e) {} root.remove(); root = null; document.body.style.overflow = ''; document.removeEventListener('keydown', onKey); } }
+  function close() { if (root && pushed && history.state && history.state.dhv) { history.back(); return; } closeNow(); }
+  function closeNow() { if (pushed) { pushed = false; window.removeEventListener('popstate', onPop); } if (root) { if (root.__off) root.__off(); var v = root.querySelector('video'); try { if (v) v.pause(); } catch (e) {} root.remove(); root = null; document.body.style.overflow = ''; document.removeEventListener('keydown', onKey); } }
+  var pushed = false;
+  function onPop() { closeNow(); }
   function onKey(e) { if (e.key === 'Escape') close(); }
 
   // DH.view(archivoId, { title, page })
   window.DH = window.DH || {};
   DH.view = async function (archivoId, opts) {
-    opts = opts || {}; css(); close();
+    opts = opts || {}; css(); closeNow();
     root = document.createElement('div'); root.id = 'dhv'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true');
     root.innerHTML = '<div class="bar"><b>' + esc(opts.title || '') + '</b><span id="dhv-act"></span><button type="button" id="dhv-x" aria-label="Close">✕ ' + esc(T('Close', 'Cerrar')) + '</button></div><div class="body" id="dhv-b"><p>' + esc(T('Opening…', 'Abriendo…')) + '</p></div>';
     document.body.appendChild(root); document.body.style.overflow = 'hidden'; document.addEventListener('keydown', onKey);
+    try { history.pushState({ dhv: 1 }, ''); pushed = true; window.addEventListener('popstate', onPop); } catch (e) {}   // phone back gesture / button closes the viewer
     root.querySelector('#dhv-x').onclick = close;
     var body = root.querySelector('#dhv-b');
     try {

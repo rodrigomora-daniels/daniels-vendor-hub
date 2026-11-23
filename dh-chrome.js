@@ -5,7 +5,7 @@
   var css = '.dh-logo{display:inline-flex;align-items:center;flex:none;margin-right:14px}.dh-logo img{height:34px;width:auto;display:block}' +
     '.dh-home{flex:none;display:inline-flex;align-items:center;min-height:40px;margin-left:12px;padding:0 14px;color:#D6E4F7;border:1px solid rgba(214,228,247,.65);border-radius:8px;font:700 13px Arial,sans-serif;text-decoration:none;background:transparent;cursor:pointer;white-space:nowrap}' +
     '.dh-home:hover{background:rgba(255,255,255,.1)}.dh-home:focus-visible,.dh-logo:focus-visible{outline:2px solid #C8922A;outline-offset:2px}' +
-    'body > header,body > .top-bar,body > .site-header{position:sticky;top:0;z-index:40}' +
+    'body > header,body > .top-bar,body > .site-header{position:sticky;top:0;z-index:40;padding-top:max(12px,env(safe-area-inset-top))}' +
     '@media print{.dh-logo,.dh-home{display:none!important}}';
   function leave(e) {
     if (CONFIRM && !window.confirm('Leave this page? Your progress on this test will be lost. / ¿Salir de esta página? Se perderá tu progreso en esta evaluación.')) e.preventDefault();
