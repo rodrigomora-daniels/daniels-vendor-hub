@@ -115,6 +115,24 @@
   #me-card .mlink{margin-top:auto;padding-top:10px;font:700 13px 'Segoe UI',Arial,sans-serif;color:#1B3A6B;text-decoration:none;min-height:40px;display:inline-flex;align-items:center}
   #me-card .mopt{display:block;width:100%;text-align:left;background:#F4F6FA;border:2px solid transparent;border-radius:8px;padding:10px 12px;margin-bottom:6px;font:600 14px 'Segoe UI',Arial,sans-serif;color:#1E2735;cursor:pointer;min-height:44px}
   #me-card .mopt.on{border-color:#1B3A6B;background:#fff}
+  #me-card .rq{font:700 17px/1.35 Georgia,serif;color:#12284A;margin:2px 0 10px}
+  #me-card .rres{font:700 22px Georgia,serif;margin:2px 0 6px}
+  #me-card .rres.ok{color:#1d7a46} #me-card .rres.no{color:#b3261e}
+  #me-card .mopt.right{border-color:#1d7a46;background:#eaf6ef} #me-card .mopt.wrong{border-color:#b3261e;background:#fdeceb}
+  #me-card .mopt[disabled]{cursor:default}
+  #me-card .rbtn{background:#1B3A6B;color:#fff;border:0;border-radius:8px;min-height:44px;padding:0 16px;font:700 14px 'Segoe UI',Arial,sans-serif;cursor:pointer;margin:8px 8px 0 0}
+  #me-card .rbtn.alt{background:#fff;color:#1B3A6B;border:1px solid #1B3A6B}
+  #rk-ov{position:fixed;inset:0;background:rgba(18,40,74,.55);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px}
+  #rk-box{background:#fff;border-radius:10px;width:min(440px,100%);max-height:88vh;overflow:auto;padding:18px 20px;font:14px 'Segoe UI',Arial,sans-serif;color:#1E2735}
+  #rk-box h3{font:700 20px Georgia,serif;color:#1B3A6B;margin:0 0 4px}
+  #rk-box .rt{display:flex;gap:6px;margin:10px 0}
+  #rk-box .rt button{flex:1;min-height:44px;border-radius:8px;border:1px solid #c5ccd8;background:#fff;font:600 14px 'Segoe UI',Arial,sans-serif;cursor:pointer}
+  #rk-box .rt button.on{background:#1B3A6B;color:#fff;border-color:#1B3A6B}
+  #rk-box .rr{display:flex;gap:10px;align-items:center;padding:9px 6px;border-bottom:1px solid #eef1f6}
+  #rk-box .rr.yo{background:#FFF7DB;border-radius:6px;font-weight:700}
+  #rk-box .rr .p{width:28px;text-align:center;font-weight:700;color:#1B3A6B}
+  #rk-box .rr .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #rk-box .rx{width:100%;min-height:44px;margin-top:12px;border-radius:8px;border:0;background:#F4F6FA;font:700 14px 'Segoe UI',Arial,sans-serif;cursor:pointer}
   #me-card .mbd{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
   #me-card .mbd select,#me-card .mbd button{min-height:40px;border-radius:8px;border:1px solid #c5ccd8;font:14px 'Segoe UI',Arial,sans-serif;padding:0 10px;background:#fff}
   #goal-card{background:#fff;border-radius:6px;border-left:6px solid #C8922A;padding:14px 18px;box-shadow:0 14px 34px -26px rgba(18,40,74,.7);margin-bottom:16px}
@@ -1479,28 +1497,50 @@ async function loadMeCard(){
   var el=document.getElementById('me-card'); if(!el)return;
   try{
     var d=await DH.rpc('home_widget'); if(!d||d.error){el.classList.add('hide');return}
-    ME.d=d; await renderMeCard();
+    ME.d=d; ME.reto=null; ME.playing=false;
+    try{var rt=await DH.rpc('reto_hoy',{p_jugar:false}); if(rt&&rt.disponible)ME.reto=rt}catch(e){}
+    var bdayToday=(d.cumples||[]).some(function(x){return x.en_dias===0});
+    if(d.tipo==='reto'&&!ME.reto)d.tipo='cumples';
+    await renderMeCard();
   }catch(e){el.classList.add('hide')}
 }
 async function renderMeCard(){
   var el=document.getElementById('me-card'), d=ME.d; if(!d)return;
   var es=(localStorage.getItem('dh_lang')==='es'), T=function(a,b){return es?b:a};
-  var titles={cumples:T('Celebrations','Celebraciones'),ventas_resumen:T('Sales today','Ventas de hoy'),mi_tienda:T('My store today','Mi tienda hoy')};
-  var head='<div class="mh"><h3>'+(d.tipo==='cumples'?'🎂 ':'📈 ')+titles[d.tipo]+'</h3><button type="button" onclick="meMenu()" aria-label="'+T('Choose what to show here','Elegir qué mostrar aquí')+'">⚙</button></div>';
+  var titles={cumples:T('Celebrations','Celebraciones'),ventas_resumen:T('Sales today','Ventas de hoy'),mi_tienda:T('My store today','Mi tienda hoy'),reto:T('Daily Challenge','Reto del día')};
+  var head='<div class="mh"><h3>'+({cumples:'🎂 ',reto:'🧩 '}[d.tipo]||'📈 ')+titles[d.tipo]+'</h3><button type="button" onclick="meMenu()" aria-label="'+T('Choose what to show here','Elegir qué mostrar aquí')+'">⚙</button></div>';
   var body='';
   if(ME.menu){
     var opts=[['cumples',T('Birthdays & celebrations','Cumpleaños y celebraciones')],['ventas_resumen',T('Daily sales summary (all stores)','Resumen de ventas del día (todas las tiendas)')]];
+    if(ME.reto)opts.push(['reto',T('Daily Challenge','Reto del día')]);
     if(d.tienda)opts.push(['mi_tienda',T('My store vs daily goal','Mi tienda vs meta del día')]);
     body=opts.map(function(o){return '<button type="button" class="mopt'+(o[0]===d.tipo?' on':'')+'" onclick="meSet(\''+o[0]+'\')">'+o[1]+'</button>'}).join('');
     el.innerHTML=head+body; el.classList.remove('hide'); return;
   }
-  if(d.tipo==='cumples'){
+  if(d.tipo==='reto'&&ME.reto){
+    var q=ME.reto;
+    if(q.respondido){
+      var ok=q.mi.correcta, opts2=q.opciones||[];
+      body='<div class="rres '+(ok?'ok':'no')+'">'+(ok?T('Correct! ','¡Correcto! '):T('Not this time. ','Hoy no. '))+'<span style="font-size:15px;color:#33404f">'+q.mi.segundos+'s</span></div>'
+        +'<div class="msub">'+meEsc((q.explicacion||{})[es?'es':'en']||'')+'</div>'
+        +'<div class="msub" style="font-size:12px;color:#6B6B6B;margin-top:6px">'+T('Source: ','Fuente: ')+meEsc(q.fuente||'')+'</div>'
+        +'<div class="msub" style="margin-top:6px">🔥 '+T('Streak: ','Racha: ')+'<b>'+(q.racha||0)+'</b> '+T('days','días')+' · '+q.acertaron+'/'+q.participantes+' '+T('got it right today','acertaron hoy')+'</div>'
+        +'<button type="button" class="rbtn" onclick="retoRanking()">🏆 '+T('See today\'s ranking','Ver ranking de hoy')+'</button>';
+    } else if(ME.playing&&q.pregunta){
+      body='<div class="msub" style="margin-bottom:4px">'+meEsc(q.tema)+'</div><div class="rq">'+meEsc(q.pregunta[es?'es':'en'])+'</div>'
+        +q.opciones.map(function(o,i){return '<button type="button" class="mopt" onclick="retoResp('+i+')">'+meEsc(o[es?'es':'en'])+'</button>'}).join('');
+    } else {
+      body='<div class="mbig">'+T('One question. Everyone plays. Fastest right answer wins the day.','Una pregunta. Todos juegan. Gana quien acierte más rápido.')+'</div>'
+        +'<div class="msub">'+T('Topic: ','Tema: ')+'<b>'+meEsc(q.tema)+'</b> · 🔥 '+(q.racha||0)+' · '+q.participantes+' '+T('played so far','han jugado')+'</div>'
+        +'<button type="button" class="rbtn" onclick="retoPlay()">'+T('Play now','Jugar ahora')+'</button><button type="button" class="rbtn alt" onclick="retoRanking()">🏆 '+T('Ranking','Ranking')+'</button>';
+    }
+  } else if(d.tipo==='cumples'){
     var list=d.cumples||[], me=list.filter(function(x){return x.yo&&x.en_dias===0})[0], md=['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], mde=['','ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
     var fd=function(x){return es?x.dia+' '+mde[x.mes]:md[x.mes]+' '+x.dia};
     if(me){body='<div class="mbig">🎉 '+T('Happy Birthday, ','¡Feliz cumpleaños, ')+meEsc(me.nombre.split(' ')[0])+'!</div><div class="msub">'+T('Everyone at DHC wishes you a great day.','Todos en DHC te deseamos un gran día.')+'</div>'}
     else if(list.length){
       var today=list.filter(function(x){return x.en_dias===0});
-      if(today.length){body='<div class="mbig">🎂 '+T('Happy Birthday ','Feliz cumpleaños ')+today.map(function(x){return meEsc(x.nombre)}).join(', ')+'!</div>'}
+      if(today.length){body='<div style="text-align:center;padding:6px 0"><div style="font-size:64px;line-height:1" aria-hidden="true">🎂</div><div class="mbig" style="margin-top:8px">'+T('Happy Birthday ','Feliz cumpleaños ')+today.map(function(x){return meEsc(x.nombre)}).join(', ')+'!</div></div>'}
       var next=list.filter(function(x){return x.en_dias>0});
       if(next.length)body+=(today.length?'':'<div class="msub" style="margin-bottom:4px">'+T('Coming up this week','Esta semana')+'</div>')+next.map(function(x){return '<div class="mrow"><span>🎈 '+meEsc(x.nombre)+'</span><b>'+fd(x)+'</b></div>'}).join('');
     } else body='<div class="msub">'+T('No birthdays this week. Add yours so the team can celebrate with you.','No hay cumpleaños esta semana. Agrega el tuyo para que el equipo lo celebre contigo.')+'</div>';
@@ -1529,6 +1569,41 @@ async function renderMeCard(){
     body+='<a class="mlink" href="ventas_meta.html">'+T('Open full report','Abrir reporte completo')+' ›</a>';
   }
   el.innerHTML=head+body; el.classList.remove('hide');
+}
+async function retoPlay(){
+  try{var q=await DH.rpc('reto_hoy',{p_jugar:true}); if(q&&q.disponible){ME.reto=q;ME.playing=true}}catch(e){} renderMeCard();
+}
+async function retoResp(i){
+  var btns=document.querySelectorAll('#me-card .mopt'); btns.forEach(function(b){b.disabled=true});
+  try{
+    var r=await DH.rpc('reto_responder',{p_opcion:i});
+    if(r&&r.ok){ME.playing=false; var q=ME.reto; q.respondido=true; q.mi={opcion:i,correcta:r.correcta,segundos:r.segundos}; q.correcta_idx=r.correcta_idx; q.explicacion=r.explicacion; q.fuente=r.fuente; q.racha=r.racha; q.participantes=(q.participantes||0)+1; q.acertaron=(q.acertaron||0)+(r.correcta?1:0);}
+    else if(r&&r.error==='already'){ME.playing=false; ME.reto=await DH.rpc('reto_hoy',{p_jugar:false})}
+  }catch(e){}
+  renderMeCard();
+}
+async function retoRanking(){
+  var es=(localStorage.getItem('dh_lang')==='es'), T=function(a,b){return es?b:a}, rk=null;
+  try{rk=await DH.rpc('reto_ranking')}catch(e){} if(!rk||rk.error)return;
+  var old=document.getElementById('rk-ov'); if(old)old.remove();
+  var ov=document.createElement('div'); ov.id='rk-ov'; ov.setAttribute('role','dialog'); ov.setAttribute('aria-modal','true'); ov.setAttribute('data-no-i18n','');
+  function draw(tab){
+    var rows=(tab==='dia'?rk.dia:rk.semana)||[];
+    var h='<div id="rk-box"><h3>🏆 '+T('Daily Challenge ranking','Ranking del reto')+'</h3><div class="msub" style="color:#6B6B6B">'+rk.acertaron+'/'+rk.participantes+' '+T('got it right today','acertaron hoy')+' · 🔥 '+(rk.racha||0)+'</div>'
+     +'<div class="rt"><button type="button" data-t="dia" class="'+(tab==='dia'?'on':'')+'">'+T('Today','Hoy')+'</button><button type="button" data-t="semana" class="'+(tab==='semana'?'on':'')+'">'+T('This week','Esta semana')+'</button></div>';
+    if(!rows.length)h+='<div class="msub" style="padding:12px 0">'+(tab==='dia'?T('No correct answers yet. Be the first.','Nadie ha acertado todavía. Sé el primero.'):T('No results this week yet.','Aún no hay resultados esta semana.'))+'</div>';
+    rows.forEach(function(r){h+='<div class="rr'+(r.yo?' yo':'')+'"><span class="p">'+({1:'🥇',2:'🥈',3:'🥉'}[r.pos]||r.pos)+'</span><span class="n">'+meEsc(r.nombre)+'</span><b>'+(tab==='dia'?r.segundos+'s':r.aciertos+' ✓')+'</b></div>'});
+    var mine=tab==='dia'?rk.mi_dia:rk.mi_pos_semana;
+    if(mine&&mine>10)h+='<div class="rr yo"><span class="p">'+mine+'</span><span class="n">'+T('You','Tú')+'</span></div>';
+    h+='<button type="button" class="rx">'+T('Close','Cerrar')+'</button></div>';
+    ov.innerHTML=h;
+    ov.querySelectorAll('.rt button').forEach(function(b){b.onclick=function(){draw(b.getAttribute('data-t'))}});
+    ov.querySelector('.rx').onclick=close; ov.querySelector('.rx').focus();
+  }
+  function close(){ov.remove();document.removeEventListener('keydown',esc)}
+  function esc(e){if(e.key==='Escape')close()}
+  ov.addEventListener('click',function(e){if(e.target===ov)close()}); document.addEventListener('keydown',esc);
+  document.body.appendChild(ov); draw('dia');
 }
 function meMenu(){ME.menu=!ME.menu;renderMeCard()}
 async function meSet(t){try{await DH.rpc('home_widget_set',{p_tipo:t});ME.d.tipo=t}catch(e){} ME.menu=false;renderMeCard()}
