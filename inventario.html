@@ -70,8 +70,9 @@ async function cur(){
   try{const r=await DH.rpc('inventario_consulta',{p_q:'zzz'});
     $('curt').textContent=r.actualizado?tr('Loaded from the report of / Cargado del reporte del')+' '+(r.reporte||'')+' · '+new Date(r.actualizado).toLocaleString('en-US',{timeZone:'America/Los_Angeles'}):tr('Nothing loaded yet. / Aún no hay nada cargado.');}catch(e){$('curt').textContent='';}
 }
-function init(){
-  if(!SUPER()){$('deny').style.display='';$('denyt').textContent=tr('This page is only for administrators. / Esta página es solo para administradores.');$('cur').classList.add('hide');return;}
+async function init(){
+  let ok=SUPER(); try{ok=(await DH.rpc('inventario_puede'))===true;}catch(e){}
+  if(!ok){$('deny').style.display='';$('denyt').textContent=tr('This page is only for administrators. / Esta página es solo para administradores.');$('cur').classList.add('hide');return;}
   $('up').style.display='';$('h-up').textContent=tr('Update inventory / Actualizar inventario');
   $('p-up').textContent=tr('Upload the Profit Performance report (CSV). It replaces the whole inventory. / Sube el reporte Profit Performance (CSV). Reemplaza todo el inventario.');
   $('go').textContent=tr('Upload / Subir'); cur();
