@@ -1545,6 +1545,8 @@ async function renderMeCard(){
   } else if(d.tipo==='cumples'){
     var list=d.cumples||[], me=list.filter(function(x){return x.yo&&x.en_dias===0})[0], md=['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], mde=['','ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
     var fd=function(x){return es?x.dia+' '+mde[x.mes]:md[x.mes]+' '+x.dia};
+    /* TEMP demo (expires after 2026-11-23): celebrate Angel Delgado until his real birthday is loaded */
+    var _n=new Date(); if(_n.getFullYear()===2026&&_n.getMonth()===10&&_n.getDate()===23&&!list.some(function(x){return x.en_dias===0&&/angel/i.test(x.nombre)}))list=[{nombre:'Angel Delgado',mes:11,dia:23,en_dias:0,yo:false}].concat(list);
     if(me){body='<div class="mbig">🎉 '+T('Happy Birthday, ','¡Feliz cumpleaños, ')+meEsc(me.nombre.split(' ')[0])+'!</div><div class="msub">'+T('Everyone at DHC wishes you a great day.','Todos en DHC te deseamos un gran día.')+'</div>'}
     else if(list.length){
       var today=list.filter(function(x){return x.en_dias===0});
