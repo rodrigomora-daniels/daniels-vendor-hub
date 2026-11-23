@@ -33,6 +33,6 @@
     try{await s.unsubscribe();}catch(e){}
     return {ok:true};
   }
-  async function savePrefs(p){return DH.rpc('push_prefs_guardar',{p_menciones:!!p.menciones,p_alertas:!!p.alertas,p_noticias:!!p.noticias,p_horario:!!p.horario,p_chats:p.chats!==false});}
+  async function savePrefs(p){return DH.rpc('push_prefs_guardar',{p_menciones:!!p.menciones,p_alertas:!!p.alertas,p_noticias:!!p.noticias,p_horario:!!p.horario,p_chats:p.chats!==false,p_tickets:p.tickets!==false});}
   window.DHPush={supported:supported,state:state,enable:enable,disable:disable,savePrefs:savePrefs};
 })();

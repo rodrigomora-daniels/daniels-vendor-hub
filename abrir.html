@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><script src="dh-phone.js"></script><link rel="stylesheet" href="dh-mobile.css">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1B3A6B">
+<title>My Workspace — Open document / Abrir documento</title>
+<style>
+  :root{--navy:#1B3A6B;--gold:#C8922A;--lt:#D6E4F7;--ink:#1E2735;--gray:#6B6B6B}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#EEF1F6;color:var(--ink)}
+  header{background:var(--navy);border-bottom:3px solid var(--gold);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;color:#fff}
+  header h1{font-size:18px} header a{color:var(--lt);font-size:13px;text-decoration:none}
+  main{max-width:560px;margin:0 auto;padding:22px 16px 60px}
+  .card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 0 #dfe5ee,0 10px 26px -22px rgba(18,40,74,.5)}
+  h2{font-size:19px;color:var(--navy);margin-bottom:6px;overflow-wrap:anywhere}
+  p{font-size:14.5px;line-height:1.5;color:#46505f;margin-top:8px;overflow-wrap:anywhere}
+  .host{font-weight:700;color:var(--ink)}
+  .btn{display:flex;align-items:center;justify-content:center;border:0;background:var(--navy);color:#fff;border-radius:10px;min-height:52px;width:100%;font:700 16px 'Segoe UI',Arial,sans-serif;cursor:pointer;text-decoration:none;margin-top:14px}
+  .btn.alt{background:#fff;color:var(--navy);border:1px solid #cfd6e2}
+  .btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+</style>
+<meta name="dh-i18n" content="on">
+<script src="dh-chrome.js" defer></script>
+</head>
+<body>
+<header><h1>📄 Document / Documento</h1><a href="index.html">← Home / Inicio</a></header>
+<main><div class="card" id="c"></div></main>
+<script>
+(function(){
+  var q=new URLSearchParams(location.search), u=q.get('u')||'', t=(q.get('t')||'').slice(0,160), c=document.getElementById('c');
+  var esc=function(s){return String(s).replace(/[&<>"]/g,function(x){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[x];});};
+  var host=''; try{var x=new URL(u); if(/^https?:$/.test(x.protocol))host=x.hostname; else u='';}catch(e){u='';}
+  function back(){ if(history.length>1)history.back(); else location.href='recursos.html'; }
+  if(!u){ c.innerHTML='<h2>This link is not valid. / Este enlace no es válido.</h2><button class="btn" id="b">← Back / Regresar</button>'; document.getElementById('b').onclick=back; return; }
+  c.innerHTML='<h2>'+esc(t||'Document / Documento')+'</h2>'
+   +'<p>This opens in your browser, outside of My Workspace. When you finish, come back here or tap Home. / Se abre en tu navegador, fuera de My Workspace. Al terminar, regresa aquí o toca Inicio.</p>'
+   +'<p>Site / Sitio: <span class="host">'+esc(host)+'</span></p>'
+   +'<a class="btn" id="o" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">Open document / Abrir documento ↗</a>'
+   +'<button class="btn alt" id="b">← Back / Regresar</button>';
+  document.getElementById('b').onclick=back;
+})();
+</script>
+</body>
+</html>

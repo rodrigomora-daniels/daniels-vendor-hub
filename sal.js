@@ -143,7 +143,7 @@
     return viewerP;
   }
   async function openFile(archivoId, page, url, btn) {
-    if (!archivoId) { if (url) window.open(url, '_blank', 'noopener'); return; }
+    if (!archivoId) { if (url) { location.href = /^https?:/i.test(url) && url.indexOf(location.origin) !== 0 ? 'abrir.html?u=' + encodeURIComponent(url) + '&t=' + encodeURIComponent(document.title || '') : url; } return; }
     var old = btn && btn.textContent; if (btn) { btn.disabled = true; btn.textContent = t('Opening…', 'Abriendo…'); }
     try {
       await loadViewer();

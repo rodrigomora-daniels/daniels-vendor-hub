@@ -250,10 +250,11 @@ function saveDone(){try{localStorage.setItem(KEY(),JSON.stringify(DONE));}catch(
 const byTitle=t=>RES.find(r=>r.titulo===t);
 async function openRes(id){
   const it=RES.find(x=>x.id===id); if(!it)return;
-  if(!it.archivo_id&&it.url){window.open(it.url,'_blank','noopener');return;}
-  const w=window.open('','_blank');
-  try{const u=await DH.files.sign([it.archivo_id]);const f=u[it.archivo_id];if(!f)throw new Error('x');if(w){w.opener=null;w.location=f.url;}else location.href=f.url;}
-  catch(e){if(w)w.close();alert(T(UI.notFound));}
+  if(!it.archivo_id&&it.url){const u=String(it.url);location.href=/^https?:/i.test(u)&&u.indexOf(location.origin)!==0?'abrir.html?u='+encodeURIComponent(u)+'&t='+encodeURIComponent(it.titulo||''):u;return;}
+  try{
+    if(!window.DH||!DH.view){await new Promise((ok,no)=>{const s=document.createElement('script');s.src='dh-viewer.js';s.onload=ok;s.onerror=no;document.head.appendChild(s);});}
+    DH.view(it.archivo_id,{title:it.titulo});
+  }catch(e){alert(T(UI.notFound));}
 }
 const icon=r=>{const m=r.mime||'';return /sheet|excel/.test(m)?'📊':/word/.test(m)?'📝':/presentation/.test(m)?'📽️':!r.archivo_id?'🔗':'📄';};
 const libBtn=r=>`<button class="lib" onclick="openRes('${r.id}')"><span>${icon(r)}</span><span>${esc(r.titulo)}</span></button>`;

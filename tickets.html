@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content"><script src="dh-phone.js"></script><link rel="stylesheet" href="dh-mobile.css">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1B3A6B">
+<title>My Workspace — IT tickets / Tickets de TI</title>
+<style>
+  :root{--navy:#1B3A6B;--gold:#C8922A;--lt:#D6E4F7;--ink:#1E2735;--gray:#6B6B6B;--red:#C0392B;--green:#2E7D32}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#EEF1F6;color:var(--ink)}
+  header{background:var(--navy);border-bottom:3px solid var(--gold);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;color:#fff}
+  header h1{font-size:18px} header a{color:var(--lt);font-size:13px;text-decoration:none}
+  main{max-width:900px;margin:0 auto;padding:16px 14px 70px}
+  h2{font:700 16px 'Segoe UI',Arial,sans-serif;color:var(--navy);margin:20px 2px 8px}
+  .card{background:#fff;border-radius:12px;padding:14px;box-shadow:0 1px 0 #dfe5ee,0 10px 26px -22px rgba(18,40,74,.5);margin-bottom:12px}
+  .step{font-weight:700;color:var(--navy);font-size:14px;margin:12px 0 6px}
+  .step:first-child{margin-top:0}
+  .opts{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+  .opt{border:2px solid #cfd6e2;background:#fff;border-radius:12px;min-height:64px;padding:8px;font:600 14px 'Segoe UI',Arial,sans-serif;color:var(--ink);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-align:center}
+  .opt .i{font-size:22px}
+  .opt.on{border-color:var(--navy);background:#E9F0FB;color:var(--navy)}
+  .opt.bad.on{border-color:var(--red);background:#FDECEA;color:var(--red)}
+  .opts.two{grid-template-columns:1fr 1fr 1fr}
+  button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.opt:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+  label{display:block;font-size:13px;font-weight:600;color:var(--navy);margin-bottom:3px}
+  input,select,textarea{width:100%;font:inherit;font-size:16px;padding:9px 11px;border:1px solid #cfd6e2;border-radius:10px;min-height:44px;background:#fff}
+  textarea{min-height:70px;resize:vertical}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .btn{border:0;background:var(--navy);color:#fff;border-radius:10px;min-height:48px;padding:0 20px;font:700 16px 'Segoe UI',Arial,sans-serif;cursor:pointer}
+  .btn.alt{background:#fff;color:var(--navy);border:1px solid #cfd6e2}
+  .btn.ok{background:var(--green)} .btn.warn{background:var(--red)}
+  .btn.sm{min-height:44px;font-size:14px;padding:0 14px}
+  .btn[disabled]{opacity:.5}
+  .err{background:#fdecea;color:var(--red);border-radius:8px;padding:10px 12px;font-size:14px;margin-top:10px;line-height:1.45}
+  .okm{background:#e3f4e5;color:var(--green)}
+  .hide{display:none}
+  .tk{background:#fff;border-radius:12px;padding:12px 14px;margin-bottom:10px;border-left:6px solid #5B9BE0;box-shadow:0 1px 0 #dfe5ee;cursor:pointer}
+  .tk.abierto{border-left-color:var(--red)} .tk.en_proceso{border-left-color:#E8A317} .tk.resuelto{border-left-color:#2E9E4A} .tk.cerrado{border-left-color:#9aa3b0;opacity:.85}
+  .tk .t1{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .tk .t1 b{font-size:15px}
+  .tk .t2{font-size:13.5px;color:#46505f;margin-top:4px;overflow-wrap:anywhere}
+  .tk .t3{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center}
+  .pill{display:inline-block;border-radius:12px;padding:2px 10px;font-size:12.5px;font-weight:700;white-space:nowrap}
+  .p-abierto{background:#fdecea;color:var(--red)}.p-en_proceso{background:#fff1d6;color:#8a5a00}.p-resuelto{background:#e3f4e5;color:var(--green)}.p-cerrado{background:#eceff3;color:#6b7482}
+  .dur{font-weight:700;font-variant-numeric:tabular-nums;color:var(--navy);font-size:13px}
+  .empty{color:var(--gray);padding:14px 2px;font-size:14px}
+  .ov{position:fixed;inset:0;background:rgba(15,25,45,.5);display:flex;align-items:flex-start;justify-content:center;padding:20px 12px;overflow:auto;z-index:50}
+  .md{background:#fff;border-radius:12px;max-width:560px;width:100%;padding:16px}
+  .md h3{font-size:17px;color:var(--navy);margin-bottom:6px}
+  .tl{margin:10px 0;border-left:2px solid #dfe5ee;padding-left:12px}
+  .tl div{font-size:13.5px;margin-bottom:8px;overflow-wrap:anywhere}
+  .tl small{color:var(--gray);display:block}
+  .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0 8px}
+  .bar select{width:auto;min-height:40px;font-size:14px}
+  .sp{flex:1}
+  @media(max-width:560px){.grid2{grid-template-columns:1fr}.opts.two{grid-template-columns:1fr}}
+</style>
+<meta name="dh-i18n" content="on">
+<script src="dh-chrome.js" defer></script>
+</head>
+<body>
+<header><h1>🛠 IT tickets / Tickets de TI</h1><a href="index.html">← Home / Inicio</a></header>
+<main>
+  <div id="rep" class="card hide"></div>
+  <div class="bar"><h2 style="margin:0" id="lh">Tickets</h2><span class="sp"></span>
+    <select id="flt" class="hide" onchange="render()" aria-label="Location / Ubicación"></select>
+    <button class="btn alt sm hide" id="rbtn" onclick="openRep()">⬇ Report / Reporte</button></div>
+  <div id="list"></div>
+</main>
+<div class="ov hide" id="ov"><div class="md" id="md" role="dialog" aria-modal="true"></div></div>
+<script src="dh-session.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const tr=s=>(window.DH&&DH.i18n)?DH.i18n.pick(s):s;
+const LA='America/Los_Angeles';
+const DEV={tablet:['📱','Tablet'],pos:['🧾','Register (POS) / Caja'],computer:['🖥️','Computer / Computadora'],printer:['🖨️','Printer / Impresora'],phone:['☎️','Phone / Teléfono'],network:['📶','Wi-Fi / Network / Red'],camera:['📷','Camera / Cámara'],other:['🔧','Other / Otro']};
+const PROB={sin_red:'No network / Sin red',no_funciona:'Not working / No funciona',otro:'Other / Otro'};
+const EST={abierto:'Open / Abierto',en_proceso:'In progress / En proceso',resuelto:'Waiting confirmation / Esperando confirmación',cerrado:'Closed / Cerrado'};
+const LOC=['Euclid / Anaheim','Cerritos','Chino','Warehouse / Almacén','Corporate'];
+let D={admin:false,items:[]}, F={loc:'',dev:'',prob:'',since:'now',custom:''}, OPEN=null, HOPEN=null;
+
+function fmtDur(sec){sec=Math.max(0,Math.floor(sec));const d=Math.floor(sec/86400),h=Math.floor(sec%86400/3600),m=Math.floor(sec%3600/60);return d?d+'d '+h+'h':(h?h+'h '+m+'m':m+'m');}
+function fmtDT(iso){return new Intl.DateTimeFormat('en-US',{timeZone:LA,month:'2-digit',day:'2-digit',hour:'numeric',minute:'2-digit'}).format(new Date(iso)).replace(',','');}
+function dayKey(d){return new Intl.DateTimeFormat('en-CA',{timeZone:LA}).format(d);}
+function laToIso(s){const g=new Date(s+':00Z');const p={};new Intl.DateTimeFormat('en-US',{timeZone:LA,hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).formatToParts(g).forEach(x=>p[x.type]=x.value);
+  const wall=Date.UTC(+p.year,+p.month-1,+p.day,+p.hour,+p.minute,+p.second);return new Date(g.getTime()-(wall-g.getTime())).toISOString();}
+function sinceIso(){
+  const n=Date.now();
+  if(F.since==='now')return new Date(n).toISOString();
+  if(F.since==='1h')return new Date(n-3600e3).toISOString();
+  if(F.since==='morning')return laToIso(dayKey(new Date())+'T08:00');
+  if(F.since==='yesterday')return laToIso(dayKey(new Date(n-864e5))+'T09:00');
+  return F.custom?laToIso(F.custom):null;
+}
+function defLoc(){
+  const t=(((window.DH&&DH.emp&&DH.emp())||{}).tienda||'').toLowerCase();
+  if(t.includes('euclid')||t.includes('anaheim'))return LOC[0]; if(t.includes('cerritos'))return LOC[1]; if(t.includes('chino'))return LOC[2]; if(t==='wh'||t.includes('warehouse'))return LOC[3]; return LOC[4];
+}
+async function init(){
+  if(!DH.token()){location.href='index.html';return;}
+  HOPEN=(location.hash||'').slice(1)||null;
+  F.loc=defLoc(); await load();
+}
+async function load(){
+  try{D=await DH.rpc('tickets_listar');}
+  catch(e){ $('list').innerHTML='<div class="empty">'+esc(tr('You do not have access to IT tickets. Ask your manager. / No tienes acceso a los tickets de TI. Pregunta a tu gerente.'))+'</div>'; return; }
+  buildRep(); render();
+  if(HOPEN){const id=HOPEN;HOPEN=null;if(D.items.some(x=>x.id===id))openTk(id);}
+}
+
+/* ---------- report form ---------- */
+function buildRep(){
+  const b=$('rep'); b.classList.remove('hide');
+  const o=(map,key,cur,cls)=>Object.keys(map).map(k=>`<button type="button" class="opt ${cls||''}${cur===k?' on':''}" aria-pressed="${cur===k}" onclick="pick('${key}','${k}')">${Array.isArray(map[k])?`<span class="i">${map[k][0]}</span>${esc(tr(map[k][1]))}`:esc(tr(map[k]))}</button>`).join('');
+  const SI={now:'Just now / Ahora',"1h":'1 hour ago / Hace 1 hora',morning:'This morning / Esta mañana',yesterday:'Yesterday / Ayer',custom:'Other time / Otra hora'};
+  b.innerHTML=`<h2 style="margin:0 0 10px">${esc(tr('Report a problem / Reportar un problema'))}</h2>
+   <div class="step">1. ${esc(tr('Where? / ¿Dónde?'))}</div>
+   <select id="r-loc" onchange="F.loc=this.value" aria-label="Location / Ubicación">${LOC.map(l=>`<option${l===F.loc?' selected':''}>${esc(l)}</option>`).join('')}</select>
+   <div class="step">2. ${esc(tr('Which device? / ¿Qué equipo?'))}</div>
+   <div class="opts">${o(DEV,'dev',F.dev)}</div>
+   <div style="margin-top:8px"><label for="r-et">${esc(tr('Name or number (optional) / Nombre o número (opcional)'))}</label><input id="r-et" maxlength="60" placeholder="Register 2 / Caja 2"></div>
+   <div class="step">3. ${esc(tr("What's wrong? / ¿Qué pasa?"))}</div>
+   <div class="opts two">${o(PROB,'prob',F.prob,'bad')}</div>
+   <div class="step">4. ${esc(tr('Since when? / ¿Desde cuándo?'))}</div>
+   <div class="opts" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">${o(SI,'since',F.since)}</div>
+   ${F.since==='custom'?`<div style="margin-top:8px"><input type="datetime-local" id="r-cu" value="${F.custom}" onchange="F.custom=this.value" aria-label="Start time (LA) / Hora de inicio (LA)"></div>`:''}
+   <div class="step">5. ${esc(tr('Details (optional) / Detalles (opcional)'))}</div>
+   <textarea id="r-det" maxlength="500"></textarea>
+   <div class="err hide" id="r-err" role="alert"></div>
+   <div class="acts"><button class="btn" id="r-go" onclick="sendTk()">${esc(tr('Send to IT / Enviar a TI'))}</button></div>`;
+}
+function pick(k,v){const et=$('r-et')?$('r-et').value:'',dt=$('r-det')?$('r-det').value:'';F[k]=v;buildRep();$('r-et').value=et;$('r-det').value=dt;}
+function rerr(t,ok){const e=$('r-err');e.textContent=t;e.className='err'+(ok?' okm':'')+(t?'':' hide');}
+async function sendTk(){
+  if(!F.dev||!F.prob){rerr(tr('Pick the device and what is wrong. / Elige el equipo y qué pasa.'));return;}
+  const ini=sinceIso(); if(!ini){rerr(tr('Pick when it started. / Elige cuándo empezó.'));return;}
+  const b=$('r-go'); b.disabled=true; rerr('');
+  try{
+    const r=await DH.rpc('ticket_crear',{p_datos:{ubicacion:F.loc,dispositivo:F.dev,etiqueta:$('r-et').value,problema:F.prob,detalle:$('r-det').value,inicio:ini}});
+    if(r&&r.ok){F.dev='';F.prob='';F.since='now';F.custom='';await load();rerr(tr('Sent. IT has been notified. / Enviado. TI ya recibió el aviso.')+' #'+r.numero,true);return;}
+    rerr(tr(r&&r.error==='limit'?'You reached today\'s limit of 20 tickets. / Llegaste al límite de 20 tickets de hoy.':'Check the start time and try again. / Revisa la hora de inicio e intenta de nuevo.'));
+  }catch(e){rerr(tr('Could not send. Check your connection. / No se pudo enviar. Revisa tu conexión.'));}
+  b.disabled=false;
+}
+
+/* ---------- list ---------- */
+function card(t){
+  const live=t.estado==='abierto'||t.estado==='en_proceso';
+  const dur=live?(Date.now()-new Date(t.inicio).getTime())/1000:t.dur_seg;
+  const d=DEV[t.dispositivo]||DEV.other;
+  return `<div class="tk ${t.estado}" onclick="openTk('${t.id}')"><div class="t1"><b>#${t.numero} ${d[0]} ${esc(tr(d[1]))}${t.etiqueta?' · '+esc(t.etiqueta):''}</b><span class="pill p-${t.estado}">${esc(tr(EST[t.estado]))}</span></div>
+   <div class="t2" data-no-i18n>${esc(t.ubicacion)} · ${esc(tr(PROB[t.problema]))}${t.reporta?' · '+esc(t.reporta):''}${t.detalle?' — '+esc(t.detalle):''}</div>
+   <div class="t3"><span class="dur">⏱ ${esc(fmtDur(dur))} ${esc(tr(live?'down so far / caído hasta ahora':'of downtime / de caída'))}</span><span style="font-size:12px;color:var(--gray)">${esc(tr('Since / Desde'))} ${esc(fmtDT(t.inicio))}</span>${t.reabierto?`<span class="pill p-abierto">${esc(tr('Reopened / Reabierto'))} ×${t.reabierto}</span>`:''}</div>
+   ${t.estado==='resuelto'&&t.mio?`<div class="acts" onclick="event.stopPropagation()"><button class="btn ok sm" onclick="act('${t.id}','confirmar')">✓ ${esc(tr("It's fixed / Ya funciona"))}</button><button class="btn warn sm" onclick="askNote('${t.id}','reabrir')">✗ ${esc(tr('Still not working / Sigue sin funcionar'))}</button></div>`:''}
+   ${D.admin&&(t.estado==='abierto'||t.estado==='en_proceso')?`<div class="acts" onclick="event.stopPropagation()">${t.estado==='abierto'?`<button class="btn alt sm" onclick="act('${t.id}','en_proceso')">${esc(tr('Working on it / En proceso'))}</button>`:''}<button class="btn ok sm" onclick="askNote('${t.id}','resuelto')">${esc(tr('Mark resolved / Marcar resuelto'))}</button></div>`:''}
+  </div>`;
+}
+function render(){
+  const f=$('flt');
+  if(D.admin||D.items.some(x=>!x.mio)){f.classList.remove('hide');const cur=f.value;f.innerHTML='<option value="">'+esc(tr('All locations / Todas las ubicaciones'))+'</option>'+[...new Set(D.items.map(x=>x.ubicacion))].map(l=>`<option${l===cur?' selected':''}>${esc(l)}</option>`).join('');}
+  $('rbtn').classList.toggle('hide',!(D.admin||D.items.some(x=>!x.mio)));
+  const loc=f.value, its=D.items.filter(x=>!loc||x.ubicacion===loc);
+  $('lh').textContent=tr(D.admin?'IT queue / Cola de TI':'My tickets / Mis tickets');
+  if(!its.length){$('list').innerHTML='<div class="empty">'+esc(tr('No tickets. / No hay tickets.'))+'</div>';return;}
+  const grp=[['abierto','Open / Abiertos'],['en_proceso','In progress / En proceso'],['resuelto','Waiting confirmation / Esperando confirmación'],['cerrado','Closed (last 30 days) / Cerrados (últimos 30 días)']];
+  $('list').innerHTML=grp.map(g=>{const x=its.filter(t=>t.estado===g[0]);return x.length?`<h2>${esc(tr(g[1]))} · ${x.length}</h2>`+x.map(card).join(''):'';}).join('');
+}
+setInterval(()=>{if($('ov').classList.contains('hide')&&D.items.length)render();},60000);
+setInterval(async()=>{if(!document.hidden&&$('ov').classList.contains('hide')){try{D=await DH.rpc('tickets_listar');render();}catch(e){}}},90000);
+
+/* ---------- actions ---------- */
+async function act(id,a,nota){
+  try{const r=await DH.rpc('ticket_actualizar',{p_id:id,p_accion:a,p_nota:nota||null});if(r&&r.ok){closeM();await load();return true;}}catch(e){}
+  alert(tr('Could not update. / No se pudo actualizar.')); return false;
+}
+function askNote(id,a){
+  const ttl={resuelto:'What was done? (optional) / ¿Qué se hizo? (opcional)',reabrir:'What is still failing? / ¿Qué sigue fallando?',cerrar:'Why close it? / ¿Por qué cerrarlo?'}[a];
+  $('md').innerHTML=`<h3>${esc(tr(ttl))}</h3><textarea id="nt" maxlength="300"></textarea><div class="acts"><button class="btn" onclick="act('${id}','${a}',$('nt').value)">${esc(tr('Send / Enviar'))}</button><button class="btn alt" onclick="closeM()">${esc(tr('Cancel / Cancelar'))}</button></div>`;
+  $('ov').classList.remove('hide'); setTimeout(()=>$('nt').focus(),30);
+}
+async function openTk(id){
+  const t=D.items.find(x=>x.id===id); if(!t)return; OPEN=id;
+  let ev=[]; try{ev=await DH.rpc('ticket_detalle',{p_id:id});}catch(e){}
+  const d=DEV[t.dispositivo]||DEV.other, live=t.estado==='abierto'||t.estado==='en_proceso';
+  const L={creado:'Reported / Reportado',en_proceso:'In progress / En proceso',resuelto:'Marked resolved / Marcado resuelto',confirmado:'Confirmed fixed / Confirmado resuelto',reabierto:'Reopened / Reabierto',nota:'Note / Nota',cerrado_admin:'Closed by IT / Cerrado por TI'};
+  $('md').innerHTML=`<h3>#${t.numero} ${d[0]} ${esc(tr(d[1]))}${t.etiqueta?' · '+esc(t.etiqueta):''}</h3>
+   <div class="t2" data-no-i18n>${esc(t.ubicacion)} · ${esc(tr(PROB[t.problema]))}${t.reporta?' · '+esc(t.reporta):''}</div>
+   <div style="margin-top:6px"><span class="pill p-${t.estado}">${esc(tr(EST[t.estado]))}</span> <span class="dur">⏱ ${esc(fmtDur(live?(Date.now()-new Date(t.inicio).getTime())/1000:t.dur_seg))}</span> <span style="font-size:12px;color:var(--gray)">${esc(tr('Since / Desde'))} ${esc(fmtDT(t.inicio))}</span></div>
+   ${t.detalle?`<p style="margin-top:8px;font-size:14px" data-no-i18n>${esc(t.detalle)}</p>`:''}
+   <div class="tl">${ev.map(e=>`<div><b>${esc(tr(L[e.tipo]||e.tipo))}</b> <span data-no-i18n>${esc(e.quien||'')}</span><small>${esc(fmtDT(e.t))}</small>${e.nota?`<span data-no-i18n>${esc(e.nota)}</span>`:''}</div>`).join('')}</div>
+   ${t.estado!=='cerrado'?`<label for="nt">${esc(tr('Add a note / Agregar una nota'))}</label><textarea id="nt" maxlength="300"></textarea><div class="acts"><button class="btn alt sm" onclick="addNote('${t.id}')">${esc(tr('Add note / Agregar nota'))}</button>${D.admin?`<button class="btn alt sm" onclick="askNote('${t.id}','cerrar')">${esc(tr('Close without confirmation / Cerrar sin confirmación'))}</button>`:''}</div>`:''}
+   <div class="acts"><button class="btn alt" onclick="closeM()">${esc(tr('Close / Cerrar'))}</button></div>`;
+  $('ov').classList.remove('hide');
+}
+async function addNote(id){const n=$('nt').value.trim();if(!n)return;await act(id,'nota',n);}
+function closeM(){$('ov').classList.add('hide');OPEN=null;}
+$('ov').addEventListener('mousedown',e=>{if(e.target===$('ov'))closeM();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeM();});
+
+/* ---------- CSV report ---------- */
+function openRep(){
+  const t=dayKey(new Date()), f=dayKey(new Date(Date.now()-30*864e5));
+  $('md').innerHTML=`<h3>${esc(tr('Download report / Descargar reporte'))}</h3><div class="grid2"><div><label for="r-from">${esc(tr('From / Desde'))}</label><input type="date" id="r-from" value="${f}"></div><div><label for="r-to">${esc(tr('To / Hasta'))}</label><input type="date" id="r-to" value="${t}"></div></div>
+   <div class="err hide" id="r-err2" role="alert"></div><div class="acts"><button class="btn" onclick="dlRep()">${esc(tr('Download CSV / Descargar CSV'))}</button><button class="btn alt" onclick="closeM()">${esc(tr('Close / Cerrar'))}</button></div>`;
+  $('ov').classList.remove('hide');
+}
+const cc=v=>{v=v==null?'':String(v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+async function dlRep(){
+  const f=$('r-from').value,t=$('r-to').value,e=$('r-err2');
+  if(!f||!t||t<f){e.textContent=tr('Pick a valid date range. / Elige un rango de fechas válido.');e.classList.remove('hide');return;}
+  try{
+    const r=await DH.rpc('tickets_reporte',{p_desde:f,p_hasta:t});
+    if(!r||!r.ok){e.textContent=tr('The range is too long. / El rango es muy largo.');e.classList.remove('hide');return;}
+    const head=['Ticket','Started (LA)','Location','Device','Name','Problem','Details','Reported by','Status','Resolved (LA)','Closed (LA)','Confirmed by reporter','Reopened','Downtime (minutes)'];
+    const rows=r.rows.map(x=>[x.numero,fmtDT(x.inicio),x.ubicacion,DEV[x.dispositivo][1].split(' / ')[0],x.etiqueta,PROB[x.problema].split(' / ')[0],x.detalle,x.reporta,EST[x.estado].split(' / ')[0],x.resuelto_at?fmtDT(x.resuelto_at):'',x.cerrado_at?fmtDT(x.cerrado_at):'',x.confirmado==null?'':(x.confirmado?'Yes':'No'),x.reabierto,x.dur_min]);
+    const txt='﻿'+[head.map(cc).join(',')].concat(rows.map(r=>r.map(cc).join(','))).join('\r\n');
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/csv;charset=utf-8'}));a.download='it-tickets_'+f+'_'+t+'.csv';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
+  }catch(x){e.textContent=tr('Could not build the report. / No se pudo generar el reporte.');e.classList.remove('hide');}
+}
+window.addEventListener('dh-lang',()=>{if($('ov').classList.contains('hide')){buildRep();render();}});
+init();
+</script>
+</body>
+</html>
