@@ -311,6 +311,13 @@
     </div>
 
     <!-- AUDIT LOG -->
+    <!-- BACKUPS — Super Admin only: weekly snapshots of all records, kept 2 years -->
+    <div class="section" id="section-backups" style="display:none">
+      <div class="section-hdr"><h2>🗄️ Records Backups</h2></div>
+      <div style="font-size:12px;color:var(--mgray);margin-bottom:8px;">A full copy of people, evaluations, commitments, certifications and logs is saved every Sunday and kept for 2 years. Passwords are never included. Download one now and again to keep a copy outside the system.</div>
+      <div class="tw"><table id="tbl-backups"><thead><tr><th>Date</th><th>Type</th><th>Evaluations</th><th>Size</th><th></th></tr></thead><tbody id="tbl-backups-body"><tr><td colspan="5" class="empty-state">Loading...</td></tr></tbody></table></div>
+    </div>
+
     <div class="section" id="section-auditlog">
       <div class="section-hdr">
         <h2>📋 Admin Activity Log</h2>
@@ -650,7 +657,7 @@ async function handleAdminLogin() {
 /* ════════ LOAD DATA ════════ */
 async function loadAllData() {
   await loadCertAttempts();
-  await Promise.all([loadEmployees(), loadCodes(), loadLeadSource(), loadAuditLog(), loadOrganigrama(), loadEvalCycles(), loadMgrFeedback(), loadEvalDist(), loadEvalConfig(), loadEvalResults(), loadRoster()]);
+  await Promise.all([loadEmployees(), loadCodes(), loadLeadSource(), loadAuditLog(), loadOrganigrama(), loadEvalCycles(), loadMgrFeedback(), loadEvalDist(), loadEvalConfig(), loadEvalResults(), loadRoster(), loadBackups()]);
   renderCertAttemptsTable(cachedData.certAttempts);
   const plantBtn = document.getElementById('btn-plant-cert-floating');
   if (plantBtn) plantBtn.style.display = isViewOnly() ? 'none' : 'block';
@@ -1663,6 +1670,27 @@ function openLeadSourceFullList() {
 }
 
 /* ════════ AUDIT LOG ════════ */
+/* ---- Records backups (Super Admin) ---- */
+async function loadBackups() {
+  if (!isSuperAdmin()) return;
+  let r; try { r = await DH.rpc('respaldo_lista'); } catch (e) { return; }
+  if (!r || r.error) return;
+  document.getElementById('section-backups').style.display = '';
+  const b = document.getElementById('tbl-backups-body');
+  b.innerHTML = (r.items || []).map(x => `<tr><td data-v="${x.fecha}">${new Date(x.fecha).toLocaleString()}</td><td>${x.tipo}</td><td>${(x.filas && x.filas.evaluaciones) ?? '—'}</td><td>${(x.bytes / 1024).toFixed(0)} KB</td><td><button class="btn btn-ghost" onclick="downloadBackup('${x.id}', this)">Download</button></td></tr>`).join('') || '<tr><td colspan="5" class="empty-state">No backups yet.</td></tr>';
+}
+async function downloadBackup(id, btn) {
+  btn.disabled = true;
+  try {
+    const r = await DH.rpc('respaldo_obtener', { p_id: id });
+    if (!r || r.error) { alert('Could not download.'); return; }
+    const blob = new Blob([JSON.stringify(r, null, 1)], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = 'dhc-records-backup-' + String(r.fecha).slice(0, 10) + '.json'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  } catch (e) { alert('Could not download.'); } finally { btn.disabled = false; }
+}
+
 async function loadAuditLog() {
   const _sec = document.getElementById('section-auditlog');
   if (_sec && !isSuperAdmin()) { _sec.style.display = 'none'; return; }
