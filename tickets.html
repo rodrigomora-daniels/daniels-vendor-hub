@@ -107,7 +107,7 @@ async function init(){
 }
 async function load(){
   try{D=await DH.rpc('tickets_listar');}
-  catch(e){ $('list').innerHTML='<div class="empty">'+esc(tr('Could not load tickets. Check your connection and try again. / No se pudieron cargar los tickets. Revisa tu conexión e intenta de nuevo.'))+'</div>'; return; }
+  catch(e){ if(e&&/403|PT403|Forbidden/i.test(String(e.status||"")+String(e.code||"")+String(e.message||""))){ $('rep').classList.add('hide'); $('list').innerHTML='<div class="empty">'+esc(tr('This section is for managers and above. / Esta sección es para gerentes en adelante.'))+'</div>'; return; } $('list').innerHTML='<div class="empty">'+esc(tr('Could not load tickets. Check your connection and try again. / No se pudieron cargar los tickets. Revisa tu conexión e intenta de nuevo.'))+'</div>'; return; }
   if(D.puede_reportar)buildRep(); else $('rep').classList.add('hide'); render();
   if(HOPEN){const id=HOPEN;HOPEN=null;if(D.items.some(x=>x.id===id))openTk(id);}
 }
