@@ -101,6 +101,22 @@
   #push-dlg .pb.go{background:#1B3A6B;color:#fff}#push-dlg .pb.off{background:#fff;border:1px solid #c5ccd8;color:#C0392B}#push-dlg .pb.cl{background:#fff;border:1px solid #c5ccd8;color:#1B3A6B;margin-left:8px}
   #push-dlg .msg{margin-top:10px;font-size:13px;color:#C0392B}
   .my-day{font:700 22px Georgia,'Times New Roman',serif;color:#1B3A6B;margin:0 0 12px}
+  #hero2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-bottom:16px;align-items:stretch}
+  #hero2 #goal-card{margin-bottom:0}
+  #me-card{background:#fff;border-radius:6px;border-left:6px solid #1B3A6B;padding:14px 18px;box-shadow:0 14px 34px -26px rgba(18,40,74,.7);min-width:0;display:flex;flex-direction:column}
+  #me-card.hide{display:none}
+  #me-card .mh{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  #me-card .mh h3{font:700 17px Georgia,serif;color:#1B3A6B;margin:0;flex:1}
+  #me-card .mh button{background:none;border:0;font-size:18px;cursor:pointer;min-width:40px;min-height:40px;border-radius:8px;color:#1B3A6B}
+  #me-card .mh button:hover{background:#F4F6FA}
+  #me-card .mbig{font:700 clamp(22px,3vw,30px)/1.15 Georgia,serif;color:#12284A;margin:4px 0 6px}
+  #me-card .msub{font:14px/1.5 'Segoe UI',Arial,sans-serif;color:#33404f}
+  #me-card .mrow{display:flex;justify-content:space-between;gap:10px;font:14px 'Segoe UI',Arial,sans-serif;color:#1E2735;padding:6px 0;border-bottom:1px solid #eef1f6}
+  #me-card .mlink{margin-top:auto;padding-top:10px;font:700 13px 'Segoe UI',Arial,sans-serif;color:#1B3A6B;text-decoration:none;min-height:40px;display:inline-flex;align-items:center}
+  #me-card .mopt{display:block;width:100%;text-align:left;background:#F4F6FA;border:2px solid transparent;border-radius:8px;padding:10px 12px;margin-bottom:6px;font:600 14px 'Segoe UI',Arial,sans-serif;color:#1E2735;cursor:pointer;min-height:44px}
+  #me-card .mopt.on{border-color:#1B3A6B;background:#fff}
+  #me-card .mbd{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  #me-card .mbd select,#me-card .mbd button{min-height:40px;border-radius:8px;border:1px solid #c5ccd8;font:14px 'Segoe UI',Arial,sans-serif;padding:0 10px;background:#fff}
   #goal-card{background:#fff;border-radius:6px;border-left:6px solid #C8922A;padding:14px 18px;box-shadow:0 14px 34px -26px rgba(18,40,74,.7);margin-bottom:16px}
   #goal-card.hide{display:none}
   #goal-card .gh{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
@@ -566,7 +582,10 @@ document.addEventListener('DOMContentLoaded',function(){
         <button class="x" onclick="dismissPush()" aria-label="Not now / Ahora no">✕</button>
       </div>
       <h2 class="my-day">My day / Mi día</h2>
+      <div id="hero2">
       <section id="goal-card" class="hide" data-no-i18n aria-label="Sales vs goal"></section>
+      <section id="me-card" class="hide" data-no-i18n aria-label="My panel"></section>
+      </div>
       <div id="briefing">
       <section id="alerts-card" class="hide" aria-label="Priority updates">
         <div id="ac-alerts" class="hide">
@@ -1149,7 +1168,7 @@ function handleLogout() {
    DASHBOARD
    ════════════════════════════════════════════════════════════ */
 async function loadDashboard() {
-  loadAlertsCard(); loadGoalCard(); initPushCard(); loadNewsHero(); loadPromoStrip(); loadMsgBadge(); loadNotesToday();
+  loadAlertsCard(); loadGoalCard(); loadMeCard(); initPushCard(); loadNewsHero(); loadPromoStrip(); loadMsgBadge(); loadNotesToday();
   const emp = session.empleado;
 
   // If this employee has a temporary password, force the change screen first
@@ -1451,6 +1470,71 @@ function startGoalClock(){
     for(var u in v){var n=box.querySelector('[data-u="'+u+'"]');if(n){var x=u==='d'?String(v[u]):String(v[u]).padStart(2,'0');if(n.textContent!==x)n.textContent=x}}
     if(ms===0){clearInterval(_goalClock);_goalClock=null;loadGoalCard()}}
   tick(); _goalClock=setInterval(tick,1000);
+}
+
+/* ---- Home hero, right side: personal panel (birthdays by default; sales summary / my store optional) ---- */
+var ME={d:null,menu:false};
+function meEsc(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]})}
+async function loadMeCard(){
+  var el=document.getElementById('me-card'); if(!el)return;
+  try{
+    var d=await DH.rpc('home_widget'); if(!d||d.error){el.classList.add('hide');return}
+    ME.d=d; await renderMeCard();
+  }catch(e){el.classList.add('hide')}
+}
+async function renderMeCard(){
+  var el=document.getElementById('me-card'), d=ME.d; if(!d)return;
+  var es=(localStorage.getItem('dh_lang')==='es'), T=function(a,b){return es?b:a};
+  var titles={cumples:T('Celebrations','Celebraciones'),ventas_resumen:T('Sales today','Ventas de hoy'),mi_tienda:T('My store today','Mi tienda hoy')};
+  var head='<div class="mh"><h3>'+(d.tipo==='cumples'?'🎂 ':'📈 ')+titles[d.tipo]+'</h3><button type="button" onclick="meMenu()" aria-label="'+T('Choose what to show here','Elegir qué mostrar aquí')+'">⚙</button></div>';
+  var body='';
+  if(ME.menu){
+    var opts=[['cumples',T('Birthdays & celebrations','Cumpleaños y celebraciones')],['ventas_resumen',T('Daily sales summary (all stores)','Resumen de ventas del día (todas las tiendas)')]];
+    if(d.tienda)opts.push(['mi_tienda',T('My store vs daily goal','Mi tienda vs meta del día')]);
+    body=opts.map(function(o){return '<button type="button" class="mopt'+(o[0]===d.tipo?' on':'')+'" onclick="meSet(\''+o[0]+'\')">'+o[1]+'</button>'}).join('');
+    el.innerHTML=head+body; el.classList.remove('hide'); return;
+  }
+  if(d.tipo==='cumples'){
+    var list=d.cumples||[], me=list.filter(function(x){return x.yo&&x.en_dias===0})[0], md=['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], mde=['','ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    var fd=function(x){return es?x.dia+' '+mde[x.mes]:md[x.mes]+' '+x.dia};
+    if(me){body='<div class="mbig">🎉 '+T('Happy Birthday, ','¡Feliz cumpleaños, ')+meEsc(me.nombre.split(' ')[0])+'!</div><div class="msub">'+T('Everyone at DHC wishes you a great day.','Todos en DHC te deseamos un gran día.')+'</div>'}
+    else if(list.length){
+      var today=list.filter(function(x){return x.en_dias===0});
+      if(today.length){body='<div class="mbig">🎂 '+T('Happy Birthday ','Feliz cumpleaños ')+today.map(function(x){return meEsc(x.nombre)}).join(', ')+'!</div>'}
+      var next=list.filter(function(x){return x.en_dias>0});
+      if(next.length)body+=(today.length?'':'<div class="msub" style="margin-bottom:4px">'+T('Coming up this week','Esta semana')+'</div>')+next.map(function(x){return '<div class="mrow"><span>🎈 '+meEsc(x.nombre)+'</span><b>'+fd(x)+'</b></div>'}).join('');
+    } else body='<div class="msub">'+T('No birthdays this week. Add yours so the team can celebrate with you.','No hay cumpleaños esta semana. Agrega el tuyo para que el equipo lo celebre contigo.')+'</div>';
+    if(!d.mi_cumple){
+      var ms='';for(var i=1;i<=12;i++)ms+='<option value="'+i+'">'+(es?mde[i]:md[i])+'</option>';
+      var ds='';for(var j=1;j<=31;j++)ds+='<option>'+j+'</option>';
+      body+='<div class="mbd"><select id="mc-m" aria-label="Month">'+ms+'</select><select id="mc-d" aria-label="Day">'+ds+'</select><button type="button" onclick="meBirthday()">'+T('Save my birthday','Guardar mi cumpleaños')+'</button></div><div class="msub" style="font-size:12px;color:#6B6B6B;margin-top:4px">'+T('Only day and month are shown, never the year.','Solo se muestra día y mes, nunca el año.')+'</div>';
+    }
+  } else {
+    var r=null; try{r=await DH.rpc('ventas_meta',{p_fecha:null,p_hora:null,p_demo:false})}catch(e){}
+    var $=function(n){return '$'+Math.round(n).toLocaleString('en-US')};
+    if(!r||r.error||!r.tiendas||!r.tiendas.length||r.hora_max==null){body='<div class="msub">'+T('No sales data for today yet.','Aún no hay datos de ventas de hoy.')+'</div>'}
+    else{
+      var ts=r.tiendas;
+      if(d.tipo==='mi_tienda'){var key=String(d.ubicacion||'').split(/[ \/]/)[0].toLowerCase();ts=ts.filter(function(t){return String(t.tienda).toLowerCase().indexOf(key)===0});}
+      if(!ts.length){body='<div class="msub">'+T('No data for your store today.','Sin datos de tu tienda hoy.')+'</div>'}
+      else{
+        var v=0,mv=0,s=0; ts.forEach(function(t){v+=t.v;mv+=t.meta_v;s+=t.s});
+        var pct=mv?v/mv*100:0;
+        body='<div class="mbig">'+$(v)+'</div><div class="msub">'+T('of ','de ')+$(mv)+' · <b>'+pct.toFixed(0)+'%</b> '+T('of daily goal','de la meta del día')+'</div>'
+          +'<div class="gb" style="margin:10px 0 4px;position:relative;background:#E7EBF2;border-radius:8px;height:18px;overflow:hidden"><i style="display:block;height:100%;width:'+Math.min(100,pct).toFixed(1)+'%;background:#1B3A6B;border-radius:8px"></i></div>'
+          +(ts.length>1?ts.map(function(t){return '<div class="mrow"><span>'+meEsc(t.tienda)+'</span><b>'+$(t.v)+'</b></div>'}).join(''):'')
+          +'<div class="msub" style="margin-top:6px">'+T('Services','Servicios')+': <b>'+$(s)+'</b></div>';
+      }
+    }
+    body+='<a class="mlink" href="ventas_meta.html">'+T('Open full report','Abrir reporte completo')+' ›</a>';
+  }
+  el.innerHTML=head+body; el.classList.remove('hide');
+}
+function meMenu(){ME.menu=!ME.menu;renderMeCard()}
+async function meSet(t){try{await DH.rpc('home_widget_set',{p_tipo:t});ME.d.tipo=t}catch(e){} ME.menu=false;renderMeCard()}
+async function meBirthday(){
+  var m=+document.getElementById('mc-m').value,dd=+document.getElementById('mc-d').value;
+  try{var ok=await DH.rpc('mi_cumple_set',{p_mes:m,p_dia:dd}); if(ok){ME.d.mi_cumple={mes:m,dia:dd}; await loadMeCard();}}catch(e){}
 }
 async function loadGoalCard(){
   var el=document.getElementById('goal-card'); if(!el)return;
