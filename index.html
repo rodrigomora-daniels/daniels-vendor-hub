@@ -1551,7 +1551,7 @@ async function renderMeCard(){
       if(today.length){body='<div style="text-align:center;padding:6px 0"><div style="font-size:64px;line-height:1" aria-hidden="true">🎂</div><div class="mbig" style="margin-top:8px">'+T('Happy Birthday ','Feliz cumpleaños ')+today.map(function(x){return meEsc(x.nombre)}).join(', ')+'!</div></div>'}
       var next=list.filter(function(x){return x.en_dias>0});
       if(next.length)body+=(today.length?'':'<div class="msub" style="margin-bottom:4px">'+T('Coming up this week','Esta semana')+'</div>')+next.map(function(x){return '<div class="mrow"><span>🎈 '+meEsc(x.nombre)+'</span><b>'+fd(x)+'</b></div>'}).join('');
-    } else body='<div class="msub">'+T('No birthdays this week. Add yours so the team can celebrate with you.','No hay cumpleaños esta semana. Agrega el tuyo para que el equipo lo celebre contigo.')+'</div>';
+    } else body='<div style="text-align:center;padding:8px 0"><div style="font-size:48px;line-height:1" aria-hidden="true">🎂</div><div class="msub" style="margin-top:6px">'+T('No birthdays this week.','No hay cumpleaños esta semana.')+(d.mi_cumple?'':' '+T('Add yours in ⚙ so the team can celebrate with you.','Agrega el tuyo en ⚙ para que el equipo lo celebre contigo.'))+'</div></div>';
   } else {
     var r=null; try{r=await DH.rpc('ventas_meta',{p_fecha:null,p_hora:null,p_demo:false})}catch(e){}
     var $=function(n){return '$'+Math.round(n).toLocaleString('en-US')};
