@@ -37,6 +37,7 @@
   .okm{background:#e3f4e5;color:var(--green)}
   .hide,.ov.hide{display:none!important}
   .pri{display:inline-block;font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px;margin-left:6px}.pri-urgente{background:#fdecea;color:#c0392b}.pri-alta{background:#fff1dc;color:#b86e00}.pri-normal{background:#e8f0fb;color:#1B3A6B}.pri-baja{background:#eee;color:#666}
+  .cfgr{display:flex;gap:8px;margin:6px 0;align-items:center}.cfgr input{flex:1}.cfge span{flex:0 0 auto;max-width:42%}.cfge2{display:grid;gap:8px;margin:8px 0}
   .small{font-size:12px;color:var(--gray);margin-top:8px}
   .due{font-size:12px;font-weight:600;color:#1B3A6B}.due.late{color:#c0392b}
   .tk{background:#fff;border-radius:12px;padding:12px 14px;margin-bottom:10px;border-left:6px solid #5B9BE0;box-shadow:0 1px 0 #dfe5ee;cursor:pointer}
@@ -70,6 +71,7 @@
   <div id="rep" class="card hide"></div>
   <div class="bar"><h2 style="margin:0" id="lh">Tickets</h2><span class="sp"></span>
     <select id="flt" class="hide" onchange="render()" aria-label="Location / Ubicación"></select>
+    <button class="btn alt sm hide" id="cbtn" onclick="openCfg()">⚙ Setup / Configuración</button>
     <button class="btn alt sm hide" id="rbtn" onclick="openRep()">⬇ Report / Reporte</button></div>
   <div id="list"></div>
 </main>
@@ -84,6 +86,8 @@ const DEV={tablet:['📱','Tablet'],pos:['🧾','Register (POS) / Caja'],compute
 const PROB={sin_red:'No network / Sin red',no_funciona:'Not working / No funciona',otro:'Other / Otro'};
 const EST={abierto:'Open / Abierto',en_proceso:'In progress / En proceso',resuelto:'Waiting confirmation / Esperando confirmación',cerrado:'Closed / Cerrado'};
 const LOC=['Euclid / Anaheim','Cerritos','Chino','Warehouse / Almacén','Corporate'];
+let CAT={admin:false,ubicaciones:[],equipos:[]};
+const locs=()=>CAT.ubicaciones.length?CAT.ubicaciones.map(x=>x.nombre):LOC;
 let D={admin:false,items:[]}, F={loc:'',dev:'',prob:'',since:'now',custom:''}, OPEN=null, HOPEN=null;
 
 function fmtDur(sec){sec=Math.max(0,Math.floor(sec));const d=Math.floor(sec/86400),h=Math.floor(sec%86400/3600),m=Math.floor(sec%3600/60);return d?d+'d '+h+'h':(h?h+'h '+m+'m':m+'m');}
@@ -100,12 +104,14 @@ function sinceIso(){
   return F.custom?laToIso(F.custom):null;
 }
 function defLoc(){
+  const L=locs(), pk=re=>L.find(x=>re.test(x.toLowerCase()))||L[L.length-1]||'';
   const t=(((window.DH&&DH.emp&&DH.emp())||{}).tienda||'').toLowerCase();
-  if(t.includes('euclid')||t.includes('anaheim'))return LOC[0]; if(t.includes('cerritos'))return LOC[1]; if(t.includes('chino'))return LOC[2]; if(t==='wh'||t.includes('warehouse'))return LOC[3]; return LOC[4];
+  if(t.includes('euclid')||t.includes('anaheim'))return pk(/euclid|anaheim/); if(t.includes('cerritos'))return pk(/cerritos/); if(t.includes('chino'))return pk(/chino/); if(t==='wh'||t.includes('warehouse'))return pk(/warehouse|almac/); return pk(/corporate/);
 }
 async function init(){
   if(!DH.token()){location.href='index.html';return;}
   HOPEN=(location.hash||'').slice(1)||null;
+  try{CAT=await DH.rpc('tickets_catalogo_ver');}catch(e){}
   F.loc=defLoc(); await load();
 }
 async function load(){
@@ -122,10 +128,10 @@ function buildRep(){
   const SI={now:'Just now / Ahora',"1h":'1 hour ago / Hace 1 hora',morning:'This morning / Esta mañana',yesterday:'Yesterday / Ayer',custom:'Other time / Otra hora'};
   b.innerHTML=`<h2 style="margin:0 0 10px">${esc(tr('Report a problem / Reportar un problema'))}</h2>
    <div class="step">1. ${esc(tr('Where? / ¿Dónde?'))}</div>
-   <select id="r-loc" onchange="F.loc=this.value" aria-label="Location / Ubicación">${LOC.map(l=>`<option${l===F.loc?' selected':''}>${esc(l)}</option>`).join('')}</select>
+   <select id="r-loc" onchange="F.loc=this.value;F.eq='';buildRep()" aria-label="Location / Ubicación">${locs().map(l=>`<option value="${esc(l)}" data-no-i18n${l===F.loc?' selected':''}>${esc(l)}</option>`).join('')}</select>
    <div class="step">2. ${esc(tr('Which device? / ¿Qué equipo?'))}</div>
    <div class="opts">${o(DEV,'dev',F.dev)}</div>
-   <div style="margin-top:8px"><label for="r-et">${esc(tr('Name or number (optional) / Nombre o número (opcional)'))}</label><input id="r-et" maxlength="60" placeholder="Register 2 / Caja 2"></div>
+   ${(()=>{const eq=eqFor();return `<div style="margin-top:8px">${eq.length?`<label for="r-eq">${esc(tr('Which one? / ¿Cuál?'))}</label><select id="r-eq" onchange="eqSel()"><option value="">${esc(tr('Choose… / Elige…'))}</option>${eq.map(x=>`<option value="${esc(x.nombre)}" data-no-i18n${x.nombre===F.eq?' selected':''}>${esc(x.nombre)}</option>`).join('')}<option value="__o"${F.eq==='__o'?' selected':''}>${esc(tr('Other / not listed — type it / Otro / no está en la lista — escríbelo'))}</option></select>`:''}<div id="r-etw"${eq.length&&F.eq!=='__o'?' class="hide"':''}><label for="r-et">${esc(tr('Name or number (optional) / Nombre o número (opcional)'))}</label><input id="r-et" maxlength="60" placeholder="Register 2 / Caja 2"></div></div>`;})()}
    <div class="step">3. ${esc(tr("What's wrong? / ¿Qué pasa?"))}</div>
    <div class="opts two">${o(PROB,'prob',F.prob,'bad')}</div>
    <div class="step">4. ${esc(tr('Since when? / ¿Desde cuándo?'))}</div>
@@ -136,15 +142,17 @@ function buildRep(){
    <div class="err hide" id="r-err" role="alert"></div>
    <div class="acts"><button class="btn" id="r-go" onclick="sendTk()">${esc(tr('Send to IT / Enviar a TI'))}</button></div>`;
 }
-function pick(k,v){const et=$('r-et')?$('r-et').value:'',dt=$('r-det')?$('r-det').value:'';F[k]=v;buildRep();$('r-et').value=et;$('r-det').value=dt;}
+const eqFor=()=>CAT.equipos.filter(x=>(!x.ubicacion||x.ubicacion.toLowerCase()===String(F.loc).toLowerCase())&&(!F.dev||x.dispositivo===F.dev)&&F.dev);
+function eqSel(){F.eq=$('r-eq').value;$('r-etw').classList.toggle('hide',F.eq!=='__o');}
+function pick(k,v){const et=$('r-et')?$('r-et').value:'',dt=$('r-det')?$('r-det').value:'';F[k]=v;if(k==='dev')F.eq='';buildRep();$('r-et').value=et;$('r-det').value=dt;}
 function rerr(t,ok){const e=$('r-err');e.textContent=t;e.className='err'+(ok?' okm':'')+(t?'':' hide');}
 async function sendTk(){
   if(!F.dev||!F.prob){rerr(tr('Pick the device and what is wrong. / Elige el equipo y qué pasa.'));return;}
   const ini=sinceIso(); if(!ini){rerr(tr('Pick when it started. / Elige cuándo empezó.'));return;}
   const b=$('r-go'); b.disabled=true; rerr('');
   try{
-    const r=await DH.rpc('ticket_crear',{p_datos:{ubicacion:F.loc,dispositivo:F.dev,etiqueta:$('r-et').value,problema:F.prob,detalle:$('r-det').value,inicio:ini}});
-    if(r&&r.ok){F.dev='';F.prob='';F.since='now';F.custom='';await load();rerr(tr('Sent. IT has been notified. / Enviado. TI ya recibió el aviso.')+' #'+r.numero,true);return;}
+    const r=await DH.rpc('ticket_crear',{p_datos:{ubicacion:F.loc,dispositivo:F.dev,etiqueta:($('r-eq')&&F.eq&&F.eq!=='__o')?F.eq:$('r-et').value,problema:F.prob,detalle:$('r-det').value,inicio:ini}});
+    if(r&&r.ok){F.dev='';F.eq='';F.prob='';F.since='now';F.custom='';await load();rerr(tr('Sent. IT has been notified. / Enviado. TI ya recibió el aviso.')+' #'+r.numero,true);return;}
     rerr(tr(r&&r.error==='limit'?'You reached today\'s limit of 20 tickets. / Llegaste al límite de 20 tickets de hoy.':'Check the start time and try again. / Revisa la hora de inicio e intenta de nuevo.'));
   }catch(e){rerr(tr('Could not send. Check your connection. / No se pudo enviar. Revisa tu conexión.'));}
   b.disabled=false;
@@ -169,7 +177,7 @@ function card(t){
 function render(){
   const f=$('flt');
   if(new Set(D.items.map(x=>x.ubicacion)).size>1){f.classList.remove('hide');const cur=f.value;f.innerHTML='<option value="">'+esc(tr('All locations / Todas las ubicaciones'))+'</option>'+[...new Set(D.items.map(x=>x.ubicacion))].map(l=>`<option${l===cur?' selected':''}>${esc(l)}</option>`).join('');}
-  $('rbtn').classList.toggle('hide',!D.csv);
+  $('rbtn').classList.toggle('hide',!D.csv); $('cbtn').classList.toggle('hide',!D.admin);
   const loc=f.value, its=D.items.filter(x=>!loc||x.ubicacion===loc);
   $('lh').textContent=tr(D.admin?'IT queue / Cola de TI':'IT tickets / Tickets de TI');
   const ro=D.puede_reportar?'':'<div class="empty" style="margin-bottom:10px">'+esc(tr('You can follow the status of every ticket here. Managers report problems. / Aquí puedes ver el estado de todos los tickets. Los gerentes reportan los problemas.'))+'</div>';
@@ -222,6 +230,34 @@ async function addNote(id){const n=$('nt').value.trim();if(!n)return;await act(i
 function closeM(){$('ov').classList.add('hide');OPEN=null;}
 $('ov').addEventListener('mousedown',e=>{if(e.target===$('ov'))closeM();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeM();});
+
+/* ---------- setup (IT admin only): locations and named equipment ---------- */
+async function cfgSave(a,id,datos){
+  try{const r=await DH.rpc('tickets_catalogo_guardar',{p_accion:a,p_id:id||null,p_datos:datos||{}});
+    if(r&&r.ok){CAT=await DH.rpc('tickets_catalogo_ver');if(!locs().includes(F.loc))F.loc=defLoc();openCfg();if(D.puede_reportar)buildRep();return true;}
+    cfgErr(tr(r&&r.error==='duplicado'?'That one already exists. / Ese ya existe.':'Check the name and try again. / Revisa el nombre e intenta de nuevo.'));
+  }catch(e){cfgErr(tr('Could not save. / No se pudo guardar.'));}
+  return false;
+}
+function cfgErr(t){const e=$('c-err');if(e){e.textContent=t;e.classList.remove('hide');}}
+function cfgRename(id,tipo,ant){const v=$('c-'+id).value.trim();if(!v||v===ant)return;cfgSave('edit',id,{nombre:v,anterior:ant});}
+function cfgAddLoc(){const v=$('c-newloc').value.trim();if(v)cfgSave('add',null,{tipo:'ubicacion',nombre:v});}
+function cfgAddEq(){const v=$('c-neweq').value.trim();if(!v)return;cfgSave('add',null,{tipo:'equipo',nombre:v,dispositivo:$('c-newdev').value,ubicacion:$('c-newloc2').value});}
+function openCfg(){
+  const devOpts=k=>Object.keys(DEV).map(d=>`<option value="${d}"${d===k?' selected':''}>${esc(tr(DEV[d][1]))}</option>`).join('');
+  const locOpts=sel=>`<option value="">${esc(tr('All locations / Todas las ubicaciones'))}</option>`+CAT.ubicaciones.map(l=>`<option${l.nombre.toLowerCase()===String(sel||'').toLowerCase()?' selected':''}>${esc(l.nombre)}</option>`).join('');
+  $('md').innerHTML=`<h3>${esc(tr('Setup / Configuración'))}</h3>
+   <p class="small" style="margin:6px 0 10px">${esc(tr('What you add here becomes a dropdown list for everyone who reports a problem. / Lo que agregues aquí se vuelve una lista desplegable para quien reporta un problema.'))}</p>
+   <div class="step">${esc(tr('Locations and sections / Ubicaciones y secciones'))}</div>
+   ${CAT.ubicaciones.map(l=>`<div class="cfgr"><input id="c-${l.id}" value="${esc(l.nombre)}" maxlength="60" aria-label="${esc(tr('Name / Nombre'))}" onchange="cfgRename('${l.id}','ubicacion','${esc(l.nombre).replace(/'/g,'&#39;')}')"><button class="btn alt sm" onclick="cfgSave('del','${l.id}')" aria-label="${esc(tr('Remove / Quitar'))}">✕</button></div>`).join('')}
+   <div class="cfgr"><input id="c-newloc" maxlength="60" placeholder="${esc(tr('New location or section / Nueva ubicación o sección'))}"><button class="btn sm" onclick="cfgAddLoc()">+ ${esc(tr('Add / Agregar'))}</button></div>
+   <div class="step">${esc(tr('Equipment by name / Equipos por nombre'))}</div>
+   ${CAT.equipos.map(x=>`<div class="cfgr cfge"><input id="c-${x.id}" value="${esc(x.nombre)}" maxlength="60" aria-label="${esc(tr('Name / Nombre'))}" onchange="cfgRename('${x.id}','equipo','${esc(x.nombre).replace(/'/g,'&#39;')}')"><span class="small" style="margin:0" data-no-i18n>${esc((DEV[x.dispositivo]||DEV.other)[0])} ${esc(x.ubicacion||'—')}</span><button class="btn alt sm" onclick="cfgSave('del','${x.id}')" aria-label="${esc(tr('Remove / Quitar'))}">✕</button></div>`).join('')||`<p class="small">${esc(tr('No equipment yet. / Aún no hay equipos.'))}</p>`}
+   <div class="cfge2"><input id="c-neweq" maxlength="60" placeholder="${esc(tr('e.g. Register 2, Label printer / ej. Caja 2, Impresora de etiquetas'))}"><select id="c-newdev" aria-label="${esc(tr('Device / Equipo'))}">${devOpts('pos')}</select><select id="c-newloc2" aria-label="${esc(tr('Location / Ubicación'))}">${locOpts('')}</select><button class="btn sm" onclick="cfgAddEq()">+ ${esc(tr('Add / Agregar'))}</button></div>
+   <div class="err hide" id="c-err" role="alert"></div>
+   <div class="acts"><button class="btn alt" onclick="closeM()">${esc(tr('Close / Cerrar'))}</button></div>`;
+  $('ov').classList.remove('hide');
+}
 
 /* ---------- CSV report ---------- */
 function openRep(){
