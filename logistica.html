@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content"><script src="dh-phone.js"></script><link rel="stylesheet" href="dh-mobile.css">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1B3A6B">
+<title>My Workspace — Receiving &amp; Next Day Delivery</title>
+<style>
+  :root{--navy:#1B3A6B;--gold:#C8922A;--lt:#D6E4F7;--ink:#1E2735;--gray:#6B6B6B;--red:#C0392B;--green:#2E7D32;--blue:#1769c2}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#EEF1F6;color:var(--ink)}
+  header{background:var(--navy);border-bottom:3px solid var(--gold);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;color:#fff}
+  header h1{font-size:18px} header a{color:var(--lt);font-size:13px;text-decoration:none}
+  main{max-width:1100px;margin:0 auto;padding:16px 14px 60px}
+  .bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  .tabs,.seg{display:flex;background:#fff;border-radius:10px;padding:3px;box-shadow:0 1px 0 #dfe5ee}
+  .tabs button,.seg button{border:0;background:none;font:600 14px 'Segoe UI',Arial,sans-serif;color:var(--navy);padding:0 16px;min-height:40px;border-radius:8px;cursor:pointer}
+  .tabs button.on,.seg button.on{background:var(--navy);color:#fff}
+  .sp{flex:1}
+  .btn{border:0;background:var(--navy);color:#fff;border-radius:10px;min-height:44px;padding:0 18px;font:700 15px 'Segoe UI',Arial,sans-serif;cursor:pointer}
+  .btn.alt{background:#fff;color:var(--navy);border:1px solid #cfd6e2}
+  .btn[disabled]{opacity:.5}
+  button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+  .note{font-size:13px;color:var(--gray);margin:0 2px 10px}
+  .card{background:#fff;border-radius:10px;box-shadow:0 1px 0 #dfe5ee,0 10px 26px -22px rgba(18,40,74,.5);overflow:auto}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{position:sticky;top:0;background:#F4F6FA;text-align:left;font-size:12.5px;color:var(--navy);padding:9px 10px;border-bottom:1px solid #dfe5ee;white-space:nowrap}
+  td{padding:9px 10px;border-bottom:1px solid #eef1f6;vertical-align:top}
+  tr.row{cursor:pointer} tr.row:hover td{background:#f8fafd}
+  .pill{display:inline-block;border-radius:12px;padding:2px 10px;font-size:12.5px;font-weight:700;white-space:nowrap}
+  .s-pending,.s-new{background:#dfe7ff;color:#2b3d99}.s-received,.s-delivered{background:#e3f4e5;color:var(--green)}
+  .s-rescheduled,.s-scheduled{background:#fff1d6;color:#8a5a00}.s-cancelled{background:#eceff3;color:#6b7482}
+  .t-will_call{background:#e3f4e5;color:var(--green)}.t-cita{background:#d9ecff;color:#0e4f94}
+  .ap{display:inline-block;border-radius:4px;padding:3px 8px;color:#fff;font-weight:700;font-size:13px;white-space:nowrap}
+  .ap.past{background:#c93a3a}.ap.today{background:#2e9e4a}.ap.next{background:#1769c2}
+  .empty{color:var(--gray);padding:22px 14px;font-size:14px}
+  /* calendar */
+  .cal-h{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #eef1f6}
+  .cal-h h2{font:700 16px 'Segoe UI',Arial,sans-serif;color:var(--navy);flex:1;text-align:center}
+  .cal-h button{border:1px solid #cfd6e2;background:#fff;border-radius:8px;min-height:38px;min-width:42px;font:700 15px 'Segoe UI',Arial,sans-serif;color:var(--navy);cursor:pointer}
+  .grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+  .dow{font-size:12px;font-weight:700;color:var(--gray);text-align:center;padding:6px 0;background:#F4F6FA}
+  .day{min-height:104px;border-top:1px solid #eef1f6;border-left:1px solid #eef1f6;padding:4px;cursor:pointer;overflow:hidden}
+  .day:nth-child(7n+1){border-left:0}
+  .day.out{background:#fafbfd;color:#a5adba}
+  .day.today{background:#fff8e6}
+  .day .n{font-size:12px;font-weight:700;margin-bottom:3px}
+  .ev{display:block;width:100%;text-align:left;border:0;border-radius:4px;padding:2px 5px;margin-bottom:3px;font:600 11.5px 'Segoe UI',Arial,sans-serif;color:#fff;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ev.past{background:#c93a3a}.ev.today{background:#2e9e4a}.ev.next{background:#1769c2}.ev.done{background:#7b8494}
+  .more{font-size:11.5px;color:var(--navy);font-weight:700}
+  /* modal */
+  .ov{position:fixed;inset:0;background:rgba(15,25,45,.5);display:flex;align-items:flex-start;justify-content:center;padding:20px 12px;overflow:auto;z-index:50}
+  .md{background:#fff;border-radius:12px;max-width:560px;width:100%;padding:16px 16px 18px}
+  .md h3{font-size:17px;color:var(--navy);margin-bottom:10px}
+  .f{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .f .w{grid-column:1/-1}
+  label{display:block;font-size:13px;font-weight:600;color:var(--navy);margin-bottom:3px}
+  input,select,textarea{width:100%;font:inherit;font-size:16px;padding:9px 11px;border:1px solid #cfd6e2;border-radius:10px;min-height:44px;background:#fff}
+  textarea{min-height:76px;resize:vertical}
+  .acts{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+  .acts .btn.del{background:#fff;color:var(--red);border:1px solid var(--red);margin-left:auto}
+  .acts .btn.del.ask{background:var(--red);color:#fff}
+  .err{background:#fdecea;color:var(--red);border-radius:8px;padding:10px 12px;font-size:14px;margin-top:10px;line-height:1.45}
+  .hide{display:none}
+  .small{font-size:12px;color:var(--gray);margin-top:8px}
+  @media(max-width:700px){.f{grid-template-columns:1fr}.day{min-height:70px}.ev{font-size:10.5px}.hm{display:none}}
+</style>
+<meta name="dh-i18n" content="on">
+<script src="dh-chrome.js" defer></script>
+</head>
+<body>
+<header><h1>🚚 Receiving &amp; Next Day Delivery / Recepción y Entrega al Día Siguiente</h1><a href="index.html">← Home / Inicio</a></header>
+<main>
+  <div class="bar">
+    <div class="tabs" role="tablist">
+      <button id="tb-rec" class="on" onclick="setTab('rec')">Receiving Schedule / Recepción</button>
+      <button id="tb-ndd" onclick="setTab('ndd')">Next Day Delivery Log / Entregas</button>
+    </div>
+    <div class="seg">
+      <button id="vw-list" class="on" onclick="setView('list')">List / Lista</button>
+      <button id="vw-cal" onclick="setView('cal')">Calendar / Calendario</button>
+      <button id="vw-log" onclick="setView('log')">Activity / Bitácora</button>
+    </div>
+    <span class="sp"></span>
+    <button class="btn alt" onclick="openReport()">⬇ Report / Reporte</button>
+    <button class="btn" onclick="openForm(null)">+ Add / Agregar</button>
+  </div>
+  <p class="note">Records are kept for 3 months and then deleted automatically. / Los registros se guardan 3 meses y luego se borran solos.</p>
+  <div class="card" id="box"></div>
+</main>
+<div class="ov hide" id="ov"><div class="md" id="md" role="dialog" aria-modal="true"></div></div>
+<script src="dh-session.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const tr=s=>(window.DH&&DH.i18n)?DH.i18n.pick(s):s;
+const LA='America/Los_Angeles';
+const ST={
+  rec:{pending:'Pending / Pendiente',received:'Received / Recibido',rescheduled:'Rescheduled / Reprogramado',cancelled:'Cancelled / Cancelado'},
+  ndd:{new:'New / Nuevo',scheduled:'Scheduled / Programado',delivered:'Delivered / Entregado',cancelled:'Cancelled / Cancelado'}};
+const TY={cita:'Receiving Appointment / Cita de recepción',will_call:'Will Call'};
+let ACC=null, TAB='rec', VIEW='list', DATA={rec:[],ndd:[]}, CUR=null, ASK=false;
+let CM=(function(){const p=new Intl.DateTimeFormat('en-CA',{timeZone:LA}).format(new Date()).split('-');return {y:+p[0],m:+p[1]-1};})();
+
+/* ---- time helpers (everything is shown in Los Angeles time) ---- */
+const dayKey=iso=>new Intl.DateTimeFormat('en-CA',{timeZone:LA}).format(new Date(iso));
+const todayKey=()=>dayKey(new Date());
+function fmtDT(iso){return new Intl.DateTimeFormat('en-US',{timeZone:LA,month:'2-digit',day:'2-digit',year:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(iso)).replace(',','');}
+function fmtT(iso){return new Intl.DateTimeFormat('en-US',{timeZone:LA,hour:'numeric',minute:'2-digit'}).format(new Date(iso));}
+function fmtD(k){const [y,m,d]=k.split('-');return m+'/'+d+'/'+y;}
+function toInput(iso){const p={};new Intl.DateTimeFormat('en-US',{timeZone:LA,hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).formatToParts(new Date(iso)).forEach(x=>p[x.type]=x.value);return p.year+'-'+p.month+'-'+p.day+'T'+p.hour+':'+p.minute;}
+function fromInput(s){const g=new Date(s+':00Z');const p={};new Intl.DateTimeFormat('en-US',{timeZone:LA,hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).formatToParts(g).forEach(x=>p[x.type]=x.value);
+  const wall=Date.UTC(+p.year,+p.month-1,+p.day,+p.hour,+p.minute,+p.second);return new Date(g.getTime()-(wall-g.getTime())).toISOString();}
+function apClass(iso,done){const k=dayKey(iso),t=todayKey();return done?'done':(k<t?'past':(k===t?'today':'next'));}
+
+/* ---- load ---- */
+async function init(){
+  if(!DH.token()){location.href='index.html';return;}
+  try{ACC=await DH.rpc('logistica_mi_acceso');}catch(e){$('box').innerHTML='<div class="empty">'+esc(tr('Could not load. / No se pudo cargar.'))+'</div>';return;}
+  if(!ACC||(!ACC.rec&&!ACC.ndd)){document.querySelector('.bar').classList.add('hide');$('box').innerHTML='<div class="empty">'+esc(tr('You do not have access to this section. Ask your manager. / No tienes acceso a esta sección. Pregunta a tu gerente.'))+'</div>';return;}
+  TAB=(location.hash==='#ndd'&&ACC.ndd)||!ACC.rec?'ndd':'rec';
+  $('tb-rec').classList.toggle('hide',!ACC.rec);$('tb-ndd').classList.toggle('hide',!ACC.ndd);
+  paintBar(); await load();
+}
+async function load(){
+  if(VIEW==='log'){LOG=[];}
+  try{
+    const [a,b]=await Promise.all([ACC.rec?DH.rpc('recepciones_listar'):[],ACC.ndd?DH.rpc('ndd_listar'):[]]);
+    DATA.rec=a||[]; DATA.ndd=b||[];
+  }catch(e){$('box').innerHTML='<div class="empty">'+esc(tr('Could not load the records. / No se pudieron cargar los registros.'))+'</div>';return;}
+  if(VIEW==='log'){loadLog();return;}
+  render();
+}
+function paintBar(){
+  $('tb-rec').classList.toggle('on',TAB==='rec');$('tb-ndd').classList.toggle('on',TAB==='ndd');
+  $('vw-list').classList.toggle('on',VIEW==='list');$('vw-cal').classList.toggle('on',VIEW==='cal');$('vw-log').classList.toggle('on',VIEW==='log');
+}
+function setTab(t){TAB=t;paintBar();if(VIEW==='log')loadLog();else render();}
+function setView(v){VIEW=v;paintBar();if(v==='log'){loadLog();}else render();}
+window.addEventListener('dh-lang',()=>{if(!$('ov').classList.contains('hide'))return;render();});
+
+/* ---- render ---- */
+const dateOf=r=>TAB==='rec'?dayKey(r.cita):r.fecha_ndd;
+const isDone=r=>r.estado==='received'||r.estado==='delivered'||r.estado==='cancelled';
+function pill(r){return `<span class="pill s-${r.estado}">${esc(tr(ST[TAB][r.estado]||r.estado))}</span>`;}
+function render(){
+  const rows=DATA[TAB];
+  $('box').innerHTML=VIEW==='list'?listHtml(rows):(VIEW==='cal'?calHtml(rows):logHtml());
+}
+let LOG=[];
+const FL={vendor:'Vendor',tipo:'Type',cita:'Appointment',po:'PO #',piezas:'Pieces',contenedor:'Container',contenedor_num:'Container #',driver_id:'Driver ID',estado:'Status',notas:'Notes',factura:'Invoice',cliente:'Customer',fecha_ndd:'Date of NDD',direccion:'Address'};
+function fv(k,v){if(v==null||v==='')return '—';if(k==='cita')return fmtDT(v);if(k==='estado')return tr(ST[TAB][v]||v);if(k==='tipo')return tr(TY[v]||v);return String(v);}
+function logTxt(l){
+  const a={created:'created / creó',updated:'updated / actualizó',deleted:'deleted / borró'}[l.accion];
+  let t=tr(a);
+  if(l.cambios)t+=': '+Object.keys(l.cambios).map(k=>(FL[k]||k)+' '+fv(k,l.cambios[k][0])+' → '+fv(k,l.cambios[k][1])).join('; ');
+  return t;
+}
+function dstr(d){return new Intl.DateTimeFormat('en-CA',{timeZone:LA}).format(d);}
+async function loadLog(){
+  $('box').innerHTML='<div class="empty">…</div>';
+  try{const r=await DH.rpc('logistica_bitacora',{p_modulo:TAB,p_desde:dstr(new Date(Date.now()-90*864e5)),p_hasta:dstr(new Date())});LOG=(r&&r.rows)||[];}
+  catch(e){$('box').innerHTML='<div class="empty">'+esc(tr('Could not load. / No se pudo cargar.'))+'</div>';return;}
+  render();
+}
+function logHtml(){
+  if(!LOG.length)return '<div class="empty">'+esc(tr('No activity yet. / Aún no hay actividad.'))+'</div>';
+  return `<table><thead><tr><th>${esc(tr('When / Cuándo'))}</th><th>${esc(tr('Who / Quién'))}</th><th>${esc(tr('Record / Registro'))}</th><th>${esc(tr('What happened / Qué pasó'))}</th></tr></thead><tbody>`+
+    LOG.map(l=>`<tr><td style="white-space:nowrap">${esc(fmtDT(l.cuando))}</td><td data-no-i18n>${esc(l.quien||'')}</td><td data-no-i18n>${esc(l.registro||'')}</td><td data-no-i18n>${esc(logTxt(l))}</td></tr>`).join('')+'</tbody></table>';
+}
+/* ---- reports (CSV) ---- */
+function openReport(){
+  const t=dstr(new Date()), f=dstr(new Date(Date.now()-30*864e5));
+  $('md').innerHTML=`<h3>${esc(tr('Download report / Descargar reporte'))} — ${esc(tr(TAB==='rec'?'Receiving / Recepción':'Next Day Delivery / Entregas'))}</h3>
+   <div class="f"><div><label for="r-from">${esc(tr('From / Desde'))}</label><input type="date" id="r-from" value="${f}"></div><div><label for="r-to">${esc(tr('To / Hasta'))}</label><input type="date" id="r-to" value="${t}"></div></div>
+   <div class="acts" style="margin-top:8px"><button class="btn alt" onclick="preset(7)">7 ${esc(tr('days / días'))}</button><button class="btn alt" onclick="preset(30)">30 ${esc(tr('days / días'))}</button><button class="btn alt" onclick="preset(90)">90 ${esc(tr('days / días'))}</button></div>
+   <div class="err hide" id="ferr" role="alert"></div>
+   <div class="acts"><button class="btn" onclick="dl('rows')">${esc(tr('Records (CSV) / Registros (CSV)'))}</button><button class="btn" onclick="dl('log')">${esc(tr('Activity log (CSV) / Bitácora (CSV)'))}</button><button class="btn alt" onclick="closeForm()">${esc(tr('Close / Cerrar'))}</button></div>
+   <div class="small">${esc(tr('Records are kept 3 months, so reports can cover up to the last 90 days. / Los registros se guardan 3 meses, así que los reportes cubren hasta los últimos 90 días.'))}</div>`;
+  $('ov').classList.remove('hide');
+}
+function preset(n){$('r-from').value=dstr(new Date(Date.now()-n*864e5));$('r-to').value=dstr(new Date());}
+function csvCell(v){v=v==null?'':String(v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+function csvOut(name,head,rows){
+  const txt='\ufeff'+[head.map(csvCell).join(',')].concat(rows.map(r=>r.map(csvCell).join(','))).join('\r\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/csv;charset=utf-8'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
+}
+const SE=o=>o;
+async function dl(kind){
+  const f=$('r-from').value,t=$('r-to').value; ferr('');
+  if(!f||!t||t<f){ferr(tr('Pick a valid date range. / Elige un rango de fechas válido.'));return;}
+  try{
+    const r=await DH.rpc(kind==='log'?'logistica_bitacora':'logistica_reporte',{p_modulo:TAB,p_desde:f,p_hasta:t});
+    if(!r||!r.ok){ferr(tr('The range is too long or not valid. / El rango es muy largo o no es válido.'));return;}
+    const nm=(kind==='log'?'activity':(TAB==='rec'?'receiving':'next-day-delivery'))+'_'+f+'_'+t+'.csv';
+    if(kind==='log'){csvOut(nm,['When (LA)','Who','Record','Action','Changes'],r.rows.map(l=>[fmtDT(l.cuando),l.quien,l.registro,l.accion,l.cambios?Object.keys(l.cambios).map(k=>(FL[k]||k)+': '+fv(k,l.cambios[k][0])+' -> '+fv(k,l.cambios[k][1])).join('; '):'']));}
+    else if(TAB==='rec'){csvOut(nm,['Appointment (LA)','Vendor','Type','PO #','Pieces','Container','Container #','Driver ID','Status','Notes','Created by','Created'],r.rows.map(x=>[fmtDT(x.cita),x.vendor,TY[x.tipo].split(' / ')[0],x.po,x.piezas,x.contenedor,x.contenedor_num,x.driver_id,ST.rec[x.estado].split(' / ')[0],x.notas,x.creado_por,fmtDT(x.creada)]));}
+    else{csvOut(nm,['Date of NDD','Invoice','Customer','Status','Address','Notes','Created by','Created'],r.rows.map(x=>[fmtD(x.fecha_ndd),x.factura,x.cliente,ST.ndd[x.estado].split(' / ')[0],x.direccion,x.notas,x.creado_por,fmtDT(x.creada)]));}
+  }catch(e){ferr(tr('Could not build the report. / No se pudo generar el reporte.'));}
+}
+function listHtml(rows){
+  if(!rows.length)return '<div class="empty">'+esc(tr('Nothing here yet. Use Add to create the first record. / Aún no hay registros. Usa Agregar para crear el primero.'))+'</div>';
+  if(TAB==='rec'){
+    return `<table><thead><tr><th>${esc(tr('Appointment / Cita'))}</th><th>${esc(tr('Vendor / Proveedor'))}</th><th>${esc(tr('Type / Tipo'))}</th><th>PO #</th><th>${esc(tr('Pieces / Piezas'))}</th><th>${esc(tr('Container / Contenedor'))}</th><th>${esc(tr('Driver / Chofer'))}</th><th>${esc(tr('Status / Estado'))}</th><th>${esc(tr('Notes / Notas'))}</th></tr></thead><tbody>`+
+    rows.map(r=>`<tr class="row" onclick="openForm('${r.id}')"><td><span class="ap ${apClass(r.cita,isDone(r))}" style="${isDone(r)?'background:#7b8494':''}">${esc(fmtDT(r.cita))}</span></td><td data-no-i18n>${esc(r.vendor)}</td><td><span class="pill t-${r.tipo}">${esc(tr(TY[r.tipo]))}</span></td><td data-no-i18n>${esc(r.po||'')}</td><td>${r.piezas==null?'':r.piezas}</td><td data-no-i18n>${esc([r.contenedor,r.contenedor_num].filter(Boolean).join(' · '))}</td><td data-no-i18n>${esc(r.driver_id||'')}</td><td>${pill(r)}</td><td data-no-i18n>${esc(r.notas||'')}</td></tr>`).join('')+'</tbody></table>';
+  }
+  return `<table><thead><tr><th>${esc(tr('Date of NDD / Fecha'))}</th><th>${esc(tr('Invoice / Factura'))}</th><th>${esc(tr('Customer / Cliente'))}</th><th>${esc(tr('Status / Estado'))}</th><th>${esc(tr('City of delivery / Dirección'))}</th><th>${esc(tr('Notes / Notas'))}</th><th>${esc(tr('Created by / Creó'))}</th></tr></thead><tbody>`+
+  rows.map(r=>`<tr class="row" onclick="openForm('${r.id}')"><td><span class="ap ${apClass(r.fecha_ndd+'T12:00:00-08:00',isDone(r))}" style="${isDone(r)?'background:#7b8494':''}">${esc(fmtD(r.fecha_ndd))}</span></td><td data-no-i18n>${esc(r.factura)}</td><td data-no-i18n>${esc(r.cliente)}</td><td>${pill(r)}</td><td data-no-i18n>${r.direccion?`<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.direccion)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(r.direccion)}</a>`:''}</td><td data-no-i18n>${esc(r.notas||'')}</td><td data-no-i18n>${esc(r.creado_por)}</td></tr>`).join('')+'</tbody></table>';
+}
+const MN=['January / Enero','February / Febrero','March / Marzo','April / Abril','May / Mayo','June / Junio','July / Julio','August / Agosto','September / Septiembre','October / Octubre','November / Noviembre','December / Diciembre'];
+const DW=['Sun / Dom','Mon / Lun','Tue / Mar','Wed / Mié','Thu / Jue','Fri / Vie','Sat / Sáb'];
+function calHtml(rows){
+  const by={}; rows.forEach(r=>{(by[dateOf(r)]=by[dateOf(r)]||[]).push(r);});
+  Object.keys(by).forEach(k=>by[k].sort((a,b)=>TAB==='rec'?(a.cita<b.cita?-1:1):(a.factura<b.factura?-1:1)));
+  const first=new Date(Date.UTC(CM.y,CM.m,1)), start=first.getUTCDay(), dim=new Date(Date.UTC(CM.y,CM.m+1,0)).getUTCDate(), t=todayKey();
+  let h=`<div class="cal-h"><button onclick="moveM(-1)" aria-label="Previous / Anterior">‹</button><h2>${esc(tr(MN[CM.m]))} ${CM.y}</h2><button onclick="goToday()">${esc(tr('Today / Hoy'))}</button><button onclick="moveM(1)" aria-label="Next / Siguiente">›</button></div><div class="grid">`+DW.map(d=>`<div class="dow">${esc(tr(d))}</div>`).join('');
+  const total=Math.ceil((start+dim)/7)*7;
+  for(let i=0;i<total;i++){
+    const dt=new Date(Date.UTC(CM.y,CM.m,1-start+i)), k=dt.toISOString().slice(0,10), out=dt.getUTCMonth()!==CM.m, ev=by[k]||[];
+    h+=`<div class="day${out?' out':''}${k===t?' today':''}" onclick="openForm(null,'${k}')"><div class="n">${dt.getUTCDate()}</div>`+
+      ev.slice(0,4).map(r=>{
+        const lbl=TAB==='rec'?(fmtT(r.cita)+' '+r.vendor):(r.factura+' '+r.cliente);
+        return `<button class="ev ${apClass(TAB==='rec'?r.cita:r.fecha_ndd+'T12:00:00-08:00',isDone(r))}" data-no-i18n onclick="event.stopPropagation();openForm('${r.id}')" title="${esc(lbl)}">${esc(lbl)}</button>`;}).join('')+
+      (ev.length>4?`<div class="more">+${ev.length-4} ${esc(tr('more / más'))}</div>`:'')+'</div>';
+  }
+  return h+'</div>';
+}
+function moveM(d){CM.m+=d;if(CM.m<0){CM.m=11;CM.y--;}if(CM.m>11){CM.m=0;CM.y++;}render();}
+function goToday(){const p=todayKey().split('-');CM={y:+p[0],m:+p[1]-1};render();}
+
+/* ---- form ---- */
+function opts(map,sel){return Object.keys(map).map(k=>`<option value="${k}"${k===sel?' selected':''}>${esc(tr(map[k]))}</option>`).join('');}
+function openForm(id,dayK){
+  CUR=id?DATA[TAB].find(x=>x.id===id):null; ASK=false;
+  const r=CUR||{}, tt=TAB==='rec';
+  let f;
+  if(tt){
+    const dv=r.cita?toInput(r.cita):((dayK||todayKey())+'T09:00');
+    f=`<div class="f">
+      <div class="w"><label for="f-vendor">Vendor / Proveedor *</label><input id="f-vendor" maxlength="80" value="${esc(r.vendor||'')}"></div>
+      <div><label for="f-tipo">${esc(tr('Type / Tipo'))}</label><select id="f-tipo">${opts(TY,r.tipo||'cita')}</select></div>
+      <div><label for="f-cita">${esc(tr('Appointment (LA time) / Cita (hora de LA)'))} *</label><input type="datetime-local" id="f-cita" value="${dv}"></div>
+      <div><label for="f-po">PO #</label><input id="f-po" maxlength="200" value="${esc(r.po||'')}"></div>
+      <div><label for="f-piezas">${esc(tr('Pieces / Piezas'))}</label><input type="number" min="0" max="100000" id="f-piezas" value="${r.piezas==null?'':r.piezas}"></div>
+      <div><label for="f-cont">${esc(tr('Container / Contenedor'))}</label><input id="f-cont" maxlength="40" value="${esc(r.contenedor||'')}"></div>
+      <div><label for="f-contn">${esc(tr('Container # / No. de contenedor'))}</label><input id="f-contn" maxlength="40" value="${esc(r.contenedor_num||'')}"></div>
+      <div><label for="f-driver">${esc(tr('Driver ID / ID del chofer'))}</label><input id="f-driver" maxlength="60" value="${esc(r.driver_id||'')}"></div>
+      <div><label for="f-estado">${esc(tr('Status / Estado'))}</label><select id="f-estado">${opts(ST.rec,r.estado||'pending')}</select></div>
+      <div class="w"><label for="f-notas">${esc(tr('Notes / Notas'))}</label><textarea id="f-notas" maxlength="500">${esc(r.notas||'')}</textarea></div></div>`;
+  }else{
+    f=`<div class="f">
+      <div><label for="f-fac">${esc(tr('Invoice / Factura'))} *</label><input id="f-fac" maxlength="40" value="${esc(r.factura||'')}"></div>
+      <div><label for="f-cli">${esc(tr('Customer name / Cliente'))} *</label><input id="f-cli" maxlength="120" value="${esc(r.cliente||'')}"></div>
+      <div><label for="f-fecha">${esc(tr('Date of NDD / Fecha de entrega'))} *</label><input type="date" id="f-fecha" value="${r.fecha_ndd||dayK||todayKey()}"></div>
+      <div><label for="f-estado">${esc(tr('Status / Estado'))}</label><select id="f-estado">${opts(ST.ndd,r.estado||'new')}</select></div>
+      <div class="w"><label for="f-dir">${esc(tr('City of delivery (address) / Dirección de entrega'))}</label><input id="f-dir" maxlength="250" value="${esc(r.direccion||'')}"></div>
+      <div class="w"><label for="f-notas">${esc(tr('Notes / Notas'))}</label><textarea id="f-notas" maxlength="600">${esc(r.notas||'')}</textarea></div></div>`;
+  }
+  const title=tt?(CUR?'Edit receiving / Editar recepción':'New receiving / Nueva recepción'):(CUR?'Edit delivery / Editar entrega':'New next day delivery / Nueva entrega al día siguiente');
+  $('md').innerHTML=`<h3>${esc(tr(title))}</h3>${f}<div class="err hide" id="ferr" role="alert"></div>
+    <div class="acts"><button class="btn" id="fsave" onclick="save()">${esc(tr('Save / Guardar'))}</button><button class="btn alt" onclick="closeForm()">${esc(tr('Cancel / Cancelar'))}</button>${CUR&&CUR.puede_borrar?`<button class="btn del" id="fdel" onclick="del()">${esc(tr('Delete / Borrar'))}</button>`:''}</div>
+    ${CUR?`<div class="small" data-no-i18n>${esc(CUR.creado_por||'')} · ${esc(tr('Deletes in / Se borra en'))} ${CUR.dias_restantes} ${esc(tr('days / días'))}</div>`:''}`;
+  $('ov').classList.remove('hide'); setTimeout(()=>{const x=$('md').querySelector('input');if(x)x.focus();},30);
+}
+function closeForm(){$('ov').classList.add('hide');CUR=null;}
+$('ov').addEventListener('mousedown',e=>{if(e.target===$('ov'))closeForm();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('ov').classList.contains('hide'))closeForm();});
+function ferr(t){const e=$('ferr');e.textContent=t;e.classList.toggle('hide',!t);}
+async function save(){
+  let d;
+  if(TAB==='rec'){
+    d={vendor:$('f-vendor').value.trim(),tipo:$('f-tipo').value,cita:$('f-cita').value?fromInput($('f-cita').value):'',po:$('f-po').value,piezas:$('f-piezas').value,contenedor:$('f-cont').value,contenedor_num:$('f-contn').value,driver_id:$('f-driver').value,estado:$('f-estado').value,notas:$('f-notas').value};
+    if(!d.vendor||!d.cita){ferr(tr('Vendor and appointment are required. / Proveedor y cita son obligatorios.'));return;}
+  }else{
+    d={factura:$('f-fac').value.trim(),cliente:$('f-cli').value.trim(),fecha_ndd:$('f-fecha').value,estado:$('f-estado').value,direccion:$('f-dir').value,notas:$('f-notas').value};
+    if(!d.factura||!d.cliente||!d.fecha_ndd){ferr(tr('Invoice, customer and date are required. / Factura, cliente y fecha son obligatorios.'));return;}
+  }
+  const b=$('fsave'); b.disabled=true; ferr('');
+  try{
+    const args={p_datos:d}; if(CUR)args.p_id=CUR.id;
+    const r=await DH.rpc(TAB==='rec'?'recepcion_guardar':'ndd_guardar',args);
+    if(r&&r.ok){closeForm();await load();return;}
+    ferr(tr(r&&r.error==='invalid'?'Some values are not valid. Check and try again. / Algunos valores no son válidos. Revísalos e intenta de nuevo.':'Could not save. / No se pudo guardar.'));
+  }catch(e){ferr(tr('Could not save. Check your connection. / No se pudo guardar. Revisa tu conexión.'));}
+  b.disabled=false;
+}
+async function del(){
+  const b=$('fdel');
+  if(!ASK){ASK=true;b.classList.add('ask');b.textContent=tr('Tap again to delete / Toca otra vez para borrar');return;}
+  try{const r=await DH.rpc(TAB==='rec'?'recepcion_borrar':'ndd_borrar',{p_id:CUR.id});if(r&&r.ok){closeForm();await load();return;}ferr(tr('Could not delete. / No se pudo borrar.'));}
+  catch(e){ferr(tr('Could not delete. / No se pudo borrar.'));}
+}
+init();
+</script>
+</body>
+</html>

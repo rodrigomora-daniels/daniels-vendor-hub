@@ -567,6 +567,7 @@ document.addEventListener('DOMContentLoaded',function(){
   <button class="nl" id="nl-board" disabled aria-disabled="true" title="Coming soon / Próximamente" style="opacity:.5;cursor:not-allowed"><span>🟢</span>Daniels Board / Fila de turnos <small style="margin-left:6px;font-size:11px">· Soon / Pronto</small></button>
   <button class="nl" id="nl-leadsource" onclick="navigateToTool('leadsource')"><span>📍</span>How They Found Us / Cómo nos encontraron</button>
   <button class="nl" id="nl-reportes" onclick="navigateToTool('reportes')" style="display:none"><span>📊</span>My reports / Mis reportes</button>
+  <button class="nl" id="nl-logistica" onclick="navigateToTool('logistica')" style="display:none"><span>🚚</span>Receiving &amp; Deliveries / Recepción y Entregas</button>
   <button class="nl" onclick="navigateToTool('notas')"><span>📝</span>My notes / Mis notas</button>
   <div class="grp" id="grp-mgr" style="display:none">Managers / Gerentes</div>
   <a class="nl" id="nl-teams" href="https://teams.microsoft.com" target="_blank" rel="noopener" style="display:none"><span>💬</span>Microsoft Teams ↗</a>
@@ -1216,6 +1217,7 @@ async function loadDashboard() {
   ['card-prescreen', 'card-leadsource', 'nl-prescreen', 'nl-leadsource', 'nl-board'].forEach(id => { const c = document.getElementById(id); if (c) c.style.display = canSeeStoreTools ? '' : 'none'; });
   // Daniels Board stays "Soon" for everyone except the people the server allows (admins, Ted, Héctor...).
   try{ DH.rpc('board_puede').then(ok=>{ const b=document.getElementById('nl-board'); if(!b||ok!==true) return; b.disabled=false; b.removeAttribute('aria-disabled'); b.removeAttribute('title'); b.style.opacity=''; b.style.cursor=''; b.style.display=''; const sm=b.querySelector('small'); if(sm) sm.remove(); b.onclick=()=>{ location.href='board.html'; }; }).catch(()=>{}); }catch(e){}
+  try{ DH.rpc('logistica_mi_acceso').then(r=>{ const n=document.getElementById('nl-logistica'); if(n&&r&&(r.rec||r.ndd)) n.style.display=''; }).catch(()=>{}); }catch(e){}
   try{ DH.rpc('reportes_mis').then(r=>{ const n=document.getElementById('nl-reportes'); if(n&&r&&((r.items&&r.items.length)||r.admin)) n.style.display=''; }).catch(()=>{}); }catch(e){}
   const isMgr = emp.es_admin || ['manager','admin'].includes(emp.rol) || /^(ted|karen)\s+rosenberg/i.test(emp.nombre_completo || '');
   ['nl-hub', 'nl-teams', 'grp-mgr'].forEach(id => { const c = document.getElementById(id); if (c) c.style.display = isMgr ? '' : 'none'; });
@@ -1442,7 +1444,8 @@ const TOOL_URLS = {
   horarios: 'horarios.html',
   noticias: 'noticias.html',
   mensajes: 'mensajes.html',
-  notas: 'notas.html'
+  notas: 'notas.html',
+  logistica: 'logistica.html'
 };
 
 function navigateToEvaluacion() {
