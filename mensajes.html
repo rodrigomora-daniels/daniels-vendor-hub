@@ -96,6 +96,20 @@
   .edb{display:flex;gap:8px;margin-top:6px}.edb .btn2{border:1px solid #c5ccd8;background:#fff;color:var(--navy);border-radius:8px;padding:8px 14px;font-weight:700;min-height:42px;cursor:pointer}
   .phx.pdf{border:1px solid #cfd6e2;cursor:pointer;font:600 13px 'Segoe UI',Arial,sans-serif;color:var(--navy);max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-height:40px}
   #phbar .pdfv{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:22px;padding:2px}#phbar .pdfv small{font-size:9px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .modbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:8px 14px;background:#FFF6E0;border-bottom:2px solid var(--gold);font-size:13px;color:#4a3b12}
+  .modbar .hint{flex-basis:100%;font-size:12px;color:#7a6a3a}
+  .modbar label{display:flex;align-items:center;gap:6px;font-weight:600}
+  .modbar button{border:1px solid #c5ccd8;background:#fff;color:var(--navy);border-radius:8px;padding:8px 12px;font:700 13px 'Segoe UI',Arial,sans-serif;min-height:40px;cursor:pointer}
+  .modbar button.go{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .hbtn.on{background:var(--gold);color:#fff;border-color:var(--gold)}
+  .msgs.modo .m{cursor:pointer;border-radius:12px;padding:2px 6px;outline:2px dashed transparent}
+  .msgs.modo .m *{pointer-events:none}
+  .msgs.modo .m:hover{outline-color:#d9c58a}
+  .msgs.modo .m.sel{outline:3px solid var(--gold);background:rgba(200,146,42,.12)}
+  .msgs.modo .m.sel .who::before,.msgs.modo .m.me.sel .b::before{content:'✓ ';color:var(--gold);font-weight:700}
+  .chan.dz{outline:2px dashed var(--gold);background:rgba(200,146,42,.28)}
+  .mtoast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#12284A;color:#fff;border-radius:10px;padding:10px 14px;display:flex;gap:12px;align-items:center;z-index:60;box-shadow:0 8px 24px rgba(0,0,0,.35);font-size:14px;max-width:calc(100vw - 24px)}
+  .mtoast button{border:1px solid rgba(255,255,255,.5);background:none;color:#fff;border-radius:8px;padding:6px 12px;font-weight:700;min-height:36px;cursor:pointer}
   .hide{display:none!important}
   @media (max-width:760px){
     .chans{width:100%} .thread{width:100%}
@@ -112,7 +126,8 @@
 <div class="app" id="app">
   <nav class="chans" id="chans" aria-label="Channels"></nav>
   <section class="thread" id="thread">
-    <div class="th-head"><button class="back" onclick="back()" aria-label="Back">‹</button><div style="flex:1;min-width:0"><h2 id="t-name" data-no-i18n></h2><small id="t-desc" data-no-i18n></small></div><button class="hbtn hide" id="adm" onclick="openPub()">Who can post / Quién publica</button></div>
+    <div class="th-head"><button class="back" onclick="back()" aria-label="Back">‹</button><div style="flex:1;min-width:0"><h2 id="t-name" data-no-i18n></h2><small id="t-desc" data-no-i18n></small></div><button class="hbtn hide" id="adm" onclick="openPub()">Who can post / Quién publica</button><button class="hbtn hide" id="modb" onclick="modToggle()" aria-pressed="false">⇄ Moderate / Moderar</button></div>
+    <div class="modbar hide" id="modbar"><span id="modn" data-no-i18n>0</span><label><input type="checkbox" id="modr" checked> Include replies / Incluir respuestas</label><button class="go" onclick="modPick()">Move to… / Mover a…</button><button onclick="modOff()">Done / Listo</button><span class="hint">Tap messages to select them. On a computer you can also drag a message onto a channel on the left. / Toca los mensajes para seleccionarlos. En computadora también puedes arrastrar un mensaje a un canal de la izquierda.</span></div>
     <div class="err hide" id="err"></div>
     <div class="msgs" id="msgs" aria-live="polite"></div>
     <div class="note hide" id="ro">This channel is read-only. / Este canal es solo de lectura.</div>
@@ -129,6 +144,7 @@
     </form>
   </section>
 </div>
+<div class="mtoast hide" id="mtoast" role="status"></div>
 <div class="dlg" id="dlg" onclick="if(event.target===this)closeDlg()" role="dialog" aria-modal="true"><div class="dp" id="dp"></div></div>
 <script src="dh-session.js"></script>
 <script src="push.js"></script>
@@ -137,7 +153,7 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const tr=s=>(window.DH&&DH.i18n)?DH.i18n.pick(s):s;
 const LA='America/Los_Angeles';
-let DIR=[], MEN=new Map(), PSEL=-1, PLIST=[], CH=[], CUR=null, LAST=null, SEEN=new Set(), POLL=null, BUSY=false, ASK=null, REPLY=null, CI={};
+let MODO=false, SELM=new Set(), DRAG=null, UNDOT=null, DIR=[], MEN=new Map(), PSEL=-1, PLIST=[], CH=[], CUR=null, LAST=null, SEEN=new Set(), POLL=null, BUSY=false, ASK=null, REPLY=null, CI={};
 const L=()=>(DH.i18n&&DH.i18n.lang==='es')?'es-US':'en-US';
 function dayKey(t){return new Date(t).toLocaleDateString('en-CA',{timeZone:LA});}
 function dayLabel(t){const k=dayKey(t),now=new Date(),td=dayKey(now),yd=dayKey(new Date(now-864e5));
@@ -145,6 +161,57 @@ function dayLabel(t){const k=dayKey(t),now=new Date(),td=dayKey(now),yd=dayKey(n
 function tm(t){return new Date(t).toLocaleTimeString(L(),{hour:'numeric',minute:'2-digit',timeZone:LA});}
 function showErr(t){const e=$('err');if(!t){e.classList.add('hide');return;}e.textContent=t;e.classList.remove('hide');}
 
+/* ---- moderator: move messages between chats (Super Admin only; the server checks it too) ---- */
+function modToggle(){MODO?modOff():modOn();}
+function modOn(){MODO=true;SELM.clear();$('msgs').classList.add('modo');$('modbar').classList.remove('hide');$('modb').classList.add('on');$('modb').setAttribute('aria-pressed','true');modDecor();modCount();}
+function modOff(){MODO=false;SELM.clear();$('msgs').classList.remove('modo');$('modbar').classList.add('hide');$('modb').classList.remove('on');$('modb').setAttribute('aria-pressed','false');document.querySelectorAll('#msgs .m.sel').forEach(e=>e.classList.remove('sel'));modDecor();}
+function modDecor(){document.querySelectorAll('#msgs .m').forEach(e=>{if(MODO)e.setAttribute('draggable','true');else e.removeAttribute('draggable');});}
+function modCount(){$('modn').textContent=SELM.size+' '+tr('selected / seleccionados');}
+function modPick(){
+  if(!SELM.size){showErr(tr('Select at least one message first. / Primero selecciona al menos un mensaje.'));setTimeout(()=>showErr(''),3500);return;}
+  const dest=CH.filter(c=>c.id!==CUR&&!c.alertas);
+  $('dp').innerHTML=`<h2>${esc(tr('Move to… / Mover a…'))}</h2><div class="sub">${esc(SELM.size+' '+tr('selected / seleccionados'))}</div>`+dest.map(c=>`<div class="who2"><span data-no-i18n>${esc(tr(c.nombre))}</span><button class="btn2" data-d="${c.id}" onclick="closeDlg();modMove([...SELM],this.dataset.d)">${esc(tr('Move here / Mover aquí'))}</button></div>`).join('')+`<div style="margin-top:14px"><button class="btn2" onclick="closeDlg()">${esc(tr('Cancel / Cancelar'))}</button></div>`;
+  $('dlg').classList.add('show');
+}
+function modToast(html,undoLote){
+  const t=$('mtoast'); clearTimeout(UNDOT);
+  t.innerHTML=`<span data-no-i18n>${html}</span>`+(undoLote?`<button onclick="modUndo('${undoLote}')">${esc(tr('Undo / Deshacer'))}</button>`:'');
+  t.classList.remove('hide'); UNDOT=setTimeout(()=>t.classList.add('hide'),undoLote?20000:5000);
+}
+async function modReload(){LAST=null;SEEN=new Set();BUSY=false;await fetchMsgs(true);try{CH=await DH.rpc('mensajes_canales');renderChans();}catch(e){}}
+async function modMove(ids,dest){
+  if(!ids.length||!dest)return;
+  const c=CH.find(x=>x.id===dest);
+  try{
+    const r=await DH.rpc('mensajes_mover',{p_ids:ids,p_destino:dest,p_con_respuestas:$('modr').checked});
+    if(!r||r.error){showErr(tr(r&&r.error==='destino'?'That channel cannot receive moved messages. / Ese canal no puede recibir mensajes movidos.':'Could not move. / No se pudo mover.'));setTimeout(()=>showErr(''),4000);return;}
+    SELM.clear(); await modReload(); modCount();
+    if(!r.movidos){modToast(esc(tr('Nothing to move: already there. / Nada que mover: ya estaba ahí.')));return;}
+    modToast(esc(tr('Moved / Movidos'))+' '+r.movidos+' → <b>'+esc(tr(c?c.nombre:''))+'</b>',r.lote);
+  }catch(e){showErr(tr('Could not move. / No se pudo mover.'));setTimeout(()=>showErr(''),4000);}
+}
+async function modUndo(lote){
+  try{const r=await DH.rpc('mensajes_mover_deshacer',{p_lote:lote}); await modReload(); modToast(esc(r&&r.ok?tr('Restored. / Restaurado.'):tr('Could not undo. / No se pudo deshacer.')));}
+  catch(e){modToast(esc(tr('Could not undo. / No se pudo deshacer.')));}
+}
+document.addEventListener('click',e=>{
+  if(!MODO)return; const m=e.target.closest&&e.target.closest('#msgs .m'); if(!m)return;
+  const id=m.id.slice(2); if(SELM.has(id)){SELM.delete(id);m.classList.remove('sel');}else{SELM.add(id);m.classList.add('sel');} modCount();
+});
+document.addEventListener('dragstart',e=>{
+  const m=MODO&&e.target.closest&&e.target.closest('#msgs .m'); if(!m)return;
+  const id=m.id.slice(2); DRAG=SELM.has(id)?[...SELM]:[id];
+  try{e.dataTransfer.setData('text/plain','dh-move');e.dataTransfer.effectAllowed='move';}catch(x){}
+});
+document.addEventListener('dragend',()=>{DRAG=null;document.querySelectorAll('.chan.dz').forEach(x=>x.classList.remove('dz'));});
+document.addEventListener('dragover',e=>{
+  if(!DRAG)return; const b=e.target.closest&&e.target.closest('#chans .chan'); document.querySelectorAll('.chan.dz').forEach(x=>x.classList.remove('dz'));
+  if(b&&b.dataset.id!==CUR){const c=CH.find(x=>x.id===b.dataset.id); if(c&&!c.alertas){e.preventDefault();b.classList.add('dz');}}
+});
+document.addEventListener('drop',e=>{
+  if(!DRAG)return; const b=e.target.closest&&e.target.closest('#chans .chan'); if(!b||b.dataset.id===CUR)return;
+  e.preventDefault(); const ids=DRAG; DRAG=null; document.querySelectorAll('.chan.dz').forEach(x=>x.classList.remove('dz')); modMove(ids,b.dataset.id);
+});
 async function init(){
   if(!DH.token()){location.href='index.html';return;}
   await loadChans(true);
@@ -159,7 +226,7 @@ async function loadChans(first){
   if(first&&!CH.length)$('msgs').innerHTML='<div class="empty">'+esc(tr('You are not in any channel yet. / Todavía no estás en ningún canal.'))+'</div>';
 }
 function renderChans(){
-  $('chans').innerHTML=CH.map(c=>`<button class="chan ${c.id===CUR?'on':''}" onclick="openChan('${c.id}')"><span class="n" data-no-i18n>${esc(tr(c.nombre))}<small>${esc(tr(c.descripcion||''))}</small></span>${c.sin_leer&&c.id!==CUR?`<span class="bdg">${c.sin_leer>99?'99+':c.sin_leer}</span>`:''}</button>`).join('');
+  $('chans').innerHTML=CH.map(c=>`<button class="chan ${c.id===CUR?'on':''}" data-id="${c.id}" onclick="openChan('${c.id}')"><span class="n" data-no-i18n>${esc(tr(c.nombre))}<small>${esc(tr(c.descripcion||''))}</small></span>${c.sin_leer&&c.id!==CUR?`<span class="bdg">${c.sin_leer>99?'99+':c.sin_leer}</span>`:''}</button>`).join('');
 }
 async function openChan(id){
   CUR=id; DIR=dirCache(id); MEN=new Map(); closePop(); LAST=null; SEEN=new Set(); ASK=null; REPLY=null; CI={}; $('msgs').innerHTML=''; $('msgs').removeAttribute('data-day'); $('msgs').removeAttribute('data-who'); showErr('');
@@ -201,11 +268,11 @@ function appendMsgs(list){
     const dk=dayKey(m.t);
     if(dk!==lastDay){box.insertAdjacentHTML('beforeend',`<div class="day" data-no-i18n>${esc(dayLabel(m.t))}</div>`);lastDay=dk;lastWho='';}
     RAW[m.id]=m.cuerpo; const who=m.mio?'me':m.autor;
-    box.insertAdjacentHTML('beforeend',`<div class="m ${m.mio?'me':''} ${m.mencionado?'mn':''}" id="m-${m.id}">${!m.mio?`<div class="who" data-no-i18n>${esc(m.autor)}</div>`:''}${m.responde?`<div class="qt" data-no-i18n onclick="jumpTo('${m.responde.id}')"><b>↩ ${esc(m.responde.autor)}</b> ${m.responde.borrado?esc(tr('(deleted) / (borrado)')):esc(m.responde.cuerpo)}</div>`:''}<div class="b ${CI.plantillas?flashCls(m.cuerpo):''}" id="b-${m.id}" data-no-i18n>${((m.cuerpo==='📷'||m.cuerpo==='📎')&&(m.adjuntos||[]).length)?'':body(m)}${photosHTML(m)}</div><div class="rx" id="rx-${m.id}"></div><div class="meta"><span data-no-i18n>${tm(m.t)}</span><span class="ed${m.editado?'':' hide'}" id="ed-${m.id}">${esc(tr('edited / editado'))}</span><button class="rxadd" onclick="togPk('${m.id}')" aria-label="React">☺+</button>${CI.puede_responder?`<button class="rp" data-id="${m.id}" onclick="setReply(this.dataset.id)">${esc(tr('Reply / Responder'))}</button>`:''}${m.puede_editar?`<button class="rp" onclick="editMsg('${m.id}')">${esc(tr('Edit / Editar'))}</button>`:''}${m.puede_borrar?`<button class="del" onclick="del('${m.id}',this)">Delete / Borrar</button>`:''}</div><div class="pk hide" id="pk-${m.id}">${EMO.map(e=>`<button onclick="react('${m.id}','${e}')" aria-label="${e}">${e}</button>`).join('')}</div></div>`);
+    box.insertAdjacentHTML('beforeend',`<div class="m ${m.mio?'me':''} ${m.mencionado?'mn':''}" id="m-${m.id}">${!m.mio?`<div class="who" data-no-i18n>${esc(m.autor)}</div>`:''}${m.responde?`<div class="qt" data-no-i18n onclick="jumpTo('${m.responde.id}')"><b>↩ ${esc(m.responde.autor)}</b> ${m.responde.borrado?esc(tr('(deleted) / (borrado)')):esc(m.responde.cuerpo)}</div>`:''}<div class="b ${CI.plantillas?flashCls(m.cuerpo):''}" id="b-${m.id}" data-no-i18n>${((m.cuerpo==='📷'||m.cuerpo==='📎')&&(m.adjuntos||[]).length)?'':body(m)}${photosHTML(m)}</div><div class="rx" id="rx-${m.id}"></div><div class="meta"><span data-no-i18n>${tm(m.t)}</span><span class="ed${m.editado?'':' hide'}" id="ed-${m.id}">${esc(tr('edited / editado'))}</span>${m.movido?`<span class="ed">↪ ${esc(tr('moved / movido'))}</span>`:''}<button class="rxadd" onclick="togPk('${m.id}')" aria-label="React">☺+</button>${CI.puede_responder?`<button class="rp" data-id="${m.id}" onclick="setReply(this.dataset.id)">${esc(tr('Reply / Responder'))}</button>`:''}${m.puede_editar?`<button class="rp" onclick="editMsg('${m.id}')">${esc(tr('Edit / Editar'))}</button>`:''}${m.puede_borrar?`<button class="del" onclick="del('${m.id}',this)">Delete / Borrar</button>`:''}</div><div class="pk hide" id="pk-${m.id}">${EMO.map(e=>`<button onclick="react('${m.id}','${e}')" aria-label="${e}">${e}</button>`).join('')}</div></div>`);
     lastWho=who;
   });
   box.setAttribute('data-day',lastDay); box.setAttribute('data-who',lastWho);
-  loadPhotos();
+  loadPhotos(); if(MODO)modDecor();
 }
 /* ---- photos in chat (kept 30 days, then removed automatically) ---- */
 let PH=[], PHU={};
@@ -297,6 +364,7 @@ function applyComposer(){
   if(CI.plantillas&&w&&!REPLY){tp.classList.remove('hide');tp.innerHTML=TPL.map((t,i)=>`<button type="button" onclick="useTpl(${i})" data-no-i18n>${t[0]} ${esc(tr(t[1]))}</button>`).join('');}
   else tp.classList.add('hide');
   $('adm').classList.toggle('hide',!CI.puede_admin);
+  $('modb').classList.toggle('hide',!CI.puede_mod); if(!CI.puede_mod&&MODO)modOff();
   const d=$('t-desc'); d.textContent=tr(CI.descripcion||'')+(CI.retencion_dias?' · '+tr('Messages are deleted after '+CI.retencion_dias+' days. / Los mensajes se borran a los '+CI.retencion_dias+' días.'):'');
   $('txt').placeholder=REPLY?tr('Write your reply… / Escribe tu respuesta…'):tr('Write a message… / Escribe un mensaje…');
 }

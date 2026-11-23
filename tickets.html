@@ -107,8 +107,8 @@ async function init(){
 }
 async function load(){
   try{D=await DH.rpc('tickets_listar');}
-  catch(e){ $('list').innerHTML='<div class="empty">'+esc(tr('You do not have access to IT tickets. Ask your manager. / No tienes acceso a los tickets de TI. Pregunta a tu gerente.'))+'</div>'; return; }
-  buildRep(); render();
+  catch(e){ $('list').innerHTML='<div class="empty">'+esc(tr('Could not load tickets. Check your connection and try again. / No se pudieron cargar los tickets. Revisa tu conexión e intenta de nuevo.'))+'</div>'; return; }
+  if(D.puede_reportar)buildRep(); else $('rep').classList.add('hide'); render();
   if(HOPEN){const id=HOPEN;HOPEN=null;if(D.items.some(x=>x.id===id))openTk(id);}
 }
 
@@ -152,7 +152,8 @@ function card(t){
   const live=t.estado==='abierto'||t.estado==='en_proceso';
   const dur=live?(Date.now()-new Date(t.inicio).getTime())/1000:t.dur_seg;
   const d=DEV[t.dispositivo]||DEV.other;
-  return `<div class="tk ${t.estado}" onclick="openTk('${t.id}')"><div class="t1"><b>#${t.numero} ${d[0]} ${esc(tr(d[1]))}${t.etiqueta?' · '+esc(t.etiqueta):''}</b><span class="pill p-${t.estado}">${esc(tr(EST[t.estado]))}</span></div>
+  const can=D.admin||D.csv||t.mio;
+  return `<div class="tk ${t.estado}"${can?` onclick="openTk('${t.id}')"`:' style="cursor:default"'}><div class="t1"><b>#${t.numero} ${d[0]} ${esc(tr(d[1]))}${t.etiqueta?' · '+esc(t.etiqueta):''}</b><span class="pill p-${t.estado}">${esc(tr(EST[t.estado]))}</span></div>
    <div class="t2" data-no-i18n>${esc(t.ubicacion)} · ${esc(tr(PROB[t.problema]))}${t.reporta?' · '+esc(t.reporta):''}${t.detalle?' — '+esc(t.detalle):''}</div>
    <div class="t3"><span class="dur">⏱ ${esc(fmtDur(dur))} ${esc(tr(live?'down so far / caído hasta ahora':'of downtime / de caída'))}</span><span style="font-size:12px;color:var(--gray)">${esc(tr('Since / Desde'))} ${esc(fmtDT(t.inicio))}</span>${t.reabierto?`<span class="pill p-abierto">${esc(tr('Reopened / Reabierto'))} ×${t.reabierto}</span>`:''}</div>
    ${t.estado==='resuelto'&&t.mio?`<div class="acts" onclick="event.stopPropagation()"><button class="btn ok sm" onclick="act('${t.id}','confirmar')">✓ ${esc(tr("It's fixed / Ya funciona"))}</button><button class="btn warn sm" onclick="askNote('${t.id}','reabrir')">✗ ${esc(tr('Still not working / Sigue sin funcionar'))}</button></div>`:''}
@@ -161,13 +162,14 @@ function card(t){
 }
 function render(){
   const f=$('flt');
-  if(D.admin||D.items.some(x=>!x.mio)){f.classList.remove('hide');const cur=f.value;f.innerHTML='<option value="">'+esc(tr('All locations / Todas las ubicaciones'))+'</option>'+[...new Set(D.items.map(x=>x.ubicacion))].map(l=>`<option${l===cur?' selected':''}>${esc(l)}</option>`).join('');}
-  $('rbtn').classList.toggle('hide',!(D.admin||D.items.some(x=>!x.mio)));
+  if(new Set(D.items.map(x=>x.ubicacion)).size>1){f.classList.remove('hide');const cur=f.value;f.innerHTML='<option value="">'+esc(tr('All locations / Todas las ubicaciones'))+'</option>'+[...new Set(D.items.map(x=>x.ubicacion))].map(l=>`<option${l===cur?' selected':''}>${esc(l)}</option>`).join('');}
+  $('rbtn').classList.toggle('hide',!D.csv);
   const loc=f.value, its=D.items.filter(x=>!loc||x.ubicacion===loc);
-  $('lh').textContent=tr(D.admin?'IT queue / Cola de TI':'My tickets / Mis tickets');
-  if(!its.length){$('list').innerHTML='<div class="empty">'+esc(tr('No tickets. / No hay tickets.'))+'</div>';return;}
+  $('lh').textContent=tr(D.admin?'IT queue / Cola de TI':'IT tickets / Tickets de TI');
+  const ro=D.puede_reportar?'':'<div class="empty" style="margin-bottom:10px">'+esc(tr('You can follow the status of every ticket here. Managers report problems. / Aquí puedes ver el estado de todos los tickets. Los gerentes reportan los problemas.'))+'</div>';
+  if(!its.length){$('list').innerHTML=ro+'<div class="empty">'+esc(tr('No tickets. / No hay tickets.'))+'</div>';return;}
   const grp=[['abierto','Open / Abiertos'],['en_proceso','In progress / En proceso'],['resuelto','Waiting confirmation / Esperando confirmación'],['cerrado','Closed (last 30 days) / Cerrados (últimos 30 días)']];
-  $('list').innerHTML=grp.map(g=>{const x=its.filter(t=>t.estado===g[0]);return x.length?`<h2>${esc(tr(g[1]))} · ${x.length}</h2>`+x.map(card).join(''):'';}).join('');
+  $('list').innerHTML=ro+grp.map(g=>{const x=its.filter(t=>t.estado===g[0]);return x.length?`<h2>${esc(tr(g[1]))} · ${x.length}</h2>`+x.map(card).join(''):'';}).join('');
 }
 setInterval(()=>{if($('ov').classList.contains('hide')&&D.items.length)render();},60000);
 setInterval(async()=>{if(!document.hidden&&$('ov').classList.contains('hide')){try{D=await DH.rpc('tickets_listar');render();}catch(e){}}},90000);
