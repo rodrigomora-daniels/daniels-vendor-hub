@@ -83,6 +83,14 @@
   .atb{border:1px solid #cfd6e2;background:#fff;color:var(--navy);border-radius:12px;min-width:46px;min-height:46px;font:700 18px 'Segoe UI',Arial,sans-serif;cursor:pointer;flex:none}
   .mt{color:#1B5FB3;font-weight:700}.m.me .mt{color:#F2CD7A}
   .m.mn .b{box-shadow:0 0 0 2px var(--gold)}
+  .ph{display:block;max-width:100%;width:240px;max-height:260px;object-fit:cover;border-radius:10px;margin-top:6px;cursor:zoom-in;background:#e8ecf3;min-height:90px}
+  .phs{display:flex;flex-wrap:wrap;gap:6px}.phx{display:inline-block;margin-top:6px;padding:8px 10px;border-radius:8px;background:#f0f2f6;color:#6b7280;font-size:13px}
+  #phbar{display:flex;gap:8px;padding:8px 14px 0;background:#fff;flex-wrap:wrap}#phbar .pv{position:relative;width:64px;height:64px;border-radius:8px;overflow:hidden;background:#e8ecf3}
+  #phbar img{width:100%;height:100%;object-fit:cover}#phbar .pv.up img{opacity:.45}#phbar .pv.bad{outline:3px solid var(--red)}
+  #phbar .pv button{position:absolute;top:0;right:0;width:28px;height:28px;border:0;background:rgba(0,0,0,.6);color:#fff;border-radius:0 0 0 8px;font-size:15px;cursor:pointer}
+  #lb{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:80;display:flex;align-items:center;justify-content:center;padding:12px}
+  #lb img{max-width:100%;max-height:100%;object-fit:contain;border-radius:6px}#lb button{position:absolute;top:10px;right:10px;min-width:48px;min-height:48px;border:0;border-radius:24px;background:#fff;font-size:20px;cursor:pointer}
+  .atb.cam{font-size:20px}
   .hide{display:none!important}
   @media (max-width:760px){
     .chans{width:100%} .thread{width:100%}
@@ -104,9 +112,12 @@
     <div class="note hide" id="ro">This channel is read-only. / Este canal es solo de lectura.</div>
     <div class="rbar hide" id="rbar"></div>
     <div class="tpl hide" id="tpl"></div>
+    <div id="phbar" class="hide"></div>
     <form class="comp" id="comp" onsubmit="return send(event)">
       <div id="mpop" class="hide" role="listbox" aria-label="Mention"></div>
       <button type="button" class="atb" id="atb" onclick="openAt()" aria-label="Mention someone / Mencionar a alguien">@</button>
+      <button type="button" class="atb cam" id="camb" onclick="$('phf').click()" aria-label="Add photo / Agregar foto">📷</button>
+      <input type="file" id="phf" accept="image/*" multiple class="hide" onchange="pickPhotos(this)">
       <textarea id="txt" rows="1" maxlength="1500" placeholder="Write a message… / Escribe un mensaje…" aria-label="Message"></textarea>
       <button class="send" id="sendb" type="submit">Send / Enviar</button>
     </form>
@@ -183,10 +194,51 @@ function appendMsgs(list){
     const dk=dayKey(m.t);
     if(dk!==lastDay){box.insertAdjacentHTML('beforeend',`<div class="day" data-no-i18n>${esc(dayLabel(m.t))}</div>`);lastDay=dk;lastWho='';}
     const who=m.mio?'me':m.autor;
-    box.insertAdjacentHTML('beforeend',`<div class="m ${m.mio?'me':''} ${m.mencionado?'mn':''}" id="m-${m.id}">${!m.mio?`<div class="who" data-no-i18n>${esc(m.autor)}</div>`:''}${m.responde?`<div class="qt" data-no-i18n onclick="jumpTo('${m.responde.id}')"><b>↩ ${esc(m.responde.autor)}</b> ${m.responde.borrado?esc(tr('(deleted) / (borrado)')):esc(m.responde.cuerpo)}</div>`:''}<div class="b ${CI.plantillas?flashCls(m.cuerpo):''}" data-no-i18n>${body(m)}</div><div class="rx" id="rx-${m.id}"></div><div class="meta"><span data-no-i18n>${tm(m.t)}</span><button class="rxadd" onclick="togPk('${m.id}')" aria-label="React">☺+</button>${CI.puede_responder?`<button class="rp" data-id="${m.id}" onclick="setReply(this.dataset.id)">${esc(tr('Reply / Responder'))}</button>`:''}${m.puede_borrar?`<button class="del" onclick="del('${m.id}',this)">Delete / Borrar</button>`:''}</div><div class="pk hide" id="pk-${m.id}">${EMO.map(e=>`<button onclick="react('${m.id}','${e}')" aria-label="${e}">${e}</button>`).join('')}</div></div>`);
+    box.insertAdjacentHTML('beforeend',`<div class="m ${m.mio?'me':''} ${m.mencionado?'mn':''}" id="m-${m.id}">${!m.mio?`<div class="who" data-no-i18n>${esc(m.autor)}</div>`:''}${m.responde?`<div class="qt" data-no-i18n onclick="jumpTo('${m.responde.id}')"><b>↩ ${esc(m.responde.autor)}</b> ${m.responde.borrado?esc(tr('(deleted) / (borrado)')):esc(m.responde.cuerpo)}</div>`:''}<div class="b ${CI.plantillas?flashCls(m.cuerpo):''}" data-no-i18n>${(m.cuerpo==='📷'&&(m.adjuntos||[]).length)?'':body(m)}${photosHTML(m)}</div><div class="rx" id="rx-${m.id}"></div><div class="meta"><span data-no-i18n>${tm(m.t)}</span><button class="rxadd" onclick="togPk('${m.id}')" aria-label="React">☺+</button>${CI.puede_responder?`<button class="rp" data-id="${m.id}" onclick="setReply(this.dataset.id)">${esc(tr('Reply / Responder'))}</button>`:''}${m.puede_borrar?`<button class="del" onclick="del('${m.id}',this)">Delete / Borrar</button>`:''}</div><div class="pk hide" id="pk-${m.id}">${EMO.map(e=>`<button onclick="react('${m.id}','${e}')" aria-label="${e}">${e}</button>`).join('')}</div></div>`);
     lastWho=who;
   });
   box.setAttribute('data-day',lastDay); box.setAttribute('data-who',lastWho);
+  loadPhotos();
+}
+/* ---- photos in chat (kept 30 days, then removed automatically) ---- */
+let PH=[], PHU={};
+function photosHTML(m){
+  const a=m.adjuntos||[]; if(!a.length)return '';
+  return '<div class="phs">'+a.map(x=>x.archivo_id?`<img class="ph" data-a="${x.archivo_id}" alt="${esc(tr('Photo / Foto'))}" loading="lazy" onclick="openPhoto(this)">`:`<span class="phx">📷 ${esc(tr('Photo expired / Foto vencida'))}</span>`).join('')+'</div>';
+}
+async function loadPhotos(){
+  const imgs=[...document.querySelectorAll('#msgs img.ph:not([src])')]; if(!imgs.length)return;
+  const need=[...new Set(imgs.map(i=>i.dataset.a).filter(id=>!(PHU[id]&&Date.now()-PHU[id].t<900000)))];
+  if(need.length){try{const u=await DH.files.sign(need);need.forEach(id=>{if(u[id])PHU[id]={url:u[id].url,t:Date.now()};});}catch(e){}}
+  imgs.forEach(i=>{const u=PHU[i.dataset.a];if(u)i.src=u.url;else{i.replaceWith(Object.assign(document.createElement('span'),{className:'phx',textContent:'📷 '+tr('Photo unavailable / Foto no disponible')}));}});
+}
+function openPhoto(img){
+  const o=document.createElement('div');o.id='lb';o.innerHTML='<img alt=""><button type="button" aria-label="Close / Cerrar">✕</button>';o.querySelector('img').src=img.src;
+  const close=()=>{o.remove();document.removeEventListener('keydown',k)};const k=e=>{if(e.key==='Escape')close();};
+  o.onclick=close;document.addEventListener('keydown',k);document.body.appendChild(o);o.querySelector('button').focus();
+}
+async function shrink(f){
+  const bmp=await createImageBitmap(f); const k=Math.min(1,1600/Math.max(bmp.width,bmp.height));
+  const c=document.createElement('canvas');c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
+  const blob=await new Promise(ok=>c.toBlob(ok,'image/jpeg',0.82)); if(!blob)throw new Error('x');
+  return new File([blob],'photo.jpg',{type:'image/jpeg'});
+}
+function renderPh(){
+  const bar=$('phbar'); bar.classList.toggle('hide',!PH.length);
+  bar.innerHTML=PH.map((p,i)=>`<div class="pv ${p.state==='up'?'up':''} ${p.state==='bad'?'bad':''}"><img src="${p.url}" alt=""><button type="button" onclick="rmPh(${i})" aria-label="Remove / Quitar">✕</button></div>`).join('');
+  $('sendb').disabled=PH.some(p=>p.state==='up');
+}
+function rmPh(i){const p=PH[i];if(p)URL.revokeObjectURL(p.url);PH.splice(i,1);renderPh();}
+async function pickPhotos(inp){
+  const files=[...inp.files]; inp.value=''; showErr('');
+  for(const f of files){
+    if(PH.length>=4){showErr(tr('Up to 4 photos per message. / Máximo 4 fotos por mensaje.'));break;}
+    if(!/^image\//.test(f.type)){showErr(tr('Only photos can be sent. / Solo se pueden enviar fotos.'));continue;}
+    const item={url:URL.createObjectURL(f),state:'up',id:null}; PH.push(item); renderPh();
+    try{const sm=await shrink(f); item.id=await DH.files.upload('chat',sm); item.state='ok';}
+    catch(e){item.state='bad';showErr(e&&e.message&&/larger|Only|slow/i.test(e.message)?e.message:tr('Could not upload the photo. Try again. / No se pudo subir la foto. Intenta de nuevo.'));}
+    renderPh();
+  }
 }
 
 const EMO=['👍','❤️','😂','😮','🙏','✅'];
@@ -244,14 +296,16 @@ async function del(id,btn){
 }
 async function send(ev){
   if(ev)ev.preventDefault();
-  const t=$('txt'), v=t.value.trim(); if(!v||!CUR)return false;
+  const t=$('txt'), v=t.value.trim(); const ph=PH.filter(p=>p.state==='ok'&&p.id); if((!v&&!ph.length)||!CUR)return false;
+  if(PH.some(p=>p.state==='up')){showErr(tr('Wait for the photo to finish uploading. / Espera a que termine de subir la foto.'));return false;}
+  if(PH.some(p=>p.state==='bad')){showErr(tr('Remove the photo that failed, then send. / Quita la foto que falló y envía.'));return false;}
   const b=$('sendb'); b.disabled=true;
   try{
-    const r=await DH.rpc('mensaje_enviar',{p_canal:CUR,p_cuerpo:v,p_responde_a:REPLY?REPLY.id:null,p_menciones:mentionIds(v)});
-    if(r&&r.ok){t.value='';t.style.height='';MEN=new Map();closePop();REPLY=null;applyComposer();showErr('');await fetchMsgs(false);$('msgs').scrollTop=$('msgs').scrollHeight;}
+    const r=await DH.rpc('mensaje_enviar',{p_canal:CUR,p_cuerpo:v,p_responde_a:REPLY?REPLY.id:null,p_menciones:mentionIds(v),p_archivos:ph.length?ph.map(p=>p.id):null});
+    if(r&&r.ok){PH.forEach(p=>URL.revokeObjectURL(p.url));PH=[];renderPh();t.value='';t.style.height='';MEN=new Map();closePop();REPLY=null;applyComposer();showErr('');await fetchMsgs(false);$('msgs').scrollTop=$('msgs').scrollHeight;}
     else showErr(r&&r.error==='slow_down'?tr('Slow down a little. / Más despacio.'):r&&r.error==='read_only'?tr('This channel is read-only. / Este canal es solo de lectura.'):tr('Could not send. / No se pudo enviar.'));
   }catch(e){showErr(tr('Could not send. Check your connection. / No se pudo enviar. Revisa tu conexión.'));}
-  b.disabled=false; t.focus(); return false;
+  b.disabled=PH.some(p=>p.state==='up'); t.focus(); return false;
 }
 
 /* ---- @mentions ---- */
