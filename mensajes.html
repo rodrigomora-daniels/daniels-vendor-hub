@@ -91,6 +91,8 @@
   #lb{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:80;display:flex;align-items:center;justify-content:center;padding:12px}
   #lb img{max-width:100%;max-height:100%;object-fit:contain;border-radius:6px}#lb button{position:absolute;top:10px;right:10px;min-width:48px;min-height:48px;border:0;border-radius:24px;background:#fff;font-size:20px;cursor:pointer}
   .atb.cam{font-size:20px}
+  .phx.pdf{border:1px solid #cfd6e2;cursor:pointer;font:600 13px 'Segoe UI',Arial,sans-serif;color:var(--navy);max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-height:40px}
+  #phbar .pdfv{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:22px;padding:2px}#phbar .pdfv small{font-size:9px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .hide{display:none!important}
   @media (max-width:760px){
     .chans{width:100%} .thread{width:100%}
@@ -100,6 +102,7 @@
 </style>
 <meta name="dh-i18n" content="on">
 <script src="dh-chrome.js" defer></script>
+<script src="dh-viewer.js" defer></script>
 </head>
 <body>
 <header><h1>💬 Messages / Mensajes</h1><a href="index.html">← Home / Inicio</a></header>
@@ -116,8 +119,8 @@
     <form class="comp" id="comp" onsubmit="return send(event)">
       <div id="mpop" class="hide" role="listbox" aria-label="Mention"></div>
       <button type="button" class="atb" id="atb" onclick="openAt()" aria-label="Mention someone / Mencionar a alguien">@</button>
-      <button type="button" class="atb cam" id="camb" onclick="$('phf').click()" aria-label="Add photo / Agregar foto">📷</button>
-      <input type="file" id="phf" accept="image/*" multiple class="hide" onchange="pickPhotos(this)">
+      <button type="button" class="atb cam" id="camb" onclick="$('phf').click()" aria-label="Attach a file / Adjuntar archivo">📎</button>
+      <input type="file" id="phf" accept="image/*,application/pdf" multiple class="hide" onchange="pickPhotos(this)">
       <textarea id="txt" rows="1" maxlength="1500" placeholder="Write a message… / Escribe un mensaje…" aria-label="Message"></textarea>
       <button class="send" id="sendb" type="submit">Send / Enviar</button>
     </form>
@@ -194,7 +197,7 @@ function appendMsgs(list){
     const dk=dayKey(m.t);
     if(dk!==lastDay){box.insertAdjacentHTML('beforeend',`<div class="day" data-no-i18n>${esc(dayLabel(m.t))}</div>`);lastDay=dk;lastWho='';}
     const who=m.mio?'me':m.autor;
-    box.insertAdjacentHTML('beforeend',`<div class="m ${m.mio?'me':''} ${m.mencionado?'mn':''}" id="m-${m.id}">${!m.mio?`<div class="who" data-no-i18n>${esc(m.autor)}</div>`:''}${m.responde?`<div class="qt" data-no-i18n onclick="jumpTo('${m.responde.id}')"><b>↩ ${esc(m.responde.autor)}</b> ${m.responde.borrado?esc(tr('(deleted) / (borrado)')):esc(m.responde.cuerpo)}</div>`:''}<div class="b ${CI.plantillas?flashCls(m.cuerpo):''}" data-no-i18n>${(m.cuerpo==='📷'&&(m.adjuntos||[]).length)?'':body(m)}${photosHTML(m)}</div><div class="rx" id="rx-${m.id}"></div><div class="meta"><span data-no-i18n>${tm(m.t)}</span><button class="rxadd" onclick="togPk('${m.id}')" aria-label="React">☺+</button>${CI.puede_responder?`<button class="rp" data-id="${m.id}" onclick="setReply(this.dataset.id)">${esc(tr('Reply / Responder'))}</button>`:''}${m.puede_borrar?`<button class="del" onclick="del('${m.id}',this)">Delete / Borrar</button>`:''}</div><div class="pk hide" id="pk-${m.id}">${EMO.map(e=>`<button onclick="react('${m.id}','${e}')" aria-label="${e}">${e}</button>`).join('')}</div></div>`);
+    box.insertAdjacentHTML('beforeend',`<div class="m ${m.mio?'me':''} ${m.mencionado?'mn':''}" id="m-${m.id}">${!m.mio?`<div class="who" data-no-i18n>${esc(m.autor)}</div>`:''}${m.responde?`<div class="qt" data-no-i18n onclick="jumpTo('${m.responde.id}')"><b>↩ ${esc(m.responde.autor)}</b> ${m.responde.borrado?esc(tr('(deleted) / (borrado)')):esc(m.responde.cuerpo)}</div>`:''}<div class="b ${CI.plantillas?flashCls(m.cuerpo):''}" data-no-i18n>${((m.cuerpo==='📷'||m.cuerpo==='📎')&&(m.adjuntos||[]).length)?'':body(m)}${photosHTML(m)}</div><div class="rx" id="rx-${m.id}"></div><div class="meta"><span data-no-i18n>${tm(m.t)}</span><button class="rxadd" onclick="togPk('${m.id}')" aria-label="React">☺+</button>${CI.puede_responder?`<button class="rp" data-id="${m.id}" onclick="setReply(this.dataset.id)">${esc(tr('Reply / Responder'))}</button>`:''}${m.puede_borrar?`<button class="del" onclick="del('${m.id}',this)">Delete / Borrar</button>`:''}</div><div class="pk hide" id="pk-${m.id}">${EMO.map(e=>`<button onclick="react('${m.id}','${e}')" aria-label="${e}">${e}</button>`).join('')}</div></div>`);
     lastWho=who;
   });
   box.setAttribute('data-day',lastDay); box.setAttribute('data-who',lastWho);
@@ -204,7 +207,7 @@ function appendMsgs(list){
 let PH=[], PHU={};
 function photosHTML(m){
   const a=m.adjuntos||[]; if(!a.length)return '';
-  return '<div class="phs">'+a.map(x=>x.archivo_id?`<img class="ph" data-a="${x.archivo_id}" alt="${esc(tr('Photo / Foto'))}" loading="lazy" onclick="openPhoto(this)">`:`<span class="phx">📷 ${esc(tr('Photo expired / Foto vencida'))}</span>`).join('')+'</div>';
+  return '<div class="phs">'+a.map(x=>!x.archivo_id?`<span class="phx">📎 ${esc(tr('File expired / Archivo vencido'))}</span>`:(x.mime==='application/pdf'?`<button type="button" class="phx pdf" data-a="${x.archivo_id}" data-n="${esc(x.nombre||'PDF')}" onclick="openPdf(this)">📄 ${esc(x.nombre||'PDF')}</button>`:`<img class="ph" data-a="${x.archivo_id}" alt="${esc(tr('Photo / Foto'))}" loading="lazy" onclick="openPhoto(this)">`)).join('')+'</div>';
 }
 async function loadPhotos(){
   const imgs=[...document.querySelectorAll('#msgs img.ph:not([src])')]; if(!imgs.length)return;
@@ -212,6 +215,7 @@ async function loadPhotos(){
   if(need.length){try{const u=await DH.files.sign(need);need.forEach(id=>{if(u[id])PHU[id]={url:u[id].url,t:Date.now()};});}catch(e){}}
   imgs.forEach(i=>{const u=PHU[i.dataset.a];if(u)i.src=u.url;else{i.replaceWith(Object.assign(document.createElement('span'),{className:'phx',textContent:'📷 '+tr('Photo unavailable / Foto no disponible')}));}});
 }
+function openPdf(btn){ if(window.DH&&DH.view)DH.view(btn.dataset.a,{title:btn.dataset.n}); else showErr(tr('Could not open the file. / No se pudo abrir el archivo.')); }
 function openPhoto(img){
   const o=document.createElement('div');o.id='lb';o.innerHTML='<img alt=""><button type="button" aria-label="Close / Cerrar">✕</button>';o.querySelector('img').src=img.src;
   const close=()=>{o.remove();document.removeEventListener('keydown',k)};const k=e=>{if(e.key==='Escape')close();};
@@ -225,17 +229,19 @@ async function shrink(f){
 }
 function renderPh(){
   const bar=$('phbar'); bar.classList.toggle('hide',!PH.length);
-  bar.innerHTML=PH.map((p,i)=>`<div class="pv ${p.state==='up'?'up':''} ${p.state==='bad'?'bad':''}"><img src="${p.url}" alt=""><button type="button" onclick="rmPh(${i})" aria-label="Remove / Quitar">✕</button></div>`).join('');
+  bar.innerHTML=PH.map((p,i)=>`<div class="pv ${p.state==='up'?'up':''} ${p.state==='bad'?'bad':''}">${p.pdf?`<div class="pdfv" data-no-i18n>📄<small>${esc(p.name||'PDF')}</small></div>`:`<img src="${p.url}" alt="">`}<button type="button" onclick="rmPh(${i})" aria-label="Remove / Quitar">✕</button></div>`).join('');
   $('sendb').disabled=PH.some(p=>p.state==='up');
 }
-function rmPh(i){const p=PH[i];if(p)URL.revokeObjectURL(p.url);PH.splice(i,1);renderPh();}
+function rmPh(i){const p=PH[i];if(p&&p.url)URL.revokeObjectURL(p.url);PH.splice(i,1);renderPh();}
 async function pickPhotos(inp){
   const files=[...inp.files]; inp.value=''; showErr('');
   for(const f of files){
     if(PH.length>=4){showErr(tr('Up to 4 photos per message. / Máximo 4 fotos por mensaje.'));break;}
-    if(!/^image\//.test(f.type)){showErr(tr('Only photos can be sent. / Solo se pueden enviar fotos.'));continue;}
-    const item={url:URL.createObjectURL(f),state:'up',id:null}; PH.push(item); renderPh();
-    try{const sm=await shrink(f); item.id=await DH.files.upload('chat',sm); item.state='ok';}
+    const isPdf=f.type==='application/pdf';
+    if(!isPdf&&!/^image\//.test(f.type)){showErr(tr('Only photos and PDF files can be sent. / Solo se pueden enviar fotos y archivos PDF.'));continue;}
+    if(isPdf&&f.size>10*1024*1024){showErr(tr('PDF is larger than 10 MB. / El PDF pesa más de 10 MB.'));continue;}
+    const item={url:isPdf?'':URL.createObjectURL(f),pdf:isPdf,name:f.name,state:'up',id:null}; PH.push(item); renderPh();
+    try{const sm=isPdf?f:await shrink(f); item.id=await DH.files.upload('chat',sm); item.state='ok';}
     catch(e){item.state='bad';showErr(e&&e.message&&/larger|Only|slow/i.test(e.message)?e.message:tr('Could not upload the photo. Try again. / No se pudo subir la foto. Intenta de nuevo.'));}
     renderPh();
   }
@@ -302,7 +308,7 @@ async function send(ev){
   const b=$('sendb'); b.disabled=true;
   try{
     const r=await DH.rpc('mensaje_enviar',{p_canal:CUR,p_cuerpo:v,p_responde_a:REPLY?REPLY.id:null,p_menciones:mentionIds(v),p_archivos:ph.length?ph.map(p=>p.id):null});
-    if(r&&r.ok){PH.forEach(p=>URL.revokeObjectURL(p.url));PH=[];renderPh();t.value='';t.style.height='';MEN=new Map();closePop();REPLY=null;applyComposer();showErr('');await fetchMsgs(false);$('msgs').scrollTop=$('msgs').scrollHeight;}
+    if(r&&r.ok){PH.forEach(p=>{if(p.url)URL.revokeObjectURL(p.url)});PH=[];renderPh();t.value='';t.style.height='';MEN=new Map();closePop();REPLY=null;applyComposer();showErr('');await fetchMsgs(false);$('msgs').scrollTop=$('msgs').scrollHeight;}
     else showErr(r&&r.error==='slow_down'?tr('Slow down a little. / Más despacio.'):r&&r.error==='read_only'?tr('This channel is read-only. / Este canal es solo de lectura.'):tr('Could not send. / No se pudo enviar.'));
   }catch(e){showErr(tr('Could not send. Check your connection. / No se pudo enviar. Revisa tu conexión.'));}
   b.disabled=PH.some(p=>p.state==='up'); t.focus(); return false;

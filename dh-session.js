@@ -135,7 +135,7 @@
       var okType = /^(application\/pdf|image\/(jpeg|png|webp))$/.test(file.type) || (scope === 'promo' && file.type === 'video/mp4') || ((scope === 'recurso' || scope === 'promo') && Object.keys(OFFICE).some(function (k) { return OFFICE[k] === file.type; }));
       if (!okType) throw new Error(scope === 'recurso' ? 'Only PDF, images, Word, Excel or PowerPoint. / Solo PDF, imágenes, Word, Excel o PowerPoint.' : 'Only PDF, images, Excel, Word, PowerPoint or MP4. / Solo PDF, imágenes, Excel, Word, PowerPoint o MP4.');
       file = await DH.files.prepare(file);
-      if (scope === 'chat' && !/^image\/(jpeg|png|webp)$/.test(file.type)) throw new Error('Only photos can be sent in chat. / En el chat solo se pueden enviar fotos.');
+      if (scope === 'chat' && !/^(application\/pdf|image\/(jpeg|png|webp))$/.test(file.type)) throw new Error('Only photos and PDF files can be sent in chat. / En el chat solo se pueden enviar fotos y archivos PDF.');
       var MAXMB = scope === 'promo' ? 50 : scope === 'chat' ? 10 : 20;
       if (file.size > MAXMB * 1024 * 1024) throw new Error('File is larger than ' + MAXMB + ' MB. / El archivo pesa más de ' + MAXMB + ' MB.');
       var r = await fn({ action: 'upload', scope: scope, nombre: file.name, mime: file.type, bytes: file.size });
