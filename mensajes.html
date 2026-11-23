@@ -91,6 +91,9 @@
   #lb{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:80;display:flex;align-items:center;justify-content:center;padding:12px}
   #lb img{max-width:100%;max-height:100%;object-fit:contain;border-radius:6px}#lb button{position:absolute;top:10px;right:10px;min-width:48px;min-height:48px;border:0;border-radius:24px;background:#fff;font-size:20px;cursor:pointer}
   .atb.cam{font-size:20px}
+  .ed{font-size:11px;color:var(--gray);font-style:italic}
+  textarea.edt{width:100%;min-height:70px;font:inherit;font-size:16px;padding:8px 10px;border:1px solid #cfd6e2;border-radius:8px;resize:vertical;color:var(--ink)}
+  .edb{display:flex;gap:8px;margin-top:6px}.edb .btn2{border:1px solid #c5ccd8;background:#fff;color:var(--navy);border-radius:8px;padding:8px 14px;font-weight:700;min-height:42px;cursor:pointer}
   .phx.pdf{border:1px solid #cfd6e2;cursor:pointer;font:600 13px 'Segoe UI',Arial,sans-serif;color:var(--navy);max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-height:40px}
   #phbar .pdfv{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:22px;padding:2px}#phbar .pdfv small{font-size:9px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .hide{display:none!important}
@@ -176,6 +179,7 @@ async function fetchMsgs(full){
     CI=r.canal; applyComposer();
     const box=$('msgs'), near=box.scrollHeight-box.scrollTop-box.clientHeight<120;
     if(full){box.innerHTML='';box.removeAttribute('data-day');box.removeAttribute('data-who');SEEN=new Set();}
+    (r.items||[]).filter(m=>SEEN.has(m.id)&&m.editado).forEach(m=>{const bb=$('b-'+m.id); if(!bb||bb.querySelector('textarea')||RAW[m.id]===m.cuerpo)return; RAW[m.id]=m.cuerpo; const ph=bb.querySelector('.phs'); bb.innerHTML=((m.cuerpo==='📷'||m.cuerpo==='📎')&&ph?'':body(m))+(ph?ph.outerHTML:''); const e=$('ed-'+m.id); if(e)e.classList.remove('hide');});
     const fresh=(r.items||[]).filter(m=>!SEEN.has(m.id)); fresh.forEach(m=>SEEN.add(m.id));
     if(r.items&&r.items.length)LAST=r.items[r.items.length-1].t;
     if(full&&!(r.items||[]).length)box.innerHTML='<div class="empty">'+esc(tr('No messages yet. Say hello. / Aún no hay mensajes. Saluda al equipo.'))+'</div>';
@@ -196,8 +200,8 @@ function appendMsgs(list){
   list.forEach(m=>{
     const dk=dayKey(m.t);
     if(dk!==lastDay){box.insertAdjacentHTML('beforeend',`<div class="day" data-no-i18n>${esc(dayLabel(m.t))}</div>`);lastDay=dk;lastWho='';}
-    const who=m.mio?'me':m.autor;
-    box.insertAdjacentHTML('beforeend',`<div class="m ${m.mio?'me':''} ${m.mencionado?'mn':''}" id="m-${m.id}">${!m.mio?`<div class="who" data-no-i18n>${esc(m.autor)}</div>`:''}${m.responde?`<div class="qt" data-no-i18n onclick="jumpTo('${m.responde.id}')"><b>↩ ${esc(m.responde.autor)}</b> ${m.responde.borrado?esc(tr('(deleted) / (borrado)')):esc(m.responde.cuerpo)}</div>`:''}<div class="b ${CI.plantillas?flashCls(m.cuerpo):''}" data-no-i18n>${((m.cuerpo==='📷'||m.cuerpo==='📎')&&(m.adjuntos||[]).length)?'':body(m)}${photosHTML(m)}</div><div class="rx" id="rx-${m.id}"></div><div class="meta"><span data-no-i18n>${tm(m.t)}</span><button class="rxadd" onclick="togPk('${m.id}')" aria-label="React">☺+</button>${CI.puede_responder?`<button class="rp" data-id="${m.id}" onclick="setReply(this.dataset.id)">${esc(tr('Reply / Responder'))}</button>`:''}${m.puede_borrar?`<button class="del" onclick="del('${m.id}',this)">Delete / Borrar</button>`:''}</div><div class="pk hide" id="pk-${m.id}">${EMO.map(e=>`<button onclick="react('${m.id}','${e}')" aria-label="${e}">${e}</button>`).join('')}</div></div>`);
+    RAW[m.id]=m.cuerpo; const who=m.mio?'me':m.autor;
+    box.insertAdjacentHTML('beforeend',`<div class="m ${m.mio?'me':''} ${m.mencionado?'mn':''}" id="m-${m.id}">${!m.mio?`<div class="who" data-no-i18n>${esc(m.autor)}</div>`:''}${m.responde?`<div class="qt" data-no-i18n onclick="jumpTo('${m.responde.id}')"><b>↩ ${esc(m.responde.autor)}</b> ${m.responde.borrado?esc(tr('(deleted) / (borrado)')):esc(m.responde.cuerpo)}</div>`:''}<div class="b ${CI.plantillas?flashCls(m.cuerpo):''}" id="b-${m.id}" data-no-i18n>${((m.cuerpo==='📷'||m.cuerpo==='📎')&&(m.adjuntos||[]).length)?'':body(m)}${photosHTML(m)}</div><div class="rx" id="rx-${m.id}"></div><div class="meta"><span data-no-i18n>${tm(m.t)}</span><span class="ed${m.editado?'':' hide'}" id="ed-${m.id}">${esc(tr('edited / editado'))}</span><button class="rxadd" onclick="togPk('${m.id}')" aria-label="React">☺+</button>${CI.puede_responder?`<button class="rp" data-id="${m.id}" onclick="setReply(this.dataset.id)">${esc(tr('Reply / Responder'))}</button>`:''}${m.puede_editar?`<button class="rp" onclick="editMsg('${m.id}')">${esc(tr('Edit / Editar'))}</button>`:''}${m.puede_borrar?`<button class="del" onclick="del('${m.id}',this)">Delete / Borrar</button>`:''}</div><div class="pk hide" id="pk-${m.id}">${EMO.map(e=>`<button onclick="react('${m.id}','${e}')" aria-label="${e}">${e}</button>`).join('')}</div></div>`);
     lastWho=who;
   });
   box.setAttribute('data-day',lastDay); box.setAttribute('data-who',lastWho);
@@ -247,6 +251,27 @@ async function pickPhotos(inp){
   }
 }
 
+let RAW={};
+function editMsg(id){
+  const b=$('b-'+id); if(!b||b.querySelector('textarea'))return;
+  const raw=RAW[id]!=null?RAW[id]:b.innerText; const keepPh=b.querySelector('.phs'); const ph=keepPh?keepPh.outerHTML:'';
+  const t=(raw==='📷'||raw==='📎')?'':raw;
+  b.dataset.old=b.innerHTML;
+  b.innerHTML=`<textarea class="edt" maxlength="1500" aria-label="Edit message">${esc(t)}</textarea><div class="edb"><button type="button" class="btn2" onclick="saveEdit('${id}')">${esc(tr('Save / Guardar'))}</button><button type="button" class="btn2" onclick="cancelEdit('${id}')">${esc(tr('Cancel / Cancelar'))}</button></div>`+ph;
+  const ta=b.querySelector('textarea'); ta.focus(); ta.setSelectionRange(ta.value.length,ta.value.length);
+}
+function cancelEdit(id){const b=$('b-'+id); if(b&&b.dataset.old!=null){b.innerHTML=b.dataset.old;delete b.dataset.old;loadPhotos();}}
+async function saveEdit(id){
+  const b=$('b-'+id), ta=b&&b.querySelector('textarea'); if(!ta)return; const v=ta.value.trim();
+  const btns=b.querySelectorAll('button'); btns.forEach(x=>x.disabled=true);
+  try{
+    const r=await DH.rpc('mensaje_editar',{p_id:id,p_cuerpo:v});
+    if(r&&r.ok){RAW[id]=r.cuerpo; const m={cuerpo:r.cuerpo,menciones:[]}; const old=b.dataset.old||''; const ph=b.querySelector('.phs'); 
+      b.innerHTML=((r.cuerpo==='📷'||r.cuerpo==='📎')&&ph?'':body(m))+(ph?ph.outerHTML:''); delete b.dataset.old;
+      const e=$('ed-'+id); if(e&&!r.sin_cambios)e.classList.remove('hide'); loadPhotos(); showErr('');}
+    else{btns.forEach(x=>x.disabled=false);showErr(r&&r.error==='slow_down'?tr('Slow down a little. / Más despacio.'):tr('Could not save the change. / No se pudo guardar el cambio.'));}
+  }catch(e){btns.forEach(x=>x.disabled=false);showErr(tr('Could not save the change. Check your connection. / No se pudo guardar. Revisa tu conexión.'));}
+}
 const EMO=['👍','❤️','😂','😮','🙏','✅'];
 function rxHTML(id,arr){return (arr||[]).map(r=>`<button class="rxc ${r.yo?'yo':''}" onclick="react('${id}','${r.e}')" aria-pressed="${!!r.yo}"><span>${r.e}</span><b>${r.n}</b></button>`).join('');}
 function renderRx(map){document.querySelectorAll('#msgs .rx').forEach(el=>{const id=el.id.slice(3);el.innerHTML=rxHTML(id,map[id]);});}
