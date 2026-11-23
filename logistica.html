@@ -29,8 +29,8 @@
   td{padding:9px 10px;border-bottom:1px solid #eef1f6;vertical-align:top}
   tr.row{cursor:pointer} tr.row:hover td{background:#f8fafd}
   .pill{display:inline-block;border-radius:12px;padding:2px 10px;font-size:12.5px;font-weight:700;white-space:nowrap}
-  .s-pending,.s-new{background:#dfe7ff;color:#2b3d99}.s-received,.s-delivered{background:#e3f4e5;color:var(--green)}
-  .s-rescheduled,.s-scheduled{background:#fff1d6;color:#8a5a00}.s-cancelled{background:#eceff3;color:#6b7482}
+  .s-pending,.s-new{background:#dfe7ff;color:#2b3d99}.s-received_complete,.s-delivered{background:#e3f4e5;color:var(--green)}
+  .s-received_incomplete,.s-in_progress{background:#fff1d6;color:#8a5a00}
   .t-will_call{background:#e3f4e5;color:var(--green)}.t-cita{background:#d9ecff;color:#0e4f94}
   .ap{display:inline-block;border-radius:4px;padding:3px 8px;color:#fff;font-weight:700;font-size:13px;white-space:nowrap}
   .ap.past{background:#c93a3a}.ap.today{background:#2e9e4a}.ap.next{background:#1769c2}
@@ -97,10 +97,10 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;',
 const tr=s=>(window.DH&&DH.i18n)?DH.i18n.pick(s):s;
 const LA='America/Los_Angeles';
 const ST={
-  rec:{pending:'Pending / Pendiente',received:'Received / Recibido',rescheduled:'Rescheduled / Reprogramado',cancelled:'Cancelled / Cancelado'},
-  ndd:{new:'New / Nuevo',scheduled:'Scheduled / Programado',delivered:'Delivered / Entregado',cancelled:'Cancelled / Cancelado'}};
+  rec:{pending:'Pending / Pendiente',received_complete:'Received Complete / Recibido completo',received_incomplete:'Received Incomplete / Recibido incompleto'},
+  ndd:{new:'New / Nuevo',in_progress:'In progress / En proceso',delivered:'Delivered / Entregado'}};
 const TY={cita:'Receiving Appointment / Cita de recepción',will_call:'Will Call'};
-let ACC=null, TAB='rec', VIEW='list', DATA={rec:[],ndd:[]}, CUR=null, ASK=false;
+let HOPEN=null, ACC=null, TAB='rec', VIEW='list', DATA={rec:[],ndd:[]}, CUR=null, ASK=false;
 let CM=(function(){const p=new Intl.DateTimeFormat('en-CA',{timeZone:LA}).format(new Date()).split('-');return {y:+p[0],m:+p[1]-1};})();
 
 /* ---- time helpers (everything is shown in Los Angeles time) ---- */
@@ -119,7 +119,8 @@ async function init(){
   if(!DH.token()){location.href='index.html';return;}
   try{ACC=await DH.rpc('logistica_mi_acceso');}catch(e){$('box').innerHTML='<div class="empty">'+esc(tr('Could not load. / No se pudo cargar.'))+'</div>';return;}
   if(!ACC||(!ACC.rec&&!ACC.ndd)){document.querySelector('.bar').classList.add('hide');$('box').innerHTML='<div class="empty">'+esc(tr('You do not have access to this section. Ask your manager. / No tienes acceso a esta sección. Pregunta a tu gerente.'))+'</div>';return;}
-  TAB=(location.hash==='#ndd'&&ACC.ndd)||!ACC.rec?'ndd':'rec';
+  const hm=(location.hash||'').match(/^#(rec|ndd)(?::([0-9a-f-]{36}))?$/); HOPEN=hm&&hm[2]||null;
+  TAB=(hm&&hm[1]==='ndd'&&ACC.ndd)||(hm&&hm[1]==='rec'&&ACC.rec)?hm[1]:(ACC.rec?'rec':'ndd');
   $('tb-rec').classList.toggle('hide',!ACC.rec);$('tb-ndd').classList.toggle('hide',!ACC.ndd);
   paintBar(); await load();
 }
@@ -131,6 +132,7 @@ async function load(){
   }catch(e){$('box').innerHTML='<div class="empty">'+esc(tr('Could not load the records. / No se pudieron cargar los registros.'))+'</div>';return;}
   if(VIEW==='log'){loadLog();return;}
   render();
+  if(HOPEN){const id=HOPEN;HOPEN=null;if(DATA[TAB].some(x=>x.id===id))openForm(id);}
 }
 function paintBar(){
   $('tb-rec').classList.toggle('on',TAB==='rec');$('tb-ndd').classList.toggle('on',TAB==='ndd');
@@ -142,7 +144,7 @@ window.addEventListener('dh-lang',()=>{if(!$('ov').classList.contains('hide'))re
 
 /* ---- render ---- */
 const dateOf=r=>TAB==='rec'?dayKey(r.cita):r.fecha_ndd;
-const isDone=r=>r.estado==='received'||r.estado==='delivered'||r.estado==='cancelled';
+const isDone=r=>r.estado==='received_complete'||r.estado==='delivered';
 function pill(r){return `<span class="pill s-${r.estado}">${esc(tr(ST[TAB][r.estado]||r.estado))}</span>`;}
 function render(){
   const rows=DATA[TAB];
@@ -177,8 +179,49 @@ function openReport(){
    <div class="acts" style="margin-top:8px"><button class="btn alt" onclick="preset(7)">7 ${esc(tr('days / días'))}</button><button class="btn alt" onclick="preset(30)">30 ${esc(tr('days / días'))}</button><button class="btn alt" onclick="preset(90)">90 ${esc(tr('days / días'))}</button></div>
    <div class="err hide" id="ferr" role="alert"></div>
    <div class="acts"><button class="btn" onclick="dl('rows')">${esc(tr('Records (CSV) / Registros (CSV)'))}</button><button class="btn" onclick="dl('log')">${esc(tr('Activity log (CSV) / Bitácora (CSV)'))}</button><button class="btn alt" onclick="closeForm()">${esc(tr('Close / Cerrar'))}</button></div>
+   ${SUPER()?`<div class="acts" style="margin-top:6px"><label class="btn alt" style="display:inline-flex;align-items:center;margin:0;cursor:pointer">${esc(tr('Import CSV from Lists / Importar CSV de Lists'))}<input type="file" accept=".csv,text/csv" hidden onchange="importCSV(this.files[0])"></label></div><div class="small" id="imp-msg"></div>`:''}
    <div class="small">${esc(tr('Records are kept 3 months, so reports can cover up to the last 90 days. / Los registros se guardan 3 meses, así que los reportes cubren hasta los últimos 90 días.'))}</div>`;
   $('ov').classList.remove('hide');
+}
+const SUPER=()=>{try{return ((DH.emp&&DH.emp())||{}).nivel_admin==='super_admin';}catch(e){return false;}};
+function parseCSV(t){const rows=[];let r=[],c='',q=false;t=t.replace(/^\ufeff/,'');
+  for(let i=0;i<t.length;i++){const ch=t[i];
+    if(q){if(ch==='"'){if(t[i+1]==='"'){c+='"';i++;}else q=false;}else c+=ch;}
+    else if(ch==='"')q=true; else if(ch===','){r.push(c);c='';} else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&t[i+1]==='\n')i++;r.push(c);c='';if(r.length>1||r[0]!=='')rows.push(r);r=[];} else c+=ch;}
+  if(c!==''||r.length){r.push(c);rows.push(r);} return rows;}
+function usDT(s){const m=String(s||'').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})\s*(AM|PM))?/i);if(!m)return null;
+  let h=m[4]?+m[4]:0;const ap=(m[6]||'').toUpperCase();if(ap==='PM'&&h<12)h+=12;if(ap==='AM'&&h===12)h=0;
+  const p=n=>String(n).padStart(2,'0');return {d:m[3]+'-'+p(m[1])+'-'+p(m[2]),t:p(h)+':'+m[5]};}
+function person(s){s=String(s||'').trim();if(!s)return '';if(s.includes('@'))s=s.split('@')[0].replace(/[._]+/g,' ');return s.replace(/\s+/g,' ').replace(/\b\w/g,c=>c.toUpperCase()).slice(0,80);}
+function mapRows(mod,text){
+  const rows=parseCSV(text); if(rows.length<2)return [];
+  const H=rows[0].map(h=>h.replace(/%23/g,'#').trim().toLowerCase()), ix=n=>H.indexOf(n);
+  const cut=Date.now()-90*864e5, out=[];
+  for(const r of rows.slice(1)){
+    const g=n=>{const i=ix(n);return i<0?'':(r[i]||'').trim();};
+    const cr=usDT(g('created')); if(!cr)continue; const creada=fromInput(cr.d+'T'+cr.t); if(new Date(creada).getTime()<cut)continue;
+    if(mod==='rec'){
+      const ap=usDT(g('receiving appointment')); if(!ap||!g('vendor id'))continue;
+      const st=g('status').toLowerCase();
+      out.push({vendor:g('vendor id'),tipo:g('receiving type').toLowerCase()==='will call'?'will_call':'cita',cita:fromInput(ap.d+'T'+ap.t),po:g('po #'),piezas:g('# pieces').replace(/\D/g,''),
+        contenedor:g('container').toLowerCase()==='true',contenedor_num:g('container #'),driver_id:g('driver id'),estado:st==='received complete'?'received_complete':(st==='received incomplete'?'received_incomplete':'pending'),
+        notas:g('notes'),creado_por:person(g('created by')),creada});
+    }else{
+      const nd=usDT(g('date of ndd')); if(!nd||!g('invoice'))continue;
+      let dir=g('city of delivery'); try{const j=JSON.parse(dir);dir=j.FormattedAddress||(j.Address&&j.Address.Street)||dir;}catch(e){}
+      out.push({factura:g('invoice'),cliente:g('customer name'),estado:g('status').toLowerCase()==='in progress'?'in_progress':'new',fecha_ndd:nd.d,direccion:dir,notas:g('notes'),creado_por:person(g('created by')),creada});
+    }
+  }
+  return out;
+}
+async function importCSV(file){
+  const m=$('imp-msg'); if(!file)return; m.textContent='…';
+  try{
+    const rows=mapRows(TAB,await file.text()); let ins=0,sk=0;
+    for(let i=0;i<rows.length;i+=100){const r=await DH.rpc('logistica_importar',{p_modulo:TAB,p_filas:rows.slice(i,i+100)});if(!r||!r.ok)throw 0;ins+=r.insertados;sk+=r.omitidos;}
+    m.textContent=tr('Imported / Importados')+': '+ins+' · '+tr('Skipped (duplicates or invalid) / Omitidos (duplicados o inválidos)')+': '+sk+' · '+tr('Only the last 3 months are imported. / Solo se importan los últimos 3 meses.');
+    await load();
+  }catch(e){m.textContent=tr('Could not import. / No se pudo importar.');}
 }
 function preset(n){$('r-from').value=dstr(new Date(Date.now()-n*864e5));$('r-to').value=dstr(new Date());}
 function csvCell(v){v=v==null?'':String(v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
@@ -195,7 +238,7 @@ async function dl(kind){
     if(!r||!r.ok){ferr(tr('The range is too long or not valid. / El rango es muy largo o no es válido.'));return;}
     const nm=(kind==='log'?'activity':(TAB==='rec'?'receiving':'next-day-delivery'))+'_'+f+'_'+t+'.csv';
     if(kind==='log'){csvOut(nm,['When (LA)','Who','Record','Action','Changes'],r.rows.map(l=>[fmtDT(l.cuando),l.quien,l.registro,l.accion,l.cambios?Object.keys(l.cambios).map(k=>(FL[k]||k)+': '+fv(k,l.cambios[k][0])+' -> '+fv(k,l.cambios[k][1])).join('; '):'']));}
-    else if(TAB==='rec'){csvOut(nm,['Appointment (LA)','Vendor','Type','PO #','Pieces','Container','Container #','Driver ID','Status','Notes','Created by','Created'],r.rows.map(x=>[fmtDT(x.cita),x.vendor,TY[x.tipo].split(' / ')[0],x.po,x.piezas,x.contenedor,x.contenedor_num,x.driver_id,ST.rec[x.estado].split(' / ')[0],x.notas,x.creado_por,fmtDT(x.creada)]));}
+    else if(TAB==='rec'){csvOut(nm,['Appointment (LA)','Vendor','Type','PO #','Pieces','Container','Container #','Driver ID','Status','Notes','Created by','Created'],r.rows.map(x=>[fmtDT(x.cita),x.vendor,TY[x.tipo].split(' / ')[0],x.po,x.piezas,(x.contenedor?'Yes':'No'),x.contenedor_num,x.driver_id,ST.rec[x.estado].split(' / ')[0],x.notas,x.creado_por,fmtDT(x.creada)]));}
     else{csvOut(nm,['Date of NDD','Invoice','Customer','Status','Address','Notes','Created by','Created'],r.rows.map(x=>[fmtD(x.fecha_ndd),x.factura,x.cliente,ST.ndd[x.estado].split(' / ')[0],x.direccion,x.notas,x.creado_por,fmtDT(x.creada)]));}
   }catch(e){ferr(tr('Could not build the report. / No se pudo generar el reporte.'));}
 }
@@ -203,7 +246,7 @@ function listHtml(rows){
   if(!rows.length)return '<div class="empty">'+esc(tr('Nothing here yet. Use Add to create the first record. / Aún no hay registros. Usa Agregar para crear el primero.'))+'</div>';
   if(TAB==='rec'){
     return `<table><thead><tr><th>${esc(tr('Appointment / Cita'))}</th><th>${esc(tr('Vendor / Proveedor'))}</th><th>${esc(tr('Type / Tipo'))}</th><th>PO #</th><th>${esc(tr('Pieces / Piezas'))}</th><th>${esc(tr('Container / Contenedor'))}</th><th>${esc(tr('Driver / Chofer'))}</th><th>${esc(tr('Status / Estado'))}</th><th>${esc(tr('Notes / Notas'))}</th></tr></thead><tbody>`+
-    rows.map(r=>`<tr class="row" onclick="openForm('${r.id}')"><td><span class="ap ${apClass(r.cita,isDone(r))}" style="${isDone(r)?'background:#7b8494':''}">${esc(fmtDT(r.cita))}</span></td><td data-no-i18n>${esc(r.vendor)}</td><td><span class="pill t-${r.tipo}">${esc(tr(TY[r.tipo]))}</span></td><td data-no-i18n>${esc(r.po||'')}</td><td>${r.piezas==null?'':r.piezas}</td><td data-no-i18n>${esc([r.contenedor,r.contenedor_num].filter(Boolean).join(' · '))}</td><td data-no-i18n>${esc(r.driver_id||'')}</td><td>${pill(r)}</td><td data-no-i18n>${esc(r.notas||'')}</td></tr>`).join('')+'</tbody></table>';
+    rows.map(r=>`<tr class="row" onclick="openForm('${r.id}')"><td><span class="ap ${apClass(r.cita,isDone(r))}" style="${isDone(r)?'background:#7b8494':''}">${esc(fmtDT(r.cita))}</span></td><td data-no-i18n>${esc(r.vendor)}</td><td><span class="pill t-${r.tipo}">${esc(tr(TY[r.tipo]))}</span></td><td data-no-i18n>${esc(r.po||'')}</td><td>${r.piezas==null?'':r.piezas}</td><td data-no-i18n>${esc([r.contenedor?tr('Yes / Sí'):'',r.contenedor_num].filter(Boolean).join(' · '))}</td><td data-no-i18n>${esc(r.driver_id||'')}</td><td>${pill(r)}</td><td data-no-i18n>${esc(r.notas||'')}</td></tr>`).join('')+'</tbody></table>';
   }
   return `<table><thead><tr><th>${esc(tr('Date of NDD / Fecha'))}</th><th>${esc(tr('Invoice / Factura'))}</th><th>${esc(tr('Customer / Cliente'))}</th><th>${esc(tr('Status / Estado'))}</th><th>${esc(tr('City of delivery / Dirección'))}</th><th>${esc(tr('Notes / Notas'))}</th><th>${esc(tr('Created by / Creó'))}</th></tr></thead><tbody>`+
   rows.map(r=>`<tr class="row" onclick="openForm('${r.id}')"><td><span class="ap ${apClass(r.fecha_ndd+'T12:00:00-08:00',isDone(r))}" style="${isDone(r)?'background:#7b8494':''}">${esc(fmtD(r.fecha_ndd))}</span></td><td data-no-i18n>${esc(r.factura)}</td><td data-no-i18n>${esc(r.cliente)}</td><td>${pill(r)}</td><td data-no-i18n>${r.direccion?`<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.direccion)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(r.direccion)}</a>`:''}</td><td data-no-i18n>${esc(r.notas||'')}</td><td data-no-i18n>${esc(r.creado_por)}</td></tr>`).join('')+'</tbody></table>';
@@ -243,7 +286,7 @@ function openForm(id,dayK){
       <div><label for="f-cita">${esc(tr('Appointment (LA time) / Cita (hora de LA)'))} *</label><input type="datetime-local" id="f-cita" value="${dv}"></div>
       <div><label for="f-po">PO #</label><input id="f-po" maxlength="200" value="${esc(r.po||'')}"></div>
       <div><label for="f-piezas">${esc(tr('Pieces / Piezas'))}</label><input type="number" min="0" max="100000" id="f-piezas" value="${r.piezas==null?'':r.piezas}"></div>
-      <div><label for="f-cont">${esc(tr('Container / Contenedor'))}</label><input id="f-cont" maxlength="40" value="${esc(r.contenedor||'')}"></div>
+      <div><label for="f-cont">${esc(tr('Container / Contenedor'))}</label><select id="f-cont"><option value="false"${r.contenedor?'':' selected'}>${esc(tr('No'))}</option><option value="true"${r.contenedor?' selected':''}>${esc(tr('Yes / Sí'))}</option></select></div>
       <div><label for="f-contn">${esc(tr('Container # / No. de contenedor'))}</label><input id="f-contn" maxlength="40" value="${esc(r.contenedor_num||'')}"></div>
       <div><label for="f-driver">${esc(tr('Driver ID / ID del chofer'))}</label><input id="f-driver" maxlength="60" value="${esc(r.driver_id||'')}"></div>
       <div><label for="f-estado">${esc(tr('Status / Estado'))}</label><select id="f-estado">${opts(ST.rec,r.estado||'pending')}</select></div>
@@ -270,7 +313,7 @@ function ferr(t){const e=$('ferr');e.textContent=t;e.classList.toggle('hide',!t)
 async function save(){
   let d;
   if(TAB==='rec'){
-    d={vendor:$('f-vendor').value.trim(),tipo:$('f-tipo').value,cita:$('f-cita').value?fromInput($('f-cita').value):'',po:$('f-po').value,piezas:$('f-piezas').value,contenedor:$('f-cont').value,contenedor_num:$('f-contn').value,driver_id:$('f-driver').value,estado:$('f-estado').value,notas:$('f-notas').value};
+    d={vendor:$('f-vendor').value.trim(),tipo:$('f-tipo').value,cita:$('f-cita').value?fromInput($('f-cita').value):'',po:$('f-po').value,piezas:$('f-piezas').value,contenedor:$('f-cont').value==='true',contenedor_num:$('f-contn').value,driver_id:$('f-driver').value,estado:$('f-estado').value,notas:$('f-notas').value};
     if(!d.vendor||!d.cita){ferr(tr('Vendor and appointment are required. / Proveedor y cita son obligatorios.'));return;}
   }else{
     d={factura:$('f-fac').value.trim(),cliente:$('f-cli').value.trim(),fecha_ndd:$('f-fecha').value,estado:$('f-estado').value,direccion:$('f-dir').value,notas:$('f-notas').value};
