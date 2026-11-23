@@ -1515,7 +1515,14 @@ async function renderMeCard(){
     if(ME.reto)opts.push(['reto',T('Daily Challenge','Reto del día')]);
     if(d.tienda)opts.push(['mi_tienda',T('My store vs daily goal','Mi tienda vs meta del día')]);
     body=opts.map(function(o){return '<button type="button" class="mopt'+(o[0]===d.tipo?' on':'')+'" onclick="meSet(\''+o[0]+'\')">'+o[1]+'</button>'}).join('');
-    el.innerHTML=head+body; el.classList.remove('hide'); return;
+    var menuForm='';
+    if(!d.mi_cumple){
+      var ms='';for(var i=1;i<=12;i++)ms+='<option value="'+i+'">'+(es?mde[i]:md[i])+'</option>';
+      var ds='';for(var j=1;j<=31;j++)ds+='<option>'+j+'</option>';
+      menuForm+='<div class="mbd"><select id="mc-m" aria-label="Month">'+ms+'</select><select id="mc-d" aria-label="Day">'+ds+'</select><button type="button" onclick="meBirthday()">'+T('Save my birthday','Guardar mi cumpleaños')+'</button></div><div class="msub" style="font-size:12px;color:#6B6B6B;margin-top:4px">'+T('Only day and month are shown, never the year.','Solo se muestra día y mes, nunca el año.')+'</div>';
+    
+    }
+    el.innerHTML=head+body+(menuForm?'<div class="msub" style="margin:10px 0 4px"><b>'+T('Add my birthday','Agregar mi cumpleaños')+'</b></div>'+menuForm:''); el.classList.remove('hide'); return;
   }
   if(d.tipo==='reto'&&ME.reto){
     var q=ME.reto;
@@ -1544,11 +1551,6 @@ async function renderMeCard(){
       var next=list.filter(function(x){return x.en_dias>0});
       if(next.length)body+=(today.length?'':'<div class="msub" style="margin-bottom:4px">'+T('Coming up this week','Esta semana')+'</div>')+next.map(function(x){return '<div class="mrow"><span>🎈 '+meEsc(x.nombre)+'</span><b>'+fd(x)+'</b></div>'}).join('');
     } else body='<div class="msub">'+T('No birthdays this week. Add yours so the team can celebrate with you.','No hay cumpleaños esta semana. Agrega el tuyo para que el equipo lo celebre contigo.')+'</div>';
-    if(!d.mi_cumple){
-      var ms='';for(var i=1;i<=12;i++)ms+='<option value="'+i+'">'+(es?mde[i]:md[i])+'</option>';
-      var ds='';for(var j=1;j<=31;j++)ds+='<option>'+j+'</option>';
-      body+='<div class="mbd"><select id="mc-m" aria-label="Month">'+ms+'</select><select id="mc-d" aria-label="Day">'+ds+'</select><button type="button" onclick="meBirthday()">'+T('Save my birthday','Guardar mi cumpleaños')+'</button></div><div class="msub" style="font-size:12px;color:#6B6B6B;margin-top:4px">'+T('Only day and month are shown, never the year.','Solo se muestra día y mes, nunca el año.')+'</div>';
-    }
   } else {
     var r=null; try{r=await DH.rpc('ventas_meta',{p_fecha:null,p_hora:null,p_demo:false})}catch(e){}
     var $=function(n){return '$'+Math.round(n).toLocaleString('en-US')};
