@@ -346,7 +346,7 @@ async function renderModePicker() {
   const c = myContext;
   let prog = null;
   try { prog = await DH.rpc('evaluacion_mi_progreso'); } catch (err) { console.warn('progress', err); }
-  content.innerHTML = renderMyProgress(prog) + `
+  content.innerHTML = renderGuide(c, prog) + renderMyProgress(prog) + `
     <div class="card">
       <h2>What would you like to do? / ¿Qué te gustaría hacer?</h2>
       <div class="desc">${activeCycle.nombre}</div>
@@ -385,6 +385,48 @@ async function renderModePicker() {
     </div>`;
 }
 
+
+
+/* ════════ HOW IT WORKS — instructions box (English only, adapts to what applies to the person; names only for people they evaluate, never their bosses) ════════ */
+function renderGuide(c, prog) {
+  const T = (prog && prog.tareas) || [];
+  const hasSelf = T.some(t => t.tipo === 'self');
+  const nTeam = T.filter(t => t.tipo === 'supervisor').length;
+  const hasTeam = c.tiene_reportes || nTeam > 0;
+  let seen = false; try { seen = localStorage.getItem('dh_eval_guide_seen') === '1'; } catch (e) {}
+  const li = (icon, title, body) => `<li style="display:flex;gap:10px;margin:0 0 12px"><span style="font-size:20px;line-height:1.3" aria-hidden="true">${icon}</span><span><strong>${title}</strong><br><span style="color:#444">${body}</span></span></li>`;
+  let steps = '';
+  if (hasSelf) steps += li('📝', 'Complete your self-assessment', 'Tap <b>My Self-Assessment</b>. Pick the answer that best describes you for each question, and add a note if you want to explain. If a question does not apply to your job, mark it <b>N/A</b>. Review your answers on the last screen before you submit.');
+  if (hasSelf) steps += li('👤', 'Your supervisor evaluates you', 'Your supervisor completes a separate evaluation of you. You do not need to do anything for it, and you will not see it until the whole cycle is complete.');
+  if (hasTeam) steps += li('👥', nTeam ? `Evaluate your team (${nTeam} ${nTeam === 1 ? 'person' : 'people'})` : 'Evaluate your team', 'Tap <b>Evaluate My Team</b>, choose a person, and answer the questions about their real behavior on the job (use the notes box and <b>N/A</b> when needed). Review, then submit. Repeat for each person on your list. <b>My Progress</b> below shows who is still pending.');
+  if (c.n_jefes > 0) steps += li('💬', 'Give anonymous feedback to your manager', 'Tap <b>Anonymous Feedback</b>. Your manager never sees your individual answers, only a combined summary of what the team shared.');
+  if (c.n_pares > 0) steps += li('🤝', 'Evaluate a fellow manager', 'Tap <b>Evaluate a Fellow Manager</b> and answer the short 1–5 questions about collaboration, communication and reliability.');
+  if (hasTeam) steps += li('🧭', 'Review your team and your own leadership', '<b>My Team Dashboard</b> shows progress and KPIs. <b>My Leadership Summary</b> shows what your team shared about you, anonymously.');
+  if (!steps) steps = '<li style="color:#444">There is nothing for you to complete in this cycle right now. You can still open <b>Evaluation Records</b> below.</li>';
+  return `<div class="card" style="border-left:5px solid var(--navy)">
+    <details ${seen ? '' : 'open'} ontoggle="try{localStorage.setItem('dh_eval_guide_seen','1')}catch(e){}">
+      <summary style="cursor:pointer;font-weight:700;font-size:17px;color:var(--navy);min-height:44px;display:flex;align-items:center">How evaluations work — read this first</summary>
+      <div style="font-size:14px;line-height:1.55;margin-top:10px">
+        <p style="margin:0 0 12px">Your final evaluation is <b>not a single form</b>. It combines several evaluations, each one done by a different person. The goal is a fair result with clear next steps, not a surprise.</p>
+        <h3 style="font-size:15px;margin:14px 0 8px;color:var(--navy)">What you need to do</h3>
+        <ol style="list-style:none;padding:0;margin:0">${steps}</ol>
+        <h3 style="font-size:15px;margin:14px 0 8px;color:var(--navy)">How your final result is built</h3>
+        <ul style="margin:0 0 0 18px;padding:0;color:#444">
+          <li>Each evaluation counts for a share of the final score. The shares are set by the company for each role, so nobody has to configure anything.</li>
+          <li>The result is a <b>pass / not pass</b> grade.</li>
+          <li><b>You will not see a score until every evaluation for you is complete.</b> Once they are all in, they are weighted together into one final result.</li>
+          <li>The final result also includes a list of <b>commitments</b>: the specific things to keep working on or improve, each with an action and a due date.</li>
+        </ul>
+        <h3 style="font-size:15px;margin:14px 0 8px;color:var(--navy)">Good to know</h3>
+        <ul style="margin:0 0 0 18px;padding:0;color:#444">
+          <li>The due date for this cycle is shown in <b>My Progress</b>. Finish before it.</li>
+          <li>Answer based on what you have actually seen, not on one good or bad day.</li>
+          <li>Questions about the process? Ask your manager or HR.</li>
+        </ul>
+      </div>
+    </details>
+  </div>`;
+}
 
 /* ════════ LEADERSHIP SUMMARY (managers see a digest, never raw answers) ════════ */
 async function showLeadershipSummary() {
