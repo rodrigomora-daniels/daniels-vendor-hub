@@ -215,6 +215,18 @@
         return '<div class="sal-card"><h4>' + esc(n.titulo) + '</h4><div class="meta">' + esc(fmtDate(n.publicada_en)) + '</div><p>' + esc(n.cuerpo) + '</p><div class="sal-act"><a class="sal-btn" href="noticias.html">' + esc(t('Open', 'Abrir')) + '</a></div></div>';
       }).join('');
     }
+    if (r.inv && r.inv.items && r.inv.items.length) {
+      var pill = function (ok) { return '<span style="display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700;color:#fff;background:' + (ok ? '#1E8E5A' : '#B3402F') + '">' + esc(ok ? t('Available', 'Disponible') : t('Not available', 'No disponible')) + '</span>'; };
+      h += '<div class="sal-sec">' + esc(t('Our inventory', 'Nuestro inventario')) + '</div>' + r.inv.items.map(function (it) {
+        var line = '';
+        if (r.inv.unidades) {
+          line = '<div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 12px;margin:8px 0 0;font-size:13px">' +
+            [[t('Available units', 'Unidades disponibles'), it.unidades], [t('On hand · Euclid', 'En existencia · Euclid'), it.euclid], [t('On hand · Chino', 'En existencia · Chino'), it.chino], [t('On hand · Cerritos', 'En existencia · Cerritos'), it.cerritos], [t('On hand · Warehouse', 'En existencia · Bodega'), it.bodega], [t('On order', 'En orden'), it.en_orden]].map(function (x, i) {
+              return '<span' + (i === 0 ? ' style="font-weight:700;color:#1B3A6B"' : '') + '>' + esc(x[0]) + '</span><b>' + esc(x[1]) + '</b>'; }).join('') + '</div>';
+        }
+        return '<div class="sal-card"><h4>' + esc(it.modelo || it.sku) + '</h4><div class="meta">' + pill(it.disponible) + ' ' + esc([it.descripcion, it.color].filter(Boolean).join(' · ')) + ' · SKU ' + esc(it.sku) + '</div>' + line + '</div>';
+      }).join('') + '<div class="sal-note">' + esc(t('Inventory report of ', 'Reporte de inventario del ') + (r.inv.reporte || '').replace(/\s+\d+:\d+:\d+.*$/, '')) + '</div>';
+    }
     if (r.web && r.web.length) {
       h += '<div class="sal-sec">' + esc(t('Product', 'Producto')) + '</div>' + r.web.map(function (w) {
         var img = w.image ? '<img src="' + esc(w.image) + '" alt="" loading="lazy" referrerpolicy="no-referrer" style="float:right;width:84px;height:84px;object-fit:contain;margin:0 0 6px 10px;border-radius:8px;background:#fff">' : '';
@@ -302,7 +314,9 @@
       var wq = webQuery(q), saleMode = PROMO_RE.test(q);
       if (saleMode && !(q.match(/[A-Za-z0-9*\-\/]{5,}/g) || []).some(function (x) { return /\d/.test(x); })) wq = '';   // promo question: flyers only (the website is not the source for promotions)
       var webP = (wq && DH.salWeb) ? withTimeout(DH.salWeb(wq), 10000).then(function (w) { return w && w.items || []; }).catch(function () { return []; }) : Promise.resolve([]);
+      var invP = wq ? withTimeout(DH.rpc('inventario_consulta', { p_q: wq }), 8000).catch(function () { return null; }) : Promise.resolve(null);
       var r = await withTimeout(DH.rpc('sal_buscar', { p_q: q }), 20000);
+      r.inv = await invP;
       r.web = await webP; r.saleMode = saleMode;
       if (saleMode && isPromoBrowse(q) && !(r.promos && r.promos.length)) { try { r.promos = await withTimeout(DH.rpc('sal_promos_vigentes', {}), 8000); r.browse = true; } catch (e) {} }
       clearTimeout(slowTimer);

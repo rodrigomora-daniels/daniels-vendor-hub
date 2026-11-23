@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><script src="dh-phone.js"></script><link rel="stylesheet" href="dh-mobile.css">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1B3A6B">
+<title>My Workspace — Inventory / Inventario</title>
+<style>
+  :root{--navy:#1B3A6B;--gold:#C8922A;--ink:#1E2735;--gray:#6B6B6B;--red:#C0392B;--green:#2E7D32}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#EEF1F6;color:var(--ink)}
+  header{background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px}
+  header h1{font-size:18px}header a{color:#fff;font-size:14px}
+  main{max-width:640px;margin:0 auto;padding:16px}
+  .card{background:#fff;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 1px 0 #dfe5ee}
+  h2{font-size:16px;margin-bottom:8px;color:var(--navy)} p{font-size:14px;line-height:1.5;margin-bottom:8px} .mut{color:var(--gray);font-size:13px}
+  .btn{background:var(--navy);color:#fff;border:0;border-radius:10px;padding:12px 18px;font-size:15px;font-weight:700;cursor:pointer;min-height:44px}
+  .btn:disabled{opacity:.5;cursor:default} input[type=file]{display:block;margin:10px 0;font-size:14px;max-width:100%}
+  .bar{height:10px;background:#e3e8f0;border-radius:6px;overflow:hidden;margin:10px 0}.bar i{display:block;height:100%;width:0;background:var(--green);transition:width .2s}
+  .ok{color:var(--green);font-weight:700}.err{color:var(--red);font-weight:700} .hide{display:none!important}
+</style>
+<meta name="dh-i18n" content="on">
+<script src="dh-chrome.js" defer></script>
+</head>
+<body>
+<header><h1>📦 Inventory / Inventario</h1><a href="index.html">← Home / Inicio</a></header>
+<main>
+  <div class="card" id="deny" style="display:none"><p class="err" id="denyt"></p></div>
+  <div class="card" id="cur"><h2 id="h-cur"></h2><p id="curt" class="mut"></p></div>
+  <div class="card" id="up" style="display:none">
+    <h2 id="h-up"></h2>
+    <p id="p-up"></p>
+    <input type="file" id="f" accept=".csv,.CSV,text/csv">
+    <button class="btn" id="go" disabled></button>
+    <div class="bar hide" id="bar"><i id="bi"></i></div>
+    <p id="msg" role="status"></p>
+  </div>
+</main>
+<script src="dh-session.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const tr=s=>(window.DH&&DH.i18n)?DH.i18n.pick(s):s;
+const SUPER=()=>{try{return ((DH.emp&&DH.emp())||{}).nivel_admin==='super_admin';}catch(e){return false;}};
+let ROWS=null, FECHA='';
+function parseCSV(text){
+  const out=[];let row=[],f='',q=false;
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){if(c==='"'){if(text[i+1]==='"'){f+='"';i++;}else q=false;}else f+=c;}
+    else if(c==='"')q=true; else if(c===','){row.push(f);f='';}
+    else if(c==='\n'){row.push(f.replace(/\r$/,''));out.push(row);row=[];f='';}
+    else f+=c;}
+  if(f||row.length){row.push(f.replace(/\r$/,''));out.push(row);}
+  return out;
+}
+const num=v=>{v=String(v==null?'':v).replace(/[,\s]/g,'');if(v===''||isNaN(Number(v)))return '';return String(Math.round(Number(v)));};
+function parseReport(text){
+  const rr=parseCSV(text); const hi=rr.findIndex(r=>r[0]==='Buyer#'); if(hi<0)throw new Error('header');
+  const m=(text.match(/Run Date:\s*([^\r\n]+)/)||[])[1]||''; const H=rr[hi];
+  const ix=n=>H.indexOf(n), last=re=>{let k=-1;H.forEach((h,i)=>{if(re.test(h))k=i;});return k;};
+  const c={sku:ix('SKU'),mod:ix('Model'),d1:ix('Sku Description'),col:ix('Color'),ven:ix('Vendor Name'),buy:ix('Buyer Name'),eu:ix('EU Qty OH'),cn:ix('CN Qty OH'),rr:ix('RR Qty OH'),wh:ix('WH Qty OH'),av:last(/^Qty Avail \d+\/\d+$/),oo:last(/^Qty on Order \d+\/\d+$/)};
+  if(Object.values(c).some(v=>v<0))throw new Error('cols');
+  const rows=[];
+  for(let i=hi+1;i<rr.length;i++){const r=rr[i];const sku=(r[c.sku]||'').trim();if(!sku||sku==='Totals')continue;
+    rows.push([sku,r[c.mod]||'',r[c.d1]||'',r[c.col]||'',r[c.ven]||'',r[c.buy]||'',num(r[c.eu]),num(r[c.cn]),num(r[c.rr]),num(r[c.wh]),num(r[c.av]),num(r[c.oo])]);}
+  return {rows,fecha:m.trim(),avCol:H[c.av]};
+}
+async function cur(){
+  $('h-cur').textContent=tr('Current inventory / Inventario actual');
+  try{const r=await DH.rpc('inventario_consulta',{p_q:'zzz'});
+    $('curt').textContent=r.actualizado?tr('Loaded from the report of / Cargado del reporte del')+' '+(r.reporte||'')+' · '+new Date(r.actualizado).toLocaleString('en-US',{timeZone:'America/Los_Angeles'}):tr('Nothing loaded yet. / Aún no hay nada cargado.');}catch(e){$('curt').textContent='';}
+}
+function init(){
+  if(!SUPER()){$('deny').style.display='';$('denyt').textContent=tr('This page is only for administrators. / Esta página es solo para administradores.');$('cur').classList.add('hide');return;}
+  $('up').style.display='';$('h-up').textContent=tr('Update inventory / Actualizar inventario');
+  $('p-up').textContent=tr('Upload the Profit Performance report (CSV). It replaces the whole inventory. / Sube el reporte Profit Performance (CSV). Reemplaza todo el inventario.');
+  $('go').textContent=tr('Upload / Subir'); cur();
+}
+$('f').addEventListener('change',async e=>{
+  const fl=e.target.files[0];ROWS=null;$('go').disabled=true;$('msg').className='';$('msg').textContent='';if(!fl)return;
+  try{const buf=await fl.arrayBuffer();const p=parseReport(new TextDecoder('windows-1252').decode(buf));ROWS=p.rows;FECHA=p.fecha;
+    $('msg').textContent=p.rows.length+' SKUs · '+tr('Run date / Fecha del reporte')+': '+p.fecha+' · '+tr('Available column / Columna disponible')+': '+p.avCol;$('go').disabled=!p.rows.length;}
+  catch(err){$('msg').className='err';$('msg').textContent=tr('That does not look like the Profit Performance report. / Ese archivo no parece el reporte Profit Performance.');}
+});
+$('go').addEventListener('click',async()=>{
+  if(!ROWS)return;$('go').disabled=true;$('bar').classList.remove('hide');$('msg').className='';
+  const lote=Date.now().toString(36),N=500;
+  try{for(let i=0;i<ROWS.length;i+=N){const fin=i+N>=ROWS.length;
+      const r=await DH.rpc('inventario_importar',{p_lote:lote,p_filas:ROWS.slice(i,i+N),p_final:fin,p_fecha:FECHA});
+      if(!r||!r.ok)throw new Error('x');$('bi').style.width=Math.min(100,Math.round((i+N)/ROWS.length*100))+'%';}
+    $('msg').className='ok';$('msg').textContent=tr('Done. Inventory updated. / Listo. Inventario actualizado.');cur();}
+  catch(e){$('msg').className='err';$('msg').textContent=tr('The upload did not finish. Please try again. / La carga no terminó. Intenta de nuevo.');$('go').disabled=false;}
+});
+init();
+</script>
+</body>
+</html>
