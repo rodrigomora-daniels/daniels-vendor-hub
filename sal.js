@@ -227,10 +227,11 @@
         return '<div class="sal-card"><h4>' + esc(it.modelo || it.sku) + '</h4><div class="meta">' + pill(it.disponible) + ' ' + esc([it.descripcion, it.color].filter(Boolean).join(' · ')) + ' · SKU ' + esc(it.sku) + '</div>' + line + '</div>';
       }).join('') + '<div class="sal-note">' + esc(t('Inventory report of ', 'Reporte de inventario del ') + (r.inv.reporte || '').replace(/\s+\d+:\d+:\d+.*$/, '')) + '</div>';
     }
+    var hasInv = !!(r.inv && r.inv.items && r.inv.items.length);   // our inventory report is the only source of availability when it has the item
     if (r.web && r.web.length) {
-      h += '<div class="sal-sec">' + esc(t('Product', 'Producto')) + '</div>' + r.web.map(function (w) {
+      h += '<div class="sal-sec">' + esc(hasInv ? t('Product details', 'Detalles del producto') : t('Product', 'Producto')) + '</div>' + r.web.map(function (w) {
         var img = w.image ? '<img src="' + esc(w.image) + '" alt="" loading="lazy" referrerpolicy="no-referrer" style="float:right;width:84px;height:84px;object-fit:contain;margin:0 0 6px 10px;border-radius:8px;background:#fff">' : '';
-        var badge = '<span style="display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700;color:#fff;background:' + (w.available ? '#1E8E5A' : '#B3402F') + '">' + esc(w.available ? t('Available', 'Disponible') : t('Not available', 'No disponible')) + '</span>';
+        var badge = hasInv ? '' : '<span style="display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700;color:#fff;background:' + (w.available ? '#1E8E5A' : '#B3402F') + '">' + esc(w.available ? t('Available', 'Disponible') : t('Not available', 'No disponible')) + '</span>';
         var det = (w.details || []).length ? '<div style="clear:both;display:grid;grid-template-columns:minmax(84px,38%) minmax(0,1fr);gap:4px 12px;margin:8px 0 0;font-size:13px;overflow-wrap:break-word;word-break:normal">' + w.details.map(function (d) { return '<b style="color:#1B3A6B;min-width:0;overflow-wrap:break-word;word-break:normal">' + esc(d.k) + '</b><span style="min-width:0;overflow-wrap:break-word;word-break:normal">' + esc(d.v) + '</span>'; }).join('') + '</div>' : '';
         var sm = w.summary ? '<p style="margin:8px 0 0">' + esc(w.summary) + '</p>' : '';
         var all = w.specs || [], first = all.slice(0, 6), more = all.slice(6);
@@ -240,7 +241,7 @@
         var opts = (w.options || []).filter(function (o) { return o.values && o.values.length; }).map(function (o) {
           return '<p><b>' + esc(o.name) + ' (' + o.values.length + '):</b> ' + esc(o.values.join(', ')) + '</p>';
         }).join('');
-        var vav = (w.variants || []).length > 1 ? '<p>' + esc(t('By option: ', 'Por opción: ')) + esc(w.variants.map(function (v) { return v.title + (v.available ? ' ✓' : ' ✗'); }).join(' · ')) + '</p>' : '';
+        var vav = !hasInv && (w.variants || []).length > 1 ? '<p>' + esc(t('By option: ', 'Por opción: ')) + esc(w.variants.map(function (v) { return v.title + (v.available ? ' ✓' : ' ✗'); }).join(' · ')) + '</p>' : '';
         return '<div class="sal-card" style="overflow:hidden">' + img + '<h4>' + esc(w.title) + '</h4><div class="meta">' + badge + (sub ? ' ' + esc(sub) : '') + '</div>' + sm + det + opts + vav + sp + '</div>';
       }).join('');
     }
@@ -250,7 +251,7 @@
       parts.sort(function (x, y) { return rank(x) - rank(y); });
       h = pre + parts.map(function (p) { return '<div class="sal-sec">' + p; }).join('');
     }
-    return h + '<div class="sal-note">' + esc((r.web && r.web.length) ? t('SAL can make mistakes. Availability comes from the website; check Infinity to be sure. Prices and promotions: use the store tag and the published flyers.', 'SAL puede cometer errores. La disponibilidad viene del sitio web; consulta Infinity para estar seguro. Precios y promociones: usa la etiqueta de tienda y los flyers publicados.') : t('SAL can make mistakes.', 'SAL puede cometer errores.')) + '</div>';
+    return h + '<div class="sal-note">' + esc(hasInv ? t('SAL can make mistakes. Availability comes from our inventory report; check Infinity to be sure.', 'SAL puede cometer errores. La disponibilidad viene de nuestro reporte de inventario; consulta Infinity para estar seguro.') : (r.web && r.web.length) ? t('SAL can make mistakes. Availability comes from the website; check Infinity to be sure. Prices and promotions: use the store tag and the published flyers.', 'SAL puede cometer errores. La disponibilidad viene del sitio web; consulta Infinity para estar seguro. Precios y promociones: usa la etiqueta de tienda y los flyers publicados.') : t('SAL can make mistakes.', 'SAL puede cometer errores.')) + '</div>';
   }
 
   function bindResult(node, r) {
