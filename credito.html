@@ -105,7 +105,7 @@
     <div class="card"><h2 id="h-stats"></h2><div id="stats" class="mut"></div></div>
   </div>
 </main>
-<script src="dh-session.js"></script>
+<script src="dh-session.js?v=141"></script>
 <script>
 const $=id=>document.getElementById(id);
 const tr=s=>(window.DH&&DH.i18n)?DH.i18n.pick(s):s;
@@ -180,11 +180,12 @@ $('read').onclick=()=>readShots();
 function fill(id,v,isChk){ if(v===null||v===undefined||v==='')return; const el=$(id); if(isChk)el.checked=!!v; else el.value=v; el.classList.add('fromshot'); }
 async function readShots(){
   const m=$('rmsg'); m.className='mut'; m.textContent=tr('SAL is reading… / SAL está leyendo…'); $('read').disabled=true;
-  try{ const r=await DH.creditRead(SHOTS); const f=r.fields||{}; INF=f.infinity||null;
+  try{ if(!DH.creditRead) throw new Error('Reload the page / Recarga la página');
+    const r=await DH.creditRead(SHOTS); const f=r.fields||{}; INF=f.infinity||null;
     fill('fico',f.fico);fill('score',f.score);fill('monto',f.monto);fill('dp',f.dp);fill('plazo',f.plazo);fill('late',f.late);fill('ingreso',f.ingreso);fill('deudas',f.deudas);
     fill('producto',f.producto);fill('bad',f.bad,true);fill('existente',f.existente,true);
     m.className='ok'; m.textContent=tr('Done. Yellow fields came from the screenshots: check them, then press Ask SAL. / Listo. Los campos amarillos salieron de las capturas: revísalos y presiona Consultar a SAL.')+(f.notas?' — '+f.notas:'');
-  }catch(x){ m.className='err'; m.textContent=x.code==='NO_KEY'?tr('Screenshot reading is not enabled yet. Type the fields below. / La lectura de capturas aún no está activa. Captura los campos abajo.'):x.code==='PT403'?tr('No access. / Sin acceso.'):tr('Could not read the screenshots. Type the fields below. / No se pudieron leer las capturas. Captura los campos abajo.'); }
+  }catch(x){ m.className='err'; m.textContent=x.code==='NO_KEY'?tr('Screenshot reading is not enabled yet. Type the fields below. / La lectura de capturas aún no está activa. Captura los campos abajo.'):x.code==='PT403'?tr('No access. / Sin acceso.'):tr('Could not read the screenshots. Type the fields below. / No se pudieron leer las capturas. Captura los campos abajo.')+' ('+String((x&&x.message)||x).slice(0,80)+')'; }
   $('read').disabled=false;
 }
 document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',()=>el.classList.remove('fromshot')));
