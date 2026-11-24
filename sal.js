@@ -221,7 +221,7 @@
         var line = '';
         if (r.inv.unidades) {
           line = '<div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 12px;margin:8px 0 0;font-size:13px">' +
-            [[t('Available units', 'Unidades disponibles'), it.unidades], [t('On hand · Euclid', 'En existencia · Euclid'), it.euclid], [t('On hand · Chino', 'En existencia · Chino'), it.chino], [t('On hand · Cerritos', 'En existencia · Cerritos'), it.cerritos], [t('On hand · Warehouse', 'En existencia · Bodega'), it.bodega], [t('On order', 'En orden'), it.en_orden]].map(function (x, i) {
+            (it.por_tienda === false ? [[t('Available units', 'Unidades disponibles'), it.unidades], [t('On hand · all stores', 'En existencia · todas las tiendas'), it.total == null ? '—' : it.total], [t('On order', 'En orden'), it.en_orden]] : [[t('Available units', 'Unidades disponibles'), it.unidades], [t('On hand · Euclid', 'En existencia · Euclid'), it.euclid], [t('On hand · Chino', 'En existencia · Chino'), it.chino], [t('On hand · Cerritos', 'En existencia · Cerritos'), it.cerritos], [t('On hand · Warehouse', 'En existencia · Bodega'), it.bodega], [t('On order', 'En orden'), it.en_orden]]).map(function (x, i) {
               return '<span' + (i === 0 ? ' style="font-weight:700;color:#1B3A6B"' : '') + '>' + esc(x[0]) + '</span><b>' + esc(x[1]) + '</b>'; }).join('') + '</div>';
         }
         return '<div class="sal-card"><h4>' + esc(it.modelo || it.sku) + '</h4><div class="meta">' + pill(it.disponible) + ' ' + esc([it.descripcion, it.color].filter(Boolean).join(' · ')) + ' · SKU ' + esc(it.sku) + '</div>' + line + '</div>';

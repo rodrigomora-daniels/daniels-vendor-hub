@@ -54,8 +54,20 @@ function parseCSV(text){
   return out;
 }
 const num=v=>{v=String(v==null?'':v).replace(/[,\s]/g,'');if(v===''||isNaN(Number(v)))return '';return String(Math.round(Number(v)));};
+function parseWOH(text,rr){
+  const hi=rr.findIndex(r=>r[0]==='Record Type'); const H=rr[hi], ix=n=>H.indexOf(n);
+  const c={sku:ix('Sku#'),mod:ix('Model#'),d:ix('SKU Description'),ven:ix('Vendor Name'),oh:ix('Qty on Hand'),av:ix('Qty Avail.'),oo:ix('Qty On Order')};
+  if(Object.values(c).some(v=>v<0))throw new Error('cols');
+  const m=(text.match(/Run Date:\s*([^\r\n,]+)/)||[])[1]||'';
+  const rows=[];
+  for(let i=hi+1;i<rr.length;i++){const r=rr[i]; if(r[0]!=='Detail')continue; const sku=(r[c.sku]||'').trim(); if(!sku)continue;
+    const av=num(r[c.av]);
+    rows.push([sku,r[c.mod]||'',r[c.d]||'','',r[c.ven]||'','','','','','',av===''?'0':av,num(r[c.oo]),num(r[c.oh])]);}
+  return {rows,fecha:m.trim(),avCol:'Qty Avail. (blank = 0)',woh:true};
+}
 function parseReport(text){
-  const rr=parseCSV(text); const hi=rr.findIndex(r=>r[0]==='Buyer#'); if(hi<0)throw new Error('header');
+  const rr=parseCSV(text); if(rr.some(r=>r[0]==='Record Type'&&r.includes('Sku#')))return parseWOH(text,rr);
+  const hi=rr.findIndex(r=>r[0]==='Buyer#'); if(hi<0)throw new Error('header');
   const m=(text.match(/Run Date:\s*([^\r\n]+)/)||[])[1]||''; const H=rr[hi];
   const ix=n=>H.indexOf(n), last=re=>{let k=-1;H.forEach((h,i)=>{if(re.test(h))k=i;});return k;};
   const c={sku:ix('SKU'),mod:ix('Model'),d1:ix('Sku Description'),col:ix('Color'),ven:ix('Vendor Name'),buy:ix('Buyer Name'),eu:ix('EU Qty OH'),cn:ix('CN Qty OH'),rr:ix('RR Qty OH'),wh:ix('WH Qty OH'),av:last(/^Qty Avail \d+\/\d+$/),oo:last(/^Qty on Order \d+\/\d+$/)};
@@ -74,13 +86,13 @@ async function init(){
   let ok=SUPER(); try{ok=(await DH.rpc('inventario_puede'))===true;}catch(e){}
   if(!ok){$('deny').style.display='';$('denyt').textContent=tr('This page is only for administrators. / Esta página es solo para administradores.');$('cur').classList.add('hide');return;}
   $('up').style.display='';$('h-up').textContent=tr('Update inventory / Actualizar inventario');
-  $('p-up').textContent=tr('Upload the Profit Performance report (CSV). It replaces the whole inventory. / Sube el reporte Profit Performance (CSV). Reemplaza todo el inventario.');
+  $('p-up').textContent=tr('Upload the Weeks on Hand or Profit Performance report (CSV). It replaces the whole inventory. / Sube el reporte Weeks on Hand o Profit Performance (CSV). Reemplaza todo el inventario.');
   $('go').textContent=tr('Upload / Subir'); cur();
 }
 $('f').addEventListener('change',async e=>{
   const fl=e.target.files[0];ROWS=null;$('go').disabled=true;$('msg').className='';$('msg').textContent='';if(!fl)return;
   try{const buf=await fl.arrayBuffer();const p=parseReport(new TextDecoder('windows-1252').decode(buf));ROWS=p.rows;FECHA=p.fecha;
-    $('msg').textContent=p.rows.length+' SKUs · '+tr('Run date / Fecha del reporte')+': '+p.fecha+' · '+tr('Available column / Columna disponible')+': '+p.avCol;$('go').disabled=!p.rows.length;}
+    $('msg').textContent=p.rows.length+' SKUs · '+tr('Run date / Fecha del reporte')+': '+p.fecha+' · '+tr('Available column / Columna disponible')+': '+p.avCol+(p.woh?' · '+tr('This report has no per-store units; managers will see total on hand. / Este reporte no trae unidades por tienda; los gerentes verán el total en existencia.'):'');$('go').disabled=!p.rows.length;}
   catch(err){$('msg').className='err';$('msg').textContent=tr('That does not look like the Profit Performance report. / Ese archivo no parece el reporte Profit Performance.');}
 });
 $('go').addEventListener('click',async()=>{
