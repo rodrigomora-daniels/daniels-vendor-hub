@@ -261,6 +261,7 @@ function body(m){
   let h=esc(m.cuerpo);
   (m.menciones||[]).forEach(n=>{const e=esc('@'+n);h=h.split(e).join('<span class="mt">'+e+'</span>');});
   h=h.replace(/(^|\s)(@(?:all|todos|todas))(?=\s|[.,;:!?)]|$)/gi,'$1<span class="mt">$2</span>');
+  (GRP||[]).forEach(g=>{h=h.replace(new RegExp('(^|\\s)(@'+g.slug+')(?=\\s|[.,;:!?)]|$)','gi'),'$1<span class="mt">$2</span>');});
   return h;
 }
 function appendMsgs(list){
@@ -426,9 +427,11 @@ async function send(ev){
 /* ---- @mentions ---- */
 const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 function dirCache(c){try{const v=JSON.parse(localStorage.getItem('dh_dir_'+c)||'null');return Array.isArray(v)?v:[];}catch(e){return [];}}
+var GRP=(function(){try{const v=JSON.parse(localStorage.getItem('dh_grp')||'[]');return Array.isArray(v)?v:[];}catch(e){return [];}})();
 let DIRLOAD=0;
 async function loadDir(){
   if(!CUR)return; const c=CUR;
+  try{const g=await DH.rpc('mensajes_grupos',{});if(Array.isArray(g)){GRP=g;try{localStorage.setItem('dh_grp',JSON.stringify(g));}catch(e){}}}catch(e){}
   try{
     const d=await DH.rpc('mensajes_directorio',{p_canal:c});
     if(c===CUR&&Array.isArray(d)){DIR=d;try{localStorage.setItem('dh_dir_'+c,JSON.stringify(d));}catch(e){}}
@@ -449,6 +452,7 @@ function updatePop(){
   }
   const q=norm(a.q);
   PLIST=DIR.filter(x=>!q||norm(x.nombre).split(' ').some(w=>w.startsWith(q))||norm(x.nombre).startsWith(q)).slice(0,30);
+  (GRP||[]).forEach(g=>{if(!q||norm(g.nombre).startsWith(q)||norm(g.slug).startsWith(q))PLIST.unshift({id:'__g:'+g.slug,grp:1,nombre:g.nombre,puesto:tr(g.en||'',g.es||''),ubicacion:''});});
   if(!q||'all'.startsWith(q)||'todos'.startsWith(q)||'todas'.startsWith(q))PLIST.unshift({id:'__all',nombre:'all',puesto:tr('Everyone in this chat / Todos en este chat'),ubicacion:''});
   if(!PLIST.length){p.innerHTML='<button type="button" disabled data-no-i18n>'+esc(tr('No match. Only people with an account appear. / Sin coincidencias. Solo aparecen personas con cuenta.'))+'</button>';p.classList.remove('hide');PSEL=-1;return;}
   if(PSEL<0||PSEL>=PLIST.length)PSEL=0;
@@ -457,7 +461,7 @@ function updatePop(){
 function pickMention(i){
   const p=PLIST[i]; if(!p)return; const a=atQuery(), t=$('txt'); if(!a)return;
   const after=t.value.slice(t.selectionStart), ins='@'+p.nombre+' ';
-  if(p.id==='__all'){t.value=t.value.slice(0,a.start)+ins+after;const pp=a.start+ins.length;t.setSelectionRange(pp,pp);closePop();t.focus();t.dispatchEvent(new Event('input'));return;}
+  if(p.id==='__all'||p.grp){t.value=t.value.slice(0,a.start)+ins+after;const pp=a.start+ins.length;t.setSelectionRange(pp,pp);closePop();t.focus();t.dispatchEvent(new Event('input'));return;}
   t.value=t.value.slice(0,a.start)+ins+after; const pos=a.start+ins.length; t.setSelectionRange(pos,pos);
   MEN.set(p.nombre,p.id); closePop(); t.focus(); t.dispatchEvent(new Event('input'));
 }
