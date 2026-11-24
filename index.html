@@ -109,6 +109,9 @@
   #me-card .mh h3{font:700 17px Georgia,serif;color:#1B3A6B;margin:0;flex:1}
   #me-card .mh button{background:none;border:0;font-size:18px;cursor:pointer;min-width:40px;min-height:40px;border-radius:8px;color:#1B3A6B}
   #me-card .mh button:hover{background:#F4F6FA}
+  #me-card .mu{display:flex;align-items:center;gap:8px;background:#FFF6E0;border-left:4px solid #C8922A;border-radius:6px;padding:8px 10px;margin:0 0 8px;text-decoration:none;color:#12284A;font:600 14px 'Segoe UI',Arial,sans-serif}
+  #me-card .mu b{background:#C0392B;color:#fff;border-radius:999px;padding:1px 8px;font-size:12px;margin-left:auto}
+  #me-card .mu small{font-weight:400;color:#6B6B6B}
   #me-card .mbig{font:700 clamp(22px,3vw,30px)/1.15 Georgia,serif;color:#12284A;margin:4px 0 6px}
   #me-card .msub{font:14px/1.5 'Segoe UI',Arial,sans-serif;color:#33404f}
   #me-card .mrow{display:flex;justify-content:space-between;gap:10px;font:14px 'Segoe UI',Arial,sans-serif;color:#1E2735;padding:6px 0;border-bottom:1px solid #eef1f6}
@@ -586,7 +589,7 @@ document.addEventListener('DOMContentLoaded',function(){
   <button class="nl" id="nl-reportes" onclick="navigateToTool('reportes')" style="display:none"><span>📊</span>My reports / Mis reportes</button>
   <button class="nl" id="nl-logistica" onclick="navigateToTool('logistica')" style="display:none"><span>🚚</span>Receiving &amp; Deliveries / Recepción y Entregas</button>
   <button class="nl" id="nl-tickets" style="display:none" onclick="navigateToTool('tickets')"><span>🛠</span>IT tickets / Tickets de TI</button>
-  <button class="nl" id="nl-credito" style="display:none" onclick="navigateToTool('credito')"><span>💳</span>SAL Credit / SAL de crédito</button>
+  <button class="nl" id="nl-credito" onclick="navigateToTool('credito')"><span>💳</span>SAL Credit / SAL de crédito</button>
   <button class="nl" id="nl-inventario" style="display:none" onclick="navigateToTool('inventario')"><span>📦</span>Inventory upload / Cargar inventario</button>
   <button class="nl" onclick="navigateToTool('notas')"><span>📝</span>My notes / Mis notas</button>
   <a class="nl" id="nl-web" href="https://danielshomecenter.com/" target="_blank" rel="noopener noreferrer"><span>🛋️</span>Daniels website (full catalog) / Sitio de Daniels (catálogo completo) ↗</a>
@@ -1238,7 +1241,7 @@ async function loadDashboard() {
   ['card-prescreen', 'card-leadsource', 'nl-prescreen', 'nl-leadsource', 'nl-board'].forEach(id => { const c = document.getElementById(id); if (c) c.style.display = canSeeStoreTools ? '' : 'none'; });
   // Daniels Board stays "Soon" for everyone except the people the server allows (admins, Ted, Héctor...).
   try{ DH.rpc('board_puede').then(ok=>{ const b=document.getElementById('nl-board'); if(!b||ok!==true) return; b.disabled=false; b.removeAttribute('aria-disabled'); b.removeAttribute('title'); b.style.opacity=''; b.style.cursor=''; b.style.display=''; const sm=b.querySelector('small'); if(sm) sm.remove(); b.onclick=()=>{ location.href='board.html'; }; }).catch(()=>{}); }catch(e){}
-  try{ DH.rpc('credito_puede').then(ok=>{ const n=document.getElementById('nl-credito'); if(n&&ok===true) n.style.display=''; }).catch(()=>{}); }catch(e){}
+  try{ DH.rpc('credito_puede').then(ok=>{ const n=document.getElementById('nl-credito'); if(n&&ok!==true){ const s=n.querySelector('span'); if(s) s.textContent='🔒'; n.title='Credit approvers only / Solo aprobadores de crédito'; } }).catch(()=>{}); }catch(e){}
   try{ DH.rpc('inventario_puede').then(ok=>{ const n=document.getElementById('nl-inventario'); if(n&&ok===true) n.style.display=''; }).catch(()=>{}); }catch(e){}
   try{ DH.rpc('tickets_mi_rol').then(r=>{ const n=document.getElementById('nl-tickets'); if(n&&r&&r.reporta) n.style.display=''; }).catch(()=>{}); }catch(e){}
   try{ DH.rpc('logistica_mi_acceso').then(r=>{ const n=document.getElementById('nl-logistica'); if(n&&r&&(r.rec||r.ndd)) n.style.display=''; }).catch(()=>{}); }catch(e){}
@@ -1533,7 +1536,24 @@ async function loadMeCard(){
     await renderMeCard();
   }catch(e){el.classList.add('hide')}
 }
+/* unread channel messages = one more alert inside the personal panel (shown above whatever the panel displays) */
+var ME_UN=[];
+function meUnreadHtml(){
+  if(!ME_UN.length)return '';
+  var es=(localStorage.getItem('dh_lang')==='es'), pick=(window.DH&&DH.i18n&&DH.i18n.pick)?DH.i18n.pick:function(s){return s};
+  var tot=ME_UN.reduce(function(a,c){return a+c.n},0), top=ME_UN.slice(0,3);
+  var rows=top.map(function(c){return '<a class="mu" href="mensajes.html#'+encodeURIComponent(c.id)+'">💬 <span>'+meEsc(pick(c.nombre))+'</span><b>'+(c.n>99?'99+':c.n)+'</b></a>'}).join('');
+  var more=ME_UN.length>3?'<a class="mu" href="mensajes.html"><span>'+(es?'y '+(ME_UN.length-3)+' canales más':'and '+(ME_UN.length-3)+' more channels')+'</span><b>›</b></a>':'';
+  return '<div class="mua" role="status" aria-label="'+(es?'Mensajes sin leer':'Unread messages')+'"><div class="msub" style="font-weight:700;margin-bottom:4px">'+(es?tot+' mensajes sin leer':tot+' unread messages')+'</div>'+rows+more+'</div>';
+}
 async function renderMeCard(){
+  await _renderMeCard();
+  var el=document.getElementById('me-card'); if(!el||el.classList.contains('hide'))return;
+  var old=el.querySelector('.mua'); if(old)old.remove();
+  var h=meUnreadHtml(); if(!h)return;
+  var head=el.querySelector('.mh'); if(head)head.insertAdjacentHTML('afterend',h); else el.insertAdjacentHTML('afterbegin',h);
+}
+async function _renderMeCard(){
   var el=document.getElementById('me-card'), d=ME.d; if(!d)return;
   var es=(localStorage.getItem('dh_lang')==='es'), T=function(a,b){return es?b:a};
   var titles={cumples:T('Celebrations','Celebraciones'),ventas_resumen:T('Sales today','Ventas de hoy'),mi_tienda:T('My store today','Mi tienda hoy'),reto:T('Daily Challenge','Reto del día')};
@@ -1816,9 +1836,12 @@ async function savePushPrefs(){
   var p={};document.querySelectorAll('#push-box input[data-k]').forEach(function(c){p[c.dataset.k]=c.checked;});
   try{await DHPush.savePrefs(p);}catch(e){var m=document.getElementById('push-msg');if(m)m.textContent=pTr('Could not save. / No se pudo guardar.');}
 }
+document.addEventListener('visibilitychange',function(){ if(!document.hidden&&window.DH&&DH.token&&DH.token())loadMsgBadge(); });
 async function loadMsgBadge(){
   try{
     var ch=await DH.rpc('mensajes_canales'), n=0; (ch||[]).forEach(function(c){n+=Number(c.sin_leer)||0;});
+    var acx=(typeof ACL==='string'&&ACL.indexOf('#')>-1)?ACL.split('#')[1]:''; ME_UN=(ch||[]).filter(function(c){return Number(c.sin_leer)>0&&c.id!==acx}).map(function(c){return {id:c.id,nombre:c.nombre,n:Number(c.sin_leer)}}).sort(function(a,b){return b.n-a.n});
+    try{ if(ME.d&&!ME.playing&&!ME.menu)await renderMeCard(); }catch(e){}
     ['msg-bdg','msg-bdg2'].forEach(function(id){var b=document.getElementById(id); if(!b)return; b.textContent=n>99?'99+':n; b.style.display=n?'':'none';});
   }catch(e){}
 }
