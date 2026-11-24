@@ -224,7 +224,15 @@
             (it.por_tienda === false ? [[t('Available units', 'Unidades disponibles'), it.unidades], [t('On hand · all stores', 'En existencia · todas las tiendas'), it.total == null ? '—' : it.total], [t('On order', 'En orden'), it.en_orden]] : [[t('Available units', 'Unidades disponibles'), it.unidades], [t('On hand · Euclid', 'En existencia · Euclid'), it.euclid], [t('On hand · Chino', 'En existencia · Chino'), it.chino], [t('On hand · Cerritos', 'En existencia · Cerritos'), it.cerritos], [t('On hand · Warehouse', 'En existencia · Bodega'), it.bodega], [t('On order', 'En orden'), it.en_orden]]).map(function (x, i) {
               return '<span' + (i === 0 ? ' style="font-weight:700;color:#1B3A6B"' : '') + '>' + esc(x[0]) + '</span><b>' + esc(x[1]) + '</b>'; }).join('') + '</div>';
         }
-        return '<div class="sal-card"><h4>' + esc(it.modelo || it.sku) + '</h4><div class="meta">' + pill(it.disponible) + ' ' + esc([it.descripcion, it.color].filter(Boolean).join(' · ')) + ' · SKU ' + esc(it.sku) + '</div>' + line + '</div>';
+        var where = '';
+        if (!r.inv.unidades) {   // sellers: only warehouse and their own store, never other stores
+          var w = [];
+          if (it.en_tu_tienda) w.push(t('at your store', 'en tu tienda'));
+          if (it.en_bodega) w.push(t('in the warehouse', 'en bodega'));
+          if (w.length) where = '<div style="margin-top:6px;font-size:13px;color:#1E8E5A;font-weight:600">' + esc(t('Available ', 'Disponible ') + w.join(t(' and ', ' y '))) + '</div>';
+          else if (it.solo_piso) where = '<div style="margin-top:6px;font-size:13px;color:#8A6D1D;font-weight:600">' + esc(t('Only the floor sample at your store', 'Solo la muestra de piso en tu tienda')) + '</div>';
+        }
+        return '<div class="sal-card"><h4>' + esc(it.modelo || it.sku) + '</h4><div class="meta">' + pill(it.disponible) + ' ' + (it.kit === 'K' ? '<b>KIT</b> · ' : '') + esc([it.descripcion, it.color].filter(Boolean).join(' · ')) + ' · SKU ' + esc(it.sku) + '</div>' + where + line + '</div>';
       }).join('') + '<div class="sal-note">' + esc(t('Inventory report of ', 'Reporte de inventario del ') + (r.inv.reporte || '').replace(/\s+\d+:\d+:\d+.*$/, '')) + '</div>';
     }
     var hasInv = !!(r.inv && r.inv.items && r.inv.items.length);   // our inventory report is the only source of availability when it has the item
