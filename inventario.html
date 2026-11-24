@@ -42,7 +42,7 @@
 const $=id=>document.getElementById(id);
 const tr=s=>(window.DH&&DH.i18n)?DH.i18n.pick(s):s;
 const SUPER=()=>{try{return ((DH.emp&&DH.emp())||{}).nivel_admin==='super_admin';}catch(e){return false;}};
-let ROWS=null, FECHA='', DESDE='', HASTA='';
+let ROWS=null, FECHA='', DESDE='', HASTA='', KIND='';
 function parseCSV(text){
   const out=[];let row=[],f='',q=false;
   for(let i=0;i<text.length;i++){const c=text[i];
@@ -68,8 +68,25 @@ function parseWOH(text,rr){
     rows.push([sku,r[c.mod]||'',r[c.d]||'','',r[c.ven]||'','','','','','',av===''?'0':av,num(r[c.oo]),num(r[c.oh]),qs<0?'':num(r[qs]),sl<0?'':dec(r[sl]),ls<0?'':(r[ls]||'')]);}
   return {rows,fecha:m.trim(),avCol:'Qty Avail. (blank = 0)',woh:true,desde:pr[1]||'',hasta:pr[2]||''};
 }
+function parseOH(text,rr){
+  const hi=rr.findIndex(r=>r[0]==='Sku No'&&r.includes('TotOH')); const H=rr[hi], ix=n=>H.indexOf(n);
+  const c={sku:ix('Sku No'),kit:ix('Kit'),ven:ix('Vendor Name'),mod:ix('Model'),d:ix('Description'),eu:ix('EU'),cn:ix('CN'),rr:ix('RR'),wh:ix('WH'),tot:ix('TotOH'),oo:ix('On Order'),ls:ix('Last Sold'),buy:ix('Buyer Name')};
+  if(Object.values(c).some(v=>v<0))throw new Error('cols');
+  const z=v=>{const n=num(v);return n===''?'0':n;};
+  const best=new Map();
+  for(let i=hi+1;i<rr.length;i++){const r=rr[i]; const sku=(r[c.sku]||'').trim(); if(!sku)continue;
+    // components repeat once per kit: keep the row with the most stock / on order
+    const t=Number(z(r[c.tot])), o=Number(z(r[c.oo])), k=best.get(sku);
+    if(!k||t>k.t||(t===k.t&&o>k.o))best.set(sku,{r,t,o});}
+  const rows=[];
+  best.forEach((b,sku)=>{const r=b.r;
+    rows.push([sku,(r[c.mod]||'').trim(),(r[c.d]||'').trim(),(r[c.ven]||'').trim(),(r[c.buy]||'').trim(),z(r[c.eu]),z(r[c.cn]),z(r[c.rr]),z(r[c.wh]),z(r[c.tot]),z(r[c.oo]),(r[c.ls]||'').trim(),(r[c.kit]||'').trim()]);});
+  const m=(text.slice(0,600).match(/(\d{1,2}\/\d{1,2}\/\d{4})\s+(\d{1,2}:\d{2})/)||[]);
+  return {rows,fecha:m[1]?m[1]+' '+m[2]:'',avCol:'warehouse + store units above 1 floor sample / bodega + unidades de tienda sobre 1 de piso',oh:true,kits:rows.filter(x=>x[12]==='K').length};
+}
 function parseReport(text){
-  const rr=parseCSV(text); if(rr.some(r=>r[0]==='Record Type'&&r.includes('Sku#')))return parseWOH(text,rr);
+  const rr=parseCSV(text); if(rr.some(r=>r[0]==='Sku No'&&r.includes('TotOH')))return parseOH(text,rr);
+  if(rr.some(r=>r[0]==='Record Type'&&r.includes('Sku#')))return parseWOH(text,rr);
   const hi=rr.findIndex(r=>r[0]==='Buyer#'); if(hi<0)throw new Error('header');
   const m=(text.match(/Run Date:\s*([^\r\n]+)/)||[])[1]||''; const H=rr[hi];
   const ix=n=>H.indexOf(n), last=re=>{let k=-1;H.forEach((h,i)=>{if(re.test(h))k=i;});return k;};
@@ -89,20 +106,20 @@ async function init(){
   let ok=SUPER(); try{ok=(await DH.rpc('inventario_puede'))===true;}catch(e){}
   if(!ok){$('deny').style.display='';$('denyt').textContent=tr('This page is only for administrators. / Esta página es solo para administradores.');$('cur').classList.add('hide');return;}
   $('up').style.display='';$('h-up').textContent=tr('Update inventory / Actualizar inventario');
-  $('p-up').textContent=tr('Upload the Weeks on Hand or Profit Performance report (CSV). It replaces the whole inventory. / Sube el reporte Weeks on Hand o Profit Performance (CSV). Reemplaza todo el inventario.');
+  $('p-up').textContent=tr('Upload the Inventory On Hand report (stock, with kits) or the Weeks on Hand report (sales for Top 10). / Sube el reporte Inventory On Hand (stock, con kits) o el Weeks on Hand (ventas para el Top 10).');
   $('go').textContent=tr('Upload / Subir'); cur();
 }
 $('f').addEventListener('change',async e=>{
   const fl=e.target.files[0];ROWS=null;$('go').disabled=true;$('msg').className='';$('msg').textContent='';if(!fl)return;
-  try{const buf=await fl.arrayBuffer();const p=parseReport(new TextDecoder('windows-1252').decode(buf));ROWS=p.rows;FECHA=p.fecha;DESDE=p.desde||'';HASTA=p.hasta||'';
-    $('msg').textContent=p.rows.length+' SKUs · '+tr('Run date / Fecha del reporte')+': '+p.fecha+' · '+tr('Available column / Columna disponible')+': '+p.avCol+(p.woh?' · '+tr('This report has no per-store units; managers will see total on hand. / Este reporte no trae unidades por tienda; los gerentes verán el total en existencia.'):'');$('go').disabled=!p.rows.length;}
-  catch(err){$('msg').className='err';$('msg').textContent=tr('That does not look like the Profit Performance report. / Ese archivo no parece el reporte Profit Performance.');}
+  try{const buf=await fl.arrayBuffer();const p=parseReport(new TextDecoder('windows-1252').decode(buf));ROWS=p.rows;FECHA=p.fecha;DESDE=p.desde||'';HASTA=p.hasta||'';KIND=p.oh?'oh':'woh';
+    $('msg').textContent=p.rows.length+' SKUs · '+tr('Run date / Fecha del reporte')+': '+p.fecha+' · '+tr('Available column / Columna disponible')+': '+p.avCol+(p.oh?' · '+p.kits+' '+tr('kit codes / códigos de kit')+' · '+tr('Replaces the stock; sales columns are kept. / Reemplaza el stock; las ventas se conservan.'):p.woh?' · '+tr('Sales only: updates Top 10 and keeps the stock from the On Hand report. / Solo ventas: actualiza el Top 10 y conserva el stock del reporte On Hand.'):'');$('go').disabled=!p.rows.length;}
+  catch(err){$('msg').className='err';$('msg').textContent=tr('That does not look like an Inventory On Hand or Weeks on Hand report. / Ese archivo no parece un reporte Inventory On Hand o Weeks on Hand.');}
 });
 $('go').addEventListener('click',async()=>{
   if(!ROWS)return;$('go').disabled=true;$('bar').classList.remove('hide');$('msg').className='';
-  const lote=Date.now().toString(36),N=500;
+  const lote=Date.now().toString(36),N=KIND==='oh'?1000:500;
   try{for(let i=0;i<ROWS.length;i+=N){const fin=i+N>=ROWS.length;
-      const r=await DH.rpc('inventario_importar',{p_lote:lote,p_filas:ROWS.slice(i,i+N),p_final:fin,p_fecha:FECHA,p_desde:DESDE,p_hasta:HASTA});
+      const r=KIND==='oh'?await DH.rpc('inventario_importar_oh',{p_lote:lote,p_filas:ROWS.slice(i,i+N),p_final:fin,p_fecha:FECHA}):await DH.rpc('inventario_importar',{p_lote:lote,p_filas:ROWS.slice(i,i+N),p_final:fin,p_fecha:FECHA,p_desde:DESDE,p_hasta:HASTA});
       if(!r||!r.ok)throw new Error('x');$('bi').style.width=Math.min(100,Math.round((i+N)/ROWS.length*100))+'%';}
     $('msg').className='ok';$('msg').textContent=tr('Done. Inventory updated. / Listo. Inventario actualizado.');cur();}
   catch(e){$('msg').className='err';$('msg').textContent=tr('The upload did not finish. Please try again. / La carga no terminó. Intenta de nuevo.');$('go').disabled=false;}
