@@ -98,6 +98,7 @@
     if (!res.ok || !out || out.error) { var er = new Error((out && out.error) || ('HTTP ' + res.status)); er.code = out && out.error; throw er; }
     return out;
   }
+  DH.creditAssist = function (datos) { return fn({ datos: datos }, 'credit-assist'); };
   DH.salWeb = function (q, detail, mode) { return fn({ q: q, detail: !!detail, mode: mode || '' }, 'sal-web'); };
   DH.files = {
     // ids -> { id: { url, mime, nombre } }; links last 1 hour

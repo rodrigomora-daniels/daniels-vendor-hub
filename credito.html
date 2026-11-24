@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><script src="dh-phone.js"></script><link rel="stylesheet" href="dh-mobile.css">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1B3A6B">
+<title>My Workspace — SAL Credit / SAL de crédito</title>
+<style>
+  :root{--navy:#1B3A6B;--gold:#C8922A;--ink:#1E2735;--gray:#6B6B6B;--red:#C0392B;--green:#2E7D32;--amber:#B26A00}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#EEF1F6;color:var(--ink)}
+  header{background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px}
+  header .t{display:flex;align-items:center;gap:10px} header img{width:40px;height:40px;border-radius:50%;background:#fff}
+  header h1{font-size:17px;line-height:1.15} header small{display:block;font-size:12px;opacity:.8;font-weight:400} header a{color:#fff;font-size:14px}
+  main{max-width:680px;margin:0 auto;padding:14px}
+  .card{background:#fff;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 1px 0 #dfe5ee}
+  h2{font-size:16px;margin-bottom:8px;color:var(--navy)} p{font-size:14px;line-height:1.5;margin-bottom:8px} .mut{color:var(--gray);font-size:13px}
+  label{display:block;font-size:13px;font-weight:600;margin:10px 0 4px}
+  input,select,textarea{width:100%;font:inherit;font-size:16px;padding:10px;border:1px solid #cfd7e3;border-radius:8px;background:#fff;min-height:44px}
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .chk{display:flex;align-items:center;gap:8px;margin:10px 0;font-size:14px;font-weight:400} .chk input{width:20px;height:20px;min-height:0}
+  .btn{background:var(--navy);color:#fff;border:0;border-radius:10px;padding:12px 18px;font-size:15px;font-weight:700;cursor:pointer;min-height:44px}
+  .btn.alt{background:#fff;color:var(--navy);border:1px solid var(--navy)} .btn:disabled{opacity:.5}
+  .badge{display:inline-block;border-radius:999px;padding:6px 14px;font-weight:700;font-size:15px;color:#fff}
+  .b-aprobado{background:var(--green)}.b-aprobado_condiciones{background:var(--amber)}.b-escalado{background:#6a4fb3}.b-externo{background:#37607a}.b-rechazado{background:var(--red)}
+  .kv{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.kv div{background:#F4F6FA;border-radius:10px;padding:10px;text-align:center}
+  .kv b{display:block;font-size:20px;color:var(--navy)}.kv span{font-size:12px;color:var(--gray)}
+  ul.rc{list-style:none}ul.rc li{font-size:13px;padding:6px 0;border-top:1px solid #eef1f6}ul.rc code{font-weight:700;color:var(--navy);margin-right:6px}
+  .warn{background:#FFF4E0;border-radius:8px;padding:8px 10px;font-size:13px;margin:6px 0}
+  .sug{background:#EAF2FF;border-radius:8px;padding:10px;font-size:14px;margin:10px 0}
+  .dec{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.dec button{flex:1 1 140px}
+  .err{color:var(--red);font-weight:700}.ok{color:var(--green);font-weight:700}.hide{display:none!important}
+  .case{border-top:1px solid #eef1f6;padding:8px 0;font-size:13px}
+  .legal{font-size:12px;color:var(--gray);line-height:1.4}
+</style>
+<meta name="dh-i18n" content="on">
+<script src="dh-chrome.js" defer></script>
+</head>
+<body>
+<header><div class="t"><img src="sal/sal-avatar-48.png" alt="SAL"><h1>SAL — Credit / Crédito<small>Approver assistant / Asistente del aprobador</small></h1></div><a href="index.html">← Home / Inicio</a></header>
+<main>
+  <div class="card hide" id="deny"><p class="err" id="denyt"></p></div>
+  <div id="app" class="hide">
+    <div class="card">
+      <h2 id="h-form"></h2>
+      <p class="mut" id="p-priv"></p>
+      <div class="g2">
+        <div><label id="l-fico"></label><input id="fico" type="number" inputmode="numeric" min="300" max="850"></div>
+        <div><label id="l-score"></label><select id="score"><option>A</option><option>B</option><option>C</option><option>D</option><option>U</option></select></div>
+      </div>
+      <div class="g2">
+        <div><label id="l-monto"></label><input id="monto" type="number" inputmode="decimal" min="0"></div>
+        <div><label id="l-prod"></label><select id="producto"></select></div>
+      </div>
+      <div class="g2">
+        <div><label id="l-dp"></label><input id="dp" type="number" inputmode="decimal" min="0"></div>
+        <div><label id="l-plazo"></label><input id="plazo" type="number" inputmode="numeric" min="3" max="36"></div>
+      </div>
+      <div class="g2">
+        <div><label id="l-late"></label><input id="late" type="number" inputmode="numeric" min="0" value="0"></div>
+        <div><label id="l-motivo"></label><select id="motivo"></select></div>
+      </div>
+      <label class="chk"><input type="checkbox" id="bad"><span id="l-bad"></span></label>
+      <label class="chk"><input type="checkbox" id="autozone"><span id="l-az"></span></label>
+      <label class="chk"><input type="checkbox" id="existente"><span id="l-ex"></span></label>
+      <details><summary id="l-more" style="font-size:14px;margin:8px 0;cursor:pointer"></summary>
+        <div class="g2"><div><label id="l-ing"></label><input id="ingreso" type="number" inputmode="decimal"></div><div><label id="l-deu"></label><input id="deudas" type="number" inputmode="decimal"></div></div>
+        <label id="l-ref"></label><input id="ref" maxlength="30">
+        <label id="l-nota"></label><textarea id="nota" rows="2" maxlength="300"></textarea>
+      </details>
+      <p class="mut" id="p-shot" style="margin-top:10px"></p>
+      <button class="btn" id="go" style="margin-top:6px"></button>
+      <p id="msg" role="status" style="margin-top:8px"></p>
+    </div>
+
+    <div class="card hide" id="res">
+      <h2 id="h-res"></h2>
+      <p><span class="badge" id="rbadge"></span> <span class="mut" id="rrule"></span></p>
+      <div class="kv" id="rkv"></div>
+      <div class="sug hide" id="rsug"></div>
+      <div id="rwarn"></div>
+      <ul class="rc" id="rcodes"></ul>
+      <p class="legal" id="rlegal"></p>
+      <h2 style="margin-top:14px" id="h-dec"></h2>
+      <div class="dec" id="decb"></div>
+      <p id="dmsg" role="status" style="margin-top:6px"></p>
+    </div>
+
+    <div class="card">
+      <h2 id="h-cases"></h2><p class="mut" id="p-cases"></p><div id="cases"></div>
+    </div>
+    <div class="card"><h2 id="h-stats"></h2><div id="stats" class="mut"></div></div>
+  </div>
+</main>
+<script src="dh-session.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const tr=s=>(window.DH&&DH.i18n)?DH.i18n.pick(s):s;
+const T={
+ 'h-form':'New case / Caso nuevo',
+ 'p-priv':'Do not type names, SSN or addresses. Raw cases are deleted after 7 days; only an anonymous record (no name) is kept 90 days for statistics. / No escribas nombres, SSN ni direcciones. Los casos se borran a los 7 días; solo queda un registro anónimo 90 días para estadística.',
+ 'l-fico':'FICO','l-score':'Infinity risk score / Score de riesgo Infinity','l-monto':'Purchase amount with tax ($) / Monto de compra con impuesto ($)','l-prod':'Product / Producto',
+ 'l-dp':'Down payment the customer offers ($) / Enganche que ofrece el cliente ($)','l-plazo':'Requested term (months) / Plazo pedido (meses)','l-late':'Max days late in history / Máx. días de atraso en historial',
+ 'l-motivo':'Why is this an exception? / ¿Por qué es excepción?',
+ 'l-bad':'Returned check, charge-off or co-signer / Cheque devuelto, cargo incobrable o cofirmante','l-az':'Auto-Zone sale / Venta Auto-Zone','l-ex':'Existing customer / Cliente existente',
+ 'l-more':'More detail (optional) / Más detalle (opcional)','l-ing':'Monthly income ($) / Ingreso mensual ($)','l-deu':'Monthly debts ($) / Deudas mensuales ($)','l-ref':'Short reference (no names) / Referencia corta (sin nombres)','l-nota':'Note / Nota',
+ 'p-shot':'Screenshots of Infinity and TRW are coming in the next phase. For now, type what you read from them. / Las capturas de Infinity y TRW vienen en la siguiente fase. Por ahora captura lo que lees en ellas.',
+ 'go':'Ask SAL / Consultar a SAL','h-res':'SAL recommends / SAL recomienda','h-dec':'What did you decide? / ¿Qué decidiste?',
+ 'h-cases':'Recent cases (7 days) / Casos recientes (7 días)','p-cases':'Visible to all credit approvers. / Visible para todos los aprobadores de crédito.','h-stats':'Agreement with the algorithm (90 days) / Coincidencia con el algoritmo (90 días)',
+ 'rlegal':'SAL recommends; you decide. Rules come from the Infinity X090 quick guide (Nov 17, 2026). Estimated payments use prescreener APRs and are not an offer. If you decline or change terms, record the real reason; adverse-action notices stay with the approver. / SAL recomienda; tú decides. Las reglas vienen de la guía rápida X090 de Infinity (17 nov 2026). Los pagos estimados usan APR del prescreener y no son una oferta. Si niegas o cambias términos, registra el motivo real; los avisos de acción adversa siguen siendo del aprobador.'
+};
+for(const k in T){const e=$(k); if(e) e.textContent=tr(T[k]);}
+const PR=[['furniture','Furniture / Muebles'],['mattress','Mattress / Colchón'],['appliances','Appliances / Electrodomésticos'],['electronics','Electronics / Electrónicos'],['seasonal','Seasonal / Estacionales'],['iphone','iPhone / Apple']];
+$('producto').innerHTML=PR.map(p=>`<option value="${p[0]}" data-no-i18n>${tr(p[1])}</option>`).join('');
+const MO=[['sin_oferta','Infinity gave no offer / Infinity no dio oferta'],['dp_bajo','Customer wants lower down payment / Cliente quiere menos enganche'],['monto','Amount over cap / Monto sobre el tope'],['atraso','Late history / Historial de atrasos'],['gerente','Manager request / Pedido de gerencia'],['otro','Other / Otro']];
+$('motivo').innerHTML=MO.map(p=>`<option value="${p[0]}" data-no-i18n>${tr(p[1])}</option>`).join('');
+const REC={aprobado:'Approve / Aprobar',aprobado_condiciones:'Approve with conditions / Aprobar con condiciones',escalado:'Escalate to manager / Escalar a gerencia',externo:'External or split / Externo o split',rechazado:'Decline / Rechazar'};
+let CUR=null;
+const money=n=>n==null?'—':'$'+Number(n).toLocaleString('en-US');
+function showRes(r){
+  CUR=r; $('res').classList.remove('hide');
+  const b=$('rbadge'); b.className='badge b-'+r.recomendacion; b.textContent=tr(REC[r.recomendacion]||r.recomendacion);
+  $('rrule').textContent=r.regla?('· '+r.regla):'';
+  $('rkv').innerHTML=[[money(r.dp),tr('Down payment / Enganche')+(r.dp_pct!=null?' ('+r.dp_pct+'%)':'')],[r.plazo?r.plazo+' '+tr('mo / meses'):'—',tr('Term / Plazo')],[r.pago?'~'+money(r.pago):'—',tr('Est. payment / Pago est.')]].map(x=>`<div><b>${x[0]}</b><span data-no-i18n>${x[1]}</span></div>`).join('');
+  const s=$('rsug'); if(r.sugerencia){s.classList.remove('hide');s.textContent=tr(r.sugerencia.texto);}else s.classList.add('hide');
+  $('rwarn').innerHTML=(r.warns||[]).concat(r.notes||[]).map(w=>`<div class="warn" data-no-i18n>${tr(w).replace(/</g,'&lt;')}</div>`).join('');
+  $('rcodes').innerHTML=(r.codes||[]).map(c=>`<li data-no-i18n><code>${c.c}</code>${tr(c.t).replace(/</g,'&lt;')}</li>`).join('')+(r.externo&&r.recomendacion!=='externo'?`<li data-no-i18n><code>ALT</code>${tr('Alternative / Alternativa')}: ${r.externo}</li>`:'');
+  const D=[['aprobado','Approved / Aprobé'],['aprobado_condiciones','Approved with conditions / Aprobé con condiciones'],['externo','External / Externo'],['rechazado','Declined / Rechacé'],['escalado','Escalated / Escalé']];
+  $('decb').innerHTML=D.map(d=>`<button class="btn alt" data-d="${d[0]}" data-no-i18n>${tr(d[1])}</button>`).join('');
+  $('dmsg').textContent=''; $('res').scrollIntoView({behavior:'smooth'});
+}
+$('decb').addEventListener('click',async e=>{
+  const b=e.target.closest('button[data-d]'); if(!b||!CUR)return;
+  try{const ok=await DH.rpc('credito_decidir',{p_id:CUR.id,p_decision:b.dataset.d,p_nota:$('nota').value||''});
+    $('dmsg').className=ok?'ok':'err'; $('dmsg').textContent=ok?tr('Saved. / Guardado.'):tr('Could not save. / No se pudo guardar.'); if(ok)loadList();
+  }catch(x){$('dmsg').className='err';$('dmsg').textContent=tr('Could not save. / No se pudo guardar.');}
+});
+$('go').addEventListener('click',async()=>{
+  const d={fico:$('fico').value,score:$('score').value,monto:$('monto').value,producto:$('producto').value,dp:$('dp').value,plazo:$('plazo').value,late:$('late').value,
+    bad:$('bad').checked,autozone:$('autozone').checked,existente:$('existente').checked,motivo:$('motivo').value,ingreso:$('ingreso').value,deudas:$('deudas').value,ref:$('ref').value,nota:$('nota').value};
+  const m=$('msg'); m.className='mut'; if(!d.fico||!d.monto){m.className='err';m.textContent=tr('FICO and amount are required. / FICO y monto son obligatorios.');return;}
+  $('go').disabled=true; m.textContent=tr('Consulting… / Consultando…');
+  try{ const r=await DH.creditAssist(d); m.textContent=''; showRes(r); loadList(); }
+  catch(x){ m.className='err'; m.textContent=(x.code==='PT403')?tr('No access. / Sin acceso.'):tr('Something went wrong. Try again. / Algo falló. Intenta de nuevo.'); }
+  $('go').disabled=false;
+});
+async function loadList(){
+  try{ const o=await DH.rpc('credito_listar'); const c=o.casos||[];
+    $('cases').innerHTML=c.length?c.map(x=>{const dd=x.datos||{},rs=x.resultado||{};
+      return `<div class="case" data-no-i18n><b>${new Date(x.creado).toLocaleString()}</b> · ${(x.por||'').split(' ')[0]} · FICO ${dd.fico||'—'}/${dd.score||'—'} · ${money(dd.monto)} · ${rs.regla||'—'} → <b>${tr(REC[rs.recomendacion]||'')}</b>${x.decision?' · '+tr('decided / decidió')+': '+tr(REC[x.decision]||x.decision):''}${dd.ref?' · '+String(dd.ref).replace(/</g,'&lt;'):''}</div>`;}).join(''):`<p class="mut">${tr('No cases yet. / Aún no hay casos.')}</p>`;
+    const s=o.stats||{}; const dec=s.decididos||0;
+    $('stats').innerHTML=dec?`<p data-no-i18n>${s.acuerdo} / ${dec} (${Math.round(100*s.acuerdo/dec)}%) ${tr('human decisions matched SAL / decisiones humanas coincidieron con SAL')}</p>`:`<p>${tr('Not enough decisions yet. / Aún no hay suficientes decisiones.')}</p>`;
+  }catch(e){}
+}
+(async function init(){
+  try{ const ok=await DH.rpc('credito_puede'); if(ok!==true) throw 0; $('app').classList.remove('hide'); loadList(); }
+  catch(e){ $('deny').classList.remove('hide'); $('denyt').textContent=tr('This section is only for credit approvers. / Esta sección es solo para aprobadores de crédito.'); }
+})();
+</script>
+</body>
+</html>

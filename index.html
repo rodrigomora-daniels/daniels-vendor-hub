@@ -586,6 +586,7 @@ document.addEventListener('DOMContentLoaded',function(){
   <button class="nl" id="nl-reportes" onclick="navigateToTool('reportes')" style="display:none"><span>📊</span>My reports / Mis reportes</button>
   <button class="nl" id="nl-logistica" onclick="navigateToTool('logistica')" style="display:none"><span>🚚</span>Receiving &amp; Deliveries / Recepción y Entregas</button>
   <button class="nl" id="nl-tickets" style="display:none" onclick="navigateToTool('tickets')"><span>🛠</span>IT tickets / Tickets de TI</button>
+  <button class="nl" id="nl-credito" style="display:none" onclick="navigateToTool('credito')"><span>💳</span>SAL Credit / SAL de crédito</button>
   <button class="nl" id="nl-inventario" style="display:none" onclick="navigateToTool('inventario')"><span>📦</span>Inventory upload / Cargar inventario</button>
   <button class="nl" onclick="navigateToTool('notas')"><span>📝</span>My notes / Mis notas</button>
   <a class="nl" id="nl-web" href="https://danielshomecenter.com/" target="_blank" rel="noopener noreferrer"><span>🛋️</span>Daniels website (full catalog) / Sitio de Daniels (catálogo completo) ↗</a>
@@ -1237,6 +1238,7 @@ async function loadDashboard() {
   ['card-prescreen', 'card-leadsource', 'nl-prescreen', 'nl-leadsource', 'nl-board'].forEach(id => { const c = document.getElementById(id); if (c) c.style.display = canSeeStoreTools ? '' : 'none'; });
   // Daniels Board stays "Soon" for everyone except the people the server allows (admins, Ted, Héctor...).
   try{ DH.rpc('board_puede').then(ok=>{ const b=document.getElementById('nl-board'); if(!b||ok!==true) return; b.disabled=false; b.removeAttribute('aria-disabled'); b.removeAttribute('title'); b.style.opacity=''; b.style.cursor=''; b.style.display=''; const sm=b.querySelector('small'); if(sm) sm.remove(); b.onclick=()=>{ location.href='board.html'; }; }).catch(()=>{}); }catch(e){}
+  try{ DH.rpc('credito_puede').then(ok=>{ const n=document.getElementById('nl-credito'); if(n&&ok===true) n.style.display=''; }).catch(()=>{}); }catch(e){}
   try{ DH.rpc('inventario_puede').then(ok=>{ const n=document.getElementById('nl-inventario'); if(n&&ok===true) n.style.display=''; }).catch(()=>{}); }catch(e){}
   try{ DH.rpc('tickets_mi_rol').then(r=>{ const n=document.getElementById('nl-tickets'); if(n&&r&&r.reporta) n.style.display=''; }).catch(()=>{}); }catch(e){}
   try{ DH.rpc('logistica_mi_acceso').then(r=>{ const n=document.getElementById('nl-logistica'); if(n&&r&&(r.rec||r.ndd)) n.style.display=''; }).catch(()=>{}); }catch(e){}
@@ -1469,7 +1471,7 @@ const TOOL_URLS = {
   notas: 'notas.html',
   logistica: 'logistica.html',
   tickets: 'tickets.html',
-  inventario: 'inventario.html'
+  inventario: 'inventario.html', credito: 'credito.html'
 };
 
 function navigateToEvaluacion() {
