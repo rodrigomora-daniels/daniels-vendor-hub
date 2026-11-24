@@ -53,7 +53,8 @@
       <div class="drop" id="drop" tabindex="0">
         <p><b id="t-drop"></b></p><p class="mut" id="s-drop"></p>
         <button class="btn alt" type="button" id="attach"></button>
-        <input type="file" id="file" accept="image/*" multiple class="hide">
+        <p class="mut" style="margin-top:8px" id="s-txt"></p>
+        <input type="file" id="file" accept="image/*,application/pdf" multiple class="hide">
         <div class="th" id="th"></div>
         <button class="btn hide" type="button" id="read" style="margin-top:10px"></button>
         <p id="rmsg" role="status" style="margin-top:8px"></p>
@@ -118,6 +119,7 @@ const T={
  'l-bad':'Returned check, charge-off or co-signer / Cheque devuelto, cargo incobrable o cofirmante','l-az':'Auto-Zone sale / Venta Auto-Zone','l-ex':'Existing customer / Cliente existente',
  'l-more':'More detail (optional) / Más detalle (opcional)','l-ing':'Monthly income ($) / Ingreso mensual ($)','l-deu':'Monthly debts ($) / Deudas mensuales ($)','l-ref':'Short reference (no names) / Referencia corta (sin nombres)','l-nota':'Note / Nota',
  't-drop':'Paste or attach screenshots (Infinity, TRW) / Pega o adjunta capturas (Infinity, TRW)','s-drop':'Press Ctrl+V (or Cmd+V) anywhere on this page, drop images here, or use the button. SAL reads them and fills the form below; you confirm. Images are not saved. / Presiona Ctrl+V (o Cmd+V) en cualquier parte, arrastra imágenes aquí o usa el botón. SAL las lee y llena el formulario; tú confirmas. Las imágenes no se guardan.',
+ 's-txt':'Tip: if you can select and copy the text of the TRW or Infinity screen, just paste it with Ctrl+V — that is the most accurate. Also accepts PDF. / Tip: si puedes seleccionar y copiar el texto de la pantalla del TRW o Infinity, pégalo con Ctrl+V — es lo más exacto. También acepta PDF.',
  'attach':'📎 Attach screenshots / Adjuntar capturas','read':'Read screenshots / Leer capturas',
  'go':'Ask SAL / Consultar a SAL','h-res':'SAL recommends / SAL recomienda','h-dec':'What did you decide? / ¿Qué decidiste?',
  'h-cases':'Recent cases (7 days) / Casos recientes (7 días)','p-cases':'Visible to all credit approvers. / Visible para todos los aprobadores de crédito.','h-stats':'Agreement with the algorithm (90 days) / Coincidencia con el algoritmo (90 días)',
@@ -165,12 +167,32 @@ $('go').addEventListener('click',async()=>{
 let SHOTS=[], INF=null;
 function dataUrl(file){return new Promise((ok,no)=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{const M=1600,k=Math.min(1,M/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);ok(c.toDataURL('image/jpeg',.85));};im.onerror=no;im.src=fr.result;};fr.onerror=no;fr.readAsDataURL(file);});}
 function drawTh(){ $('th').innerHTML=SHOTS.map((u,i)=>`<div><img src="${u}" alt=""><button type="button" data-i="${i}" aria-label="remove">×</button></div>`).join(''); $('read').classList.toggle('hide',!SHOTS.length); }
-async function addFiles(files){
-  const imgs=[...files].filter(f=>/^image\//.test(f.type)); if(!imgs.length)return;
-  for(const f of imgs){ if(SHOTS.length>=10){$('rmsg').className='err';$('rmsg').textContent=tr('Maximum 10 screenshots per case. / Máximo 10 capturas por caso.');break;} try{SHOTS.push(await dataUrl(f));}catch(e){} }
-  drawTh(); if(SHOTS.length) readShots();
+
+// ---- PDF support: use the text layer when it exists (exact, free); otherwise render pages and OCR them ----
+let PDFTEXT='';
+async function pdfjs(){ if(window.__pdfjs)return window.__pdfjs;
+  const m=await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.min.mjs');
+  m.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.min.mjs'; window.__pdfjs=m; return m; }
+async function addPdf(file){
+  const lib=await pdfjs(); const doc=await lib.getDocument({data:await file.arrayBuffer()}).promise; let txt='';
+  for(let i=1;i<=Math.min(doc.numPages,10);i++){
+    const pg=await doc.getPage(i); const c=await pg.getTextContent(); const t=c.items.map(x=>x.str).join(' ');
+    if(t.replace(/\s/g,'').length>=40){ txt+='\n'+t; }
+    else if(SHOTS.length<10){ const v=pg.getViewport({scale:2}); const cv=document.createElement('canvas'); cv.width=v.width; cv.height=v.height; await pg.render({canvasContext:cv.getContext('2d'),viewport:v}).promise; SHOTS.push(cv.toDataURL('image/jpeg',.85)); }
+  }
+  PDFTEXT+=txt;
 }
-document.addEventListener('paste',e=>{ if($('app').classList.contains('hide'))return; const f=[...(e.clipboardData&&e.clipboardData.items||[])].filter(i=>i.kind==='file'&&/^image\//.test(i.type)).map(i=>i.getAsFile()); if(f.length){e.preventDefault();addFiles(f);} });
+async function addFiles(files){
+  const all=[...files]; const imgs=all.filter(f=>/^image\//.test(f.type)); const pdfs=all.filter(f=>f.type==='application/pdf'||/\.pdf$/i.test(f.name));
+  if(!imgs.length&&!pdfs.length)return;
+  for(const f of pdfs){ try{ await addPdf(f); }catch(e){ $('rmsg').className='err'; $('rmsg').textContent=tr('Could not open the PDF. / No se pudo abrir el PDF.'); } }
+  for(const f of imgs){ if(SHOTS.length>=10){$('rmsg').className='err';$('rmsg').textContent=tr('Maximum 10 screenshots per case. / Máximo 10 capturas por caso.');break;} try{SHOTS.push(await dataUrl(f));}catch(e){} }
+  drawTh(); if(SHOTS.length||PDFTEXT) readShots();
+}
+document.addEventListener('paste',e=>{ if($('app').classList.contains('hide'))return;
+  const hasImg=[...(e.clipboardData&&e.clipboardData.items||[])].some(i=>i.kind==='file'&&/^image\//.test(i.type));
+  const tag=(e.target&&e.target.tagName)||''; const tx=(e.clipboardData&&e.clipboardData.getData('text'))||'';
+  if(!hasImg&&tx.length>40&&(tag!=='INPUT'||e.target.id==='ptext')&&tag!=='SELECT'){ e.preventDefault(); PDFTEXT+='\n'+tx; $('th').innerHTML+='<span class="mut">📄 '+tr('Text pasted / Texto pegado')+' ('+tx.length+')</span>'; readShots(); return; } const f=[...(e.clipboardData&&e.clipboardData.items||[])].filter(i=>i.kind==='file'&&/^image\//.test(i.type)).map(i=>i.getAsFile()); if(f.length){e.preventDefault();addFiles(f);} });
 $('attach').onclick=()=>$('file').click(); $('file').onchange=e=>{addFiles(e.target.files);e.target.value='';};
 ['dragover','dragenter'].forEach(ev=>$('drop').addEventListener(ev,e=>{e.preventDefault();$('drop').classList.add('on');}));
 ['dragleave','drop'].forEach(ev=>$('drop').addEventListener(ev,e=>{e.preventDefault();$('drop').classList.remove('on');}));
@@ -190,9 +212,12 @@ function parseText(t){
   let m;
   m=T.match(/FICO[^0-9\n]{0,25}(\d{3})\b/i); if(!m) m=T.match(/(?:credit\s*)?score[^0-9\n]{0,20}(\d{3})\b/i);
   if(m&&+m[1]>=300&&+m[1]<=850)f.fico=+m[1];
+  if(f.fico==null){ m=T.match(/(?:SCORE\s*SUMMARY|VANTAGE\s*SCORE|FICO)[^=]{0,80}=\s*(\d{3})\b/i); if(m&&+m[1]>=300&&+m[1]<=850)f.fico=+m[1]; }
   m=T.match(/risk\s*score[^A-Za-z0-9\n]{0,15}\b([ABCDU])\b/i); if(m)f.score=m[1].toUpperCase();
   let late=0,found=false; for(const x of T.matchAll(/(\d{1,3})\s*\+?\s*days?\s*(?:late|past\s*due|delinquent)/gi)){found=true;late=Math.max(late,+x[1]);}
+  for(const x of T.matchAll(/DELINQ\s*(\d{1,3})/g)){found=true;late=Math.max(late,+x[1]);}
   if(found)f.late=late;
+  if(/\bCHARGEOFF\b/.test(T))f.bad=true;
   for(const x of T.matchAll(/(charge[\s-]?off|returned\s*check|\bNSF\b|co[\s-]?sign\w*)[^0-9\n]{0,15}(\d+)/gi)){ if(+x[2]>0)f.bad=true; }
   m=T.match(/(?:down\s*pay(?:ment)?|down\s*pmt)[^0-9$\n]{0,20}\$?\s*([\d,]+(?:\.\d\d)?)/i); if(m&&num(m[1])<20000)f.dp=num(m[1]);
   m=T.match(/(?:total|purchase|sale|amount)[^0-9$\n]{0,20}\$?\s*([\d,]{3,}(?:\.\d\d)?)/i); if(m&&num(m[1])>=100&&num(m[1])<=25000)f.monto=num(m[1]);
@@ -202,7 +227,7 @@ function parseText(t){
 }
 async function ocrFallback(){
   const m=$('rmsg'); m.className='mut'; m.textContent=tr('Reading with the free reader… / Leyendo con el lector gratuito…');
-  const w=await ocrWorker(); let txt=''; for(const u of SHOTS){ const r=await w.recognize(u); txt+='\n'+((r&&r.data&&r.data.text)||''); }
+  let txt=PDFTEXT; const w=SHOTS.length?await ocrWorker():null; for(const u of SHOTS){ const r=await w.recognize(u); txt+='\n'+((r&&r.data&&r.data.text)||''); }
   const f=parseText(txt); INF=f.infinity||null;
   fill('fico',f.fico);fill('score',f.score);fill('monto',f.monto);fill('dp',f.dp);fill('plazo',f.plazo);fill('late',f.late);fill('bad',f.bad,true);
   const got=Object.keys(f).filter(k=>k!=='infinity');
@@ -212,6 +237,7 @@ async function ocrFallback(){
   d.querySelector('pre').textContent=txt.trim().slice(0,4000);
 }
 async function readShots(){
+  if(PDFTEXT&&!SHOTS.length){ try{ await ocrFallback(); }catch(e){} return; }
   const m=$('rmsg'); m.className='mut'; m.textContent=tr('SAL is reading… / SAL está leyendo…'); $('read').disabled=true;
   try{ if(!DH.creditRead) throw new Error('Reload the page / Recarga la página');
     const r=await DH.creditRead(SHOTS); const f=r.fields||{}; INF=f.infinity||null;
