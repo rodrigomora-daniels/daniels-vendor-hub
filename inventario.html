@@ -70,7 +70,7 @@ function parseWOH(text,rr){
 }
 function parseOH(text,rr){
   const hi=rr.findIndex(r=>r[0]==='Sku No'&&r.includes('TotOH')); const H=rr[hi], ix=n=>H.indexOf(n);
-  const c={sku:ix('Sku No'),kit:ix('Kit'),ven:ix('Vendor Name'),mod:ix('Model'),d:ix('Description'),eu:ix('EU'),cn:ix('CN'),rr:ix('RR'),wh:ix('WH'),tot:ix('TotOH'),oo:ix('On Order'),ls:ix('Last Sold'),buy:ix('Buyer Name')};
+  const c={sku:ix('Sku No'),kit:ix('Kit'),ven:ix('Vendor Name'),mod:ix('Model'),d:ix('Description'),eu:ix('EU'),cn:ix('CN'),rr:ix('RR'),wh:ix('WH'),tot:ix('TotOH'),oo:ix('On Order'),ls:ix('Last Sold'),buy:ix('Buyer Name'),rt:ix('Retail')};
   if(Object.values(c).some(v=>v<0))throw new Error('cols');
   const z=v=>{const n=num(v);return n===''?'0':n;};
   const best=new Map();
@@ -80,7 +80,7 @@ function parseOH(text,rr){
     if(!k||t>k.t||(t===k.t&&o>k.o))best.set(sku,{r,t,o});}
   const rows=[];
   best.forEach((b,sku)=>{const r=b.r;
-    rows.push([sku,(r[c.mod]||'').trim(),(r[c.d]||'').trim(),(r[c.ven]||'').trim(),(r[c.buy]||'').trim(),z(r[c.eu]),z(r[c.cn]),z(r[c.rr]),z(r[c.wh]),z(r[c.tot]),z(r[c.oo]),(r[c.ls]||'').trim(),(r[c.kit]||'').trim()]);});
+    rows.push([sku,(r[c.mod]||'').trim(),(r[c.d]||'').trim(),(r[c.ven]||'').trim(),(r[c.buy]||'').trim(),z(r[c.eu]),z(r[c.cn]),z(r[c.rr]),z(r[c.wh]),z(r[c.tot]),z(r[c.oo]),(r[c.ls]||'').trim(),(r[c.kit]||'').trim(),(r[c.kit]||'').trim()==='E'?'':String(r[c.rt]||'').replace(/[,\s$]/g,'')]);});   // component rows carry a kit-split price, so no price check on them
   const m=(text.slice(0,600).match(/(\d{1,2}\/\d{1,2}\/\d{4})\s+(\d{1,2}:\d{2})/)||[]);
   return {rows,fecha:m[1]?m[1]+' '+m[2]:'',avCol:'warehouse + store units above 1 floor sample / bodega + unidades de tienda sobre 1 de piso',oh:true,kits:rows.filter(x=>x[12]==='K').length};
 }

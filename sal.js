@@ -12,7 +12,8 @@
   var ARTS = ART + 'static/';
   var FACE = { idle: 'sal-idle.svg', thinking: 'sal-thinking.svg', search: 'sal-search.svg', typing: 'sal-typing.svg', success: 'sal-success.svg', error: 'sal-error.svg' };
   var teachBtn, tv, canTeach = null, TD = null;
-  var root, fab, tip, panel, logEl, form, input, sendBtn, faceEl, chipsEl, subEl, titleEl, xBtn;
+  var root, fab, tip, panel, logEl, form, input, sendBtn, faceEl, chipsEl, subEl, titleEl, xBtn, camBtn, camFile;
+  var scanNote = null, scanning = false, ocrW = null, ocrLoading = null;
   var busy = false, faceTimer = 0, typingTimer = 0, slowTimer = 0, lastQ = '', mounted = false, greeted = false;
 
   var forced = null;   // language of the question being answered (overrides the app language for that reply)
@@ -96,6 +97,7 @@
     '#sal-root.asked #sal-chips{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;max-height:none;-webkit-overflow-scrolling:touch}#sal-chips{display:flex;flex-wrap:wrap;gap:6px;max-height:112px;overflow:auto;padding:0 12px 8px;flex:none}#sal-chips button.big{font-weight:700;border-color:#0B2D5C;min-height:44px}#sal-chips button{min-height:36px;border-radius:18px;border:1.5px solid #B7C6DA;background:#fff;color:var(--n);font:600 12.5px "Segoe UI",Arial,sans-serif;padding:0 12px;cursor:pointer;white-space:nowrap}#sal-chips button:hover{border-color:var(--t);background:#F0FFFF}' +
     '#sal-form{display:flex;gap:8px;padding:8px 12px calc(10px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #D9E3EF;flex:none}' +
     '#sal-q{flex:1;min-width:0;height:44px;border:1.5px solid #B7C6DA;border-radius:22px;padding:0 16px;font:15px "Segoe UI",Arial,sans-serif;background:var(--o);color:var(--tx)}#sal-q:focus{border-color:var(--t);background:#fff;outline:none;box-shadow:0 0 0 3px rgba(0,217,217,.25)}' +
+    '#sal-cam{flex:none;width:44px;height:44px;border-radius:50%;border:1.5px solid #B7C6DA;background:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}#sal-cam:disabled{opacity:.45}#sal-cam:not(:disabled):hover{border-color:var(--t)}' +
     '#sal-send{flex:none;width:44px;height:44px;border-radius:50%;border:0;background:var(--n);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}#sal-send:disabled{opacity:.45;cursor:default}#sal-send:not(:disabled):hover{background:#12407f}' +
     '@media (max-width:520px){#sal-hd{padding-top:max(12px,calc(env(safe-area-inset-top) + 8px))}#sal-x{width:auto;min-width:44px;padding:0 14px;border-radius:22px;background:rgba(255,255,255,.2);font:700 15px Arial,sans-serif;white-space:nowrap}#sal-x::after{content:" Close / Cerrar"}#sal-panel{left:0;right:0;top:0;bottom:0;width:100%;max-width:100%;height:100%;border-radius:0;transform-origin:calc(100% - 47px) calc(100% - 47px)}#sal-root.open #sal-fab,#sal-root.open #sal-tip{display:none}#sal-log,#sal-tv{overflow-x:hidden}#sal-form{padding-bottom:calc(10px + env(safe-area-inset-bottom))}.sal-b,.sal-card{max-width:100%;overflow:hidden}.sal-b table{display:block;max-width:100%;overflow-x:auto}.sal-b img{max-width:100%}.sal-b ul,.sal-b li{overflow-wrap:anywhere}}' +
     '@media (prefers-reduced-motion:reduce){#sal-root *{animation:none!important;transition:none!important}}' +
@@ -284,6 +286,64 @@
     });
   }
 
+
+  /* ---------- scan a price tag: photo -> OCR in the browser (free) -> SKU -> the normal inventory answer ---------- */
+  function loadTess() {
+    if (window.Tesseract) return Promise.resolve();
+    return new Promise(function (ok, no) {
+      var sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+      sc.onload = ok; sc.onerror = function () { no(new Error('ocr')); }; document.head.appendChild(sc);
+    });
+  }
+  function getOcr() {
+    if (ocrW) return Promise.resolve(ocrW);
+    if (!ocrLoading) ocrLoading = loadTess().then(function () { return window.Tesseract.createWorker('eng'); }).then(function (w) { ocrW = w; return w; }).catch(function (e) { ocrLoading = null; throw e; });
+    return ocrLoading;
+  }
+  async function prepImage(file) {
+    var bmp = await createImageBitmap(file), k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+    var cv = document.createElement('canvas'); cv.width = Math.round(bmp.width * k); cv.height = Math.round(bmp.height * k);
+    cv.getContext('2d').drawImage(bmp, 0, 0, cv.width, cv.height); if (bmp.close) bmp.close(); return cv;
+  }
+  /* Daniels tag: "301-635211" is the SKU without the dash, "Model: T737-9", price in big type. */
+  function parseTag(text) {
+    var T = String(text || '').replace(/[ \t]+/g, ' '), o = { sku: '', model: '', prices: [] }, m;
+    m = T.match(/\b(\d{3})\s*[-–—]\s*(\d{6})\b/); if (m) o.sku = m[1] + m[2];
+    if (!o.sku) { m = T.match(/\b(\d{9})\b/); if (m) o.sku = m[1]; }
+    m = T.match(/Model:?\s*([A-Za-z0-9][A-Za-z0-9\-\/.]{2,})/i); if (m) o.model = m[1];
+    (T.match(/\d[\d,]*\.\d{2}\b/g) || []).forEach(function (x) { o.prices.push(x.replace(/,/g, '')); });
+    return o;
+  }
+  async function scanTag(file) {
+    if (!file || busy || scanning) return;
+    scanning = true; camBtn.disabled = true; sendBtn.disabled = true; forced = null; logEl.innerHTML = ''; root.classList.add('asked'); setFace('search');
+    var w = addSal(esc(t('Reading the tag', 'Leyendo la etiqueta')) + '<span class="sal-dots" aria-hidden="true"><i></i><i></i><i></i></span>', 'search');
+    var q = '';
+    try {
+      var r = await withTimeout((async function () { var W = await getOcr(); return W.recognize(await prepImage(file)); })(), 60000);
+      var tag = parseTag(r && r.data && r.data.text);
+      w.remove();
+      q = tag.sku || tag.model;
+      if (!q) { setFace('error', 2500); addSal(esc(t('I could not read the tag. Take the photo closer, without glare, with the whole tag in the frame, or type the SKU.', 'No pude leer la etiqueta. Toma la foto más cerca, sin reflejos y con toda la etiqueta en el cuadro, o escribe el SKU.')), 'error'); }
+      else if (tag.prices.length) {
+        try {
+          var inv = await withTimeout(DH.rpc('inventario_consulta', { p_q: q }), 8000);
+          var it = ((inv && inv.items) || []).filter(function (x) { return x.sku === tag.sku; })[0] || null;
+          if (it && it.precio != null) {
+            var sp = Number(it.precio).toFixed(2), ok = tag.prices.some(function (x) { return x === sp || x.slice(-sp.length) === sp; });   // a "$" read as a digit still matches
+            scanNote = ok ? '<b>' + esc(t('Price check: the tag matches the system', 'Precio: la etiqueta coincide con el sistema')) + '</b> ($' + esc(sp) + ')'
+              : '<b style="color:#B3402F">' + esc(t('Price check: the system says', 'Precio: el sistema dice')) + ' $' + esc(sp) + '.</b> ' + esc(t('The tag may be wrong, tell your manager.', 'La etiqueta puede estar mal, avisa a tu gerente.'));
+          }
+        } catch (e) {}
+      }
+    } catch (e) {
+      w.remove(); setFace('error', 2500);
+      addSal(esc(t('I could not read the photo right now. Type the SKU instead.', 'No pude leer la foto ahora. Escribe el SKU.')), 'error');
+    }
+    scanning = false; camBtn.disabled = false; sendBtn.disabled = false;
+    if (q) ask(q);
+  }
+
   /* ---------- ask ---------- */
   function withTimeout(p, ms) { return Promise.race([p, new Promise(function (_, no) { setTimeout(function () { no(new Error('timeout')); }, ms); })]); }
   /* Product lookups on the website only when the question looks like a product / SKU / stock question. */
@@ -308,7 +368,8 @@
   async function ask(q) {
     q = String(q || '').trim(); if (q.length < 2 || busy) return;
     busy = true; lastQ = q; sendBtn.disabled = true; input.value = ''; root.classList.add('asked');
-    forced = detectLang(q); logEl.innerHTML = ''; addMe(q); setFace('search');   // each question starts clean: the newest answer is at the top
+    forced = detectLang(q); logEl.innerHTML = ''; addMe(q); setFace('search');
+    if (scanNote) { addSal(scanNote, 'search'); scanNote = null; }   // each question starts clean: the newest answer is at the top
     var chat = smallTalk(q);
     if (chat) { setFace('success', 1800); addSal(chat, 'success'); busy = false; sendBtn.disabled = false; root.classList.add('asked'); return; }
     var pi = personalIntent(q);
@@ -364,6 +425,7 @@
     input.setAttribute('placeholder', t('Ask SAL… e.g. price match, refund, SKU', 'Pregúntale a SAL… ej. price match, reembolso, SKU'));
     input.setAttribute('aria-label', t('Type your question', 'Escribe tu pregunta'));
     sendBtn.setAttribute('aria-label', t('Send', 'Enviar'));
+    camBtn.setAttribute('aria-label', t('Scan a price tag', 'Escanear una etiqueta')); camBtn.setAttribute('title', camBtn.getAttribute('aria-label'));
     var q = L() === 'es'
       ? [['📣 Promociones de hoy', '¿Hay promociones vigentes?'], ['🔎 Buscar un producto o SKU', '@product'], ['Política de price match', 'Política de price match'], ['¿Cómo proceso una devolución?', '¿Cómo proceso una devolución?'], ['Cancelar y reembolsar en Infinity', 'Cancelar y reembolsar en Infinity'], ['¿Dónde está mi horario?', '¿Dónde está mi horario?']]
       : [['📣 Promotions today', 'Any promotions right now?'], ['🔎 Look up a product or SKU', '@product'], ['Price match policy', 'Price match policy'], ['How do I process a return?', 'How do I process a return?'], ['Cancel and refund in Infinity', 'Cancel and refund in Infinity'], ['Where is my schedule?', 'Where is my schedule?']];
@@ -608,11 +670,11 @@
       '<div id="sal-log" role="log" aria-live="polite" aria-relevant="additions"></div>' +
       '<div id="sal-tv" role="region"></div>' +
       '<div id="sal-chips"></div>' +
-      '<form id="sal-form" autocomplete="off"><input id="sal-q" type="text" maxlength="200" enterkeyhint="search" autocapitalize="off" spellcheck="false"><button type="submit" id="sal-send"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20.5 21 12 3 3.5v6.7l12 1.8-12 1.8z" fill="currentColor"/></svg></button></form>' +
+      '<form id="sal-form" autocomplete="off"><button type="button" id="sal-cam">&#128247;</button><input type="file" id="sal-file" accept="image/*" capture="environment" hidden><input id="sal-q" type="text" maxlength="200" enterkeyhint="search" autocapitalize="off" spellcheck="false"><button type="submit" id="sal-send"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20.5 21 12 3 3.5v6.7l12 1.8-12 1.8z" fill="currentColor"/></svg></button></form>' +
       '</section>';
     document.body.appendChild(root);
     fab = root.querySelector('#sal-fab'); tip = root.querySelector('#sal-tip'); panel = root.querySelector('#sal-panel'); logEl = root.querySelector('#sal-log');
-    form = root.querySelector('#sal-form'); input = root.querySelector('#sal-q'); sendBtn = root.querySelector('#sal-send'); faceEl = root.querySelector('#sal-face');
+    form = root.querySelector('#sal-form'); input = root.querySelector('#sal-q'); sendBtn = root.querySelector('#sal-send'); camBtn = root.querySelector('#sal-cam'); camFile = root.querySelector('#sal-file'); faceEl = root.querySelector('#sal-face');
     chipsEl = root.querySelector('#sal-chips'); teachBtn = root.querySelector('#sal-teach'); tv = root.querySelector('#sal-tv'); subEl = root.querySelector('#sal-sub'); titleEl = root.querySelector('#sal-title'); xBtn = root.querySelector('#sal-x');
     texts();
     // messages page has its own send bar at the bottom right: sit above it
@@ -623,6 +685,8 @@
     xBtn.addEventListener('click', close);
     panel.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.stopPropagation(); close(); } });
     form.addEventListener('submit', function (e) { e.preventDefault(); ask(input.value); });
+    camBtn.addEventListener('click', function () { camFile.click(); });
+    camFile.addEventListener('change', function () { var f = camFile.files && camFile.files[0]; camFile.value = ''; scanTag(f); });
     chipsEl.addEventListener('click', function (e) {
       var b = e.target.closest('button'); if (!b) return; var q = b.getAttribute('data-q') || b.textContent;
       if (q === '@product') { input.setAttribute('placeholder', t('Type the product name or SKU…', 'Escribe el nombre del producto o el SKU…')); input.focus(); return; }
