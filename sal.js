@@ -633,7 +633,19 @@
   var _save = DH.save, _clear = DH.clear;
   DH.save = function () { var r = _save.apply(this, arguments); setTimeout(mount, 0); return r; };
   DH.clear = function () { var r = _clear.apply(this, arguments); unmount(); return r; };
+  // Leaving the page from a SAL answer (e.g. opening a policy page) and coming back: SAL reopens and repeats the last question
+  function saveState() {
+    try { if (mounted && panel && panel.classList.contains('open') && lastQ) sessionStorage.setItem('dh_sal_state', JSON.stringify({ t: Date.now(), q: lastQ, p: location.pathname })); } catch (e) {}
+  }
+  window.addEventListener('pagehide', saveState);
+  document.addEventListener('visibilitychange', function () { if (document.hidden) saveState(); });
   window.__sal = true;
   DH.sal = { open: function () { mount(); open(); }, close: close, ask: function (q) { mount(); open(); return ask(q); } };
   mount();
+  try {
+    var st = JSON.parse(sessionStorage.getItem('dh_sal_state') || 'null'), nav = (performance.getEntriesByType('navigation')[0] || {}).type;
+    if (st && st.p === location.pathname && nav === 'back_forward' && Date.now() - st.t < 30 * 60 * 1000 && mounted) {
+      sessionStorage.removeItem('dh_sal_state'); greeted = true; open(); ask(st.q);
+    }
+  } catch (e) {}
 })();
