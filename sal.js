@@ -234,7 +234,11 @@
           if (w.length) where = '<div style="margin-top:6px;font-size:13px;color:#1E8E5A;font-weight:600">' + esc(t('Available ', 'Disponible ') + w.join(t(' and ', ' y '))) + '</div>';
           else if (it.solo_piso) where = '<div style="margin-top:6px;font-size:13px;color:#8A6D1D;font-weight:600">' + esc(t('Only the floor sample at your store', 'Solo la muestra de piso en tu tienda')) + '</div>';
         }
-        return '<div class="sal-card"><h4>' + esc(it.modelo || it.sku) + '</h4><div class="meta">' + pill(it.disponible) + ' ' + (it.kit === 'K' ? '<b>KIT</b> · ' : '') + esc([it.descripcion, it.color].filter(Boolean).join(' · ')) + ' · SKU ' + esc(it.sku) + '</div>' + where + line + '</div>';
+        var sell = '';
+        if (it.precio != null && Number(it.precio) > 0) sell += '<span style="font-weight:700;color:#1B3A6B">$' + esc(Number(it.precio).toFixed(2)) + '</span>';
+        if (!it.disponible && it.en_camino) sell += (sell ? ' · ' : '') + '<span style="color:#8A6D1D;font-weight:600">' + esc(t('On order, it is on the way', 'En orden, viene en camino')) + '</span>';
+        if (sell) sell = '<div style="margin-top:6px;font-size:13px">' + sell + '</div>';
+        return '<div class="sal-card"><h4>' + esc(it.modelo || it.sku) + '</h4><div class="meta">' + pill(it.disponible) + ' ' + (it.kit === 'K' ? '<b>KIT</b> · ' : '') + esc([it.descripcion, it.color].filter(Boolean).join(' · ')) + ' · SKU ' + esc(it.sku) + '</div>' + sell + where + line + '</div>';
       }).join('') + '<div class="sal-note">' + esc(t('Inventory report of ', 'Reporte de inventario del ') + (r.inv.reporte || '').replace(/\s+\d+:\d+:\d+.*$/, '')) + '</div>';
     }
     var hasInv = !!(r.inv && r.inv.items && r.inv.items.length);   // our inventory report is the only source of availability when it has the item
@@ -388,6 +392,7 @@
       var invP = wq ? withTimeout(DH.rpc('inventario_consulta', { p_q: wq }), 8000).catch(function () { return null; }) : Promise.resolve(null);
       var r = await withTimeout(DH.rpc('sal_buscar', { p_q: q }), 20000);
       r.inv = await invP; r.saleMode = saleMode;
+      try { DH.rpc('sal_marcar', { p_q: q, p_inv: !!(r.inv && r.inv.items && r.inv.items.length) }).catch(function () {}); } catch (e) {}   // so SKU lookups stop showing as "found nothing"
       var early = false;   // our inventory answers first; the website's photo, specs and promotion fill in below when they arrive
       if (r.inv && r.inv.items && r.inv.items.length) {
         var h0 = renderResult(Object.assign({}, r, { web: [] }), q);
@@ -598,6 +603,10 @@
     if (TD.sin_resultado && TD.sin_resultado.length) {
       h += '<div class="sal-sec">' + esc(t('People asked and SAL found nothing (30 days)', 'Preguntaron y SAL no encontró nada (30 días)')) + '</div>' + TD.sin_resultado.map(function (x, i) {
         return '<div class="sal-ask"><b>' + esc(x.q) + ' <span style="color:#5B6B82;font-weight:400">×' + x.n + '</span></b><button type="button" class="sal-btn" data-t="ans" data-i="' + i + '">' + esc(t('Answer', 'Responder')) + '</button></div>'; }).join('');
+    }
+    if (TD.skus && TD.skus.length) {
+      h += '<div class="sal-sec">' + esc(t('SKUs people looked up that are not in the inventory (30 days)', 'SKUs que buscaron y no están en el inventario (30 días)')) + '</div><div style="font-size:13px;line-height:1.7">' + TD.skus.map(function (x) {
+        return '<b>' + esc(x.q) + '</b> <span style="color:#5B6B82">×' + x.n + '</span>'; }).join(' &nbsp; ') + '</div>';
     }
     h += '<div class="sal-sec">' + esc(t('Your quick answers', 'Tus respuestas rápidas')) + ' (' + (TD.items || []).length + ')</div>';
     h += (TD.items || []).map(function (a, i) {
