@@ -86,7 +86,7 @@
     <button class="btn alt" onclick="openReport()">⬇ Report / Reporte</button>
     <button class="btn" onclick="openForm(null)">+ Add / Agregar</button>
   </div>
-  <p class="note">Records are kept for 3 months and then deleted automatically. / Los registros se guardan 3 meses y luego se borran solos.</p>
+  <p class="note">Records are kept for 12 months and then deleted automatically. / Los registros se guardan 12 meses y luego se borran solos.</p>
   <div class="card" id="box"></div>
 </main>
 <div class="ov hide" id="ov"><div class="md" id="md" role="dialog" aria-modal="true"></div></div>
@@ -162,7 +162,7 @@ function logTxt(l){
 function dstr(d){return new Intl.DateTimeFormat('en-CA',{timeZone:LA}).format(d);}
 async function loadLog(){
   $('box').innerHTML='<div class="empty">…</div>';
-  try{const r=await DH.rpc('logistica_bitacora',{p_modulo:TAB,p_desde:dstr(new Date(Date.now()-90*864e5)),p_hasta:dstr(new Date())});LOG=(r&&r.rows)||[];}
+  try{const r=await DH.rpc('logistica_bitacora',{p_modulo:TAB,p_desde:dstr(new Date(Date.now()-365*864e5)),p_hasta:dstr(new Date())});LOG=(r&&r.rows)||[];}
   catch(e){$('box').innerHTML='<div class="empty">'+esc(tr('Could not load. / No se pudo cargar.'))+'</div>';return;}
   render();
 }
@@ -176,11 +176,11 @@ function openReport(){
   const t=dstr(new Date()), f=dstr(new Date(Date.now()-30*864e5));
   $('md').innerHTML=`<h3>${esc(tr('Download report / Descargar reporte'))} — ${esc(tr(TAB==='rec'?'Receiving / Recepción':'Next Day Delivery / Entregas'))}</h3>
    <div class="f"><div><label for="r-from">${esc(tr('From / Desde'))}</label><input type="date" id="r-from" value="${f}"></div><div><label for="r-to">${esc(tr('To / Hasta'))}</label><input type="date" id="r-to" value="${t}"></div></div>
-   <div class="acts" style="margin-top:8px"><button class="btn alt" onclick="preset(7)">7 ${esc(tr('days / días'))}</button><button class="btn alt" onclick="preset(30)">30 ${esc(tr('days / días'))}</button><button class="btn alt" onclick="preset(90)">90 ${esc(tr('days / días'))}</button></div>
+   <div class="acts" style="margin-top:8px"><button class="btn alt" onclick="preset(7)">7 ${esc(tr('days / días'))}</button><button class="btn alt" onclick="preset(30)">30 ${esc(tr('days / días'))}</button><button class="btn alt" onclick="preset(90)">90 ${esc(tr('days / días'))}</button><button class="btn alt" onclick="preset(180)">180 ${esc(tr('days / días'))}</button></div>
    <div class="err hide" id="ferr" role="alert"></div>
    <div class="acts"><button class="btn" onclick="dl('rows')">${esc(tr('Records (CSV) / Registros (CSV)'))}</button><button class="btn" onclick="dl('log')">${esc(tr('Activity log (CSV) / Bitácora (CSV)'))}</button><button class="btn alt" onclick="closeForm()">${esc(tr('Close / Cerrar'))}</button></div>
    ${SUPER()?`<div class="acts" style="margin-top:6px"><label class="btn alt" style="display:inline-flex;align-items:center;margin:0;cursor:pointer">${esc(tr('Import CSV from Lists / Importar CSV de Lists'))}<input type="file" accept=".csv,text/csv" hidden onchange="importCSV(this.files[0])"></label></div><div class="small" id="imp-msg"></div>`:''}
-   <div class="small">${esc(tr('Records are kept 3 months, so reports can cover up to the last 90 days. / Los registros se guardan 3 meses, así que los reportes cubren hasta los últimos 90 días.'))}</div>`;
+   <div class="small">${esc(tr('Records are kept 12 months, so reports can cover up to the last year. / Los registros se guardan 12 meses, así que los reportes cubren hasta el último año.'))}</div>`;
   $('ov').classList.remove('hide');
 }
 const SUPER=()=>{try{return ((DH.emp&&DH.emp())||{}).nivel_admin==='super_admin';}catch(e){return false;}};
@@ -196,7 +196,7 @@ function person(s){s=String(s||'').trim();if(!s)return '';if(s.includes('@'))s=s
 function mapRows(mod,text){
   const rows=parseCSV(text); if(rows.length<2)return [];
   const H=rows[0].map(h=>h.replace(/%23/g,'#').trim().toLowerCase()), ix=n=>H.indexOf(n);
-  const cut=Date.now()-90*864e5, out=[];
+  const cut=Date.now()-365*864e5, out=[];
   for(const r of rows.slice(1)){
     const g=n=>{const i=ix(n);return i<0?'':(r[i]||'').trim();};
     const cr=usDT(g('created')); if(!cr)continue; const creada=fromInput(cr.d+'T'+cr.t); if(new Date(creada).getTime()<cut)continue;
@@ -219,7 +219,7 @@ async function importCSV(file){
   try{
     const rows=mapRows(TAB,await file.text()); let ins=0,sk=0;
     for(let i=0;i<rows.length;i+=100){const r=await DH.rpc('logistica_importar',{p_modulo:TAB,p_filas:rows.slice(i,i+100)});if(!r||!r.ok)throw 0;ins+=r.insertados;sk+=r.omitidos;}
-    m.textContent=tr('Imported / Importados')+': '+ins+' · '+tr('Skipped (duplicates or invalid) / Omitidos (duplicados o inválidos)')+': '+sk+' · '+tr('Only the last 3 months are imported. / Solo se importan los últimos 3 meses.');
+    m.textContent=tr('Imported / Importados')+': '+ins+' · '+tr('Skipped (duplicates or invalid) / Omitidos (duplicados o inválidos)')+': '+sk+' · '+tr('Only the last 12 months are imported. / Solo se importan los últimos 12 meses.');
     await load();
   }catch(e){m.textContent=tr('Could not import. / No se pudo importar.');}
 }
