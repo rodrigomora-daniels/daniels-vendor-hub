@@ -32,6 +32,11 @@
   .dec{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.dec button{flex:1 1 140px}
   .err{color:var(--red);font-weight:700}.ok{color:var(--green);font-weight:700}.hide{display:none!important}
   .case{border-top:1px solid #eef1f6;padding:8px 0;font-size:13px}
+  .drop{border:2px dashed #9db0cc;border-radius:12px;padding:16px;text-align:center;background:#F7F9FC;outline:none}
+  .drop:focus,.drop.on{border-color:var(--navy);background:#EAF2FF}
+  .th{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;justify-content:center}.th div{position:relative}.th img{height:72px;border-radius:8px;border:1px solid #cfd7e3}
+  .th button{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:0;background:var(--red);color:#fff;font-size:14px;line-height:22px;cursor:pointer}
+  .fromshot{background:#FFFBE6!important;border-color:#C8922A!important}
   .legal{font-size:12px;color:var(--gray);line-height:1.4}
 </style>
 <meta name="dh-i18n" content="on">
@@ -45,6 +50,14 @@
     <div class="card">
       <h2 id="h-form"></h2>
       <p class="mut" id="p-priv"></p>
+      <div class="drop" id="drop" tabindex="0">
+        <p><b id="t-drop"></b></p><p class="mut" id="s-drop"></p>
+        <button class="btn alt" type="button" id="attach"></button>
+        <input type="file" id="file" accept="image/*" multiple class="hide">
+        <div class="th" id="th"></div>
+        <button class="btn hide" type="button" id="read" style="margin-top:10px"></button>
+        <p id="rmsg" role="status" style="margin-top:8px"></p>
+      </div>
       <div class="g2">
         <div><label id="l-fico"></label><input id="fico" type="number" inputmode="numeric" min="300" max="850"></div>
         <div><label id="l-score"></label><select id="score"><option>A</option><option>B</option><option>C</option><option>D</option><option>U</option></select></div>
@@ -69,7 +82,6 @@
         <label id="l-ref"></label><input id="ref" maxlength="30">
         <label id="l-nota"></label><textarea id="nota" rows="2" maxlength="300"></textarea>
       </details>
-      <p class="mut" id="p-shot" style="margin-top:10px"></p>
       <button class="btn" id="go" style="margin-top:6px"></button>
       <p id="msg" role="status" style="margin-top:8px"></p>
     </div>
@@ -105,7 +117,8 @@ const T={
  'l-motivo':'Why is this an exception? / ¿Por qué es excepción?',
  'l-bad':'Returned check, charge-off or co-signer / Cheque devuelto, cargo incobrable o cofirmante','l-az':'Auto-Zone sale / Venta Auto-Zone','l-ex':'Existing customer / Cliente existente',
  'l-more':'More detail (optional) / Más detalle (opcional)','l-ing':'Monthly income ($) / Ingreso mensual ($)','l-deu':'Monthly debts ($) / Deudas mensuales ($)','l-ref':'Short reference (no names) / Referencia corta (sin nombres)','l-nota':'Note / Nota',
- 'p-shot':'Screenshots of Infinity and TRW are coming in the next phase. For now, type what you read from them. / Las capturas de Infinity y TRW vienen en la siguiente fase. Por ahora captura lo que lees en ellas.',
+ 't-drop':'Paste or attach screenshots (Infinity, TRW) / Pega o adjunta capturas (Infinity, TRW)','s-drop':'Press Ctrl+V (or Cmd+V) anywhere on this page, drop images here, or use the button. SAL reads them and fills the form below; you confirm. Images are not saved. / Presiona Ctrl+V (o Cmd+V) en cualquier parte, arrastra imágenes aquí o usa el botón. SAL las lee y llena el formulario; tú confirmas. Las imágenes no se guardan.',
+ 'attach':'📎 Attach screenshots / Adjuntar capturas','read':'Read screenshots / Leer capturas',
  'go':'Ask SAL / Consultar a SAL','h-res':'SAL recommends / SAL recomienda','h-dec':'What did you decide? / ¿Qué decidiste?',
  'h-cases':'Recent cases (7 days) / Casos recientes (7 días)','p-cases':'Visible to all credit approvers. / Visible para todos los aprobadores de crédito.','h-stats':'Agreement with the algorithm (90 days) / Coincidencia con el algoritmo (90 días)',
  'rlegal':'SAL recommends; you decide. Rules come from the Infinity X090 quick guide (Nov 17, 2026). Estimated payments use prescreener APRs and are not an offer. If you decline or change terms, record the real reason; adverse-action notices stay with the approver. / SAL recomienda; tú decides. Las reglas vienen de la guía rápida X090 de Infinity (17 nov 2026). Los pagos estimados usan APR del prescreener y no son una oferta. Si niegas o cambias términos, registra el motivo real; los avisos de acción adversa siguen siendo del aprobador.'
@@ -123,8 +136,10 @@ function showRes(r){
   const b=$('rbadge'); b.className='badge b-'+r.recomendacion; b.textContent=tr(REC[r.recomendacion]||r.recomendacion);
   $('rrule').textContent=r.regla?('· '+r.regla):'';
   $('rkv').innerHTML=[[money(r.dp),tr('Down payment / Enganche')+(r.dp_pct!=null?' ('+r.dp_pct+'%)':'')],[r.plazo?r.plazo+' '+tr('mo / meses'):'—',tr('Term / Plazo')],[r.pago?'~'+money(r.pago):'—',tr('Est. payment / Pago est.')]].map(x=>`<div><b>${x[0]}</b><span data-no-i18n>${x[1]}</span></div>`).join('');
+  if(INF&&(INF.dp||INF.plazo||INF.rule)){ r.__inf=INF; }
   const s=$('rsug'); if(r.sugerencia){s.classList.remove('hide');s.textContent=tr(r.sugerencia.texto);}else s.classList.add('hide');
-  $('rwarn').innerHTML=(r.warns||[]).concat(r.notes||[]).map(w=>`<div class="warn" data-no-i18n>${tr(w).replace(/</g,'&lt;')}</div>`).join('');
+  const inf=r.__inf?`<div class="sug" data-no-i18n>Infinity: ${[r.__inf.rule,r.__inf.dp!=null?'DP '+money(r.__inf.dp):'',r.__inf.plazo?r.__inf.plazo+' '+tr('mo / meses'):''].filter(Boolean).join(' · ')}</div>`:'';
+  $('rwarn').innerHTML=inf+(r.warns||[]).concat(r.notes||[]).map(w=>`<div class="warn" data-no-i18n>${tr(w).replace(/</g,'&lt;')}</div>`).join('');
   $('rcodes').innerHTML=(r.codes||[]).map(c=>`<li data-no-i18n><code>${c.c}</code>${tr(c.t).replace(/</g,'&lt;')}</li>`).join('')+(r.externo&&r.recomendacion!=='externo'?`<li data-no-i18n><code>ALT</code>${tr('Alternative / Alternativa')}: ${r.externo}</li>`:'');
   const D=[['aprobado','Approved / Aprobé'],['aprobado_condiciones','Approved with conditions / Aprobé con condiciones'],['externo','External / Externo'],['rechazado','Declined / Rechacé'],['escalado','Escalated / Escalé']];
   $('decb').innerHTML=D.map(d=>`<button class="btn alt" data-d="${d[0]}" data-no-i18n>${tr(d[1])}</button>`).join('');
@@ -145,6 +160,34 @@ $('go').addEventListener('click',async()=>{
   catch(x){ m.className='err'; m.textContent=(x.code==='PT403')?tr('No access. / Sin acceso.'):tr('Something went wrong. Try again. / Algo falló. Intenta de nuevo.'); }
   $('go').disabled=false;
 });
+
+// ---- Screenshots: paste / attach / drop -> SAL fills the form ----
+let SHOTS=[], INF=null;
+function dataUrl(file){return new Promise((ok,no)=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{const M=1600,k=Math.min(1,M/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);ok(c.toDataURL('image/jpeg',.85));};im.onerror=no;im.src=fr.result;};fr.onerror=no;fr.readAsDataURL(file);});}
+function drawTh(){ $('th').innerHTML=SHOTS.map((u,i)=>`<div><img src="${u}" alt=""><button type="button" data-i="${i}" aria-label="remove">×</button></div>`).join(''); $('read').classList.toggle('hide',!SHOTS.length); }
+async function addFiles(files){
+  const imgs=[...files].filter(f=>/^image\//.test(f.type)); if(!imgs.length)return;
+  for(const f of imgs){ if(SHOTS.length>=4){$('rmsg').className='err';$('rmsg').textContent=tr('Maximum 4 screenshots. / Máximo 4 capturas.');break;} try{SHOTS.push(await dataUrl(f));}catch(e){} }
+  drawTh(); if(SHOTS.length) readShots();
+}
+document.addEventListener('paste',e=>{ if($('app').classList.contains('hide'))return; const f=[...(e.clipboardData&&e.clipboardData.items||[])].filter(i=>i.kind==='file'&&/^image\//.test(i.type)).map(i=>i.getAsFile()); if(f.length){e.preventDefault();addFiles(f);} });
+$('attach').onclick=()=>$('file').click(); $('file').onchange=e=>{addFiles(e.target.files);e.target.value='';};
+['dragover','dragenter'].forEach(ev=>$('drop').addEventListener(ev,e=>{e.preventDefault();$('drop').classList.add('on');}));
+['dragleave','drop'].forEach(ev=>$('drop').addEventListener(ev,e=>{e.preventDefault();$('drop').classList.remove('on');}));
+$('drop').addEventListener('drop',e=>addFiles(e.dataTransfer.files));
+$('th').addEventListener('click',e=>{const b=e.target.closest('button[data-i]');if(!b)return;SHOTS.splice(+b.dataset.i,1);drawTh();});
+$('read').onclick=()=>readShots();
+function fill(id,v,isChk){ if(v===null||v===undefined||v==='')return; const el=$(id); if(isChk)el.checked=!!v; else el.value=v; el.classList.add('fromshot'); }
+async function readShots(){
+  const m=$('rmsg'); m.className='mut'; m.textContent=tr('SAL is reading… / SAL está leyendo…'); $('read').disabled=true;
+  try{ const r=await DH.creditRead(SHOTS); const f=r.fields||{}; INF=f.infinity||null;
+    fill('fico',f.fico);fill('score',f.score);fill('monto',f.monto);fill('dp',f.dp);fill('plazo',f.plazo);fill('late',f.late);fill('ingreso',f.ingreso);fill('deudas',f.deudas);
+    fill('producto',f.producto);fill('bad',f.bad,true);fill('existente',f.existente,true);
+    m.className='ok'; m.textContent=tr('Done. Yellow fields came from the screenshots: check them, then press Ask SAL. / Listo. Los campos amarillos salieron de las capturas: revísalos y presiona Consultar a SAL.')+(f.notas?' — '+f.notas:'');
+  }catch(x){ m.className='err'; m.textContent=x.code==='NO_KEY'?tr('Screenshot reading is not enabled yet. Type the fields below. / La lectura de capturas aún no está activa. Captura los campos abajo.'):x.code==='PT403'?tr('No access. / Sin acceso.'):tr('Could not read the screenshots. Type the fields below. / No se pudieron leer las capturas. Captura los campos abajo.'); }
+  $('read').disabled=false;
+}
+document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',()=>el.classList.remove('fromshot')));
 async function loadList(){
   try{ const o=await DH.rpc('credito_listar'); const c=o.casos||[];
     $('cases').innerHTML=c.length?c.map(x=>{const dd=x.datos||{},rs=x.resultado||{};
