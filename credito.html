@@ -167,7 +167,7 @@ function dataUrl(file){return new Promise((ok,no)=>{const fr=new FileReader();fr
 function drawTh(){ $('th').innerHTML=SHOTS.map((u,i)=>`<div><img src="${u}" alt=""><button type="button" data-i="${i}" aria-label="remove">×</button></div>`).join(''); $('read').classList.toggle('hide',!SHOTS.length); }
 async function addFiles(files){
   const imgs=[...files].filter(f=>/^image\//.test(f.type)); if(!imgs.length)return;
-  for(const f of imgs){ if(SHOTS.length>=4){$('rmsg').className='err';$('rmsg').textContent=tr('Maximum 4 screenshots. / Máximo 4 capturas.');break;} try{SHOTS.push(await dataUrl(f));}catch(e){} }
+  for(const f of imgs){ if(SHOTS.length>=10){$('rmsg').className='err';$('rmsg').textContent=tr('Maximum 10 screenshots per case. / Máximo 10 capturas por caso.');break;} try{SHOTS.push(await dataUrl(f));}catch(e){} }
   drawTh(); if(SHOTS.length) readShots();
 }
 document.addEventListener('paste',e=>{ if($('app').classList.contains('hide'))return; const f=[...(e.clipboardData&&e.clipboardData.items||[])].filter(i=>i.kind==='file'&&/^image\//.test(i.type)).map(i=>i.getAsFile()); if(f.length){e.preventDefault();addFiles(f);} });
