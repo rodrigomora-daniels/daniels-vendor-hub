@@ -183,7 +183,9 @@ function openReport(){
    <div class="small">${esc(tr('Records are kept 12 months, so reports can cover up to the last year. / Los registros se guardan 12 meses, así que los reportes cubren hasta el último año.'))}</div>`;
   $('ov').classList.remove('hide');
 }
-const SUPER=()=>{try{return ((DH.emp&&DH.emp())||{}).nivel_admin==='super_admin';}catch(e){return false;}};
+let ISSUP=false;
+const SUPER=()=>{try{return ISSUP||((DH.emp&&DH.emp())||{}).nivel_admin==='super_admin';}catch(e){return false;}};
+try{DH.rpc('es_super_admin').then(r=>{ISSUP=(r===true);}).catch(()=>{});}catch(e){}
 function parseCSV(t){const rows=[];let r=[],c='',q=false;t=t.replace(/^\ufeff/,'');
   for(let i=0;i<t.length;i++){const ch=t[i];
     if(q){if(ch==='"'){if(t[i+1]==='"'){c+='"';i++;}else q=false;}else c+=ch;}
