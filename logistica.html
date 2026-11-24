@@ -26,8 +26,18 @@
   .card{background:#fff;border-radius:10px;box-shadow:0 1px 0 #dfe5ee,0 10px 26px -22px rgba(18,40,74,.5);overflow:auto}
   table{width:100%;border-collapse:collapse;font-size:14px}
   th{position:sticky;top:0;background:#F4F6FA;text-align:left;font-size:12.5px;color:var(--navy);padding:9px 10px;border-bottom:1px solid #dfe5ee;white-space:nowrap}
+  main{padding-bottom:90px}
   td{padding:9px 10px;border-bottom:1px solid #eef1f6;vertical-align:top}
   tr.row{cursor:pointer} tr.row:hover td{background:#f8fafd}
+  tr.row.sel td{background:#E8F1FF}
+  td.ck,th.ck{width:34px;padding-left:12px;padding-right:0}td.ck input,th.ck input{width:20px;height:20px;cursor:pointer}
+  .flt{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px;border-bottom:1px solid #eef1f6;background:#FAFBFD}
+  .flt select,.flt input[type=search]{height:36px;border:1px solid #c9d3e0;border-radius:8px;padding:0 10px;font:inherit;font-size:13.5px;background:#fff;max-width:100%}
+  .flt .cnt{font-size:13px;color:#5B6B82}.flt .sp{flex:1}
+  #selbar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:#0B2D5C;color:#fff;padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:none;gap:8px;align-items:center;flex-wrap:wrap;box-shadow:0 -4px 16px rgba(0,0,0,.25)}
+  #selbar.on{display:flex}#selbar b{font-size:15px;margin-right:auto}
+  #selbar button{min-height:40px;border-radius:10px;border:0;padding:0 14px;font:700 13.5px inherit;font-family:inherit;cursor:pointer;background:#fff;color:#0B2D5C}
+  #selbar button.go{background:#1E8E5A;color:#fff}#selbar button.x{background:transparent;color:#fff;border:1.5px solid #fff}
   .pill{display:inline-block;border-radius:12px;padding:2px 10px;font-size:12.5px;font-weight:700;white-space:nowrap}
   .s-pending,.s-new{background:#dfe7ff;color:#2b3d99}.s-received_complete,.s-delivered{background:#e3f4e5;color:var(--green)}
   .s-received_incomplete,.s-in_progress{background:#fff1d6;color:#8a5a00}
@@ -83,12 +93,14 @@
       <button id="vw-log" onclick="setView('log')">Activity / Bitácora</button>
     </div>
     <span class="sp"></span>
+    <button class="btn alt" id="bt-sel" onclick="toggleSel()">☑ Select / Seleccionar</button>
     <button class="btn alt" onclick="openReport()">⬇ Report / Reporte</button>
     <button class="btn" onclick="openForm(null)">+ Add / Agregar</button>
   </div>
   <p class="note">Records are kept for 12 months and then deleted automatically. / Los registros se guardan 12 meses y luego se borran solos.</p>
   <div class="card" id="box"></div>
 </main>
+<div id="selbar" role="region" aria-label="Bulk actions"></div>
 <div class="ov hide" id="ov"><div class="md" id="md" role="dialog" aria-modal="true"></div></div>
 <script src="dh-session.js"></script>
 <script>
@@ -101,6 +113,7 @@ const ST={
   ndd:{new:'New / Nuevo',in_progress:'In progress / En proceso',delivered:'Delivered / Entregado'}};
 const TY={cita:'Receiving Appointment / Cita de recepción',will_call:'Will Call'};
 let HOPEN=null, ACC=null, TAB='rec', VIEW='list', DATA={rec:[],ndd:[]}, CUR=null, ASK=false;
+let SELMODE=false, SEL=new Set(), FLT={st:'',when:'',q:''};
 let CM=(function(){const p=new Intl.DateTimeFormat('en-CA',{timeZone:LA}).format(new Date()).split('-');return {y:+p[0],m:+p[1]-1};})();
 
 /* ---- time helpers (everything is shown in Los Angeles time) ---- */
@@ -134,12 +147,12 @@ async function load(){
   render();
   if(HOPEN){const id=HOPEN;HOPEN=null;if(DATA[TAB].some(x=>x.id===id))openForm(id);}
 }
-function paintBar(){
+function paintBar(){ if(typeof paintBar2==='function')paintBar2();
   $('tb-rec').classList.toggle('on',TAB==='rec');$('tb-ndd').classList.toggle('on',TAB==='ndd');
   $('vw-list').classList.toggle('on',VIEW==='list');$('vw-cal').classList.toggle('on',VIEW==='cal');$('vw-log').classList.toggle('on',VIEW==='log');
 }
-function setTab(t){TAB=t;paintBar();if(VIEW==='log')loadLog();else render();}
-function setView(v){VIEW=v;paintBar();if(v==='log'){loadLog();}else render();}
+function setTab(t){TAB=t;FLT={st:'',when:'',q:''};endSel();paintBar();if(VIEW==='log')loadLog();else render();}
+function setView(v){VIEW=v;if(v!=='list')endSel();paintBar();if(v==='log'){loadLog();}else render();}
 window.addEventListener('dh-lang',()=>{if(!$('ov').classList.contains('hide'))return;render();});
 
 /* ---- render ---- */
@@ -244,14 +257,45 @@ async function dl(kind){
     else{csvOut(nm,['Date of NDD','Invoice','Customer','Status','Address','Notes','Created by','Created'],r.rows.map(x=>[fmtD(x.fecha_ndd),x.factura,x.cliente,ST.ndd[x.estado].split(' / ')[0],x.direccion,x.notas,x.creado_por,fmtDT(x.creada)]));}
   }catch(e){ferr(tr('Could not build the report. / No se pudo generar el reporte.'));}
 }
-function listHtml(rows){
-  if(!rows.length)return '<div class="empty">'+esc(tr('Nothing here yet. Use Add to create the first record. / Aún no hay registros. Usa Agregar para crear el primero.'))+'</div>';
+function whenKey(){const d=new Date(Date.now()-7*864e5);return dayKey(d);}
+function visible(all){
+  const t=todayKey(), o=whenKey(), q=FLT.q.trim().toLowerCase();
+  return all.filter(r=>{
+    if(FLT.st&&r.estado!==FLT.st)return false;
+    const k=dateOf(r);
+    if(FLT.when==='past'&&!(k<t))return false; if(FLT.when==='old7'&&!(k<o))return false;
+    if(FLT.when==='today'&&k!==t)return false; if(FLT.when==='future'&&!(k>t))return false;
+    if(q&&!((TAB==='rec'?[r.vendor,r.po,r.driver_id,r.contenedor_num,r.notas]:[r.factura,r.cliente,r.direccion,r.notas]).join(' ').toLowerCase().includes(q)))return false;
+    return true;});
+}
+function sel(r){return SEL.has(r.id)?' sel':'';}
+function thCk(rows){return SELMODE?`<th class="ck"><input type="checkbox" aria-label="${esc(tr('Select all shown / Seleccionar todos los mostrados'))}" ${rows.length&&rows.every(r=>SEL.has(r.id))?'checked':''} onclick="selAll(this.checked)"></th>`:'';}
+function tdCk(r){return SELMODE?`<td class="ck" onclick="event.stopPropagation()"><input type="checkbox" aria-label="${esc(tr('Select / Seleccionar'))}" ${SEL.has(r.id)?'checked':''} onclick="pick('${r.id}',this.checked)"></td>`:'';}
+function rowClick(id,ev){if(SELMODE){pick(id,!SEL.has(id));return;}openForm(id);}
+function fltHtml(all,rows){
+  const stOpts='<option value="">'+esc(tr('All statuses / Todos los estados'))+'</option>'+Object.keys(ST[TAB]).map(k=>`<option value="${k}"${FLT.st===k?' selected':''}>${esc(tr(ST[TAB][k]))}</option>`).join('');
+  const W=[['','All dates / Todas las fechas'],['past','Before today / Antes de hoy'],['old7','Older than 7 days / Más de 7 días'],['today','Today / Hoy'],['future','Upcoming / Próximas']];
+  const wOpts=W.map(w=>`<option value="${w[0]}"${FLT.when===w[0]?' selected':''}>${esc(tr(w[1]))}</option>`).join('');
+  const stale=all.filter(r=>r.estado===(TAB==='rec'?'pending':'new')&&dateOf(r)<whenKey()).length;
+  return `<div class="flt"><select aria-label="Status" onchange="setF('st',this.value)">${stOpts}</select><select aria-label="Date" onchange="setF('when',this.value)">${wOpts}</select>`+
+    `<input type="search" placeholder="${esc(tr(TAB==='rec'?'Vendor, PO, driver… / Proveedor, PO, chofer…':'Invoice, customer… / Factura, cliente…'))}" value="${esc(FLT.q)}" onchange="setF('q',this.value)">`+
+    `<span class="cnt" data-no-i18n>${rows.length} / ${all.length}</span><span class="sp"></span>`+
+    (stale?`<button class="btn alt" onclick="cleanOld()">${esc(tr('Select old open ones / Seleccionar abiertos viejos'))} (${stale})</button>`:'')+`</div>`;
+}
+function listHtml(all){
+  const rows=visible(all);
+  if(!all.length)return '<div class="empty">'+esc(tr('Nothing here yet. Use Add to create the first record. / Aún no hay registros. Usa Agregar para crear el primero.'))+'</div>';
+  const F=fltHtml(all,rows);
+  if(!rows.length)return F+'<div class="empty">'+esc(tr('No records match these filters. / Ningún registro coincide con estos filtros.'))+'</div>';
+  return F+listTable(rows);
+}
+function listTable(rows){
   if(TAB==='rec'){
-    return `<table><thead><tr><th>${esc(tr('Appointment / Cita'))}</th><th>${esc(tr('Vendor / Proveedor'))}</th><th>${esc(tr('Type / Tipo'))}</th><th>PO #</th><th>${esc(tr('Pieces / Piezas'))}</th><th>${esc(tr('Container / Contenedor'))}</th><th>${esc(tr('Driver / Chofer'))}</th><th>${esc(tr('Status / Estado'))}</th><th>${esc(tr('Notes / Notas'))}</th></tr></thead><tbody>`+
-    rows.map(r=>`<tr class="row" onclick="openForm('${r.id}')"><td><span class="ap ${apClass(r.cita,isDone(r))}" style="${isDone(r)?'background:#7b8494':''}">${esc(fmtDT(r.cita))}</span></td><td data-no-i18n>${esc(r.vendor)}</td><td><span class="pill t-${r.tipo}">${esc(tr(TY[r.tipo]))}</span></td><td data-no-i18n>${esc(r.po||'')}</td><td>${r.piezas==null?'':r.piezas}</td><td data-no-i18n>${esc([r.contenedor?tr('Yes / Sí'):'',r.contenedor_num].filter(Boolean).join(' · '))}</td><td data-no-i18n>${esc(r.driver_id||'')}</td><td>${pill(r)}</td><td data-no-i18n>${esc(r.notas||'')}</td></tr>`).join('')+'</tbody></table>';
+    return `<table><thead><tr>${thCk(rows)}<th>${esc(tr('Appointment / Cita'))}</th><th>${esc(tr('Vendor / Proveedor'))}</th><th>${esc(tr('Type / Tipo'))}</th><th>PO #</th><th>${esc(tr('Pieces / Piezas'))}</th><th>${esc(tr('Container / Contenedor'))}</th><th>${esc(tr('Driver / Chofer'))}</th><th>${esc(tr('Status / Estado'))}</th><th>${esc(tr('Notes / Notas'))}</th></tr></thead><tbody>`+
+    rows.map(r=>`<tr class="row${sel(r)}" onclick="rowClick('${r.id}',event)">${tdCk(r)}<td><span class="ap ${apClass(r.cita,isDone(r))}" style="${isDone(r)?'background:#7b8494':''}">${esc(fmtDT(r.cita))}</span></td><td data-no-i18n>${esc(r.vendor)}</td><td><span class="pill t-${r.tipo}">${esc(tr(TY[r.tipo]))}</span></td><td data-no-i18n>${esc(r.po||'')}</td><td>${r.piezas==null?'':r.piezas}</td><td data-no-i18n>${esc([r.contenedor?tr('Yes / Sí'):'',r.contenedor_num].filter(Boolean).join(' · '))}</td><td data-no-i18n>${esc(r.driver_id||'')}</td><td>${pill(r)}</td><td data-no-i18n>${esc(r.notas||'')}</td></tr>`).join('')+'</tbody></table>';
   }
-  return `<table><thead><tr><th>${esc(tr('Date of NDD / Fecha'))}</th><th>${esc(tr('Invoice / Factura'))}</th><th>${esc(tr('Customer / Cliente'))}</th><th>${esc(tr('Status / Estado'))}</th><th>${esc(tr('City of delivery / Dirección'))}</th><th>${esc(tr('Notes / Notas'))}</th><th>${esc(tr('Created by / Creó'))}</th></tr></thead><tbody>`+
-  rows.map(r=>`<tr class="row" onclick="openForm('${r.id}')"><td><span class="ap ${apClass(r.fecha_ndd+'T12:00:00-08:00',isDone(r))}" style="${isDone(r)?'background:#7b8494':''}">${esc(fmtD(r.fecha_ndd))}</span></td><td data-no-i18n>${esc(r.factura)}</td><td data-no-i18n>${esc(r.cliente)}</td><td>${pill(r)}</td><td data-no-i18n>${r.direccion?`<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.direccion)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(r.direccion)}</a>`:''}</td><td data-no-i18n>${esc(r.notas||'')}</td><td data-no-i18n>${esc(r.creado_por)}</td></tr>`).join('')+'</tbody></table>';
+  return `<table><thead><tr>${thCk(rows)}<th>${esc(tr('Date of NDD / Fecha'))}</th><th>${esc(tr('Invoice / Factura'))}</th><th>${esc(tr('Customer / Cliente'))}</th><th>${esc(tr('Status / Estado'))}</th><th>${esc(tr('City of delivery / Dirección'))}</th><th>${esc(tr('Notes / Notas'))}</th><th>${esc(tr('Created by / Creó'))}</th></tr></thead><tbody>`+
+  rows.map(r=>`<tr class="row${sel(r)}" onclick="rowClick('${r.id}',event)">${tdCk(r)}<td><span class="ap ${apClass(r.fecha_ndd+'T12:00:00-08:00',isDone(r))}" style="${isDone(r)?'background:#7b8494':''}">${esc(fmtD(r.fecha_ndd))}</span></td><td data-no-i18n>${esc(r.factura)}</td><td data-no-i18n>${esc(r.cliente)}</td><td>${pill(r)}</td><td data-no-i18n>${r.direccion?`<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.direccion)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(r.direccion)}</a>`:''}</td><td data-no-i18n>${esc(r.notas||'')}</td><td data-no-i18n>${esc(r.creado_por)}</td></tr>`).join('')+'</tbody></table>';
 }
 const MN=['January / Enero','February / Febrero','March / Marzo','April / Abril','May / Mayo','June / Junio','July / Julio','August / Agosto','September / Septiembre','October / Octubre','November / Noviembre','December / Diciembre'];
 const DW=['Sun / Dom','Mon / Lun','Tue / Mar','Wed / Mié','Thu / Jue','Fri / Vie','Sat / Sáb'];
@@ -273,6 +317,45 @@ function calHtml(rows){
 }
 function moveM(d){CM.m+=d;if(CM.m<0){CM.m=11;CM.y--;}if(CM.m>11){CM.m=0;CM.y++;}render();}
 function goToday(){const p=todayKey().split('-');CM={y:+p[0],m:+p[1]-1};render();}
+
+
+/* ---- bulk status change ---- */
+function setF(k,v){FLT[k]=v;SEL.clear();render();paintSel();}
+function toggleSel(){SELMODE?endSel():(SELMODE=true,SEL.clear(),paintBar2(),render(),paintSel());}
+function endSel(){SELMODE=false;SEL.clear();paintBar2();paintSel();if(VIEW==='list'&&$('box'))render();}
+function paintBar2(){const b=$('bt-sel');if(b){b.classList.toggle('on',SELMODE);b.style.display=VIEW==='list'?'':'none';b.textContent=SELMODE?tr('✕ Done selecting / Terminar selección'):tr('☑ Select / Seleccionar');}}
+function pick(id,on){on?SEL.add(id):SEL.delete(id);render();paintSel();}
+function selAll(on){visible(DATA[TAB]).forEach(r=>on?SEL.add(r.id):SEL.delete(r.id));render();paintSel();}
+function cleanOld(){FLT={st:TAB==='rec'?'pending':'new',when:'old7',q:''};SELMODE=true;SEL.clear();visible(DATA[TAB]).forEach(r=>SEL.add(r.id));paintBar2();render();paintSel();}
+function paintSel(){
+  const b=$('selbar'),n=SEL.size;
+  if(!SELMODE||!n){b.classList.remove('on');b.innerHTML='';return;}
+  const keys=Object.keys(ST[TAB]);
+  b.innerHTML=`<b data-no-i18n>${n} ${esc(tr('selected / seleccionados'))}</b>`+keys.map(k=>`<button class="${k==='received_complete'||k==='delivered'?'go':''}" onclick="askBulk('${k}')">${esc(tr('Mark as / Marcar como'))} ${esc(tr(ST[TAB][k]))}</button>`).join('')+`<button class="x" onclick="endSel()">${esc(tr('Cancel / Cancelar'))}</button>`;
+  b.classList.add('on');
+}
+function askBulk(st){
+  const ids=[...SEL], rows=DATA[TAB].filter(r=>SEL.has(r.id)), mix={};
+  rows.forEach(r=>{mix[r.estado]=(mix[r.estado]||0)+1;});
+  const chg=rows.filter(r=>r.estado!==st).length;
+  if(!chg){alert(tr('All the selected records already have that status. / Todos los registros seleccionados ya tienen ese estado.'));return;}
+  const m=Object.keys(mix).map(k=>`${mix[k]} × ${esc(tr(ST[TAB][k]))}`).join(' · ');
+  $('md').innerHTML=`<h3>${esc(tr('Are you sure? / ¿Seguro que quieres hacer esta acción?'))}</h3>
+    <p style="margin:6px 0;font-size:15px" data-no-i18n><b>${chg}</b> ${esc(tr('records will change to / registros cambiarán a'))} <b>${esc(tr(ST[TAB][st]))}</b></p>
+    <p class="small" data-no-i18n>${m}</p>
+    <p class="small">${esc(tr('Every change is saved in the Activity log with your name, and the others with access get one notification. / Cada cambio queda en la Bitácora con tu nombre y los demás con acceso reciben un solo aviso.'))}</p>
+    <div class="err hide" id="ferr" role="alert"></div>
+    <div class="acts"><button class="btn" id="fbulk" onclick="doBulk('${st}')">${esc(tr('Yes, change them / Sí, cambiarlos'))}</button><button class="btn alt" onclick="closeForm()">${esc(tr('Cancel / Cancelar'))}</button></div>`;
+  $('ov').classList.remove('hide');
+}
+async function doBulk(st){
+  const b=$('fbulk');b.disabled=true;ferr('');
+  try{
+    const r=await DH.rpc('logistica_estado_masivo',{p_modulo:TAB,p_ids:[...SEL],p_estado:st});
+    if(r&&r.ok){closeForm();SELMODE=false;SEL.clear();paintBar2();paintSel();await load();return;}
+    ferr(tr('Could not update. / No se pudo actualizar.'));b.disabled=false;
+  }catch(e){ferr(tr('Could not update. Check your connection. / No se pudo actualizar. Revisa tu conexión.'));b.disabled=false;}
+}
 
 /* ---- form ---- */
 function opts(map,sel){return Object.keys(map).map(k=>`<option value="${k}"${k===sel?' selected':''}>${esc(tr(map[k]))}</option>`).join('');}
