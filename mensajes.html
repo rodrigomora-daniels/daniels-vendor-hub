@@ -39,6 +39,7 @@
   .m .del:hover,.m .del.ask{color:var(--red)}
   .m .rx{display:flex;gap:5px;flex-wrap:wrap;margin:4px 2px 0}
   .m.me .rx{justify-content:flex-end}
+  #rxtip{position:fixed;z-index:60;background:#12284A;color:#fff;font:13px/1.35 'Segoe UI',Arial,sans-serif;padding:7px 10px;border-radius:8px;max-width:260px;pointer-events:none;box-shadow:0 6px 18px rgba(0,0,0,.25)}
   .rxc{display:inline-flex;align-items:center;gap:5px;border:1px solid #d5dce8;background:#fff;border-radius:16px;padding:3px 10px;font-size:15px;min-height:32px;cursor:pointer}
   .rxc b{font:700 12px Arial,sans-serif;color:var(--navy)}
   .rxc.yo{background:#E4EDFB;border-color:var(--navy)}
@@ -340,7 +341,22 @@ async function saveEdit(id){
   }catch(e){btns.forEach(x=>x.disabled=false);showErr(tr('Could not save the change. Check your connection. / No se pudo guardar. Revisa tu conexión.'));}
 }
 const EMO=['👍','❤️','😂','😮','🙏','✅'];
-function rxHTML(id,arr){return (arr||[]).map(r=>`<button class="rxc ${r.yo?'yo':''}" onclick="react('${id}','${r.e}')" aria-pressed="${!!r.yo}"><span>${r.e}</span><b>${r.n}</b></button>`).join('');}
+
+/* who reacted: hover (desktop) / long-press (phone) on a reaction shows the names */
+(function(){
+  let tip=null,timer=null,held=false;
+  const show=(b)=>{const q=b.dataset.q; if(!q)return; hide(); tip=document.createElement('div'); tip.id='rxtip'; tip.setAttribute('data-no-i18n',''); tip.textContent=b.querySelector('span').textContent+'  '+q; document.body.appendChild(tip);
+    const r=b.getBoundingClientRect(), w=tip.offsetWidth, x=Math.max(8,Math.min(innerWidth-w-8,r.left+r.width/2-w/2)); tip.style.left=x+'px'; tip.style.top=Math.max(8,r.top-tip.offsetHeight-6)+'px';};
+  const hide=()=>{if(tip){tip.remove();tip=null;}};
+  document.addEventListener('mouseover',e=>{const b=e.target.closest&&e.target.closest('.rxc'); if(b)show(b);});
+  document.addEventListener('mouseout',e=>{if(e.target.closest&&e.target.closest('.rxc'))hide();});
+  document.addEventListener('touchstart',e=>{const b=e.target.closest&&e.target.closest('.rxc'); if(!b)return; held=false; timer=setTimeout(()=>{held=true;show(b);},450);},{passive:true});
+  const end=()=>{clearTimeout(timer); if(tip)setTimeout(hide,2500);};
+  document.addEventListener('touchend',end); document.addEventListener('touchmove',()=>{clearTimeout(timer);},{passive:true});
+  document.addEventListener('click',e=>{if(held&&e.target.closest&&e.target.closest('.rxc')){e.preventDefault();e.stopPropagation();held=false;}},true);
+})();
+function rxNames(r){const me=((window.DH&&DH.emp&&DH.emp())||{}).nombre_completo||'',a=(r.q||[]).map(n=>n===me?tr('You / Tú'):n);if(r.yo&&!a.includes(tr('You / Tú')))a.unshift(tr('You / Tú'));const sh=a.slice(0,12);return sh.join(', ')+(a.length>12?' '+tr('and / y')+' '+(a.length-12)+' '+tr('more / más'):'');}
+function rxHTML(id,arr){return (arr||[]).map(r=>`<button class="rxc ${r.yo?'yo':''}" data-q="${esc(rxNames(r))}" onclick="react('${id}','${r.e}')" aria-pressed="${!!r.yo}"><span>${r.e}</span><b>${r.n}</b></button>`).join('');}
 function renderRx(map){document.querySelectorAll('#msgs .rx').forEach(el=>{const id=el.id.slice(3);el.innerHTML=rxHTML(id,map[id]);});}
 function togPk(id){document.querySelectorAll('#msgs .pk').forEach(el=>{if(el.id!=='pk-'+id)el.classList.add('hide');});const e=$('pk-'+id);if(e)e.classList.toggle('hide');}
 async function react(id,emo){
