@@ -588,9 +588,9 @@ document.addEventListener('DOMContentLoaded',function(){
   <button class="nl" id="nl-tickets" style="display:none" onclick="navigateToTool('tickets')"><span>🛠</span>IT tickets / Tickets de TI</button>
   <button class="nl" id="nl-inventario" style="display:none" onclick="navigateToTool('inventario')"><span>📦</span>Inventory upload / Cargar inventario</button>
   <button class="nl" onclick="navigateToTool('notas')"><span>📝</span>My notes / Mis notas</button>
+  <a class="nl" id="nl-web" href="https://danielshomecenter.com/" target="_blank" rel="noopener noreferrer"><span>🛋️</span>Daniels website (full catalog) / Sitio de Daniels (catálogo completo) ↗</a>
   <div class="grp" id="grp-mgr" style="display:none">Managers / Gerentes</div>
   <a class="nl" id="nl-teams" href="https://teams.microsoft.com" target="_blank" rel="noopener" style="display:none"><span>💬</span>Microsoft Teams ↗</a>
-  <a class="nl" id="nl-hub" href="https://mydaniels.sharepoint.com/sites/DHCOperationsHUB" target="_blank" rel="noopener" style="display:none"><span>🗂️</span>Operations HUB (SharePoint) ↗</a>
 </aside>
 <div class="mainc">
   <div class="dash-header">
@@ -1242,7 +1242,7 @@ async function loadDashboard() {
   try{ DH.rpc('logistica_mi_acceso').then(r=>{ const n=document.getElementById('nl-logistica'); if(n&&r&&(r.rec||r.ndd)) n.style.display=''; }).catch(()=>{}); }catch(e){}
   try{ DH.rpc('reportes_mis').then(r=>{ const n=document.getElementById('nl-reportes'); if(n&&r&&((r.items&&r.items.length)||r.admin)) n.style.display=''; }).catch(()=>{}); }catch(e){}
   const isMgr = emp.es_admin || ['manager','admin'].includes(emp.rol) || /^(ted|karen)\s+rosenberg/i.test(emp.nombre_completo || '');
-  ['nl-hub', 'nl-teams', 'grp-mgr'].forEach(id => { const c = document.getElementById(id); if (c) c.style.display = isMgr ? '' : 'none'; });
+  ['nl-teams', 'grp-mgr'].forEach(id => { const c = document.getElementById(id); if (c) c.style.display = isMgr ? '' : 'none'; });
   // Certifications are limited for now: Tier 1/2 sales associates, managers, Ted and Karen (decided server-side by mis_accesos).
   let showCerts = true;
   try { const ac = await DH.rpc('mis_accesos'); showCerts = !!(ac && ac.certificaciones); } catch (e) { showCerts = true; }
