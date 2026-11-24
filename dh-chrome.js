@@ -31,6 +31,13 @@
     var nx = logo.nextElementSibling; if (nx) nx.style.marginRight = 'auto';
     var home = document.createElement('a'); home.className = 'dh-home'; home.href = 'index.html'; home.textContent = '← Home / Inicio';
     home.addEventListener('click', leave);
+    // Back: only when we arrived from another page of this app (and not straight from Home, where "Home" does the same)
+    var ref = ''; try { var u = new URL(document.referrer); if (u.origin === location.origin) ref = u.pathname; } catch (e) {}
+    if (ref && !/(^|\/)(index\.html)?$/.test(ref) && history.length > 1) {
+      var back = document.createElement('a'); back.className = 'dh-home dh-back'; back.href = '#'; back.textContent = '‹ Back / Atrás';
+      back.addEventListener('click', function (e) { e.preventDefault(); if (CONFIRM && !window.confirm('Leave this page? Your progress on this test will be lost. / ¿Salir de esta página? Se perderá tu progreso en esta evaluación.')) return; history.back(); });
+      bar.appendChild(back);
+    }
     bar.appendChild(home);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount); else mount();
