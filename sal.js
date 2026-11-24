@@ -233,6 +233,7 @@
         var img = w.image ? '<img src="' + esc(w.image) + '" alt="" loading="lazy" referrerpolicy="no-referrer" style="float:right;width:84px;height:84px;object-fit:contain;margin:0 0 6px 10px;border-radius:8px;background:#fff">' : '';
         var badge = hasInv ? '' : '<span style="display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700;color:#fff;background:' + (w.available ? '#1E8E5A' : '#B3402F') + '">' + esc(w.available ? t('Available', 'Disponible') : t('Not available', 'No disponible')) + '</span>';
         var det = (w.details || []).length ? '<div style="clear:both;display:grid;grid-template-columns:minmax(84px,38%) minmax(0,1fr);gap:4px 12px;margin:8px 0 0;font-size:13px;overflow-wrap:break-word;word-break:normal">' + w.details.map(function (d) { return '<b style="color:#1B3A6B;min-width:0;overflow-wrap:break-word;word-break:normal">' + esc(d.k) + '</b><span style="min-width:0;overflow-wrap:break-word;word-break:normal">' + esc(d.v) + '</span>'; }).join('') + '</div>' : '';
+        var promo = w.promo ? '<div style="clear:both;margin:8px 0 0;padding:8px 10px;border-radius:8px;background:#FDF1C9;color:#5c4400;font-size:13px"><b>🏷 ' + esc(t('Promotion on the website', 'Promoción en el sitio web')) + ':</b> ' + esc((w.promo.multi ? t('from ', 'desde ') : '') + '$' + w.promo.price.toLocaleString('en-US') + ' · ' + t('was ', 'antes ') + '$' + w.promo.was.toLocaleString('en-US') + ' · ' + t('save ', 'ahorra ') + '$' + w.promo.save.toLocaleString('en-US')) + '</div>' : '';
         var sm = w.summary ? '<p style="margin:8px 0 0">' + esc(w.summary) + '</p>' : '';
         var all = w.specs || [], first = all.slice(0, 6), more = all.slice(6);
         var sp = all.length ? '<ul style="clear:both;margin:8px 0 0 18px;padding:0;overflow-wrap:break-word;word-break:normal">' + first.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ul>' +
@@ -242,7 +243,7 @@
           return '<p><b>' + esc(o.name) + ' (' + o.values.length + '):</b> ' + esc(o.values.join(', ')) + '</p>';
         }).join('');
         var vav = !hasInv && (w.variants || []).length > 1 ? '<p>' + esc(t('By option: ', 'Por opción: ')) + esc(w.variants.map(function (v) { return v.title + (v.available ? ' ✓' : ' ✗'); }).join(' · ')) + '</p>' : '';
-        return '<div class="sal-card" style="overflow:hidden">' + img + '<h4>' + esc(w.title) + '</h4><div class="meta">' + badge + (sub ? ' ' + esc(sub) : '') + '</div>' + sm + det + opts + vav + sp + '</div>';
+        return '<div class="sal-card" style="overflow:hidden">' + img + '<h4>' + esc(w.title) + '</h4><div class="meta">' + badge + (sub ? ' ' + esc(sub) : '') + '</div>' + promo + sm + det + opts + vav + sp + '</div>';
       }).join('');
     }
     if (!h) return '';
@@ -317,12 +318,18 @@
       var webP = (wq && DH.salWeb) ? withTimeout(DH.salWeb(wq), 10000).then(function (w) { return w && w.items || []; }).catch(function () { return []; }) : Promise.resolve([]);
       var invP = wq ? withTimeout(DH.rpc('inventario_consulta', { p_q: wq }), 8000).catch(function () { return null; }) : Promise.resolve(null);
       var r = await withTimeout(DH.rpc('sal_buscar', { p_q: q }), 20000);
-      r.inv = await invP;
-      r.web = await webP; r.saleMode = saleMode;
+      r.inv = await invP; r.saleMode = saleMode;
+      var early = false;   // our inventory answers first; the website's photo, specs and promotion fill in below when they arrive
+      if (r.inv && r.inv.items && r.inv.items.length) {
+        var h0 = renderResult(Object.assign({}, r, { web: [] }), q);
+        if (h0) { clearTimeout(slowTimer); setBubble(wait, h0 + '<div class="sal-note">' + esc(t('Loading specs…', 'Cargando especificaciones…')) + '</div>', 'success'); bindResult(wait, r); setFace('success', 2500); logEl.scrollTop = 0; early = true; }
+      }
+      r.web = await webP;
       if (saleMode && isPromoBrowse(q) && !(r.promos && r.promos.length)) { try { r.promos = await withTimeout(DH.rpc('sal_promos_vigentes', {}), 8000); r.browse = true; } catch (e) {} }
       clearTimeout(slowTimer);
       var html = renderResult(r, q);
-      if (!html) {
+      if (early && !(r.web && r.web.length)) { setBubble(wait, html, 'success'); bindResult(wait, r); }   // nothing more from the website: drop the "loading" line
+      else if (!html) {
         setBubble(wait, '<b>' + esc(r.saleMode ? t('I could not find that promotion', 'No encontré esa promoción') : t('I found nothing about “', 'No encontré nada sobre “') + q + '”') + '</b><p>' + esc(r.saleMode ? t('It is not in the text of the published flyers and wraps, the promotions channel, or the product lists. Flyers that are only pictures may not be readable yet. Open Promotions to look at the flyers, or ask Marketing.', 'No aparece en el texto de los flyers y wraps publicados, en el canal de promociones ni en las listas de productos. Los flyers que son solo imagen pueden no ser legibles todavía. Abre Promociones para ver los flyers, o pregunta a Marketing.') : t('Nothing in the library, channels, promotions or news that you can access. That does not prove it does not exist: try other words (for example the product name, a policy name or the SKU), or ask your manager.', 'Nada en la biblioteca, canales, promociones ni novedades a los que tienes acceso. Eso no prueba que no exista: prueba con otras palabras (por ejemplo el nombre del producto, de la política o el SKU), o pregunta a tu gerente.')) + '</p>' + (r.saleMode ? '<div class="sal-act"><a class="sal-btn pri" href="promociones.html">' + esc(t('Open Promotions', 'Abrir Promociones')) + '</a></div>' : ''), 'thinking');
         setFace('thinking', 2500); chipsEl.style.display = '';   // offer the quick topics again
       } else {
