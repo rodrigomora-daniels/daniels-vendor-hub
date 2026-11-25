@@ -160,7 +160,7 @@ const fut=r=>r.desde>PN.hoy;
 function pRows(){
   const D=PN.D, g=D.grupo, q=PN.s.q.trim().toLowerCase();
   let rows=D.rows.map(r=>{const o=Object.assign({},r);o.lbl=pLabel(r,g);o.tienda_n=SN[r.tienda]||r.tienda||'';o.fut=fut(r);
-    o.pm=o.meta_real>0&&!o.fut?o.neto/o.meta_real*100:null;o.yoy=o.ly_real>0&&!o.fut?(o.neto/o.ly_real-1)*100:null;
+    const nd=!(o.dias>0||o.ventas_n>0);o.nd=nd;o.pm=o.meta>0&&!o.fut&&!nd?o.neto/(o.meta_real>0?o.meta_real:o.meta)*100:null;o.yoy=o.ly_real>0&&!o.fut&&!nd?(o.neto/o.ly_real-1)*100:null;
     o.sp=o.merch>0?o.serv/o.merch*100:null;o.tk=o.ventas_n>0?o.neto/o.ventas_n:null;o.pd=o.dias>0?o.neto/o.dias:null;return o});
   if(q)rows=rows.filter(r=>(r.lbl+' '+r.tienda_n+' '+r.k).toLowerCase().includes(q));
   const S=PN.sort, k=S.k||(isTime(g)?'k':'neto'), d=S.k?S.d:(isTime(g)?1:-1);
@@ -336,6 +336,17 @@ function hRender(){
    <div class="kpi"><div class="v">${meta>0?$$(meta):'—'}</div><div class="l">${esc(T('Goal for the day','Meta del día'))}</div><div class="d eq">${esc(H.fecha>H.hoy?T('Forecast','Pronóstico'):'')}</div></div></div>`+svg+`<div class="lg"><span><i class="ln" style="background:#1B3A6B"></i>${esc(T('Actual (cumulative)','Real (acumulado)'))}</span><span><i class="ln" style="background:#9aa3b2"></i>${esc(T('Expected pace','Ritmo esperado'))}</span><span><i class="ln dsh"></i>${esc(T('Goal','Meta'))}</span></div>
    <div class="tw" style="margin-top:10px"><table class="xt"><thead><tr><th>${esc(T('Store','Tienda'))}</th><th class="r">${esc(T('Sales','Ventas'))}</th><th class="r">${esc(T('Goal','Meta'))}</th><th class="r">${esc(T('% of goal','% de meta'))}</th><th class="r">${esc(T('Expected now','Esperado ahora'))}</th><th class="r">${esc(T('vs pace','vs ritmo'))}</th></tr></thead><tbody>${rows}</tbody></table></div>
    <div class="note">${esc(T('Hour-by-hour history starts on 11/25/2026, when each hourly report began to be saved. Earlier days show the final total only. The pace curve is a default assumption.','El historial por hora empieza el 25/11/2026, cuando se empezó a guardar cada reporte por hora. Los días anteriores muestran solo el total final. La curva de ritmo es un supuesto por ahora.'))}</div>`;
+  box.innerHTML+=hKpi(L,H);
+}
+function hKpi(L,H){
+  const km=H.kmeta||{serv:9,pb:8}, pct=(a,b)=>b>0?a/b*100:0, col=(p,g)=>p>=g?'#2E7D32':'#C0392B';
+  const bar=(lbl,p,g)=>{const ok=p>=g,w=g>0?Math.min(100,p/g*100):0,c=col(p,g);return `<div style="margin:4px 0"><div style="display:flex;justify-content:space-between;font-size:13px"><span>${esc(lbl)} <b style="color:${c}">${p.toFixed(1)}%</b></span><span style="color:#6B6B6B">${esc(T('goal','meta'))} ${g}%${ok?' ✓':''}</span></div><div style="height:9px;background:#E7EBF2;border-radius:5px;overflow:hidden"><i style="display:block;height:100%;width:${w.toFixed(1)}%;background:${c}"></i></div></div>`};
+  const st=L.filter(t=>t.kpi&&+t.kpi.merch>0&&t.t!=='EC'||(t.t==='EC'&&t.kpi&&+t.kpi.merch>0));
+  if(!st.length)return '';
+  const cards=st.map(t=>{const m=+t.kpi.merch;return `<div style="flex:1 1 220px;min-width:200px;border:1px solid #E7EBF2;border-radius:10px;padding:10px"><b>${esc(SN[t.t]||t.t)}</b>${bar(T('Services','Servicios'),pct(+t.kpi.serv,m),km.serv)}${bar('Profit Booster',pct(+t.kpi.pb,m),km.pb)}</div>`}).join('');
+  const V=L.flatMap(t=>(t.vend||[]).filter(v=>+v.merch>0).map(v=>Object.assign({tt:t.t},v))).sort((a,b)=>pct(+a.serv,+a.merch)-pct(+b.serv,+b.merch));
+  const rows=V.map(v=>{const sp=pct(+v.serv,+v.merch),pp=pct(+v.pb,+v.merch);return `<tr><td>${esc(v.n)}</td><td>${esc(SN[v.tt]||v.tt)}</td><td class="r">${$$(+v.merch)}</td><td class="r" style="color:${col(sp,km.serv)};font-weight:600">${sp.toFixed(1)}%</td><td class="r" style="color:${col(pp,km.pb)};font-weight:600">${pp.toFixed(1)}%</td></tr>`}).join('');
+  return `<h3 style="margin:16px 0 6px">${esc(T('Services and Profit Booster penetration','Penetración de servicios y Profit Booster'))}</h3><div style="display:flex;flex-wrap:wrap;gap:10px">${cards}</div>`+(rows?`<div class="tw" style="margin-top:10px"><table class="xt"><thead><tr><th>${esc(T('Seller','Vendedor'))}</th><th>${esc(T('Store','Tienda'))}</th><th class="r">${esc(T('Merch','Mercancía'))}</th><th class="r">${esc(T('Services','Servicios'))} (${km.serv}%)</th><th class="r">Profit Booster (${km.pb}%)</th></tr></thead><tbody>${rows}</tbody></table></div>`:'')+`<div class="note">${esc(T('Penetration = dollars of services or Profit Booster ÷ merchandise dollars. Red = below goal. Sellers who are behind get a friendly push in the afternoon.','Penetración = dólares de servicios o Profit Booster ÷ dólares de mercancía. Rojo = abajo de la meta. Los vendedores que van abajo reciben un aviso amigable por la tarde.'))}</div>`;
 }
 function hDay(n){PN.hfecha=addDays(PN.hfecha||PN.hoy,n);hFetch()}
 async function pnLoad(){try{PN.opc=await DH.rpc('ventas_reporte_opc')}catch(e){PN.opc=null} if(PN.opc&&!PN.opc.error){} pPaint(); await pFetch()}

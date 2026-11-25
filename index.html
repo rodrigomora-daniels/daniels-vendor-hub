@@ -1770,14 +1770,16 @@ async function loadDomeCard(){
     var st=function(pct){var df=pct-pace;return stale?'':df>=5?'<div class="dst" style="color:#2E7D32">▲ '+T('Ahead of pace','Adelante del ritmo')+'</div>':df<=-5?'<div class="dst" style="color:#C0392B">▼ '+T('Behind pace','Detrás del ritmo')+'</div>':'<div class="dst" style="color:#6B6B6B">● '+T('On pace','En ritmo')+'</div>'};
     var pcD=function(v,m){if(!(m>0))return '';var q=Math.round(v/m*100),c=q>=120?'a':q>=100?'g':q>=80?'m':'l';return ' <span class="pc pc-'+c+'">'+(q>=120?'★ ':q>=100?'✓ ':'')+q+'%</span>'};
     var bar=function(pct,mark,g){return '<div class="db"><i'+(g?' class="g"':'')+' style="width:'+Math.max(0,Math.min(100,pct)).toFixed(1)+'%"></i>'+(mark!=null?'<b style="left:'+Math.min(100,mark).toFixed(1)+'%"></b>':'')+'</div>'};
+    var kpi=function(lbl,p,g){g=+g||0;var ok=g>0&&p>=g,w=g>0?Math.min(100,p/g*100):0,c=ok?'#2E7D32':'#C0392B';return '<div class="dl"><span>'+lbl+' <b style="color:'+c+'">'+(+p).toFixed(1)+'%</b></span><span>'+T('goal','meta')+' '+g+'%'+(ok?' ✓':'')+'</span></div><div class="db"><i style="width:'+w.toFixed(1)+'%;background:'+c+'"></i></div>'};
+    var kc=function(p,g){return '<span style="color:'+(p>=g?'#2E7D32':'#C0392B')+'">'+(+p).toFixed(1)+'%</span>'};
     var h='<div class="dh"><h3>🎯 '+(r.yo?T('My day','Mi día'):T('Stores today','Tiendas hoy'))+' · '+dn+'</h3><small>'+(tm?T('Updated ','Actualizado ')+tm:'')+'</small></div>';
     if(stale)h+='<div class="dn" style="margin:0 0 6px">'+T('Latest data is from ','Los últimos datos son del ')+dn+'.</div>';
     if(r.yo){
       var y=r.yo, pct=y.meta_dia>0?y.neto/y.meta_dia*100:0, mp=y.meta_mes>0?y.mes_acum/y.meta_mes*100:0;
       h+=domeSvg(pct,pace,'#1B3A6B',Math.round(pct)+'% '+T('of today\'s goal','de la meta de hoy'))
         +'<div class="ds"><b>'+$(y.neto)+'</b> '+T('of','de')+' '+$(y.meta_dia)+'</div>'+st(pct)
-        +'<div class="dl"><span>'+T('Services','Servicios')+' <b>'+y.serv_pct.toFixed(1)+'%</b></span><span>'+T('goal','meta')+' '+y.serv_meta_pct+'%</span></div>'+bar(y.serv_meta_pct?y.serv_pct/y.serv_meta_pct*100:0,null,true)
-        +'<div class="dl"><span>'+T('Profit booster','Profit booster')+' <b>'+y.pb_pct.toFixed(1)+'%</b></span><span>'+(y.pb_meta_pct!=null?T('goal','meta')+' '+y.pb_meta_pct+'%':'')+'</span></div>'+(y.pb_meta_pct?bar(y.pb_pct/y.pb_meta_pct*100,null,true):'')
+        +kpi(T('Services','Servicios'),y.serv_pct,y.serv_meta_pct)+kpi('Profit Booster',y.pb_pct,y.pb_meta_pct!=null?y.pb_meta_pct:8)
+        +((y.merch>0&&(y.serv_pct<y.serv_meta_pct||y.pb_pct<(y.pb_meta_pct!=null?y.pb_meta_pct:8)))?'<div class="dn" style="color:#C0392B">💪 '+T('Keep pushing! Offer services and Profit Booster on your next sale.','¡Échale ganas! Ofrece servicios y Profit Booster en tu próxima venta.')+'</div>':'')
         +'<div class="dl"><span>'+T('Month','Mes')+' <b>'+$(y.mes_acum)+'</b></span><span>'+$(y.meta_mes)+'</span></div>'+bar(mp,null)
         +'<div class="dn">'+(y.base==='tienda'&&y.n?T('Daily goal = your store goal today ('+$(y.meta_tienda)+') ÷ '+y.n+(y.n===1?' seller.':' sellers.'),'Meta diaria = la meta de tu tienda hoy ('+$(y.meta_tienda)+') ÷ '+y.n+(y.n===1?' vendedor.':' vendedores.')):T('Daily goal = your share of the '+$(y.meta_mes)+' monthly minimum for today.','Meta diaria = tu parte del mínimo mensual de '+$(y.meta_mes)+' para hoy.'))+' '+T('Never below your monthly minimum. The dark mark is where you should be by now.','Nunca baja de tu mínimo mensual. La marca oscura es donde deberías ir a esta hora.')+'</div>';
     }
@@ -1790,14 +1792,14 @@ async function loadDomeCard(){
       h+='<div class="dn" style="margin:6px 0 0">'+T('Tap a store to see its sellers.','Toca una tienda para ver sus vendedores.')+'</div>';
       r.tiendas.forEach(function(t){var rf=ref(t), p2=rf>0?t.v/rf*100:0;
         var sub=t.sin_filas?T('no sales in the report','sin ventas en el reporte'):(rf>0?$(rf)+' '+refLbl(t):(rf===0?T('no goal today','sin meta hoy'):T('no 2025 data','sin datos 2025')));
-        h+='<details style="margin-top:6px"><summary style="display:block;min-height:44px"><span class="dl" style="margin-top:0"><span><b>'+meEsc(t.nombre)+'</b> '+$(t.v)+(t.sin_filas?'':pcD(t.v,rf))+'</span><span>'+sub+'</span></span>'+bar(p2,pace)+'</summary>';
+        h+='<details style="margin-top:6px"><summary style="display:block;min-height:44px"><span class="dl" style="margin-top:0"><span><b>'+meEsc(t.nombre)+'</b> '+$(t.v)+pcD(t.v,rf)+'</span><span>'+sub+'</span></span>'+bar(p2,pace)+'</summary>';
         if(t.sin_filas){h+='<div class="dn">'+T('The hourly Sales by Salesperson report has no rows for this store yet today.','El reporte por hora de ventas por vendedor no trae filas de esta tienda hoy.')+'</div>'}
         else if(t.t==='EC'){h+='<div class="dn">'+T('Online sales (José Padrón, Victoria Sagaste). It has a store goal and no seller goals.','Ventas en línea (José Padrón, Victoria Sagaste). Tiene meta de tienda y no tiene metas por vendedor.')+'</div>'}
         else{
-          h+='<div class="dl"><span>'+T('Services','Servicios')+' <b>'+(t.merch>0?(t.serv/t.merch*100).toFixed(1):'0.0')+'%</b></span><span>'+T('goal','meta')+' '+(r.tiendas&&r.serv_meta_pct!=null?r.serv_meta_pct:9)+'%</span></div>';
+          h+=kpi(T('Services','Servicios'),t.merch>0?t.serv/t.merch*100:0,r.serv_meta_pct!=null?r.serv_meta_pct:9)+kpi('Profit Booster',t.merch>0?(t.pb||0)/t.merch*100:0,r.pb_meta_pct!=null?r.pb_meta_pct:8);
           h+='<div class="dn" style="margin:4px 0 0">'+(t.n?T('Seller goal = store goal ÷ '+t.n+(t.n===1?' seller':' sellers')+', never below the monthly minimum.','Meta por vendedor = meta de la tienda ÷ '+t.n+(t.n===1?' vendedor':' vendedores')+', nunca debajo del mínimo mensual.'):T('Seller goal = the monthly minimum (no seller count yet).','Meta por vendedor = el mínimo mensual (aún sin conteo de vendedores).'))+'</div>';
           h+=t.vendedores.map(function(v){var p3=v.meta_dia>0?v.neto/v.meta_dia*100:0, sp=v.merch>0?(v.serv/v.merch*100):0;
-            return '<div class="dl" style="margin-top:10px"><span>'+meEsc(v.n)+' <small style="color:#6B6B6B">· '+v.vn+' '+T('sales','ventas')+' · '+T('svc','serv')+' '+sp.toFixed(1)+'%</small></span><span><b>'+$(v.neto)+'</b> / '+$(v.meta_dia)+pcD(v.neto,v.meta_dia)+'</span></div>'+bar(p3,pace)}).join('');
+            return '<div class="dl" style="margin-top:10px"><span>'+meEsc(v.n)+' <small style="color:#6B6B6B">· '+v.vn+' '+T('sales','ventas')+' · '+T('svc','serv')+' '+kc(sp,r.serv_meta_pct!=null?r.serv_meta_pct:9)+' · PB '+kc(v.merch>0?(v.pb||0)/v.merch*100:0,r.pb_meta_pct!=null?r.pb_meta_pct:8)+'</small></span><span><b>'+$(v.neto)+'</b> / '+$(v.meta_dia)+pcD(v.neto,v.meta_dia)+'</span></div>'+bar(p3,pace)}).join('');
         }
         h+='</details>';
       });
