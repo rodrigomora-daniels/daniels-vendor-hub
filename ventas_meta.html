@@ -79,13 +79,6 @@
   <div id="out" data-no-i18n></div>
   <div class="card hide" id="ex"><h2>Explore the numbers / Explorar los números</h2><div id="ex-ctl" class="xc" data-no-i18n></div><div id="ex-out" data-no-i18n></div></div>
   <div class="card hide" id="hist" data-no-i18n></div>
-  <div class="card demo hide" id="demo">
-    <h2>Test mode / Modo de prueba <span class="badge">Admin</span></h2>
-    <label for="d-h">Simulate sales until hour / Simular ventas hasta la hora: <span class="rv" id="rv-d"></span></label>
-    <input type="range" id="d-h" min="10" max="20" step="1" value="15">
-    <div class="row"><button class="btn" id="d-go">Load demo data / Cargar datos de prueba</button><button class="btn ghost" id="d-off">Clear demo / Borrar prueba</button></div>
-    <div class="note">Fake numbers for the selected day, only visible to admins. Real hourly data will replace them. / Números falsos para el día elegido, solo visibles para administradores. Los datos reales por hora los reemplazarán.</div>
-  </div>
   <div class="card hide" id="imp">
     <h2>Import seller report / Importar reporte por vendedor <span class="badge">Admin</span></h2>
     <div class="note" style="margin:0 0 8px">Sales By Salesperson (CSV, hourly run). Each upload replaces the day's numbers for those sellers. / Sales By Salesperson (CSV por hora). Cada carga reemplaza los números del día de esos vendedores.</div>
@@ -103,7 +96,7 @@ const $$=n=>'$'+Math.round(n).toLocaleString('en-US');
 const pct=(a,b)=>b>0?a/b*100:0;
 const DOWN={en:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],es:['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']};
 const fdate=iso=>{const d=new Date(iso+'T12:00:00Z');return DOWN[LANG()][d.getUTCDay()]+' '+(d.getUTCMonth()+1)+'/'+d.getUTCDate()};
-let D=null, DEMO=false, ISADM=false;
+let D=null, DEMO=false, ISADM=false, ISSUP=false;
 const show=t=>{const e=$('err');if(!t){e.classList.add('hide');return}e.textContent=t;e.classList.remove('hide')};
 function getDemo(){try{return localStorage.getItem('dh_goal_demo')||''}catch(e){return ''}}
 function setDemo(v){try{if(v)localStorage.setItem('dh_goal_demo',v);else localStorage.removeItem('dh_goal_demo')}catch(e){}}
@@ -139,7 +132,7 @@ function draw(){
      <div class="sub">${esc(T('Services','Servicios'))} ${$$(t.s)} / ${$$(t.meta_s)} · ${esc(T('penetration','penetración'))} ${(t.v>0?t.s/t.v*100:0).toFixed(1)}% ${esc(T('vs goal','vs meta'))} ${(t.meta_v>0?t.meta_s/t.meta_v*100:0).toFixed(1)}%</div></div>`).join('')}
     <div class="note">${esc(T('The dark tick marks where each store should be by this hour. The pace curve is a default assumption for now.','La marca oscura indica dónde debería ir cada tienda a esta hora. La curva de ritmo es un supuesto por ahora.'))}</div></div>
    <div class="card"><h2>${esc(T('Sales through the day','Ventas durante el día'))}</h2>${chart(L,S)}</div>`;
-  const dm=$('demo'); if(ISADM){dm.classList.remove('hide');$('imp').classList.remove('hide')}
+  if(ISADM)$('imp').classList.remove('hide')
 }
 function chart(L,S){
   const W=640,H=230,pl=52,pr=12,pt=14,pb=28, hrs=[]; for(let h=10;h<=20;h++)hrs.push(h);
@@ -160,10 +153,6 @@ $('f-d').onchange=()=>load($('f-d').value,null);
 $('f-t').onchange=()=>draw();
 $('f-h').oninput=e=>{$('rv-h').textContent=e.target.value+':00'};
 $('f-h').onchange=e=>load(D.fecha,+e.target.value);
-$('d-h').oninput=e=>{$('rv-d').textContent=e.target.value+':00'};
-$('rv-d').textContent='15:00';
-$('d-go').onclick=async()=>{try{const r=await DH.rpc('ventas_demo',{p_fecha:D.fecha,p_hasta:+$('d-h').value});if(r&&r.error)throw 0;setDemo(D.fecha);await load(D.fecha,null)}catch(e){show(T('Could not load demo data.','No se pudieron cargar los datos de prueba.'))}};
-$('d-off').onclick=async()=>{try{await DH.rpc('ventas_demo',{p_fecha:D.fecha,p_hasta:null});setDemo('');await load(null,null)}catch(e){show(T('Could not clear demo data.','No se pudo borrar la prueba.'))}};
 
 function csvRows(t){const R=[];let r=[],c='',q=false;for(let i=0;i<t.length;i++){const ch=t[i];if(q){if(ch=='"'){if(t[i+1]=='"'){c+='"';i++}else q=false}else c+=ch}else if(ch=='"')q=true;else if(ch==','){r.push(c);c=''}else if(ch=='\n'||ch=='\r'){if(ch=='\r'&&t[i+1]=='\n')i++;r.push(c);c='';R.push(r);r=[]}else c+=ch}if(c!==''||r.length){r.push(c);R.push(r)}return R}
 function parseSellerCsv(t){
@@ -307,11 +296,11 @@ async function exInit(){
   const mx=EX.opc.max; if(mx){const d=new Date(mx+'T12:00:00Z');d.setUTCFullYear(d.getUTCFullYear()-1);EX.s.desde=d.toISOString().slice(0,10);EX.s.hasta=mx}
   exPaint(); exFetch();
   window.addEventListener('dh-lang',()=>{exPaint();exRender();histPaint()});
-  if(ISADM)histPaint();
+  histPaint();
 }
 /* ---- admin: load history file ---- */
 function histPaint(){
-  const b=$('hist'); if(!ISADM||!b)return; b.classList.remove('hide');
+  const b=$('hist'); if(!ISSUP||!b)return; b.classList.remove('hide');
   if(!$('h-f')){b.innerHTML=`<h2>${esc(T('Load sales history','Cargar historial de ventas'))} <span class="badge">Admin</span></h2><div class="note" style="margin:0 0 8px">${esc(T('CSV with columns fecha, tienda, codigo, nombre, neto, merch, servicios, descuento, gp, piezas, ventas_n (one row per seller per day). Loading it again replaces those days.','CSV con las columnas fecha, tienda, codigo, nombre, neto, merch, servicios, descuento, gp, piezas, ventas_n (una fila por vendedor por día). Si lo cargas otra vez reemplaza esos días.'))}</div><div class="row"><input type="file" id="h-f" accept=".csv,text/csv" aria-label="CSV"><button class="btn" id="h-go" onclick="histGo()">${esc(T('Load','Cargar'))}</button></div><div id="h-out" class="note" role="status"></div>`}
 }
 async function histGo(){
@@ -334,6 +323,7 @@ async function histGo(){
 (async function(){
   if(!DH.token()){location.href='index.html';return}
   try{const e=DH.emp();ISADM=!!(e&&e.es_admin)}catch(e){}
+  try{ISSUP=(await DH.rpc('es_super_admin'))===true}catch(e){}
   await load(null,null);
   exInit();
 })();
