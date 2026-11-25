@@ -155,13 +155,13 @@ function pLabel(r,g,short){
   return short?(r.nombre||r.codigo||'').split(' ')[0]:(r.nombre||r.codigo)+' · '+(SN[r.tienda]||r.tienda||'');
 }
 const isTime=g=>g==='dia'||g==='semana'||g==='mes'||g==='anio';
-const MET={neto:{l:()=>T('Sales','Ventas'),f:r=>r.neto},serv:{l:()=>T('Services','Servicios'),f:r=>r.serv},merch:{l:()=>T('Merchandise','Mercancía'),f:r=>r.merch},ventas_n:{l:()=>T('# of sales','# de ventas'),f:r=>r.ventas_n,cnt:1},tk:{l:()=>T('Avg ticket','Ticket prom.'),f:r=>r.ventas_n>0?r.neto/r.ventas_n:0}};
+const MET={neto:{l:()=>T('Sales','Ventas'),f:r=>r.neto},serv:{l:()=>T('Services','Servicios'),f:r=>r.serv},pb:{l:()=>'Profit Booster',f:r=>r.pb,ly:r=>r.ly_pb},merch:{l:()=>T('Merchandise','Mercancía'),f:r=>r.merch},ventas_n:{l:()=>T('# of sales','# de ventas'),f:r=>r.ventas_n,cnt:1},tk:{l:()=>T('Avg ticket','Ticket prom.'),f:r=>r.ventas_n>0?r.neto/r.ventas_n:0}};
 const fut=r=>r.desde>PN.hoy;
 function pRows(){
   const D=PN.D, g=D.grupo, q=PN.s.q.trim().toLowerCase();
   let rows=D.rows.map(r=>{const o=Object.assign({},r);o.lbl=pLabel(r,g);o.tienda_n=SN[r.tienda]||r.tienda||'';o.fut=fut(r);
     const nd=!(o.dias>0||o.ventas_n>0);o.nd=nd;o.pm=o.meta>0&&!o.fut&&!nd?o.neto/(o.meta_real>0?o.meta_real:o.meta)*100:null;o.yoy=o.ly_real>0&&!o.fut&&!nd?(o.neto/o.ly_real-1)*100:null;
-    o.sp=o.merch>0?o.serv/o.merch*100:null;o.tk=o.ventas_n>0?o.neto/o.ventas_n:null;o.pd=o.dias>0?o.neto/o.dias:null;return o});
+    o.sp=o.neto>0?o.serv/o.neto*100:null;o.pp=o.neto>0?o.pb/o.neto*100:null;o.tk=o.ventas_n>0?o.neto/o.ventas_n:null;o.pd=o.dias>0?o.neto/o.dias:null;return o});
   if(q)rows=rows.filter(r=>(r.lbl+' '+r.tienda_n+' '+r.k).toLowerCase().includes(q));
   const S=PN.sort, k=S.k||(isTime(g)?'k':'neto'), d=S.k?S.d:(isTime(g)?1:-1);
   rows.sort((a,b)=>{const x=a[k],y=b[k];if(x==null&&y==null)return 0;if(x==null)return 1;if(y==null)return -1;return(typeof x==='string'?x.localeCompare(y):x-y)*d});
@@ -206,7 +206,7 @@ function pCols(){return [
  {k:'ly',l:T('Last year','Año pasado'),f:v=>v>0?$$(v):'—'},
  {k:'meta',l:T('Goal','Meta'),f:v=>v>0?$$(v):'—'},
  {k:'pm',l:T('% of goal','% de meta'),f:v=>v==null?'—':pTag(v),raw:1},
- {k:'serv',l:T('Services','Servicios'),f:(v,r)=>r.fut?'—':$$(v)},{k:'sp',l:T('Svc %','% serv.'),f:v=>v==null?'—':v.toFixed(1)+'%'},
+ {k:'serv',l:T('Services','Servicios'),f:(v,r)=>r.fut?'—':$$(v)},{k:'sp',l:T('Svc %','% serv.'),f:v=>v==null?'—':v.toFixed(1)+'%'},{k:'pb',l:'Profit Booster',f:(v,r)=>r.fut?'—':$$(v)},{k:'pp',l:'PB %',f:v=>v==null?'—':v.toFixed(1)+'%'},
  {k:'merch',l:T('Merchandise','Mercancía'),f:(v,r)=>r.fut?'—':$$(v)},
  {k:'ventas_n',l:T('# sales','# ventas'),f:(v,r)=>r.fut?'—':Math.round(v).toLocaleString('en-US')},
  {k:'tk',l:T('Avg ticket','Ticket prom.'),f:v=>v==null?'—':$$(v)},{k:'dias',l:T('Days','Días'),f:v=>String(v)},{k:'pd',l:T('Avg / day','Prom. / día'),f:v=>v==null?'—':$$(v)}]}
@@ -214,8 +214,8 @@ function pTable(rows){
   const t=PN.D.total,cols=pCols(),S=PN.sort,g=PN.D.grupo,def=isTime(g)?'k':'neto';
   const head=cols.map(c=>{const kk=c.k==='lbl'?'k':c.k,on=S.k?S.k===kk:kk===def,asc=S.k?S.d>0:isTime(g);return `<th class="${c.t==='s'?'':'r '}sh${on?' on':''}" tabindex="0" role="button" onclick="pSort('${kk}')" onkeydown="if(event.key==='Enter')pSort('${kk}')">${esc(c.l)}${on?(asc?' ▲':' ▼'):''}</th>`}).join('');
   const cell=(r,c)=>{const v=r[c.k];if(c.k==='lbl')return `<td data-no-i18n><b>${esc(v)}</b>${r.fut?` <span class="xp">${esc(T('forecast','pronóst.'))}</span>`:''}</td>`;if(c.k==='tienda_n')return `<td>${esc(v)}</td>`;const s=c.f?c.f(v,r):v;return `<td class="r">${c.raw?s:esc(s)}</td>`};
-  const pm=t.meta_real>0?t.neto/t.meta_real*100:null, sp=t.merch>0?t.serv/t.merch*100:null, tk=t.ventas_n>0?t.neto/t.ventas_n:null;
-  const tot=`<tr class="tot"><td><b>${esc(T('Total','Total'))}</b></td><td></td><td class="r">${$$(t.neto)}</td><td class="r">${t.ly_real>0?yoyTag(t.neto,t.ly_real):'—'}</td><td class="r">${t.ly>0?$$(t.ly):'—'}</td><td class="r">${t.meta>0?$$(t.meta):'—'}</td><td class="r">${pm==null?'—':pTag(pm)}</td><td class="r">${$$(t.serv)}</td><td class="r">${sp==null?'—':sp.toFixed(1)+'%'}</td><td class="r">${$$(t.merch)}</td><td class="r">${Math.round(t.ventas_n).toLocaleString('en-US')}</td><td class="r">${tk==null?'—':$$(tk)}</td><td class="r">${t.dias}</td><td class="r">${t.dias>0?$$(t.neto/t.dias):'—'}</td></tr>`;
+  const pm=t.meta_real>0?t.neto/t.meta_real*100:null, sp=t.neto>0?t.serv/t.neto*100:null, pp=t.neto>0?t.pb/t.neto*100:null, tk=t.ventas_n>0?t.neto/t.ventas_n:null;
+  const tot=`<tr class="tot"><td><b>${esc(T('Total','Total'))}</b></td><td></td><td class="r">${$$(t.neto)}</td><td class="r">${t.ly_real>0?yoyTag(t.neto,t.ly_real):'—'}</td><td class="r">${t.ly>0?$$(t.ly):'—'}</td><td class="r">${t.meta>0?$$(t.meta):'—'}</td><td class="r">${pm==null?'—':pTag(pm)}</td><td class="r">${$$(t.serv)}</td><td class="r">${sp==null?'—':sp.toFixed(1)+'%'}</td><td class="r">${$$(t.pb||0)}</td><td class="r">${pp==null?'—':pp.toFixed(1)+'%'}</td><td class="r">${$$(t.merch)}</td><td class="r">${Math.round(t.ventas_n).toLocaleString('en-US')}</td><td class="r">${tk==null?'—':$$(tk)}</td><td class="r">${t.dias}</td><td class="r">${t.dias>0?$$(t.neto/t.dias):'—'}</td></tr>`;
   return `<div class="tw"><table class="xt" id="pt"><thead><tr>${head}</tr></thead><tbody>${rows.map(r=>`<tr data-k="${esc(r.k)}"${r.fut?' class="fu"':''}>${cols.map(c=>cell(r,c)).join('')}</tr>`).join('')}${rows.length?tot:`<tr><td colspan="${cols.length}" class="empty">${esc(T('No sales match these filters.','Ninguna venta coincide con estos filtros.'))}</td></tr>`}</tbody></table></div>`;
 }
 function pSort(k){const S=PN.sort;if(S.k!==k){S.k=k;S.d=(k==='k'||k==='tienda_n')?1:-1}else if(S.d<0&&!(k==='k'||k==='tienda_n')){S.d=1}else if(S.d>0&&(k==='k'||k==='tienda_n')){S.d=-1}else{S.k=null;S.d=1}pRender()}
@@ -342,12 +342,12 @@ function hRender(){
 function hKpi(L,H){
   const km=H.kmeta||{serv:9,pb:8}, pct=(a,b)=>b>0?a/b*100:0, col=(p,g)=>p>=g?'#2E7D32':'#C0392B';
   const bar=(lbl,p,g)=>{const ok=p>=g,w=g>0?Math.min(100,p/g*100):0,c=col(p,g);return `<div style="margin:4px 0"><div style="display:flex;justify-content:space-between;font-size:13px"><span>${esc(lbl)} <b style="color:${c}">${p.toFixed(1)}%</b></span><span style="color:#6B6B6B">${esc(T('goal','meta'))} ${g}%${ok?' ✓':''}</span></div><div style="height:9px;background:#E7EBF2;border-radius:5px;overflow:hidden"><i style="display:block;height:100%;width:${w.toFixed(1)}%;background:${c}"></i></div></div>`};
-  const st=L.filter(t=>t.kpi&&+t.kpi.merch>0&&t.t!=='EC'||(t.t==='EC'&&t.kpi&&+t.kpi.merch>0));
+  const st=L.filter(t=>t.kpi&&+t.kpi.neto>0);
   if(!st.length)return '';
-  const cards=st.map(t=>{const m=+t.kpi.merch;return `<div style="flex:1 1 220px;min-width:200px;border:1px solid #E7EBF2;border-radius:10px;padding:10px"><b>${esc(SN[t.t]||t.t)}</b>${bar(T('Services','Servicios'),pct(+t.kpi.serv,m),km.serv)}${bar('Profit Booster',pct(+t.kpi.pb,m),km.pb)}</div>`}).join('');
-  const V=L.flatMap(t=>(t.vend||[]).filter(v=>+v.merch>0).map(v=>Object.assign({tt:t.t},v))).sort((a,b)=>pct(+a.serv,+a.merch)-pct(+b.serv,+b.merch));
-  const rows=V.map(v=>{const sp=pct(+v.serv,+v.merch),pp=pct(+v.pb,+v.merch);return `<tr><td>${esc(v.n)}</td><td>${esc(SN[v.tt]||v.tt)}</td><td class="r">${$$(+v.merch)}</td><td class="r" style="color:${col(sp,km.serv)};font-weight:600">${sp.toFixed(1)}%</td><td class="r" style="color:${col(pp,km.pb)};font-weight:600">${pp.toFixed(1)}%</td></tr>`}).join('');
-  return `<h3 style="margin:16px 0 6px">${esc(T('Services and Profit Booster penetration','Penetración de servicios y Profit Booster'))}</h3><div style="display:flex;flex-wrap:wrap;gap:10px">${cards}</div>`+(rows?`<div class="tw" style="margin-top:10px"><table class="xt"><thead><tr><th>${esc(T('Seller','Vendedor'))}</th><th>${esc(T('Store','Tienda'))}</th><th class="r">${esc(T('Merch','Mercancía'))}</th><th class="r">${esc(T('Services','Servicios'))} (${km.serv}%)</th><th class="r">Profit Booster (${km.pb}%)</th></tr></thead><tbody>${rows}</tbody></table></div>`:'')+`<div class="note">${esc(T('Penetration = dollars of services or Profit Booster ÷ merchandise dollars. Red = below goal. Sellers who are behind get a friendly push in the afternoon.','Penetración = dólares de servicios o Profit Booster ÷ dólares de mercancía. Rojo = abajo de la meta. Los vendedores que van abajo reciben un aviso amigable por la tarde.'))}</div>`;
+  const cards=st.map(t=>{const m=+t.kpi.neto;return `<div style="flex:1 1 220px;min-width:200px;border:1px solid #E7EBF2;border-radius:10px;padding:10px"><b>${esc(SN[t.t]||t.t)}</b>${bar(T('Services','Servicios'),pct(+t.kpi.serv,m),km.serv)}${bar('Profit Booster',pct(+t.kpi.pb,m),km.pb)}</div>`}).join('');
+  const V=L.flatMap(t=>(t.vend||[]).filter(v=>+v.neto>0).map(v=>Object.assign({tt:t.t},v))).sort((a,b)=>pct(+a.serv,+a.neto)-pct(+b.serv,+b.neto));
+  const rows=V.map(v=>{const sp=pct(+v.serv,+v.neto),pp=pct(+v.pb,+v.neto);return `<tr><td>${esc(v.n)}</td><td>${esc(SN[v.tt]||v.tt)}</td><td class="r">${$$(+v.neto)}</td><td class="r" style="color:${col(sp,km.serv)};font-weight:600">${sp.toFixed(1)}%</td><td class="r" style="color:${col(pp,km.pb)};font-weight:600">${pp.toFixed(1)}%</td></tr>`}).join('');
+  return `<h3 style="margin:16px 0 6px">${esc(T('Services and Profit Booster penetration','Penetración de servicios y Profit Booster'))}</h3><div style="display:flex;flex-wrap:wrap;gap:10px">${cards}</div>`+(rows?`<div class="tw" style="margin-top:10px"><table class="xt"><thead><tr><th>${esc(T('Seller','Vendedor'))}</th><th>${esc(T('Store','Tienda'))}</th><th class="r">${esc(T('Net sales','Venta neta'))}</th><th class="r">${esc(T('Services','Servicios'))} (${km.serv}%)</th><th class="r">Profit Booster (${km.pb}%)</th></tr></thead><tbody>${rows}</tbody></table></div>`:'')+`<div class="note">${esc(T('Penetration = dollars of services or Profit Booster ÷ net sales dollars. Red = below goal. Sellers who are behind get a friendly push in the afternoon.','Penetración = dólares de servicios o Profit Booster ÷ venta neta. Rojo = abajo de la meta. Los vendedores que van abajo reciben un aviso amigable por la tarde.'))}</div>`;
 }
 function hDay(n){PN.hfecha=addDays(PN.hfecha||PN.hoy,n);hFetch()}
 async function pnLoad(){try{PN.opc=await DH.rpc('ventas_reporte_opc')}catch(e){PN.opc=null} if(PN.opc&&!PN.opc.error){} pPaint(); await pFetch()}
@@ -372,7 +372,7 @@ async function histGo(){
   try{
     const R=csvRows(await f.text()), H=R[0].map(x=>x.trim()), ix=n=>H.indexOf(n); for(const n of ['fecha','tienda','codigo','neto'])if(ix(n)<0)throw new Error('header '+n);
     const g=(r,n)=>{const i=ix(n);return i<0?null:(r[i]===''||r[i]==null?null:r[i])};
-    const rows=R.slice(1).filter(r=>r.length>3&&g(r,'fecha')).map(r=>({f:g(r,'fecha'),t:g(r,'tienda'),c:g(r,'codigo'),n:g(r,'nombre')||'',v:g(r,'neto'),m:g(r,'merch'),s:g(r,'servicios'),d:g(r,'descuento'),g:g(r,'gp'),p:g(r,'piezas'),k:g(r,'ventas_n')}));
+    const rows=R.slice(1).filter(r=>r.length>3&&g(r,'fecha')).map(r=>({f:g(r,'fecha'),t:g(r,'tienda'),c:g(r,'codigo'),n:g(r,'nombre')||'',v:g(r,'neto'),m:g(r,'merch'),s:g(r,'servicios'),d:g(r,'descuento'),g:g(r,'gp'),p:g(r,'piezas'),k:g(r,'ventas_n'),b:g(r,'pb')}));
     if(!rows.length){o.textContent=T('No rows found.','No se encontraron filas.');return}
     let done=0; $('h-go').disabled=true;
     for(let i=0;i<rows.length;i+=1500){

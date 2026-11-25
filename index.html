@@ -1779,7 +1779,7 @@ async function loadDomeCard(){
       h+=domeSvg(pct,pace,'#1B3A6B',Math.round(pct)+'% '+T('of today\'s goal','de la meta de hoy'))
         +'<div class="ds"><b>'+$(y.neto)+'</b> '+T('of','de')+' '+$(y.meta_dia)+'</div>'+st(pct)
         +kpi(T('Services','Servicios'),y.serv_pct,y.serv_meta_pct)+kpi('Profit Booster',y.pb_pct,y.pb_meta_pct!=null?y.pb_meta_pct:8)
-        +((y.merch>0&&(y.serv_pct<y.serv_meta_pct||y.pb_pct<(y.pb_meta_pct!=null?y.pb_meta_pct:8)))?'<div class="dn" style="color:#C0392B">💪 '+T('Keep pushing! Offer services and Profit Booster on your next sale.','¡Échale ganas! Ofrece servicios y Profit Booster en tu próxima venta.')+'</div>':'')
+        +((y.neto>0&&(y.serv_pct<y.serv_meta_pct||y.pb_pct<(y.pb_meta_pct!=null?y.pb_meta_pct:8)))?'<div class="dn" style="color:#C0392B">💪 '+T('Keep pushing! Offer services and Profit Booster on your next sale.','¡Échale ganas! Ofrece servicios y Profit Booster en tu próxima venta.')+'</div>':'')
         +'<div class="dl"><span>'+T('Month','Mes')+' <b>'+$(y.mes_acum)+'</b></span><span>'+$(y.meta_mes)+'</span></div>'+bar(mp,null)
         +'<div class="dn">'+(y.base==='tienda'&&y.n?T('Daily goal = your store goal today ('+$(y.meta_tienda)+') ÷ '+y.n+(y.n===1?' seller.':' sellers.'),'Meta diaria = la meta de tu tienda hoy ('+$(y.meta_tienda)+') ÷ '+y.n+(y.n===1?' vendedor.':' vendedores.')):T('Daily goal = your share of the '+$(y.meta_mes)+' monthly minimum for today.','Meta diaria = tu parte del mínimo mensual de '+$(y.meta_mes)+' para hoy.'))+' '+T('Never below your monthly minimum. The dark mark is where you should be by now.','Nunca baja de tu mínimo mensual. La marca oscura es donde deberías ir a esta hora.')+'</div>';
     }
@@ -1796,10 +1796,10 @@ async function loadDomeCard(){
         if(t.sin_filas){h+='<div class="dn">'+T('The hourly Sales by Salesperson report has no rows for this store yet today.','El reporte por hora de ventas por vendedor no trae filas de esta tienda hoy.')+'</div>'}
         else if(t.t==='EC'){h+='<div class="dn">'+T('Online sales (José Padrón, Victoria Sagaste). It has a store goal and no seller goals.','Ventas en línea (José Padrón, Victoria Sagaste). Tiene meta de tienda y no tiene metas por vendedor.')+'</div>'}
         else{
-          h+=kpi(T('Services','Servicios'),t.merch>0?t.serv/t.merch*100:0,r.serv_meta_pct!=null?r.serv_meta_pct:9)+kpi('Profit Booster',t.merch>0?(t.pb||0)/t.merch*100:0,r.pb_meta_pct!=null?r.pb_meta_pct:8);
+          h+=kpi(T('Services','Servicios'),t.v>0?t.serv/t.v*100:0,r.serv_meta_pct!=null?r.serv_meta_pct:9)+kpi('Profit Booster',t.v>0?(t.pb||0)/t.v*100:0,r.pb_meta_pct!=null?r.pb_meta_pct:8);
           h+='<div class="dn" style="margin:4px 0 0">'+(t.n?T('Seller goal = store goal ÷ '+t.n+(t.n===1?' seller':' sellers')+', never below the monthly minimum.','Meta por vendedor = meta de la tienda ÷ '+t.n+(t.n===1?' vendedor':' vendedores')+', nunca debajo del mínimo mensual.'):T('Seller goal = the monthly minimum (no seller count yet).','Meta por vendedor = el mínimo mensual (aún sin conteo de vendedores).'))+'</div>';
-          h+=t.vendedores.map(function(v){var p3=v.meta_dia>0?v.neto/v.meta_dia*100:0, sp=v.merch>0?(v.serv/v.merch*100):0;
-            return '<div class="dl" style="margin-top:10px"><span>'+meEsc(v.n)+' <small style="color:#6B6B6B">· '+v.vn+' '+T('sales','ventas')+' · '+T('svc','serv')+' '+kc(sp,r.serv_meta_pct!=null?r.serv_meta_pct:9)+' · PB '+kc(v.merch>0?(v.pb||0)/v.merch*100:0,r.pb_meta_pct!=null?r.pb_meta_pct:8)+'</small></span><span><b>'+$(v.neto)+'</b> / '+$(v.meta_dia)+pcD(v.neto,v.meta_dia)+'</span></div>'+bar(p3,pace)}).join('');
+          h+=t.vendedores.map(function(v){var p3=v.meta_dia>0?v.neto/v.meta_dia*100:0, sp=v.neto>0?(v.serv/v.neto*100):0;
+            return '<div class="dl" style="margin-top:10px"><span>'+meEsc(v.n)+' <small style="color:#6B6B6B">· '+v.vn+' '+T('sales','ventas')+' · '+T('svc','serv')+' '+kc(sp,r.serv_meta_pct!=null?r.serv_meta_pct:9)+' · PB '+kc(v.neto>0?(v.pb||0)/v.neto*100:0,r.pb_meta_pct!=null?r.pb_meta_pct:8)+'</small></span><span><b>'+$(v.neto)+'</b> / '+$(v.meta_dia)+pcD(v.neto,v.meta_dia)+'</span></div>'+bar(p3,pace)}).join('');
         }
         h+='</details>';
       });
