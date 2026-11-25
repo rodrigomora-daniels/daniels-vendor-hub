@@ -57,6 +57,23 @@
   .tl{margin:10px 0;border-left:2px solid #dfe5ee;padding-left:12px}
   .tl div{font-size:13.5px;margin-bottom:8px;overflow-wrap:anywhere}
   .tl small{color:var(--gray);display:block}
+  .md.wide{max-width:880px}
+  .st h3{font:700 19px Georgia,serif;color:var(--navy)}
+  .st .kp{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:12px 0}
+  .st .kt{background:#fff;border-left:5px solid var(--gold);border-radius:6px;padding:10px 12px;box-shadow:0 10px 24px -20px rgba(18,40,74,.7);border-top:1px solid #eef1f6;border-right:1px solid #eef1f6;border-bottom:1px solid #eef1f6}
+  .st .kt b{display:block;font:700 22px Georgia,serif;color:var(--navy)}
+  .st .kt span{font-size:12px;color:var(--gray)}
+  .st .sec{background:#fff;border-left:5px solid var(--navy);border-radius:6px;padding:10px 12px;margin:10px 0;border-top:1px solid #eef1f6;border-right:1px solid #eef1f6;border-bottom:1px solid #eef1f6}
+  .st .sec h4{font:700 14px Georgia,serif;color:var(--navy);margin:0 0 8px}
+  .st .br{display:grid;grid-template-columns:minmax(90px,170px) 1fr 70px;gap:8px;align-items:center;font-size:13px;margin:4px 0}
+  .st .br i{display:block;height:12px;border-radius:3px;background:var(--navy)}
+  .st .br i.g{background:var(--gold)}
+  .st .br em{font-style:normal;color:var(--gray);text-align:right}
+  .st .tr7{display:flex;align-items:flex-end;gap:3px;height:90px;margin-top:6px}
+  .st .tr7 div{flex:1;background:var(--navy);border-radius:2px 2px 0 0;min-height:2px;position:relative}
+  .st .tr7 div:hover::after{content:attr(data-t);position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#111;color:#fff;font-size:11px;padding:2px 6px;border-radius:4px;white-space:nowrap}
+  @media print{body>header,body>main{display:none!important}.ov{position:static!important;background:#fff!important;padding:0!important;display:block!important}.xc,.noprint{display:none!important}.md{max-width:none!important;box-shadow:none!important}}
+
   .ph{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.ph .th{position:relative;width:84px;height:84px;border-radius:10px;overflow:hidden;background:#eef1f6;border:1px solid #dfe5ee;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--gray)}.ph .th img{width:100%;height:100%;object-fit:cover}.ph .th button{position:absolute;top:2px;right:2px;border:0;border-radius:50%;width:22px;height:22px;background:rgba(0,0,0,.65);color:#fff;font-size:13px;line-height:22px;padding:0;cursor:pointer}.lb img{max-width:100%;max-height:70vh;display:block;margin:8px auto;border-radius:8px}
   .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
   .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0 8px}
@@ -74,6 +91,7 @@
   <div class="bar"><h2 style="margin:0" id="lh">Tickets</h2><span class="sp"></span>
     <select id="flt" class="hide" onchange="render()" aria-label="Location / Ubicación"></select>
     <button class="btn alt sm hide" id="cbtn" onclick="openCfg()">⚙ Setup / Configuración</button>
+    <button class="btn alt sm hide" id="sbtn" onclick="openStats()">📊 Stats / Estadísticas</button>
     <button class="btn alt sm hide" id="rbtn" onclick="openRep()">⬇ Report / Reporte</button></div>
   <div id="list"></div>
 </main>
@@ -192,7 +210,7 @@ function card(t){
 function render(){
   const f=$('flt');
   if(new Set(D.items.map(x=>x.ubicacion)).size>1){f.classList.remove('hide');const cur=f.value;f.innerHTML='<option value="">'+esc(tr('All locations / Todas las ubicaciones'))+'</option>'+[...new Set(D.items.map(x=>x.ubicacion))].map(l=>`<option${l===cur?' selected':''}>${esc(l)}</option>`).join('');}
-  $('rbtn').classList.toggle('hide',!D.csv); $('cbtn').classList.toggle('hide',!D.admin);
+  $('rbtn').classList.toggle('hide',!D.csv); $('sbtn').classList.toggle('hide',!D.csv); $('cbtn').classList.toggle('hide',!D.admin);
   const loc=f.value, its=D.items.filter(x=>!loc||x.ubicacion===loc);
   $('lh').textContent=tr(D.admin?'IT queue / Cola de TI':'IT tickets / Tickets de TI');
   const ro=D.puede_reportar?'':'<div class="empty" style="margin-bottom:10px">'+esc(tr('You can follow the status of every ticket here. Managers report problems. / Aquí puedes ver el estado de todos los tickets. Los gerentes reportan los problemas.'))+'</div>';
@@ -302,6 +320,77 @@ async function dlRep(){
     const txt='﻿'+[head.map(cc).join(',')].concat(rows.map(r=>r.map(cc).join(','))).join('\r\n');
     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/csv;charset=utf-8'}));a.download='it-tickets_'+f+'_'+t+'.csv';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
   }catch(x){e.textContent=tr('Could not build the report. / No se pudo generar el reporte.');e.classList.remove('hide');}
+}
+
+/* ---------- statistics (IT admin + super admins) ---------- */
+let STAT=null;
+function csvDownload(name,head,rows){
+  const txt='﻿'+[head.map(cc).join(',')].concat(rows.map(r=>r.map(cc).join(','))).join('\r\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/csv;charset=utf-8'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
+}
+function openStats(){
+  $('md').className='md wide st';
+  $('md').innerHTML=`<h3>${esc(tr('IT statistics / Estadísticas de TI'))}</h3>
+   <div class="noprint" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px"><label for="st-r" style="margin:0">${esc(tr('Period / Periodo'))}</label>
+   <select id="st-r" onchange="loadStats()" style="width:auto"><option value="7">${esc(tr('Last 7 days / Últimos 7 días'))}</option><option value="30" selected>${esc(tr('Last 30 days / Últimos 30 días'))}</option><option value="90">${esc(tr('Last 90 days / Últimos 90 días'))}</option><option value="365">${esc(tr('Last 12 months / Últimos 12 meses'))}</option></select></div>
+   <div id="st-b"><p class="small">${esc(tr('Loading… / Cargando…'))}</p></div>
+   <div class="acts noprint"><button class="btn sm" onclick="dlStat('sum')">⬇ ${esc(tr('Summary CSV / CSV resumen'))}</button><button class="btn alt sm" onclick="dlStat('det')">⬇ ${esc(tr('Detail CSV / CSV detalle'))}</button><button class="btn alt sm" onclick="window.print()">🖨 ${esc(tr('Print / Save PDF / Imprimir / Guardar PDF'))}</button><button class="btn alt sm" onclick="closeM()">${esc(tr('Close / Cerrar'))}</button></div>`;
+  $('ov').classList.remove('hide'); loadStats();
+}
+const _cm=closeM; closeM=function(){const m=$('md');if(m)m.className='md';_cm();};
+async function loadStats(){
+  const n=parseInt($('st-r').value,10), t=dayKey(new Date()), f=dayKey(new Date(Date.now()-(n-1)*864e5));
+  const b=$('st-b');
+  try{
+    const r=await DH.rpc('tickets_reporte',{p_desde:f,p_hasta:t});
+    if(!r||!r.ok)throw 0;
+    STAT={f:f,t:t,n:n,rows:r.rows}; renderStats();
+  }catch(e){b.innerHTML='<div class="err">'+esc(tr('Could not build the statistics. / No se pudieron generar las estadísticas.'))+'</div>';}
+}
+const hrs=m=>m==null?'—':(m<90?Math.round(m)+' min':(m<2880?(m/60).toFixed(1)+' h':(m/1440).toFixed(1)+' d'));
+const med=a=>{if(!a.length)return null;a=a.slice().sort((x,y)=>x-y);const k=a.length>>1;return a.length%2?a[k]:(a[k-1]+a[k])/2;};
+function statCalc(rows){
+  const tot=rows.length, res=rows.filter(x=>x.resuelto_at), rt=res.map(x=>(new Date(x.resuelto_at)-new Date(x.inicio))/60000).filter(x=>x>=0);
+  const cl=rows.filter(x=>x.estado==='cerrado'), conf=cl.filter(x=>x.confirmado===true).length;
+  const down=rows.reduce((a,x)=>a+(+x.dur_min||0),0), reo=rows.filter(x=>x.reabierto>0).length;
+  const by=(fn)=>{const m={};rows.forEach(x=>{const k=fn(x);if(k==null||k==='')return;(m[k]=m[k]||{n:0,d:0});m[k].n++;m[k].d+=(+x.dur_min||0);});return Object.entries(m).sort((a,b)=>b[1].n-a[1].n||b[1].d-a[1].d);};
+  return {tot,res:res.length,open:rows.filter(x=>x.estado==='abierto'||x.estado==='en_proceso').length,avg:rt.length?rt.reduce((a,x)=>a+x,0)/rt.length:null,med:med(rt),down,reo,conf,cl:cl.length,
+    loc:by(x=>x.ubicacion),dev:by(x=>(DEV[x.dispositivo]||DEV.other)[1].split(' / ')[0]),prob:by(x=>PROB[x.problema]?PROB[x.problema].split(' / ')[0]:x.problema),eq:by(x=>x.etiqueta?((DEV[x.dispositivo]||DEV.other)[1].split(' / ')[0]+' · '+x.etiqueta):null).slice(0,6)};
+}
+function bars(list,fmtR,cls){const mx=Math.max(1,...list.map(x=>x[1].n));return list.length?list.map(x=>`<div class="br"><span data-no-i18n>${esc(x[0])}</span><i class="${cls||''}" style="width:${Math.max(3,Math.round(x[1].n/mx*100))}%"></i><em>${x[1].n}${fmtR?' · '+esc(hrs(x[1].d/x[1].n)):''}</em></div>`).join(''):`<p class="small">${esc(tr('No data. / Sin datos.'))}</p>`;}
+function renderStats(){
+  const S=STAT,c=statCalc(S.rows),b=$('st-b');
+  if(!c.tot){b.innerHTML='<div class="empty" style="margin-top:12px">'+esc(tr('No tickets in this period. / No hay tickets en este periodo.'))+'</div>';return;}
+  const weekly=S.n>45, bucket={};
+  S.rows.forEach(x=>{const d=dayKey(new Date(x.inicio));let k=d;if(weekly){const dt=new Date(d+'T12:00:00');dt.setDate(dt.getDate()-((dt.getDay()+6)%7));k=dayKey(dt);}bucket[k]=(bucket[k]||0)+1;});
+  const ks=Object.keys(bucket).sort(), mx=Math.max(1,...ks.map(k=>bucket[k]));
+  b.innerHTML=`<p class="small" style="margin:4px 0" data-no-i18n>${esc(S.f)} → ${esc(S.t)} (LA)</p>
+   <div class="kp">
+    <div class="kt"><b>${c.tot}</b><span>${esc(tr('Tickets reported / Tickets reportados'))}</span></div>
+    <div class="kt"><b>${c.open}</b><span>${esc(tr('Still open / Aún abiertos'))}</span></div>
+    <div class="kt"><b>${esc(hrs(c.med))}</b><span>${esc(tr('Typical time to fix (median) / Tiempo típico de solución (mediana)'))}</span></div>
+    <div class="kt"><b>${esc(hrs(c.avg))}</b><span>${esc(tr('Average time to fix / Tiempo promedio de solución'))}</span></div>
+    <div class="kt"><b>${esc(hrs(c.down))}</b><span>${esc(tr('Total downtime / Caída total'))}</span></div>
+    <div class="kt"><b>${c.cl?Math.round(c.conf/c.cl*100)+'%':'—'}</b><span>${esc(tr('Confirmed fixed by reporter / Confirmados por quien reportó'))}</span></div>
+    <div class="kt"><b>${c.reo}</b><span>${esc(tr('Reopened tickets / Tickets reabiertos'))}</span></div>
+   </div>
+   <div class="sec"><h4>${esc(tr(weekly?'Tickets per week / Tickets por semana':'Tickets per day / Tickets por día'))}</h4><div class="tr7" role="img" aria-label="${esc(tr('Tickets over time / Tickets en el tiempo'))}">${ks.map(k=>`<div style="height:${Math.round(bucket[k]/mx*100)}%" data-t="${esc(k)}: ${bucket[k]}"></div>`).join('')}</div></div>
+   <div class="sec"><h4>${esc(tr('By location (tickets · average downtime) / Por ubicación (tickets · caída promedio)'))}</h4>${bars(c.loc,true)}</div>
+   <div class="sec"><h4>${esc(tr('By device / Por equipo'))}</h4>${bars(c.dev,true,'g')}</div>
+   <div class="sec"><h4>${esc(tr("What's wrong / Qué pasa"))}</h4>${bars(c.prob,true)}</div>
+   <div class="sec"><h4>${esc(tr('Most repeated equipment / Equipos que más se repiten'))}</h4>${bars(c.eq,true,'g')}</div>`;
+}
+function dlStat(kind){
+  if(!STAT)return; const S=STAT,c=statCalc(S.rows), nm='it-stats_'+S.f+'_'+S.t+'.csv';
+  if(kind==='det'){
+    const head=['Ticket','Started (LA)','Location','Device','Name','Problem','Details','Reported by','Status','Resolved (LA)','Closed (LA)','Confirmed by reporter','Reopened','Downtime (minutes)'];
+    csvDownload('it-tickets_'+S.f+'_'+S.t+'.csv',head,S.rows.map(x=>[x.numero,fmtDT(x.inicio),x.ubicacion,DEV[x.dispositivo][1].split(' / ')[0],x.etiqueta,PROB[x.problema].split(' / ')[0],x.detalle,x.reporta,EST[x.estado].split(' / ')[0],x.resuelto_at?fmtDT(x.resuelto_at):'',x.cerrado_at?fmtDT(x.cerrado_at):'',x.confirmado==null?'':(x.confirmado?'Yes':'No'),x.reabierto,x.dur_min]));
+    return;
+  }
+  const r=[['Period (LA)',S.f+' to '+S.t,'',''],['Tickets reported',c.tot,'',''],['Still open',c.open,'',''],['Median time to fix (minutes)',c.med==null?'':Math.round(c.med),'',''],['Average time to fix (minutes)',c.avg==null?'':Math.round(c.avg),'',''],['Total downtime (minutes)',c.down,'',''],['Confirmed fixed by reporter (%)',c.cl?Math.round(c.conf/c.cl*100):'','',''],['Reopened tickets',c.reo,'','']];
+  const add=(t,l)=>{r.push(['','','','']);r.push([t,'Tickets','Avg downtime (minutes)','']);l.forEach(x=>r.push([x[0],x[1].n,Math.round(x[1].d/x[1].n),'']));};
+  add('By location',c.loc);add('By device',c.dev);add('By problem',c.prob);add('Most repeated equipment',c.eq);
+  csvDownload(nm,['Metric','Value','',''],r);
 }
 window.addEventListener('dh-lang',()=>{if($('ov').classList.contains('hide')){buildRep();render();}});
 init();
