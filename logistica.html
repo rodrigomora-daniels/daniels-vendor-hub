@@ -380,8 +380,10 @@ function podHtml(r){
   return h;
 }
 async function loadPod(id){
-  try{const r=await DH.rpc('recepcion_po_detalle',{p_id:id});const el=$('pod');if(!el||!CUR||CUR.id!==id)return;const h=podHtml(r);if(h)el.innerHTML=h;else el.remove();}
-  catch(e){const el=$('pod');if(el)el.remove();}
+  try{const r=await DH.rpc('recepcion_po_detalle',{p_id:id});const el=$('pod');if(!el||!CUR||CUR.id!==id)return;
+    if(r&&r.error){el.innerHTML='<div class="nd">'+esc(tr('Could not load the PO detail / No se pudo cargar el detalle de la PO'))+': '+esc(String(r.error))+'</div>';return;}
+    const h=podHtml(r);if(h)el.innerHTML=h;else el.innerHTML='<div class="nd">'+esc(tr('No PO detail for this record yet. / Aún no hay detalle de PO para este registro.'))+'</div>';}
+  catch(e){const el=$('pod');if(el)el.innerHTML='<div class="nd">'+esc(tr('Could not load the PO detail / No se pudo cargar el detalle de la PO'))+': '+esc(String((e&&e.message)||e))+'</div>';}
 }
 function openForm(id,dayK){
   CUR=id?DATA[TAB].find(x=>x.id===id):null; ASK=false;
