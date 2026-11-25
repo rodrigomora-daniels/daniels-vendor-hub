@@ -210,7 +210,7 @@ function card(t){
 function render(){
   const f=$('flt');
   if(new Set(D.items.map(x=>x.ubicacion)).size>1){f.classList.remove('hide');const cur=f.value;f.innerHTML='<option value="">'+esc(tr('All locations / Todas las ubicaciones'))+'</option>'+[...new Set(D.items.map(x=>x.ubicacion))].map(l=>`<option${l===cur?' selected':''}>${esc(l)}</option>`).join('');}
-  $('rbtn').classList.toggle('hide',!D.csv); $('sbtn').classList.toggle('hide',!D.csv); $('cbtn').classList.toggle('hide',!D.admin);
+  $('rbtn').classList.toggle('hide',!(D.csv||D.stats)); $('sbtn').classList.toggle('hide',!(D.csv||D.stats)); $('cbtn').classList.toggle('hide',!D.admin);
   const loc=f.value, its=D.items.filter(x=>!loc||x.ubicacion===loc);
   $('lh').textContent=tr(D.admin?'IT queue / Cola de TI':'IT tickets / Tickets de TI');
   const ro=D.puede_reportar?'':'<div class="empty" style="margin-bottom:10px">'+esc(tr('You can follow the status of every ticket here. Managers report problems. / Aquí puedes ver el estado de todos los tickets. Los gerentes reportan los problemas.'))+'</div>';
