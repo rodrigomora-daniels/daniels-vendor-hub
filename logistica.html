@@ -44,6 +44,12 @@
   .t-will_call{background:#e3f4e5;color:var(--green)}.t-cita{background:#d9ecff;color:#0e4f94}
   .ap{display:inline-block;border-radius:4px;padding:3px 8px;color:#fff;font-weight:700;font-size:13px;white-space:nowrap}
   .ap.past{background:#c93a3a}.ap.today{background:#2e9e4a}.ap.next{background:#1769c2}
+  .pod{border:1px solid #dfe5ee;border-radius:10px;margin:0 0 14px;max-height:40vh;overflow:auto;background:#FAFBFD}
+  .pod h4{margin:0;padding:9px 12px;font:700 14px 'Segoe UI',Arial,sans-serif;color:var(--navy);background:#F4F6FA;position:sticky;top:0;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .pod h4 small{font-weight:600;color:var(--gray)}
+  .pod table{font-size:13px}.pod td,.pod th{padding:6px 10px}.pod th{position:static}
+  .pod .n{text-align:right;white-space:nowrap}.pod .kt{font-size:11px;font-weight:700;color:#8a5a00;background:#fff1d6;border-radius:4px;padding:1px 5px;margin-left:6px}
+  .pod .nd{padding:10px 12px;font-size:13px;color:#5B6B82}
   .empty{color:var(--gray);padding:22px 14px;font-size:14px}
   /* calendar */
   .cal-h{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #eef1f6}
@@ -359,6 +365,24 @@ async function doBulk(st){
 
 /* ---- form ---- */
 function opts(map,sel){return Object.keys(map).map(k=>`<option value="${k}"${k===sel?' selected':''}>${esc(tr(map[k]))}</option>`).join('');}
+function podHtml(r){
+  if(!r||r.error)return '';
+  const f=x=>x?fmtD(String(x).slice(0,10)):'';
+  let h='';
+  (r.pos||[]).forEach(p=>{
+    const pend=p.lineas.reduce((a,l)=>a+(+l.pend||0),0), rec=p.lineas.reduce((a,l)=>a+(+l.rec||0),0);
+    const st=p.cerrada?tr('Received / Recibida'):(rec>0?tr('Partly received / Recibida parcial'):tr('On order / Por llegar'));
+    h+=`<h4>PO ${esc(p.po)} <span>${esc(p.vendor||'')}</span><small>${esc(st)}${p.esperada&&!p.cerrada?' · '+esc(tr('Due / Esperada'))+' '+f(p.esperada):''}</small></h4>
+    <table><thead><tr><th>SKU</th><th>${esc(tr('Description / Descripción'))}</th><th class="n">${esc(tr('Ordered / Pedido'))}</th><th class="n">${esc(tr('Received / Recibido'))}</th><th class="n">${esc(tr('Pending / Pendiente'))}</th></tr></thead><tbody>`
+     +p.lineas.map(l=>`<tr><td data-no-i18n>${esc(l.sku||'')}</td><td data-no-i18n>${l.kit==='E'?'↳ ':''}${esc(l.desc||'')}${l.kit==='K'?'<span class="kt">KIT</span>':''}</td><td class="n">${l.ord}</td><td class="n">${l.rec}</td><td class="n">${p.cerrada?0:l.pend}</td></tr>`).join('')+'</tbody></table>';
+  });
+  if((r.faltan||[]).length)h+=`<div class="nd">${esc(tr('No detail yet for PO / Aún sin detalle de la PO'))}: ${esc(r.faltan.join(', '))}. ${esc(tr('The open PO report updates daily. / El reporte de POs abiertas se actualiza a diario.'))}</div>`;
+  return h;
+}
+async function loadPod(id){
+  try{const r=await DH.rpc('recepcion_po_detalle',{p_id:id});const el=$('pod');if(!el||!CUR||CUR.id!==id)return;const h=podHtml(r);if(h)el.innerHTML=h;else el.remove();}
+  catch(e){const el=$('pod');if(el)el.remove();}
+}
 function openForm(id,dayK){
   CUR=id?DATA[TAB].find(x=>x.id===id):null; ASK=false;
   const r=CUR||{}, tt=TAB==='rec';
@@ -386,10 +410,11 @@ function openForm(id,dayK){
       <div class="w"><label for="f-notas">${esc(tr('Notes / Notas'))}</label><textarea id="f-notas" maxlength="600">${esc(r.notas||'')}</textarea></div></div>`;
   }
   const title=tt?(CUR?'Edit receiving / Editar recepción':'New receiving / Nueva recepción'):(CUR?'Edit delivery / Editar entrega':'New next day delivery / Nueva entrega al día siguiente');
-  $('md').innerHTML=`<h3>${esc(tr(title))}</h3>${f}<div class="err hide" id="ferr" role="alert"></div>
+  const hasPo=tt&&CUR&&/\d{5}/.test(CUR.po||'');
+  $('md').innerHTML=`<h3>${esc(tr(title))}</h3>${hasPo?`<div class="pod" id="pod"><div class="nd">${esc(tr('Loading PO detail… / Cargando detalle de la PO…'))}</div></div>`:''}${f}<div class="err hide" id="ferr" role="alert"></div>
     <div class="acts"><button class="btn" id="fsave" onclick="save()">${esc(tr('Save / Guardar'))}</button><button class="btn alt" onclick="closeForm()">${esc(tr('Cancel / Cancelar'))}</button>${CUR&&CUR.puede_borrar?`<button class="btn del" id="fdel" onclick="del()">${esc(tr('Delete / Borrar'))}</button>`:''}</div>
     ${CUR?`<div class="small" data-no-i18n>${esc(CUR.creado_por||'')} · ${esc(tr('Deletes in / Se borra en'))} ${CUR.dias_restantes} ${esc(tr('days / días'))}</div>`:''}`;
-  $('ov').classList.remove('hide'); setTimeout(()=>{const x=$('md').querySelector('input');if(x)x.focus();},30);
+  $('ov').classList.remove('hide'); if(hasPo)loadPod(CUR.id); setTimeout(()=>{const x=$('md').querySelector('input');if(x)x.focus();},30);
 }
 function closeForm(){$('ov').classList.add('hide');CUR=null;}
 $('ov').addEventListener('mousedown',e=>{if(e.target===$('ov'))closeForm();});
