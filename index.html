@@ -158,6 +158,8 @@
   #me-card .mbd select,#me-card .mbd button{min-height:40px;border-radius:8px;border:1px solid #c5ccd8;font:14px 'Segoe UI',Arial,sans-serif;padding:0 10px;background:#fff}
   #goal-card{background:#fff;border-radius:6px;border-left:6px solid #C8922A;padding:14px 18px;box-shadow:0 14px 34px -26px rgba(18,40,74,.7);margin-bottom:16px}
   #goal-card.hide{display:none}
+  .hol::before{content:attr(data-hol);display:block;margin:-14px -18px 12px;padding:7px 18px;background:#12284A;color:#F2C14E;font:700 12.5px 'Segoe UI',Arial,sans-serif;letter-spacing:.2px}
+  #dome-card.hol,#goal-card.hol{border-left-color:#F2C14E;box-shadow:0 14px 34px -22px rgba(18,40,74,.85),inset 0 0 0 1px rgba(242,193,78,.45)}
   #season-card{background:#12284A;color:#fff;border-radius:6px;border-left:6px solid #F2C14E;padding:16px 18px;margin-bottom:16px;box-shadow:0 14px 34px -26px rgba(18,40,74,.9)}
   #season-card.hide{display:none}
   #season-card .gcd{background:rgba(255,255,255,.08);border-radius:8px;padding:12px 14px 14px;margin:10px 0 0}
@@ -681,7 +683,7 @@ document.addEventListener('DOMContentLoaded',function(){
       </div>
       <h2 class="my-day">My day / Mi día</h2>
       <div id="hero2">
-      <section id="season-card" class="hide" data-no-i18n aria-label="Black Friday season"></section>
+      <section id="season-card" class="hide" hidden data-no-i18n aria-label="Black Friday season"></section>
       <section id="goal-card" class="hide" data-no-i18n aria-label="Sales vs goal"></section>
       <div id="hero2-r"><section id="dome-card" class="hide" data-no-i18n aria-label="My sales today"></section>
       <section id="me-card" class="hide" data-no-i18n aria-label="My panel"></section></div>
@@ -1269,7 +1271,7 @@ function handleLogout() {
    DASHBOARD
    ════════════════════════════════════════════════════════════ */
 async function loadDashboard() {
-  loadAlertsCard(); loadGoalCard(); loadMeCard(); loadDomeCard(); loadSeasonCard(); initPushCard(); loadNewsHero(); loadPromoStrip(); loadMsgBadge(); loadNotesToday();
+  loadAlertsCard(); loadGoalCard(); loadMeCard(); loadDomeCard(); holSkin(); initPushCard(); loadNewsHero(); loadPromoStrip(); loadMsgBadge(); loadNotesToday();
   const emp = session.empleado;
 
   // If this employee has a temporary password, force the change screen first
@@ -1733,6 +1735,15 @@ function domeSvg(pct,pace,col,label){
    +'<text class="dt" x="100" y="96" text-anchor="middle">'+Math.round(pct)+'%</text></svg>';
 }
 /* Black Friday season: Thanksgiving..Cyber Monday (LA dates). While it runs, only the season meter shows; "My day" returns on Tuesday. */
+function holSkin(){
+  var on=seasonLiveNow(), es=(localStorage.getItem('dh_lang')==='es');
+  var t=new Date().toLocaleDateString('en-CA',{timeZone:'America/Los_Angeles'}), y=+t.slice(0,4);
+  var d1=new Date(Date.UTC(y,10,1)), off=(4-d1.getUTCDay()+7)%7, tg=Date.UTC(y,10,1+off+21), i=Math.round((Date.parse(t+'T00:00:00Z')-tg)/864e5);
+  var nm=es?['Acción de Gracias','Black Friday','Sábado de temporada','Domingo de temporada','Cyber Monday']:['Thanksgiving','Black Friday','Holiday Saturday','Holiday Sunday','Cyber Monday'];
+  ['goal-card','dome-card'].forEach(function(id){var e=document.getElementById(id); if(!e)return;
+    if(on&&i>=0&&i<=4){e.classList.add('hol');e.setAttribute('data-hol','🛍️ '+(es?'Temporada Black Friday':'Black Friday season')+' · '+nm[i]+' · '+(es?'día ':'day ')+(i+1)+(es?' de 5':' of 5'))}
+    else{e.classList.remove('hol');e.removeAttribute('data-hol')}});
+}
 function seasonLiveNow(){
   var t=new Date().toLocaleDateString('en-CA',{timeZone:'America/Los_Angeles'}), y=+t.slice(0,4);
   var d1=new Date(Date.UTC(y,10,1)), off=(4-d1.getUTCDay()+7)%7, tg=Date.UTC(y,10,1+off+21), now=Date.parse(t+'T00:00:00Z');
@@ -1740,7 +1751,6 @@ function seasonLiveNow(){
 }
 async function loadDomeCard(){
   var el=document.getElementById('dome-card'); if(!el)return;
-  if(seasonLiveNow()){el.classList.add('hide');return}
   try{
     var r=await DH.rpc('ventas_mi');
     if(!r||r.error||r.vacio||(!r.yo&&!(r.gerente&&r.tiendas&&r.tiendas.length))){el.classList.add('hide');return}
@@ -1823,7 +1833,6 @@ async function loadGoalCard(){
         +'<div class="gn"><span><b>'+$(v)+'</b> / '+$(mv)+' · '+Math.round(pv)+'%</span><span>'+T('Services ','Servicios ')+'<b>'+pen.toFixed(1)+'%</b> '+T('vs goal','vs meta')+' '+penM.toFixed(1)+'%</span><span class="gs" style="color:'+col+'">'+st+'</span></div>'
         +'<div class="gsg">'+r.tiendas.map(sp).join('')+'</div>';
     }
-    var _sc=document.getElementById('season-card'); if(_sc&&!_sc.classList.contains('hide')){el.classList.add('hide');return}
     el.classList.remove('hide'); startGoalClock();
   }catch(e){el.classList.add('hide')}
 }
@@ -1954,7 +1963,7 @@ async function amDone(id){AML=AML.filter(function(a){return a.id!==id;});amRende
 async function amSnzDo(id,modo){AML=AML.filter(function(a){return a.id!==id;});AMS=null;amRender();try{await DH.rpc('alarma_posponer',{p_id:id,p_modo:modo});}catch(e){}}
 async function amAll(){AML=[];amRender();try{await DH.rpc('alarma_descartar',{});}catch(e){}}
 async function amPoll(){if(document.hidden||!DH.token())return;try{var r=await DH.rpc('alarmas_mias');if(Array.isArray(r)){AML=r;amRender();}}catch(e){}}
-setInterval(amPoll,90000);setInterval(function(){if(!document.hidden&&window.DH&&DH.token&&DH.token()){loadDomeCard();loadSeasonCard()}},60000);document.addEventListener('visibilitychange',function(){if(!document.hidden&&window.DH&&DH.token&&DH.token()){loadDomeCard();loadSeasonCard()}});document.addEventListener('visibilitychange',function(){if(!document.hidden)amPoll();});
+setInterval(amPoll,90000);setInterval(function(){if(!document.hidden&&window.DH&&DH.token&&DH.token()){loadDomeCard();holSkin()}},60000);document.addEventListener('visibilitychange',function(){if(!document.hidden&&window.DH&&DH.token&&DH.token()){loadDomeCard();holSkin()}});document.addEventListener('visibilitychange',function(){if(!document.hidden)amPoll();});
 async function loadAlertsCard(){
   var card=document.getElementById('alerts-card'), br=document.getElementById('briefing');
   var al=null, sc=null;
