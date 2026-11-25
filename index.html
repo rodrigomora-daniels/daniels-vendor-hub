@@ -1715,27 +1715,29 @@ async function loadDomeCard(){
         +'<div class="dl"><span>'+T('Services','Servicios')+' <b>'+y.serv_pct.toFixed(1)+'%</b></span><span>'+T('goal','meta')+' '+y.serv_meta_pct+'%</span></div>'+bar(y.serv_meta_pct?y.serv_pct/y.serv_meta_pct*100:0,null,true)
         +'<div class="dl"><span>'+T('Profit booster','Profit booster')+' <b>'+y.pb_pct.toFixed(1)+'%</b></span><span>'+(y.pb_meta_pct!=null?T('goal','meta')+' '+y.pb_meta_pct+'%':'')+'</span></div>'+(y.pb_meta_pct?bar(y.pb_pct/y.pb_meta_pct*100,null,true):'')
         +'<div class="dl"><span>'+T('Month','Mes')+' <b>'+$(y.mes_acum)+'</b></span><span>'+$(y.meta_mes)+'</span></div>'+bar(mp,null)
-        +'<div class="dn">'+T('Daily goal = monthly goal ÷ ','Meta diaria = meta mensual ÷ ')+y.dias+T(' scheduled days',' días programados')+(y.estimado?' ('+T('estimated, schedule incomplete','estimado, horario incompleto')+')':'')+'. '+T('The dark mark is where you should be by now.','La marca oscura es donde deberías ir a esta hora.')+'</div>';
+        +'<div class="dn">'+(y.base==='tienda'&&y.n?T('Daily goal = your store goal today ('+$(y.meta_tienda)+') ÷ '+y.n+(y.n===1?' seller.':' sellers.'),'Meta diaria = la meta de tu tienda hoy ('+$(y.meta_tienda)+') ÷ '+y.n+(y.n===1?' vendedor.':' vendedores.')):T('Daily goal = your share of the '+$(y.meta_mes)+' monthly minimum for today.','Meta diaria = tu parte del mínimo mensual de '+$(y.meta_mes)+' para hoy.'))+' '+T('Never below your monthly minimum. The dark mark is where you should be by now.','Nunca baja de tu mínimo mensual. La marca oscura es donde deberías ir a esta hora.')+'</div>';
     }
     if(r.gerente&&r.tiendas&&r.tiendas.length){
-      var ref=function(t){return t.meta!=null?+t.meta:(t.hist!=null?+t.hist:null)}, refLbl=function(t){return t.meta!=null?T('goal','meta'):T('same weekday 2025','mismo día 2025')};
-      var tv=0,th=0,allMeta=true; r.tiendas.forEach(function(t){var rf=ref(t);tv+=t.v;if(rf!=null)th+=rf;if(t.meta==null)allMeta=false});
+      var ref=function(t){return t.meta!=null?+t.meta:(t.hist!=null?+t.hist:null)}, refLbl=function(t){return t.meta!=null&&!t.meta_ly?T('goal','meta'):T('same weekday 2025','mismo día 2025')};
+      var tv=0,th=0,allMeta=true; r.tiendas.forEach(function(t){var rf=ref(t);tv+=t.v;if(rf!=null)th+=rf;if(t.meta==null||t.meta_ly)allMeta=false});
       if(!r.yo&&th>0){var tp=tv/th*100, tl=allMeta?T('goal','meta'):T('same weekday 2025','mismo día 2025');
         h+=domeSvg(tp,pace,'#1B3A6B',Math.round(tp)+'% '+T('of total','del total'))+'<div class="ds"><b>'+$(tv)+'</b> '+T('vs','vs')+' '+$(th)+' '+tl+'</div>'
           +'<div class="dn" style="text-align:center;margin-top:2px">'+T('Expected by now','Esperado a esta hora')+' <b>'+$(th*pace/100)+'</b></div>'+st(tp)}
       h+='<div class="dn" style="margin:6px 0 0">'+T('Tap a store to see its sellers.','Toca una tienda para ver sus vendedores.')+'</div>';
       r.tiendas.forEach(function(t){var rf=ref(t), p2=rf>0?t.v/rf*100:0;
-        var sub=t.sin_filas?T('no sales in the report','sin ventas en el reporte'):(rf!=null?$(rf)+' '+refLbl(t):T('no 2025 data','sin datos 2025'));
+        var sub=t.sin_filas?T('no sales in the report','sin ventas en el reporte'):(rf>0?$(rf)+' '+refLbl(t):(rf===0?T('no goal today','sin meta hoy'):T('no 2025 data','sin datos 2025')));
         h+='<details style="margin-top:6px"><summary style="display:block;min-height:44px"><span class="dl" style="margin-top:0"><span><b>'+meEsc(t.nombre)+'</b> '+$(t.v)+'</span><span>'+sub+'</span></span>'+bar(p2,pace)+'</summary>';
         if(t.sin_filas){h+='<div class="dn">'+T('The hourly Sales by Salesperson report has no rows for this store yet today.','El reporte por hora de ventas por vendedor no trae filas de esta tienda hoy.')+'</div>'}
+        else if(t.t==='EC'){h+='<div class="dn">'+T('Online sales (José Padrón, Victoria Sagaste). It has a store goal and no seller goals.','Ventas en línea (José Padrón, Victoria Sagaste). Tiene meta de tienda y no tiene metas por vendedor.')+'</div>'}
         else{
           h+='<div class="dl"><span>'+T('Services','Servicios')+' <b>'+(t.merch>0?(t.serv/t.merch*100).toFixed(1):'0.0')+'%</b></span><span>'+T('goal','meta')+' '+(r.tiendas&&r.serv_meta_pct!=null?r.serv_meta_pct:9)+'%</span></div>';
+          h+='<div class="dn" style="margin:4px 0 0">'+(t.n?T('Seller goal = store goal ÷ '+t.n+(t.n===1?' seller':' sellers')+', never below the monthly minimum.','Meta por vendedor = meta de la tienda ÷ '+t.n+(t.n===1?' vendedor':' vendedores')+', nunca debajo del mínimo mensual.'):T('Seller goal = the monthly minimum (no seller count yet).','Meta por vendedor = el mínimo mensual (aún sin conteo de vendedores).'))+'</div>';
           h+=t.vendedores.map(function(v){var p3=v.meta_dia>0?v.neto/v.meta_dia*100:0, sp=v.merch>0?(v.serv/v.merch*100):0;
             return '<div class="dl" style="margin-top:10px"><span>'+meEsc(v.n)+' <small style="color:#6B6B6B">· '+v.vn+' '+T('sales','ventas')+' · '+T('svc','serv')+' '+sp.toFixed(1)+'%</small></span><span><b>'+$(v.neto)+'</b> / '+$(v.meta_dia)+'</span></div>'+bar(p3,pace)}).join('');
         }
         h+='</details>';
       });
-      h+='<div class="dn">'+T('Dark mark = expected by this hour. Net sales include delivery charges and kit sales. Seller goals use an estimated 5 days a week until schedules are complete.','Marca oscura = esperado a esta hora. Las ventas netas incluyen cargos de entrega y ventas de kits. Las metas por vendedor usan 5 días por semana estimados hasta que los horarios estén completos.')+'</div>';
+      h+='<div class="dn">'+T('Dark mark = expected by this hour. Net sales include delivery charges and kit sales. E-commerce is shown on its own and is not in Euclid. Seller goal = store goal ÷ sellers on the first report after noon, never below the monthly minimum.','Marca oscura = esperado a esta hora. Las ventas netas incluyen cargos de entrega y ventas de kits. El e-commerce se muestra aparte y no está en Euclid. Meta por vendedor = meta de la tienda ÷ vendedores del primer reporte después de las 12:00, nunca debajo del mínimo mensual.')+'</div>';
     }
     var _op=[].map.call(el.querySelectorAll('details'),function(x){return x.open});
     el.innerHTML=h; el.classList.remove('hide'); el.dataset.k=_k;
