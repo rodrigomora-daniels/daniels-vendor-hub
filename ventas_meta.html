@@ -44,6 +44,25 @@
   .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
   .badge{display:inline-block;background:var(--gold);color:#fff;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:700;margin-left:6px}
   .note{font-size:12px;color:var(--gray);margin-top:6px;line-height:1.4}
+  .xc{display:grid;gap:12px;margin-bottom:12px}
+  .xg label{display:block;font-size:12px;font-weight:700;color:var(--navy);margin-bottom:4px}
+  .xg.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+  .xg input[type=date],.xg input[type=search]{width:100%;font:inherit;font-size:15px;padding:9px 10px;border:1px solid #cfd6e2;border-radius:10px;min-height:44px;background:#fff}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{border:1px solid #cfd6e2;background:#fff;color:var(--navy);border-radius:999px;min-height:40px;padding:0 14px;font:700 13px 'Segoe UI',Arial,sans-serif;cursor:pointer}
+  .chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .chip:focus-visible,.xt .sh:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+  .tw{overflow:auto;max-height:70vh;border:1px solid var(--line);border-radius:10px}
+  table.xt{border-collapse:collapse;width:100%;font-size:13px;white-space:nowrap}
+  .xt th{position:sticky;top:0;background:#EEF1F6;color:var(--navy);text-align:left;padding:9px 10px;font-weight:700;cursor:pointer;border-bottom:1px solid var(--line)}
+  .xt th.r,.xt td.r{text-align:right}
+  .xt th.on{background:#D6E4F7}
+  .xt td{padding:8px 10px;border-bottom:1px solid #eef1f6}
+  .xt tr.tot td{font-weight:700;background:#F7F9FC;position:sticky;bottom:0;border-top:2px solid var(--navy)}
+  .xt td.empty{text-align:center;color:var(--gray);padding:22px}
+  #ex-out.busy{opacity:.55}
+  .xp{display:inline-block;font-weight:700;font-size:12px;padding:1px 8px;border-radius:10px;background:#eef1f6;color:var(--navy)}
+  .xp-a{background:#F2C14E;color:#12284A}.xp-g{background:#DDF3E4;color:#1E6B34}.xp-l{background:#FBE3E0;color:#B03024}
 </style>
 <meta name="dh-i18n" content="on">
 <script src="dh-chrome.js" defer></script>
@@ -58,6 +77,8 @@
     <div id="w-h" class="hide"><label for="f-h">As of hour / Hasta la hora: <span class="rv" id="rv-h"></span></label><input type="range" id="f-h" min="10" max="20" step="1"></div>
   </div></div>
   <div id="out" data-no-i18n></div>
+  <div class="card hide" id="ex"><h2>Explore the numbers / Explorar los números</h2><div id="ex-ctl" class="xc" data-no-i18n></div><div id="ex-out" data-no-i18n></div></div>
+  <div class="card hide" id="hist" data-no-i18n></div>
   <div class="card demo hide" id="demo">
     <h2>Test mode / Modo de prueba <span class="badge">Admin</span></h2>
     <label for="d-h">Simulate sales until hour / Simular ventas hasta la hora: <span class="rv" id="rv-d"></span></label>
@@ -168,10 +189,153 @@ $('i-go').onclick=async()=>{
     o.textContent=T('Imported ','Importado: ')+r.filas+T(' sellers for ',' vendedores del ')+P.fecha+' · '+P.corrida.slice(11,16)+(sv?' · '+T('Not linked to a user: ','Sin vincular a usuario: ')+sv:'');
   }catch(e){o.textContent=T('Could not read that file. Use the "Sales By Salesperson" CSV for a single day.','No se pudo leer el archivo. Usa el CSV "Sales By Salesperson" de un solo día.')}
 };
+
+/* ---- explorer: filter, sort, download ---- */
+const SN={EU:'Euclid',CN:'Chino',RR:'Cerritos',WH:'Warehouse / Almacén',EC:'E-commerce'};
+const MON={en:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],es:['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']};
+const EX={opc:null,s:{grupo:'mes',desde:'',hasta:'',tiendas:new Set(),vend:'',dows:new Set(),meses:new Set(),anios:new Set(),q:''},sort:{k:null,d:-1},R:null,tm:null,busy:false,seq:0};
+const exTag=p=>{const q=Math.round(p),c=q>=120?'a':q>=100?'g':q>=80?'m':'l';return `<span class="xp xp-${c}">${q>=120?'★ ':q>=100?'✓ ':''}${q}%</span>`};
+function exLabel(r,g){
+  const k=r.k, L=LANG();
+  if(g==='dia'){const d=new Date(k+'T12:00:00Z');return DOWN[L][d.getUTCDay()]+' '+(d.getUTCMonth()+1)+'/'+d.getUTCDate()+'/'+d.getUTCFullYear()}
+  if(g==='semana'){const d=new Date(k+'T12:00:00Z');return T('Week of ','Semana del ')+(d.getUTCMonth()+1)+'/'+d.getUTCDate()+'/'+d.getUTCFullYear()}
+  if(g==='mes'){const p=k.split('-');return MON[L][+p[1]-1]+' '+p[0]}
+  if(g==='anio')return k;
+  if(g==='tienda')return SN[k]||k;
+  if(g==='dow')return DOWN[L][+k];
+  return (r.nombre||r.codigo)+' · '+(SN[r.tienda]||r.tienda||'');
+}
+function exCols(){return [
+  {k:'lbl',l:T('Group','Grupo'),t:'s'},
+  {k:'tienda',l:T('Store','Tienda'),t:'s'},
+  {k:'neto',l:T('Sales','Ventas'),t:'n',f:$$},
+  {k:'meta',l:T('Goal','Meta'),t:'n',f:v=>v==null?'—':$$(v)},
+  {k:'pm',l:T('% of goal','% de meta'),t:'n',f:(v)=>v==null?'—':exTag(v),raw:true},
+  {k:'merch',l:T('Merchandise','Mercancía'),t:'n',f:$$},
+  {k:'serv',l:T('Services','Servicios'),t:'n',f:$$},
+  {k:'sp',l:T('Svc %','% serv.'),t:'n',f:v=>v==null?'—':v.toFixed(1)+'%'},
+  {k:'desc',l:T('Discounts','Descuentos'),t:'n',f:v=>v?$$(v):'—'},
+  {k:'gp',l:T('Gross profit','Utilidad bruta'),t:'n',f:v=>v?$$(v):'—'},
+  {k:'gm',l:T('GM %','% margen'),t:'n',f:v=>v==null?'—':v.toFixed(1)+'%'},
+  {k:'ventas_n',l:T('# sales','# ventas'),t:'n',f:v=>Math.round(v).toLocaleString('en-US')},
+  {k:'tk',l:T('Avg ticket','Ticket prom.'),t:'n',f:v=>v==null?'—':$$(v)},
+  {k:'dias',l:T('Days','Días'),t:'n',f:v=>String(v)},
+  {k:'pd',l:T('Avg / day','Prom. / día'),t:'n',f:v=>v==null?'—':$$(v)}
+]}
+function exRows(){
+  const g=EX.R.grupo, q=EX.s.q.trim().toLowerCase();
+  let rows=EX.R.rows.map(r=>{
+    const o=Object.assign({},r); o.lbl=exLabel(r,g); o.tienda_n=SN[r.tienda]||r.tienda||'';
+    o.pm=o.meta>0?o.neto/o.meta*100:null; o.sp=o.merch>0?o.serv/o.merch*100:null; o.gm=o.merch>0&&o.gp?o.gp/o.merch*100:null;
+    o.tk=o.ventas_n>0?o.neto/o.ventas_n:null; o.pd=o.dias>0?o.neto/o.dias:null; return o});
+  if(q)rows=rows.filter(r=>(r.lbl+' '+r.tienda_n).toLowerCase().includes(q));
+  const S=EX.sort, def=(g==='dia'||g==='semana'||g==='mes'||g==='anio')?{k:'k',d:-1}:{k:'neto',d:-1};
+  const k=S.k||def.k, d=S.k?S.d:def.d;
+  rows.sort((a,b)=>{const x=a[k],y=b[k]; if(x==null&&y==null)return 0; if(x==null)return 1; if(y==null)return -1; return (typeof x==='string'?x.localeCompare(y):x-y)*d});
+  return rows;
+}
+function exRender(){
+  const box=$('ex-out'); if(!EX.R){return}
+  if(EX.R.error){box.innerHTML=`<div class="err">${esc(T('You do not have access to this report.','No tienes acceso a este reporte.'))}</div>`;return}
+  const rows=exRows(), t=EX.R.total, cols=exCols(), S=EX.sort, g=EX.R.grupo;
+  const def=(g==='dia'||g==='semana'||g==='mes'||g==='anio')?'lbl':'neto';
+  const sk=S.k||(def==='lbl'?'k':def), sd=S.k?S.d:-1;
+  const pm=t.meta>0?t.neto/t.meta*100:null, sp=t.merch>0?t.serv/t.merch*100:null, tk=t.ventas_n>0?t.neto/t.ventas_n:null;
+  const kp=(v,l,d)=>`<div class="kpi"><div class="v">${v}</div><div class="l">${esc(l)}</div>${d?`<div class="d">${d}</div>`:''}</div>`;
+  const head=cols.map(c=>{const on=(c.k===S.k)||(!S.k&&(c.k===def||(def==='lbl'&&c.k==='lbl')));
+    return `<th class="${c.t==='n'?'r ':''}sh${on?' on':''}" onclick="exSort('${c.k}')" title="${esc(T('Sort','Ordenar'))}">${esc(c.l)}${on?(sd>0&&S.k?' ▲':' ▼'):''}</th>`}).join('');
+  const cell=(r,c)=>{const v=r[c.k]; if(c.k==='lbl')return `<td data-no-i18n><b>${esc(v)}</b></td>`; if(c.k==='tienda')return `<td>${esc(r.tienda_n)}</td>`; const s=c.f?c.f(v):v; return `<td class="r">${c.raw?s:esc(s)}</td>`};
+  const tot=`<tr class="tot"><td><b>${esc(T('Total','Total'))}</b></td><td></td><td class="r">${$$(t.neto)}</td><td class="r">${t.meta==null?'—':$$(t.meta)}</td><td class="r">${pm==null?'—':exTag(pm)}</td><td class="r">${$$(t.merch)}</td><td class="r">${$$(t.serv)}</td><td class="r">${sp==null?'—':sp.toFixed(1)+'%'}</td><td class="r">${t.desc?$$(t.desc):'—'}</td><td class="r">${t.gp?$$(t.gp):'—'}</td><td class="r">${t.merch>0&&t.gp?(t.gp/t.merch*100).toFixed(1)+'%':'—'}</td><td class="r">${Math.round(t.ventas_n).toLocaleString('en-US')}</td><td class="r">${tk==null?'—':$$(tk)}</td><td class="r">${t.dias}</td><td class="r">${t.dias>0?$$(t.neto/t.dias):'—'}</td></tr>`;
+  box.innerHTML=`<div class="kpis">${kp($$(t.neto),T('Sales in this view','Ventas en esta vista'),pm==null?'':exTag(pm)+' '+esc(T('of goal','de la meta')))}${kp(Math.round(t.ventas_n).toLocaleString('en-US'),T('Number of sales','Número de ventas'),tk==null?'':esc(T('Avg ticket ','Ticket prom. '))+$$(tk))}${kp(sp==null?'—':sp.toFixed(1)+'%',T('Services as % of merchandise','Servicios como % de mercancía'),$$(t.serv))}${kp(String(t.dias),T('Days with sales','Días con ventas'),t.dias>0?esc(T('Avg ','Prom. '))+$$(t.neto/t.dias)+esc(T(' per day',' por día')):'')}</div>
+   <div class="tw"><table class="xt"><thead><tr>${head}</tr></thead><tbody>${rows.map(r=>'<tr>'+cols.map(c=>cell(r,c)).join('')+'</tr>').join('')}${rows.length?tot:`<tr><td colspan="${cols.length}" class="empty">${esc(T('No sales match these filters.','Ninguna venta coincide con estos filtros.'))}</td></tr>`}</tbody></table></div>
+   <div class="note">${esc(T('Rows: ','Filas: '))}${rows.length}${EX.R.truncado?' · '+esc(T('Showing the first 4,000 groups. Narrow the dates to see the rest.','Se muestran los primeros 4,000 grupos. Acorta las fechas para ver el resto.')):''} · ${esc(T('Goal = the store goal for each day (same day last year, or the hand-loaded number if higher). It appears only for 2026 onward and when no seller is selected. Sales include services and delivery charges, and e-commerce is its own line.','Meta = la meta de la tienda de cada día (mismo día del año pasado, o la cargada a mano si es mayor). Solo aparece de 2026 en adelante y cuando no hay un vendedor elegido. Las ventas incluyen servicios y cargos de entrega, y el e-commerce es una línea aparte.'))}</div>`;
+}
+function exSort(k){const S=EX.sort; if(S.k!==k){S.k=k;S.d=(k==='lbl'||k==='tienda')?1:-1}else if(S.d<0&&(k==='lbl'||k==='tienda')){S.d=1}else if(S.d<0){S.d=1}else{S.k=null;S.d=-1} exRender()}
+function exArr(s){return s.size?[...s]:null}
+async function exFetch(){
+  const my=++EX.seq, s=EX.s; $('ex-out').classList.add('busy');
+  try{
+    const r=await DH.rpc('ventas_reporte',{p_desde:s.desde||null,p_hasta:s.hasta||null,p_tiendas:exArr(s.tiendas),p_codigos:s.vend?[s.vend]:null,p_dows:exArr(s.dows),p_meses:exArr(s.meses),p_anios:exArr(s.anios),p_grupo:s.grupo});
+    if(my!==EX.seq)return; EX.R=r||{error:'x'};
+  }catch(e){if(my!==EX.seq)return; EX.R={error:'x'}}
+  $('ex-out').classList.remove('busy'); exRender();
+}
+function exGo(){clearTimeout(EX.tm);EX.tm=setTimeout(exFetch,200)}
+function exSet(k,v){EX.s[k]=v; if(k==='vend'&&v){/* seller view hides goal, by design */} exPaint(); exGo()}
+function exTog(k,v){const st=EX.s[k]; if(st.has(v))st.delete(v); else st.add(v); exPaint(); exGo()}
+function exPreset(p){
+  const mx=EX.opc.max||new Date().toISOString().slice(0,10), d=new Date(mx+'T12:00:00Z'), z=n=>String(n).padStart(2,'0'), iso=x=>x.getUTCFullYear()+'-'+z(x.getUTCMonth()+1)+'-'+z(x.getUTCDate());
+  const sub=n=>{const x=new Date(d);x.setUTCDate(x.getUTCDate()-n);return iso(x)};
+  EX.s.meses.clear();EX.s.anios.clear();EX.s.dows.clear();
+  if(p==='7'){EX.s.desde=sub(6);EX.s.hasta=mx;EX.s.grupo='dia'}
+  else if(p==='30'){EX.s.desde=sub(29);EX.s.hasta=mx;EX.s.grupo='dia'}
+  else if(p==='mtd'){EX.s.desde=d.getUTCFullYear()+'-'+z(d.getUTCMonth()+1)+'-01';EX.s.hasta=mx;EX.s.grupo='dia'}
+  else if(p==='ytd'){EX.s.desde=d.getUTCFullYear()+'-01-01';EX.s.hasta=mx;EX.s.grupo='mes'}
+  else if(p==='ly'){EX.s.desde=(d.getUTCFullYear()-1)+'-01-01';EX.s.hasta=(d.getUTCFullYear()-1)+'-12-31';EX.s.grupo='mes'}
+  else{EX.s.desde='';EX.s.hasta='';EX.s.grupo='anio'}
+  exPaint(); exGo();
+}
+function exPaint(){
+  const o=EX.opc, s=EX.s, L=LANG(), ch=(on,fn,t)=>`<button type="button" class="chip${on?' on':''}" onclick="${fn}" aria-pressed="${on}">${esc(t)}</button>`;
+  const yrs=[]; if(o.min&&o.max){for(let y=+o.max.slice(0,4);y>=+o.min.slice(0,4);y--)yrs.push(y)}
+  const G=[['dia',T('Day','Día')],['semana',T('Week','Semana')],['mes',T('Month','Mes')],['anio',T('Year','Año')],['dow',T('Weekday','Día de la semana')],['tienda',T('Store','Tienda')],['vendedor',T('Seller','Vendedor')]];
+  const vs=(o.vendedores||[]).filter(v=>!s.tiendas.size||s.tiendas.has(v.t)); const byT={}; vs.forEach(v=>{(byT[v.t]=byT[v.t]||[]).push(v)});
+  $('ex-ctl').innerHTML=`
+   <div class="xg"><label>${esc(T('Group by','Agrupar por'))}</label><div class="chips">${G.map(g=>ch(s.grupo===g[0],`exSet('grupo','${g[0]}')`,g[1])).join('')}</div></div>
+   <div class="xg"><label>${esc(T('Quick range','Rango rápido'))}</label><div class="chips">${[['7',T('Last 7 days','Últimos 7 días')],['30',T('Last 30 days','Últimos 30 días')],['mtd',T('This month','Este mes')],['ytd',T('This year','Este año')],['ly',T('Last year','Año pasado')],['all',T('All time','Todo')]].map(p=>`<button type="button" class="chip" onclick="exPreset('${p[0]}')">${esc(p[1])}</button>`).join('')}</div></div>
+   <div class="xg two"><div><label for="x-d">${esc(T('From','Desde'))}</label><input type="date" id="x-d" value="${esc(s.desde)}" min="${esc(o.min||'')}" max="${esc(o.max||'')}" onchange="exSet('desde',this.value)"></div><div><label for="x-h">${esc(T('To','Hasta'))}</label><input type="date" id="x-h" value="${esc(s.hasta)}" min="${esc(o.min||'')}" max="${esc(o.max||'')}" onchange="exSet('hasta',this.value)"></div></div>
+   <div class="xg"><label>${esc(T('Year','Año'))}</label><div class="chips">${yrs.map(y=>ch(s.anios.has(y),`exTog('anios',${y})`,String(y))).join('')||'—'}</div></div>
+   <div class="xg"><label>${esc(T('Month','Mes'))}</label><div class="chips">${MON[L].map((m,i)=>ch(s.meses.has(i+1),`exTog('meses',${i+1})`,m)).join('')}</div></div>
+   <div class="xg"><label>${esc(T('Weekday','Día de la semana'))}</label><div class="chips">${DOWN[L].map((m,i)=>ch(s.dows.has(i),`exTog('dows',${i})`,m)).join('')}</div></div>
+   <div class="xg"><label>${esc(T('Store','Tienda'))}</label><div class="chips">${(o.tiendas||[]).map(t=>ch(s.tiendas.has(t),`exTog('tiendas','${t}')`,SN[t]||t)).join('')}</div></div>
+   <div class="xg two"><div><label for="x-v">${esc(T('Seller','Vendedor'))}</label><select id="x-v" onchange="exSet('vend',this.value)"><option value="">${esc(T('All sellers','Todos los vendedores'))}</option>${Object.keys(byT).sort().map(t=>`<optgroup label="${esc(SN[t]||t)}">${byT[t].map(v=>`<option value="${esc(v.c)}"${s.vend===v.c?' selected':''}>${esc(v.n)} (${esc(v.c)})</option>`).join('')}</optgroup>`).join('')}</select></div>
+     <div><label for="x-q">${esc(T('Find in results','Buscar en resultados'))}</label><input type="search" id="x-q" value="${esc(s.q)}" oninput="EX.s.q=this.value;exRender()" placeholder="${esc(T('Name, store, date…','Nombre, tienda, fecha…'))}"></div></div>
+   <div class="row"><button class="btn" onclick="exCsv()">${esc(T('Download CSV','Descargar CSV'))}</button><button class="btn ghost" onclick="exReset()">${esc(T('Clear filters','Limpiar filtros'))}</button></div>`;
+}
+function exReset(){const s=EX.s;s.grupo='mes';s.desde='';s.hasta='';s.vend='';s.q='';['tiendas','dows','meses','anios'].forEach(k=>s[k].clear());EX.sort={k:null,d:-1};exPaint();exGo()}
+function exCsv(){
+  if(!EX.R||EX.R.error)return; const cols=exCols(), rows=exRows(), q=v=>{v=v==null?'':String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+  const raw=r=>cols.map(c=>{if(c.k==='lbl')return r.lbl; if(c.k==='tienda')return r.tienda_n; const v=r[c.k]; return v==null?'':(typeof v==='number'?Math.round(v*100)/100:v)});
+  const t=EX.R.total, lines=[cols.map(c=>c.l).join(',')].concat(rows.map(r=>raw(r).map(q).join(','))); 
+  const s=EX.s, nm='sales_'+EX.R.grupo+'_'+(s.desde||'start')+'_'+(s.hasta||'today')+'.csv';
+  const b=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}), a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=nm; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);
+}
+async function exInit(){
+  try{EX.opc=await DH.rpc('ventas_reporte_opc')}catch(e){EX.opc=null}
+  if(!EX.opc||EX.opc.error){return}
+  $('ex').classList.remove('hide');
+  const mx=EX.opc.max; if(mx){const d=new Date(mx+'T12:00:00Z');d.setUTCFullYear(d.getUTCFullYear()-1);EX.s.desde=d.toISOString().slice(0,10);EX.s.hasta=mx}
+  exPaint(); exFetch();
+  window.addEventListener('dh-lang',()=>{exPaint();exRender();histPaint()});
+  if(ISADM)histPaint();
+}
+/* ---- admin: load history file ---- */
+function histPaint(){
+  const b=$('hist'); if(!ISADM||!b)return; b.classList.remove('hide');
+  if(!$('h-f')){b.innerHTML=`<h2>${esc(T('Load sales history','Cargar historial de ventas'))} <span class="badge">Admin</span></h2><div class="note" style="margin:0 0 8px">${esc(T('CSV with columns fecha, tienda, codigo, nombre, neto, merch, servicios, descuento, gp, piezas, ventas_n (one row per seller per day). Loading it again replaces those days.','CSV con las columnas fecha, tienda, codigo, nombre, neto, merch, servicios, descuento, gp, piezas, ventas_n (una fila por vendedor por día). Si lo cargas otra vez reemplaza esos días.'))}</div><div class="row"><input type="file" id="h-f" accept=".csv,text/csv" aria-label="CSV"><button class="btn" id="h-go" onclick="histGo()">${esc(T('Load','Cargar'))}</button></div><div id="h-out" class="note" role="status"></div>`}
+}
+async function histGo(){
+  const f=$('h-f').files[0], o=$('h-out'); if(!f){o.textContent=T('Choose the CSV first.','Elige primero el CSV.');return}
+  try{
+    const R=csvRows(await f.text()), H=R[0].map(x=>x.trim()), ix=n=>H.indexOf(n); for(const n of ['fecha','tienda','codigo','neto'])if(ix(n)<0)throw new Error('header '+n);
+    const g=(r,n)=>{const i=ix(n);return i<0?null:(r[i]===''||r[i]==null?null:r[i])};
+    const rows=R.slice(1).filter(r=>r.length>3&&g(r,'fecha')).map(r=>({f:g(r,'fecha'),t:g(r,'tienda'),c:g(r,'codigo'),n:g(r,'nombre')||'',v:g(r,'neto'),m:g(r,'merch'),s:g(r,'servicios'),d:g(r,'descuento'),g:g(r,'gp'),p:g(r,'piezas'),k:g(r,'ventas_n')}));
+    if(!rows.length){o.textContent=T('No rows found.','No se encontraron filas.');return}
+    let done=0; $('h-go').disabled=true;
+    for(let i=0;i<rows.length;i+=1500){
+      const r=await DH.rpc('ventas_hist_importar',{p_filas:rows.slice(i,i+1500)}); if(!r||!r.ok)throw new Error(r&&r.error||'rpc');
+      done+=r.filas; o.textContent=T('Loading… ','Cargando… ')+done+' / '+rows.length;
+    }
+    o.textContent=T('Done. Loaded ','Listo. Se cargaron ')+done+T(' rows.',' filas.'); $('h-go').disabled=false;
+    EX.opc=await DH.rpc('ventas_reporte_opc'); exPaint(); exFetch();
+  }catch(e){$('h-go').disabled=false;o.textContent=T('Could not load that file. Check the columns and try again.','No se pudo cargar el archivo. Revisa las columnas e intenta de nuevo.')}
+}
+
 (async function(){
   if(!DH.token()){location.href='index.html';return}
   try{const e=DH.emp();ISADM=!!(e&&e.es_admin)}catch(e){}
   await load(null,null);
+  exInit();
 })();
 </script>
 </body>
