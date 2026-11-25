@@ -1819,12 +1819,9 @@ async function loadGoalCard(){
       var cd=daysTo<=0?T('Today','Hoy'):daysTo===1?T('Tomorrow','Mañana'):T('In '+daysTo+' days','En '+daysTo+' días');
       var first=r.dias[0], last=r.dias[r.dias.length-1], fd=function(x){var q=new Date(x+'T12:00:00Z');return (q.getUTCMonth()+1)+'/'+q.getUTCDate()};
       var gt=laMidnight(r.fecha);
-      var cdb='<div class="gcd" data-t="'+gt+'" role="timer" aria-live="off"><div class="gct">'+T('Goal days start in','Los días con meta arrancan en')+(r.nota?' · '+r.nota:'')+'</div><div class="gcg">'
+      var cdb='<div class="gcd" data-t="'+gt+'" role="timer" aria-live="off"><div class="gct">'+(r.nota==='Thanksgiving'?T('Black Friday season starts in','La temporada Black Friday arranca en')+' · '+r.nota:T('Goal days start in','Los días con meta arrancan en'))+'</div><div class="gcg">'
         +['d','h','m','s'].map(function(u){return '<div><b data-u="'+u+'">0</b><span>'+({d:T('days','días'),h:T('hours','horas'),m:T('min','min'),s:T('sec','seg')})[u]+'</span></div>'}).join('')+'</div></div>';
-      el.innerHTML='<div class="gh"><h3>🎯 '+T('Sales vs goal','Ventas vs meta')+'</h3><span class="gd">'+cd+'</span><a href="ventas_meta.html">'+T('Full report','Reporte completo')+' ›</a></div>'
-        +cdb+'<div class="gn"><span>'+T('Next goal day: ','Próximo día con meta: ')+'<b>'+dn+(r.nota?' · '+r.nota:'')+'</b></span><span>'+T('Goal ','Meta ')+'<b>'+$(mv)+'</b></span><span>'+T('Services ','Servicios ')+'<b>'+$(ms)+'</b> ('+penM.toFixed(1)+'%)</span></div>'
-        +'<div class="gsl">'+r.tiendas.map(function(n){return '<span class="gchip"><em>'+n.tienda+'</em> <b>'+$(n.meta_v)+'</b></span>'}).join('')+'</div>'
-        +'<div class="gn"><span style="color:#6B6B6B">'+T('Goal days: ','Días con meta: ')+fd(first)+' – '+fd(last)+'</span></div>';
+      el.innerHTML='<div class="gh"><h3>🎯 '+T('Sales vs goal','Ventas vs meta')+'</h3><span class="gd">'+cd+'</span><a href="ventas_meta.html">'+T('Full report','Reporte completo')+' ›</a></div>'+cdb;
     }else{
       var st=!hasData?T('No sales loaded yet','Sin ventas cargadas todavía'):diff>=2?'▲ '+T('Ahead of pace','Adelante del ritmo'):diff<=-2?'▼ '+T('Behind pace','Detrás del ritmo'):'● '+T('On pace','En ritmo');
       var col=!hasData?'#6B6B6B':diff>=2?'#2E7D32':diff<=-2?'#C0392B':'#6B6B6B';
