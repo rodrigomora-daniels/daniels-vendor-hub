@@ -57,6 +57,7 @@
   .tl{margin:10px 0;border-left:2px solid #dfe5ee;padding-left:12px}
   .tl div{font-size:13.5px;margin-bottom:8px;overflow-wrap:anywhere}
   .tl small{color:var(--gray);display:block}
+  .ph{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.ph .th{position:relative;width:84px;height:84px;border-radius:10px;overflow:hidden;background:#eef1f6;border:1px solid #dfe5ee;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--gray)}.ph .th img{width:100%;height:100%;object-fit:cover}.ph .th button{position:absolute;top:2px;right:2px;border:0;border-radius:50%;width:22px;height:22px;background:rgba(0,0,0,.65);color:#fff;font-size:13px;line-height:22px;padding:0;cursor:pointer}.lb img{max-width:100%;max-height:70vh;display:block;margin:8px auto;border-radius:8px}
   .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
   .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0 8px}
   .bar select{width:auto;min-height:40px;font-size:14px}
@@ -89,7 +90,7 @@ const EST={abierto:'Open / Abierto',en_proceso:'In progress / En proceso',resuel
 const LOC=['Euclid / Anaheim','Cerritos','Chino','Warehouse / Almacén','Corporate'];
 let CAT={admin:false,ubicaciones:[],equipos:[]};
 const locs=()=>CAT.ubicaciones.length?CAT.ubicaciones.map(x=>x.nombre):LOC;
-let D={admin:false,items:[]}, F={loc:'',dev:'',prob:'',since:'now',custom:''}, OPEN=null, HOPEN=null;
+let D={admin:false,items:[]}, F={loc:'',dev:'',prob:'',since:'now',custom:'',fotos:[]}, OPEN=null, HOPEN=null;
 
 function fmtDur(sec){sec=Math.max(0,Math.floor(sec));const d=Math.floor(sec/86400),h=Math.floor(sec%86400/3600),m=Math.floor(sec%3600/60);return d?d+'d '+h+'h':(h?h+'h '+m+'m':m+'m');}
 function fmtDT(iso){return new Intl.DateTimeFormat('en-US',{timeZone:LA,month:'2-digit',day:'2-digit',hour:'numeric',minute:'2-digit'}).format(new Date(iso)).replace(',','');}
@@ -140,10 +141,23 @@ function buildRep(){
    ${F.since==='custom'?`<div style="margin-top:8px"><input type="datetime-local" id="r-cu" value="${F.custom}" onchange="F.custom=this.value" aria-label="Start time (LA) / Hora de inicio (LA)"></div>`:''}
    <div class="step">5. ${esc(tr('Details (optional) / Detalles (opcional)'))}</div>
    <textarea id="r-det" maxlength="500"></textarea>
+   <div class="step">6. ${esc(tr('Photos (optional, up to 3) / Fotos (opcional, hasta 3)'))}</div>
+   <div class="ph" id="r-ph">${F.fotos.map((x,i)=>`<div class="th"><span>${esc(tr('Photo / Foto'))} ${i+1}</span><button type="button" aria-label="${esc(tr('Remove photo / Quitar foto'))}" onclick="rmPh(${i})">×</button></div>`).join('')}</div>
+   ${F.fotos.length<3?`<div style="margin-top:8px"><input type="file" id="r-file" accept="image/*" multiple onchange="addPh(this)" aria-label="${esc(tr('Add photos / Agregar fotos'))}"></div>`:''}
    <div class="err hide" id="r-err" role="alert"></div>
    <div class="acts"><button class="btn" id="r-go" onclick="sendTk()">${esc(tr('Send to IT / Enviar a TI'))}</button></div>`;
 }
 const eqFor=()=>CAT.equipos.filter(x=>(!x.ubicacion||x.ubicacion.toLowerCase()===String(F.loc).toLowerCase())&&(!F.dev||x.dispositivo===F.dev)&&F.dev);
+async function addPh(inp){
+  const files=[...inp.files].slice(0,3-F.fotos.length); inp.value=''; if(!files.length)return;
+  const b=$('r-go'); b.disabled=true; rerr(tr('Uploading photo… / Subiendo foto…'),true);
+  try{
+    for(const f of files){const id=await DH.files.upload('ticket',f);F.fotos.push({id:id,name:f.name});}
+    const et=$('r-et')?$('r-et').value:'',dt=$('r-det').value; buildRep(); if($('r-et'))$('r-et').value=et; $('r-det').value=dt; rerr('');
+  }catch(e){b.disabled=false;rerr(String(e&&e.message||tr('Could not upload the photo. / No se pudo subir la foto.')));return;}
+  $('r-go').disabled=false;
+}
+function rmPh(i){const et=$('r-et')?$('r-et').value:'',dt=$('r-det').value;F.fotos.splice(i,1);buildRep();if($('r-et'))$('r-et').value=et;$('r-det').value=dt;}
 function eqSel(){F.eq=$('r-eq').value;$('r-etw').classList.toggle('hide',F.eq!=='__o');}
 function pick(k,v){const et=$('r-et')?$('r-et').value:'',dt=$('r-det')?$('r-det').value:'';F[k]=v;if(k==='dev')F.eq='';buildRep();$('r-et').value=et;$('r-det').value=dt;}
 function rerr(t,ok){const e=$('r-err');e.textContent=t;e.className='err'+(ok?' okm':'')+(t?'':' hide');}
@@ -152,8 +166,8 @@ async function sendTk(){
   const ini=sinceIso(); if(!ini){rerr(tr('Pick when it started. / Elige cuándo empezó.'));return;}
   const b=$('r-go'); b.disabled=true; rerr('');
   try{
-    const r=await DH.rpc('ticket_crear',{p_datos:{ubicacion:F.loc,dispositivo:F.dev,etiqueta:($('r-eq')&&F.eq&&F.eq!=='__o')?F.eq:$('r-et').value,problema:F.prob,detalle:$('r-det').value,inicio:ini}});
-    if(r&&r.ok){F.dev='';F.eq='';F.prob='';F.since='now';F.custom='';await load();rerr(tr('Sent. IT has been notified. / Enviado. TI ya recibió el aviso.')+' #'+r.numero,true);return;}
+    const r=await DH.rpc('ticket_crear',{p_datos:{ubicacion:F.loc,dispositivo:F.dev,etiqueta:($('r-eq')&&F.eq&&F.eq!=='__o')?F.eq:$('r-et').value,problema:F.prob,detalle:$('r-det').value,inicio:ini,fotos:F.fotos.map(x=>x.id)}});
+    if(r&&r.ok){F.dev='';F.eq='';F.prob='';F.fotos=[];F.since='now';F.custom='';await load();rerr(tr('Sent. IT has been notified. / Enviado. TI ya recibió el aviso.')+' #'+r.numero,true);return;}
     rerr(tr(r&&r.error==='limit'?'You reached today\'s limit of 20 tickets. / Llegaste al límite de 20 tickets de hoy.':'Check the start time and try again. / Revisa la hora de inicio e intenta de nuevo.'));
   }catch(e){rerr(tr('Could not send. Check your connection. / No se pudo enviar. Revisa tu conexión.'));}
   b.disabled=false;
@@ -170,7 +184,7 @@ function card(t){
   const can=D.admin||D.csv||t.mio;
   return `<div class="tk ${t.estado}"${can?` onclick="openTk('${t.id}')"`:' style="cursor:default"'}><div class="t1"><b>#${t.numero} ${d[0]} ${esc(tr(d[1]))}${t.etiqueta?' · '+esc(t.etiqueta):''}</b><span><span class="pill p-${t.estado}">${esc(tr(EST[t.estado]))}</span>${priPill(t)}</span></div>
    <div class="t2" data-no-i18n>${esc(t.ubicacion)} · ${esc(tr(PROB[t.problema]))}${t.reporta?' · '+esc(t.reporta):''}${t.detalle?' — '+esc(t.detalle):''}</div>
-   <div class="t3"><span class="dur">⏱ ${esc(fmtDur(dur))} ${esc(tr(live?'down so far / caído hasta ahora':'of downtime / de caída'))}</span><span style="font-size:12px;color:var(--gray)">${esc(tr('Since / Desde'))} ${esc(fmtDT(t.inicio))}</span>${dueTx(t)}${t.reabierto?`<span class="pill p-abierto">${esc(tr('Reopened / Reabierto'))} ×${t.reabierto}</span>`:''}</div>
+   <div class="t3"><span class="dur">⏱ ${esc(fmtDur(dur))} ${esc(tr(live?'down so far / caído hasta ahora':'of downtime / de caída'))}</span><span style="font-size:12px;color:var(--gray)">${esc(tr('Since / Desde'))} ${esc(fmtDT(t.inicio))}</span>${dueTx(t)}${t.fotos?`<span class="small" style="margin:0">📷 ${t.fotos}</span>`:''}${t.reabierto?`<span class="pill p-abierto">${esc(tr('Reopened / Reabierto'))} ×${t.reabierto}</span>`:''}</div>
    ${t.estado==='resuelto'&&t.mio?`<div class="acts" onclick="event.stopPropagation()"><button class="btn ok sm" onclick="act('${t.id}','confirmar')">✓ ${esc(tr("It's fixed / Ya funciona"))}</button><button class="btn warn sm" onclick="askNote('${t.id}','reabrir')">✗ ${esc(tr('Still not working / Sigue sin funcionar'))}</button></div>`:''}
    ${D.admin&&(t.estado==='abierto'||t.estado==='en_proceso')?`<div class="acts" onclick="event.stopPropagation()"><button class="btn alt sm" onclick="planM('${t.id}')">${esc(tr('Priority & ETA / Prioridad y tiempo'))}</button>${t.estado==='abierto'?`<button class="btn alt sm" onclick="act('${t.id}','en_proceso')">${esc(tr('Working on it / En proceso'))}</button>`:''}<button class="btn ok sm" onclick="askNote('${t.id}','resuelto')">${esc(tr('Mark resolved / Marcar resuelto'))}</button></div>`:''}
   </div>`;
@@ -202,16 +216,24 @@ function askNote(id,a){
 async function openTk(id){
   const t=D.items.find(x=>x.id===id); if(!t)return; OPEN=id;
   let ev=[]; try{ev=await DH.rpc('ticket_detalle',{p_id:id});}catch(e){}
+  let fids=[]; if(t.fotos){try{fids=await DH.rpc('ticket_fotos_ver',{p_id:id});}catch(e){}}
   const d=DEV[t.dispositivo]||DEV.other, live=t.estado==='abierto'||t.estado==='en_proceso';
   const L={creado:'Reported / Reportado',en_proceso:'In progress / En proceso',resuelto:'Marked resolved / Marcado resuelto',confirmado:'Confirmed fixed / Confirmado resuelto',reabierto:'Reopened / Reabierto',nota:'Note / Nota',nota_ti:'🔒 IT note (internal) / Nota de TI (interna)',cerrado_admin:'Closed by IT / Cerrado por TI',planificado:'Priority & ETA set / Prioridad y tiempo definidos',vencido:'Past the promised time / Se pasó el tiempo'};
   $('md').innerHTML=`<h3>#${t.numero} ${d[0]} ${esc(tr(d[1]))}${t.etiqueta?' · '+esc(t.etiqueta):''}</h3>
    <div class="t2" data-no-i18n>${esc(t.ubicacion)} · ${esc(tr(PROB[t.problema]))}${t.reporta?' · '+esc(t.reporta):''}</div>
    <div style="margin-top:6px"><span class="pill p-${t.estado}">${esc(tr(EST[t.estado]))}</span> <span class="dur">⏱ ${esc(fmtDur(live?(Date.now()-new Date(t.inicio).getTime())/1000:t.dur_seg))}</span> <span style="font-size:12px;color:var(--gray)">${esc(tr('Since / Desde'))} ${esc(fmtDT(t.inicio))}</span> ${priPill(t)} ${dueTx(t)}</div>
    ${t.detalle?`<p style="margin-top:8px;font-size:14px" data-no-i18n>${esc(t.detalle)}</p>`:''}
+   ${fids.length?`<div class="ph" id="tk-ph">${fids.map(f=>`<div class="th" data-f="${esc(f)}" onclick="showPh('${esc(f)}','${t.id}')"><span>…</span></div>`).join('')}</div>`:''}
    <div class="tl">${ev.map(e=>`<div><b>${esc(tr(L[e.tipo]||e.tipo))}</b> <span data-no-i18n>${esc(e.quien||'')}</span><small>${esc(fmtDT(e.t))}</small>${e.nota?`<span data-no-i18n>${esc(e.nota)}</span>`:''}</div>`).join('')}</div>
    ${t.estado!=='cerrado'?`<label for="nt">${esc(tr('Add a note / Agregar una nota'))}</label><textarea id="nt" maxlength="300"></textarea><div class="acts"><button class="btn alt sm" onclick="addNote('${t.id}')">${esc(tr('Add note / Agregar nota'))}</button>${D.admin?`<button class="btn alt sm" onclick="addIT('${t.id}')">${esc(tr('Add IT note (internal) / Agregar nota de TI (interna)'))}</button><button class="btn alt sm" onclick="askNote('${t.id}','cerrar')">${esc(tr('Close without confirmation / Cerrar sin confirmación'))}</button>`:''}</div>`:''}
    <div class="acts"><button class="btn alt" onclick="closeM()">${esc(tr('Close / Cerrar'))}</button></div>`;
   $('ov').classList.remove('hide');
+  if(fids.length){try{const u=await DH.files.sign(fids);document.querySelectorAll('#tk-ph .th').forEach(el=>{const x=u[el.dataset.f];if(x&&x.url)el.innerHTML=`<img alt="${esc(tr('Photo / Foto'))}" src="${esc(x.url)}">`;});}catch(e){}}
+}
+async function showPh(fid,tid){
+  try{const u=await DH.files.sign([fid]);const x=u[fid];if(!x||!x.url)return;
+    $('md').innerHTML=`<div class="lb"><img alt="${esc(tr('Photo / Foto'))}" src="${esc(x.url)}"></div><div class="acts"><button class="btn alt" onclick="openTk('${tid}')">${esc(tr('Back / Volver'))}</button></div>`;
+  }catch(e){}
 }
 function planM(id){
   const t=D.items.find(x=>x.id===id); if(!t)return;
