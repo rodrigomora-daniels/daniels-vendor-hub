@@ -102,7 +102,7 @@
   #push-dlg .msg{margin-top:10px;font-size:13px;color:#C0392B}
   .my-day{font:700 22px Georgia,'Times New Roman',serif;color:#1B3A6B;margin:0 0 12px}
   #hero2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-bottom:16px;align-items:stretch}
-  #hero2 #goal-card{margin-bottom:0}
+  #hero2 #goal-card,#hero2 #season-card{margin-bottom:0}
   #hero2-r{display:flex;flex-direction:column;gap:16px;min-width:0}
   #hero2-r #me-card{flex:1}
   #dome-card{background:#fff;border-radius:6px;border-left:6px solid #C8922A;padding:14px 18px;box-shadow:0 14px 34px -26px rgba(18,40,74,.7);min-width:0}
@@ -160,6 +160,13 @@
   #goal-card.hide{display:none}
   #season-card{background:#12284A;color:#fff;border-radius:6px;border-left:6px solid #F2C14E;padding:16px 18px;margin-bottom:16px;box-shadow:0 14px 34px -26px rgba(18,40,74,.9)}
   #season-card.hide{display:none}
+  #season-card .gcd{background:rgba(255,255,255,.08);border-radius:8px;padding:12px 14px 14px;margin:10px 0 0}
+  #season-card .gct{font:700 13px 'Segoe UI',Arial,sans-serif;color:#F2C14E;margin-bottom:8px}
+  #season-card .gcg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;max-width:420px}
+  #season-card .gcg div{background:rgba(255,255,255,.1);border-radius:8px;text-align:center;padding:8px 4px}
+  #season-card .gcg b{display:block;font:700 34px/1.05 Georgia,'Times New Roman',serif;font-variant-numeric:tabular-nums;color:#fff}
+  #season-card .gcg span{font:700 11px 'Segoe UI',Arial,sans-serif;color:#9fb6d6}
+  @media(max-width:480px){#season-card .gcg b{font-size:28px}}
   #season-card .sh{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   #season-card .sh h3{font:700 19px Georgia,serif;margin:0;color:#fff;flex:1;min-width:200px}
   #season-card .sh small{font:13px 'Segoe UI',Arial,sans-serif;color:#C9D6EA}
@@ -668,11 +675,11 @@ document.addEventListener('DOMContentLoaded',function(){
       </div>
       <h2 class="my-day">My day / Mi día</h2>
       <div id="hero2">
+      <section id="season-card" class="hide" data-no-i18n aria-label="Black Friday season"></section>
       <section id="goal-card" class="hide" data-no-i18n aria-label="Sales vs goal"></section>
       <div id="hero2-r"><section id="dome-card" class="hide" data-no-i18n aria-label="My sales today"></section>
       <section id="me-card" class="hide" data-no-i18n aria-label="My panel"></section></div>
       </div>
-      <section id="season-card" class="hide" data-no-i18n aria-label="Black Friday season"></section>
       <div id="briefing">
       <section id="alerts-card" class="hide" aria-label="Priority updates">
         <div id="ac-alarms" class="hide"></div>
@@ -1803,6 +1810,7 @@ async function loadGoalCard(){
         +'<div class="gn"><span><b>'+$(v)+'</b> / '+$(mv)+' · '+Math.round(pv)+'%</span><span>'+T('Services ','Servicios ')+'<b>'+pen.toFixed(1)+'%</b> '+T('vs goal','vs meta')+' '+penM.toFixed(1)+'%</span><span class="gs" style="color:'+col+'">'+st+'</span></div>'
         +'<div class="gsg">'+r.tiendas.map(sp).join('')+'</div>';
     }
+    var _sc=document.getElementById('season-card'); if(_sc&&!_sc.classList.contains('hide')){el.classList.add('hide');return}
     el.classList.remove('hide'); startGoalClock();
   }catch(e){el.classList.add('hide')}
 }
@@ -1825,6 +1833,11 @@ async function loadSeasonCard(){
     var dayIdx=Math.round((new Date(r.hoy+'T12:00:00Z')-new Date(r.inicio+'T12:00:00Z'))/864e5);
     var chip=!r.empezo?(daysTo===1?T('Starts tomorrow','Empieza mañana'):T('Starts in '+daysTo+' days','Empieza en '+daysTo+' días')):(dayIdx>=0&&dayIdx<=4?T('Day '+(dayIdx+1)+' of 5','Día '+(dayIdx+1)+' de 5'):'');
     var h='<div class="sh"><h3>🛍️ '+T('Black Friday season','Temporada Black Friday')+'</h3>'+(chip?'<span class="sc">'+chip+'</span>':'')+'<small>'+LB[0]+' → '+LB[4]+' · '+fd(r.inicio)+'–'+fd(r.fin)+'</small></div>';
+    var cdb='';
+    if(!r.empezo){var gt=laMidnight(r.inicio);
+      cdb='<div class="gcd" data-t="'+gt+'" role="timer" aria-live="off"><div class="gct">'+T('Season starts in','La temporada arranca en')+' · '+LB[0]+'</div><div class="gcg">'
+        +['d','h','m','s'].map(function(u){return '<div><b data-u="'+u+'">0</b><span>'+({d:T('days','días'),h:T('hours','horas'),m:T('min','min'),s:T('sec','seg')})[u]+'</span></div>'}).join('')+'</div></div>';}
+    h+=cdb;
     var barH=function(p,mark,sm){return '<div class="sb'+(sm?' sm':'')+'"><i style="width:'+Math.max(0,Math.min(100,p)).toFixed(1)+'%"></i>'+(mark!=null?'<b style="left:'+Math.min(100,mark).toFixed(1)+'%"></b>':'')+'</div>'};
     var st='';
     if(r.empezo){st=diff>=5?'<span class="ss" style="color:#7BE0A0">▲ '+T('Ahead of pace','Adelante del ritmo')+'</span>':diff<=-5?'<span class="ss" style="color:#FF9C8F">▼ '+T('Behind pace','Detrás del ritmo')+'</span>':'<span class="ss">● '+T('On pace','En ritmo')+'</span>'}
@@ -1858,7 +1871,19 @@ async function loadSeasonCard(){
     var _op=[].map.call(el.querySelectorAll('details'),function(x){return x.open});
     el.innerHTML=h; el.classList.remove('hide'); el.dataset.k=_k;
     [].forEach.call(el.querySelectorAll('details'),function(x,i){if(_op[i])x.open=true});
+    var gc=document.getElementById('goal-card'); if(gc)gc.classList.add('hide');
+    startSeasonClock();
   }catch(e){el.classList.add('hide')}
+}
+var _seasonClock=null;
+function startSeasonClock(){
+  if(_seasonClock){clearInterval(_seasonClock);_seasonClock=null}
+  var box=document.querySelector('#season-card .gcd'); if(!box)return;
+  var t=+box.getAttribute('data-t');
+  function tick(){var ms=Math.max(0,t-Date.now()),s=Math.floor(ms/1000),v={d:Math.floor(s/86400),h:Math.floor(s%86400/3600),m:Math.floor(s%3600/60),s:s%60};
+    for(var u in v){var n=box.querySelector('[data-u="'+u+'"]');if(n){var x=u==='d'?String(v[u]):String(v[u]).padStart(2,'0');if(n.textContent!==x)n.textContent=x}}
+    if(ms===0){clearInterval(_seasonClock);_seasonClock=null;var e=document.getElementById('season-card');if(e)e.dataset.k='';loadSeasonCard()}}
+  tick(); _seasonClock=setInterval(tick,1000);
 }
 async function loadNewsHero(){
   try{
