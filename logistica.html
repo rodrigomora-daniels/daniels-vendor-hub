@@ -48,6 +48,7 @@
   .pod h4{margin:0;padding:9px 12px;font:700 14px 'Segoe UI',Arial,sans-serif;color:var(--navy);background:#F4F6FA;position:sticky;top:0;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   .pod h4 small{font-weight:600;color:var(--gray)}
   .pod table{font-size:13px}.pod td,.pod th{padding:6px 10px}.pod th{position:static}
+  .pod h4.rh{background:#EAF4EA;color:#2E5E2E}
   .pod .n{text-align:right;white-space:nowrap}.pod .kt{font-size:11px;font-weight:700;color:#8a5a00;background:#fff1d6;border-radius:4px;padding:1px 5px;margin-left:6px}
   .pod .nd{padding:10px 12px;font-size:13px;color:#5B6B82}
   .empty{color:var(--gray);padding:22px 14px;font-size:14px}
@@ -376,6 +377,17 @@ function podHtml(r){
     <table><thead><tr><th>SKU</th><th>${esc(tr('Description / Descripción'))}</th><th class="n">${esc(tr('Ordered / Pedido'))}</th><th class="n">${esc(tr('Received / Recibido'))}</th><th class="n">${esc(tr('Pending / Pendiente'))}</th></tr></thead><tbody>`
      +p.lineas.map(l=>`<tr><td data-no-i18n>${esc(l.sku||'')}</td><td data-no-i18n>${l.kit==='E'?'↳ ':''}${esc(l.desc||'')}${l.kit==='K'?'<span class="kt">KIT</span>':''}</td><td class="n">${l.ord}</td><td class="n">${l.rec}</td><td class="n">${p.cerrada?0:l.pend}</td></tr>`).join('')+'</tbody></table>';
   });
+  const rb={};(r.recibidos||[]).forEach(x=>{rb[x.po]=x;});
+  const rcT=x=>`<table class="rcv"><thead><tr><th>${esc(tr('Receipt / Recibo'))}</th><th>${esc(tr('Date / Fecha'))}</th><th>SKU</th><th>${esc(tr('Description / Descripción'))}</th><th class="n">${esc(tr('Qty / Cant.'))}</th><th>Bin</th></tr></thead><tbody>`
+    +x.recibos.map(l=>`<tr><td data-no-i18n>${esc(l.recibo||'')}</td><td>${l.fecha?esc(f(l.fecha)):''}</td><td data-no-i18n>${esc(l.sku||'')}</td><td data-no-i18n>${esc(l.desc||'')}</td><td class="n">${l.qty}</td><td data-no-i18n>${esc(l.bins||'')}</td></tr>`).join('')+'</tbody></table>';
+  const shown={};(r.pos||[]).forEach(p=>{shown[p.po]=1;});
+  // PO blocks above get their receipt table appended; POs only in the received report get their own block
+  if(Object.keys(rb).length){
+    let h2='';
+    (r.pos||[]).forEach(p=>{ if(rb[p.po]){ h2+=`<h4 class="rh">${esc(tr('Already received on PO / Ya recibido de la PO'))} ${esc(p.po)}</h4>`+rcT(rb[p.po]); } });
+    Object.keys(rb).filter(k=>!shown[k]).forEach(k=>{ h2+=`<h4>PO ${esc(k)} <span>${esc(rb[k].vendor||'')}</span><small>${esc(tr('Received / Recibida'))}</small></h4>`+rcT(rb[k]); });
+    h+=h2;
+  }
   if((r.faltan||[]).length)h+=`<div class="nd">${esc(tr('No detail yet for PO / Aún sin detalle de la PO'))}: ${esc(r.faltan.join(', '))}. ${esc(tr('The open PO report updates daily. / El reporte de POs abiertas se actualiza a diario.'))}</div>`;
   return h;
 }
