@@ -132,7 +132,7 @@ function draw(){
      <div class="sub">${esc(T('Services','Servicios'))} ${$$(t.s)} / ${$$(t.meta_s)} · ${esc(T('penetration','penetración'))} ${(t.v>0?t.s/t.v*100:0).toFixed(1)}% ${esc(T('vs goal','vs meta'))} ${(t.meta_v>0?t.meta_s/t.meta_v*100:0).toFixed(1)}%</div></div>`).join('')}
     <div class="note">${esc(T('The dark tick marks where each store should be by this hour. The pace curve is a default assumption for now.','La marca oscura indica dónde debería ir cada tienda a esta hora. La curva de ritmo es un supuesto por ahora.'))}</div></div>
    <div class="card"><h2>${esc(T('Sales through the day','Ventas durante el día'))}</h2>${chart(L,S)}</div>`;
-  if(ISADM)$('imp').classList.remove('hide')
+  if(ISSUP)$('imp').classList.remove('hide')
 }
 function chart(L,S){
   const W=640,H=230,pl=52,pr=12,pt=14,pb=28, hrs=[]; for(let h=10;h<=20;h++)hrs.push(h);
