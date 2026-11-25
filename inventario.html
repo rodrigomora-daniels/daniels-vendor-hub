@@ -117,12 +117,13 @@ $('f').addEventListener('change',async e=>{
 });
 $('go').addEventListener('click',async()=>{
   if(!ROWS)return;$('go').disabled=true;$('bar').classList.remove('hide');$('msg').className='';
-  const lote=Date.now().toString(36),N=KIND==='oh'?1000:500;
-  try{for(let i=0;i<ROWS.length;i+=N){const fin=i+N>=ROWS.length;
-      const r=KIND==='oh'?await DH.rpc('inventario_importar_oh',{p_lote:lote,p_filas:ROWS.slice(i,i+N),p_final:fin,p_fecha:FECHA}):await DH.rpc('inventario_importar',{p_lote:lote,p_filas:ROWS.slice(i,i+N),p_final:fin,p_fecha:FECHA,p_desde:DESDE,p_hasta:HASTA});
-      if(!r||!r.ok)throw new Error('x');$('bi').style.width=Math.min(100,Math.round((i+N)/ROWS.length*100))+'%';}
+  const lote=Date.now().toString(36),N=KIND==='oh'?200:500;
+  const send=async(rows,fin)=>{for(let t=0;t<3;t++){try{const r=KIND==='oh'?await DH.rpc('inventario_importar_oh',{p_lote:lote,p_filas:rows,p_final:fin,p_fecha:FECHA}):await DH.rpc('inventario_importar',{p_lote:lote,p_filas:rows,p_final:fin,p_fecha:FECHA,p_desde:DESDE,p_hasta:HASTA});if(r&&r.ok)return r;if(r&&r.error)throw new Error(String(r.error));}catch(e){if(t===2)throw e;await new Promise(z=>setTimeout(z,800*(t+1)));}}throw new Error('x');};
+  try{for(let i=0;i<ROWS.length;i+=N){const fin=KIND!=='oh'&&i+N>=ROWS.length;
+      await send(ROWS.slice(i,i+N),fin);$('bi').style.width=Math.min(99,Math.round((i+N)/ROWS.length*100))+'%';}
+    if(KIND==='oh')await send([],true);$('bi').style.width='100%';
     $('msg').className='ok';$('msg').textContent=tr('Done. Inventory updated. / Listo. Inventario actualizado.');cur();}
-  catch(e){$('msg').className='err';$('msg').textContent=tr('The upload did not finish. Please try again. / La carga no terminó. Intenta de nuevo.');$('go').disabled=false;}
+  catch(e){$('msg').className='err';$('msg').textContent=tr('The upload did not finish. Please try again. / La carga no terminó. Intenta de nuevo.')+' ('+String(e&&e.message||e).slice(0,120)+')';$('go').disabled=false;}
 });
 init();
 </script>
