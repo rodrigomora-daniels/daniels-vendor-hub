@@ -158,6 +158,31 @@
   #me-card .mbd select,#me-card .mbd button{min-height:40px;border-radius:8px;border:1px solid #c5ccd8;font:14px 'Segoe UI',Arial,sans-serif;padding:0 10px;background:#fff}
   #goal-card{background:#fff;border-radius:6px;border-left:6px solid #C8922A;padding:14px 18px;box-shadow:0 14px 34px -26px rgba(18,40,74,.7);margin-bottom:16px}
   #goal-card.hide{display:none}
+  #season-card{background:#12284A;color:#fff;border-radius:6px;border-left:6px solid #F2C14E;padding:16px 18px;margin-bottom:16px;box-shadow:0 14px 34px -26px rgba(18,40,74,.9)}
+  #season-card.hide{display:none}
+  #season-card .sh{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  #season-card .sh h3{font:700 19px Georgia,serif;margin:0;color:#fff;flex:1;min-width:200px}
+  #season-card .sh small{font:13px 'Segoe UI',Arial,sans-serif;color:#C9D6EA}
+  #season-card .sc{background:#F2C14E;color:#12284A;border-radius:10px;padding:2px 10px;font:700 12px 'Segoe UI',Arial,sans-serif}
+  #season-card .sb{position:relative;background:rgba(255,255,255,.18);border-radius:8px;height:22px;overflow:hidden;margin-top:10px}
+  #season-card .sb i{display:block;height:100%;background:#F2C14E;border-radius:8px}
+  #season-card .sb b{position:absolute;top:-2px;bottom:-2px;width:3px;background:#fff}
+  #season-card .sb.sm{height:12px;border-radius:6px;margin-top:4px}
+  #season-card .sn{display:flex;gap:16px;flex-wrap:wrap;font:14px 'Segoe UI',Arial,sans-serif;margin-top:8px;color:#E6EDF8}
+  #season-card .sn b{font:700 20px Georgia,serif;color:#fff}
+  #season-card .ss{font:700 14px 'Segoe UI',Arial,sans-serif}
+  #season-card .sd{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:12px}
+  #season-card .sd>div{background:rgba(255,255,255,.08);border-radius:8px;padding:6px 6px 8px;min-width:0;text-align:center;font:12px 'Segoe UI',Arial,sans-serif;color:#C9D6EA}
+  #season-card .sd>div.t{background:rgba(242,193,78,.22);outline:2px solid #F2C14E}
+  #season-card .sd>div b{display:block;font:700 13px 'Segoe UI',Arial,sans-serif;color:#fff;margin-top:2px}
+  #season-card details{background:rgba(255,255,255,.07);border-radius:8px;margin-top:8px;padding:2px 12px 10px}
+  #season-card summary{display:block;min-height:44px;cursor:pointer;padding-top:8px;list-style:none}
+  #season-card summary::-webkit-details-marker{display:none}
+  #season-card .sl{display:flex;justify-content:space-between;gap:8px;font:14px 'Segoe UI',Arial,sans-serif;margin-top:8px;color:#fff}
+  #season-card .sl small{color:#C9D6EA}
+  #season-card .sx{font:12px/1.4 'Segoe UI',Arial,sans-serif;color:#C9D6EA;margin-top:10px}
+  #season-card summary:focus-visible{outline:3px solid #F2C14E;outline-offset:2px}
+  @media (max-width:520px){#season-card .sd{gap:4px}#season-card .sd>div{padding:5px 2px 6px;font-size:11px}#season-card .sd>div b{font-size:12px}}
   #goal-card .gh{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
   #goal-card .gh h3{font:700 17px Georgia,serif;color:#1B3A6B;margin:0}
   #goal-card .gh a{margin-left:auto;color:#1B3A6B;font:700 13px 'Segoe UI',Arial,sans-serif;text-decoration:none;min-height:40px;display:inline-flex;align-items:center}
@@ -647,6 +672,7 @@ document.addEventListener('DOMContentLoaded',function(){
       <div id="hero2-r"><section id="dome-card" class="hide" data-no-i18n aria-label="My sales today"></section>
       <section id="me-card" class="hide" data-no-i18n aria-label="My panel"></section></div>
       </div>
+      <section id="season-card" class="hide" data-no-i18n aria-label="Black Friday season"></section>
       <div id="briefing">
       <section id="alerts-card" class="hide" aria-label="Priority updates">
         <div id="ac-alarms" class="hide"></div>
@@ -1230,7 +1256,7 @@ function handleLogout() {
    DASHBOARD
    ════════════════════════════════════════════════════════════ */
 async function loadDashboard() {
-  loadAlertsCard(); loadGoalCard(); loadMeCard(); loadDomeCard(); initPushCard(); loadNewsHero(); loadPromoStrip(); loadMsgBadge(); loadNotesToday();
+  loadAlertsCard(); loadGoalCard(); loadMeCard(); loadDomeCard(); loadSeasonCard(); initPushCard(); loadNewsHero(); loadPromoStrip(); loadMsgBadge(); loadNotesToday();
   const emp = session.empleado;
 
   // If this employee has a temporary password, force the change screen first
@@ -1780,6 +1806,60 @@ async function loadGoalCard(){
     el.classList.remove('hide'); startGoalClock();
   }catch(e){el.classList.add('hide')}
 }
+async function loadSeasonCard(){
+  var el=document.getElementById('season-card'); if(!el)return;
+  try{
+    var r=await DH.rpc('ventas_temporada');
+    if(!r||r.error||!r.activa||!r.tiendas||!r.tiendas.length){el.classList.add('hide');return}
+    var es=(localStorage.getItem('dh_lang')==='es'), T=function(a,b){return es?b:a};
+    var _k=[r.corrida,r.hoy,es,r.tiendas.map(function(t){return t.v}).join(',')].join('|');
+    if(el.dataset.k===_k&&el.innerHTML&&!el.classList.contains('hide'))return;
+    var $=function(n){return (n<0?'-':'')+'$'+Math.abs(Math.round(n||0)).toLocaleString('en-US')};
+    var LB=es?['Acción de Gracias','Black Friday','Sábado','Domingo','Cyber Monday']:['Thanksgiving','Black Friday','Saturday','Sunday','Cyber Monday'];
+    var SH=es?['Jue','Vie','Sáb','Dom','Lun']:['Thu','Fri','Sat','Sun','Mon'];
+    var fd=function(x){var q=new Date(x+'T12:00:00Z');return (q.getUTCMonth()+1)+'/'+q.getUTCDate()};
+    var daysTo=Math.round((new Date(r.inicio+'T12:00:00Z')-new Date(r.hoy+'T12:00:00Z'))/864e5);
+    var inc=r.tiendas.filter(function(t){return !t.sin_filas});
+    var M=0,V=0,E=0; inc.forEach(function(t){M+=+t.meta;V+=+t.v;E+=+t.esperado});
+    var pct=M>0?V/M*100:0, pace=M>0?E/M*100:0, diff=pct-pace;
+    var dayIdx=Math.round((new Date(r.hoy+'T12:00:00Z')-new Date(r.inicio+'T12:00:00Z'))/864e5);
+    var chip=!r.empezo?(daysTo===1?T('Starts tomorrow','Empieza mañana'):T('Starts in '+daysTo+' days','Empieza en '+daysTo+' días')):(dayIdx>=0&&dayIdx<=4?T('Day '+(dayIdx+1)+' of 5','Día '+(dayIdx+1)+' de 5'):'');
+    var h='<div class="sh"><h3>🛍️ '+T('Black Friday season','Temporada Black Friday')+'</h3>'+(chip?'<span class="sc">'+chip+'</span>':'')+'<small>'+LB[0]+' → '+LB[4]+' · '+fd(r.inicio)+'–'+fd(r.fin)+'</small></div>';
+    var barH=function(p,mark,sm){return '<div class="sb'+(sm?' sm':'')+'"><i style="width:'+Math.max(0,Math.min(100,p)).toFixed(1)+'%"></i>'+(mark!=null?'<b style="left:'+Math.min(100,mark).toFixed(1)+'%"></b>':'')+'</div>'};
+    var st='';
+    if(r.empezo){st=diff>=5?'<span class="ss" style="color:#7BE0A0">▲ '+T('Ahead of pace','Adelante del ritmo')+'</span>':diff<=-5?'<span class="ss" style="color:#FF9C8F">▼ '+T('Behind pace','Detrás del ritmo')+'</span>':'<span class="ss">● '+T('On pace','En ritmo')+'</span>'}
+    h+=barH(pct,r.empezo&&r.ritmo>0?pace:null)
+      +'<div class="sn"><span><b>'+$(V)+'</b> / '+$(M)+' · '+Math.round(pct)+'%</span>'+(r.empezo?'<span>'+T('Expected by now ','Esperado a esta hora ')+'<b style="font-size:16px">'+$(E)+'</b></span>':'<span>'+T('Season goal to beat','Meta de temporada a superar')+'</span>')+st+'</div>';
+    // days strip
+    var d0=inc.length?inc[0].dias:r.tiendas[0].dias;
+    h+='<div class="sd">'+d0.map(function(d,i){
+      var dm=0,dv=0; inc.forEach(function(t){dm+=+t.dias[i].meta||0;dv+=+t.dias[i].v||0});
+      var fut=d.f>r.hoy, cur=d.f===r.hoy;
+      return '<div'+(cur?' class="t"':'')+'>'+SH[i]+' '+fd(d.f)+'<b>'+(fut||!r.empezo?$(dm):$(dv))+'</b>'+(fut||!r.empezo?'<span>'+T('goal','meta')+'</span>':'<span>'+T('of ','de ')+$(dm)+'</span>')+'</div>'}).join('')+'</div>';
+    // stores
+    h+='<div class="sx" style="margin-top:12px">'+T('Tap a store to see each day and its sellers.','Toca una tienda para ver cada día y sus vendedores.')+'</div>';
+    r.tiendas.forEach(function(t){
+      var tp=t.meta>0?t.v/t.meta*100:0, tpc=t.meta>0?t.esperado/t.meta*100:0;
+      h+='<details><summary><span class="sl" style="margin-top:0"><span><b>'+meEsc(t.nombre)+'</b> '+(r.empezo&&!t.sin_filas?$(t.v):'')+'</span><span>'+(t.sin_filas?T('no seller report','sin reporte por vendedor'):$(t.meta)+' '+T('goal','meta'))+'</span></span>'+(t.sin_filas?'':barH(tp,r.empezo&&r.ritmo>0?tpc:null,true))+'</summary>';
+      if(t.sin_filas){h+='<div class="sx">'+T('This store is not in the hourly Sales by Salesperson report, so it is left out of the season total.','Esta tienda no viene en el reporte por hora de ventas por vendedor, por eso no entra en el total de la temporada.')+'</div>'}
+      else{
+        h+=t.dias.map(function(d,i){var fut=d.f>r.hoy||!r.empezo; return '<div class="sl"><span>'+LB[i]+' <small>'+fd(d.f)+'</small></span><span>'+(fut?'<small>'+T('goal','meta')+'</small> '+$(d.meta):'<b>'+$(d.v)+'</b> / '+$(d.meta))+'</span></div>'}).join('');
+        if(t.t==='EC'){h+='<div class="sx">'+T('Online sales (José Padrón, Victoria Sagaste). It has a store goal and no seller goals.','Ventas en línea (José Padrón, Victoria Sagaste). Tiene meta de tienda y no tiene metas por vendedor.')+'</div>'}
+        else if(t.vendedores&&t.vendedores.length){
+          var isT=r.ref===r.hoy;
+          h+='<div class="sx" style="margin-top:12px"><b style="color:#fff">'+T('Sellers','Vendedores')+'</b> · '+(isT?T('today','hoy'):T('last day with data ','último día con datos ')+fd(r.ref))+(t.n?' · '+T('goal = store goal for the day ÷ '+t.n+(t.n===1?' seller':' sellers')+', never below the monthly minimum','meta = meta de la tienda del día ÷ '+t.n+(t.n===1?' vendedor':' vendedores')+', nunca debajo del mínimo mensual'):'')+'</div>';
+          h+=t.vendedores.map(function(v){var vp=v.meta_hoy>0?v.hoy/v.meta_hoy*100:0;
+            return '<div class="sl" style="margin-top:10px"><span>'+meEsc(v.n)+' <small>· '+T('season','temporada')+' '+$(v.temp)+'</small></span><span><b>'+$(v.hoy)+'</b> / '+$(v.meta_hoy)+'</span></div>'+barH(vp,isT&&r.ritmo>0?r.ritmo*100:null,true)}).join('');
+        }
+      }
+      h+='</details>';
+    });
+    h+='<div class="sx">'+T('Goal = what each store sold the same day last year (Thanksgiving week 2025), or the number loaded by hand if it is higher. Euclid does not include e-commerce. Same hourly report as My day; this card is only for the season and disappears after Cyber Monday. White mark = expected by this hour.','Meta = lo que vendió cada tienda el mismo día el año pasado (semana de Acción de Gracias 2025), o el número cargado a mano si es mayor. Euclid no incluye e-commerce. Mismo reporte por hora que Mi día; esta tarjeta es solo de la temporada y desaparece después del Cyber Monday. Marca blanca = esperado a esta hora.')+'</div>';
+    var _op=[].map.call(el.querySelectorAll('details'),function(x){return x.open});
+    el.innerHTML=h; el.classList.remove('hide'); el.dataset.k=_k;
+    [].forEach.call(el.querySelectorAll('details'),function(x,i){if(_op[i])x.open=true});
+  }catch(e){el.classList.add('hide')}
+}
 async function loadNewsHero(){
   try{
     var r=await DH.rpc('noticias_listar');
@@ -1835,7 +1915,7 @@ async function amDone(id){AML=AML.filter(function(a){return a.id!==id;});amRende
 async function amSnzDo(id,modo){AML=AML.filter(function(a){return a.id!==id;});AMS=null;amRender();try{await DH.rpc('alarma_posponer',{p_id:id,p_modo:modo});}catch(e){}}
 async function amAll(){AML=[];amRender();try{await DH.rpc('alarma_descartar',{});}catch(e){}}
 async function amPoll(){if(document.hidden||!DH.token())return;try{var r=await DH.rpc('alarmas_mias');if(Array.isArray(r)){AML=r;amRender();}}catch(e){}}
-setInterval(amPoll,90000);setInterval(function(){if(!document.hidden&&window.DH&&DH.token&&DH.token())loadDomeCard()},60000);document.addEventListener('visibilitychange',function(){if(!document.hidden&&window.DH&&DH.token&&DH.token())loadDomeCard()});document.addEventListener('visibilitychange',function(){if(!document.hidden)amPoll();});
+setInterval(amPoll,90000);setInterval(function(){if(!document.hidden&&window.DH&&DH.token&&DH.token()){loadDomeCard();loadSeasonCard()}},60000);document.addEventListener('visibilitychange',function(){if(!document.hidden&&window.DH&&DH.token&&DH.token()){loadDomeCard();loadSeasonCard()}});document.addEventListener('visibilitychange',function(){if(!document.hidden)amPoll();});
 async function loadAlertsCard(){
   var card=document.getElementById('alerts-card'), br=document.getElementById('briefing');
   var al=null, sc=null;
