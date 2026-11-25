@@ -327,6 +327,20 @@
       var r = await withTimeout((async function () { var W = await getOcr(); return W.recognize(await prepImage(file)); })(), 60000);
       var tag = parseTag(r && r.data && r.data.text);
       w.remove();
+      var nearNote = '', fmt = function (x) { return String(x).replace(/^(\d{3})(\d{6})$/, '$1-$2'); };
+      if (tag.sku || tag.model) {   // a camera often misreads one digit (6 as 0): check the SKU exists, else use the closest SKU that matches the model
+        try {
+          var pr = await withTimeout(DH.rpc('inventario_parecidos', { p_sku: tag.sku || '', p_model: tag.model || '' }), 6000), cands = (pr && pr.items) || [];
+          if (!cands.some(function (c) { return c.sku === tag.sku; })) {
+            var d1 = cands.filter(function (c) { return c.dist === 1; }), mo = cands.filter(function (c) { return c.modelo_ok; });
+            var best = cands.filter(function (c) { return c.modelo_ok && c.dist <= 2; })[0] || (d1.length === 1 ? d1[0] : null) || (!tag.sku && mo.length === 1 ? mo[0] : null);
+            if (best) {
+              nearNote = '<b style="color:#B3402F">' + esc(tag.sku ? t('I read ' + fmt(tag.sku) + ', which is not in inventory. Closest match: ', 'Leí ' + fmt(tag.sku) + ', que no está en inventario. La más parecida: ') : t('I could not read the SKU. Found by model: ', 'No pude leer el SKU. Encontré por modelo: ')) + fmt(best.sku) + (best.modelo ? ' · ' + best.modelo : '') + '.</b> ' + esc(t('Check it against the tag.', 'Compárala con la etiqueta.'));
+              tag.sku = best.sku;
+            }
+          }
+        } catch (e) {}
+      }
       q = tag.sku || tag.model;
       if (!q) { setFace('error', 2500); addSal(esc(t('I could not read the tag. Take the photo closer, without glare, with the whole tag in the frame, or type the SKU.', 'No pude leer la etiqueta. Toma la foto más cerca, sin reflejos y con toda la etiqueta en el cuadro, o escribe el SKU.')), 'error'); }
       else if (tag.prices.length) {
@@ -340,6 +354,7 @@
           }
         } catch (e) {}
       }
+      if (nearNote) scanNote = nearNote + (scanNote ? '<br>' + scanNote : '');
     } catch (e) {
       w.remove(); setFace('error', 2500);
       addSal(esc(t('I could not read the photo right now. Type the SKU instead.', 'No pude leer la foto ahora. Escribe el SKU.')), 'error');
@@ -405,6 +420,15 @@
       if (early && !(r.web && r.web.length)) { setBubble(wait, html, 'success'); bindResult(wait, r); }   // nothing more from the website: drop the "loading" line
       else if (!html) {
         setBubble(wait, '<b>' + esc(r.saleMode ? t('I could not find that promotion', 'No encontré esa promoción') : t('I found nothing about “', 'No encontré nada sobre “') + q + '”') + '</b><p>' + esc(r.saleMode ? t('It is not in the text of the published flyers and wraps, the promotions channel, or the product lists. Flyers that are only pictures may not be readable yet. Open Promotions to look at the flyers, or ask Marketing.', 'No aparece en el texto de los flyers y wraps publicados, en el canal de promociones ni en las listas de productos. Los flyers que son solo imagen pueden no ser legibles todavía. Abre Promociones para ver los flyers, o pregunta a Marketing.') : t('Nothing in the library, channels, promotions or news that you can access. That does not prove it does not exist: try other words (for example the product name, a policy name or the SKU), or ask your manager.', 'Nada en la biblioteca, canales, promociones ni novedades a los que tienes acceso. Eso no prueba que no exista: prueba con otras palabras (por ejemplo el nombre del producto, de la política o el SKU), o pregunta a tu gerente.')) + '</p>' + (r.saleMode ? '<div class="sal-act"><a class="sal-btn pri" href="promociones.html">' + esc(t('Open Promotions', 'Abrir Promociones')) + '</a></div>' : ''), 'thinking');
+        if (!r.saleMode && /^\d{3}-?\d{6}$/.test(q.replace(/\s/g, ''))) {   // typed SKU with one wrong digit: offer the closest one
+          try {
+            var pr2 = await withTimeout(DH.rpc('inventario_parecidos', { p_sku: q, p_model: '' }), 6000), nr = ((pr2 && pr2.items) || []).filter(function (x) { return x.dist === 1; });
+            if (nr.length === 1) {
+              var nb = document.createElement('div'); nb.innerHTML = '<p>' + esc(t('Did you mean', '¿Quisiste decir')) + ' <button type="button" style="cursor:pointer;min-height:40px;padding:0 12px;border:1px solid #1B3A6B;border-radius:999px;background:#fff;color:#1B3A6B;font:700 14px inherit">' + esc(nr[0].sku) + '</button> ' + esc((nr[0].descripcion || '') + (nr[0].modelo ? ' · ' + nr[0].modelo : '')) + '?</p>';
+              wait.querySelector('.sal-b').appendChild(nb); nb.querySelector('button').onclick = function () { ask(nr[0].sku); };
+            }
+          } catch (e) {}
+        }
         setFace('thinking', 2500); chipsEl.style.display = '';   // offer the quick topics again
       } else {
         setBubble(wait, html, 'success'); bindResult(wait, r); setFace('success', 2500);
