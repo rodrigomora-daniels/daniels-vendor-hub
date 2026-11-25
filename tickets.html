@@ -83,7 +83,7 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const tr=s=>(window.DH&&DH.i18n)?DH.i18n.pick(s):s;
 const LA='America/Los_Angeles';
-const DEV={tablet:['📱','Tablet'],pos:['🧾','Register (POS) / Caja'],computer:['🖥️','Computer / Computadora'],printer:['🖨️','Printer / Impresora'],phone:['☎️','Phone / Teléfono'],network:['📶','Wi-Fi / Network / Red'],camera:['📷','Camera / Cámara'],other:['🔧','Other / Otro']};
+const DEV={tablet:['📱','Tablet'],pos:['🧾','Register (POS) / Caja'],computer:['🖥️','Computer / Computadora'],printer:['🖨️','Printer / Impresora'],phone:['☎️','Phone / Teléfono'],network:['📶','Wi-Fi / Network / Red'],camera:['📷','Camera / Cámara'],infinityx:['♾️','Infinity X'],email:['✉️','Email / Correo'],password:['🔑','Password reset / Restablecer contraseña'],other:['🔧','Other / Otro']};
 const PROB={sin_red:'No network / Sin red',no_funciona:'Not working / No funciona',otro:'Other / Otro'};
 const EST={abierto:'Open / Abierto',en_proceso:'In progress / En proceso',resuelto:'Waiting confirmation / Esperando confirmación',cerrado:'Closed / Cerrado'};
 const LOC=['Euclid / Anaheim','Cerritos','Chino','Warehouse / Almacén','Corporate'];
@@ -203,13 +203,13 @@ async function openTk(id){
   const t=D.items.find(x=>x.id===id); if(!t)return; OPEN=id;
   let ev=[]; try{ev=await DH.rpc('ticket_detalle',{p_id:id});}catch(e){}
   const d=DEV[t.dispositivo]||DEV.other, live=t.estado==='abierto'||t.estado==='en_proceso';
-  const L={creado:'Reported / Reportado',en_proceso:'In progress / En proceso',resuelto:'Marked resolved / Marcado resuelto',confirmado:'Confirmed fixed / Confirmado resuelto',reabierto:'Reopened / Reabierto',nota:'Note / Nota',cerrado_admin:'Closed by IT / Cerrado por TI',planificado:'Priority & ETA set / Prioridad y tiempo definidos',vencido:'Past the promised time / Se pasó el tiempo'};
+  const L={creado:'Reported / Reportado',en_proceso:'In progress / En proceso',resuelto:'Marked resolved / Marcado resuelto',confirmado:'Confirmed fixed / Confirmado resuelto',reabierto:'Reopened / Reabierto',nota:'Note / Nota',nota_ti:'🔒 IT note (internal) / Nota de TI (interna)',cerrado_admin:'Closed by IT / Cerrado por TI',planificado:'Priority & ETA set / Prioridad y tiempo definidos',vencido:'Past the promised time / Se pasó el tiempo'};
   $('md').innerHTML=`<h3>#${t.numero} ${d[0]} ${esc(tr(d[1]))}${t.etiqueta?' · '+esc(t.etiqueta):''}</h3>
    <div class="t2" data-no-i18n>${esc(t.ubicacion)} · ${esc(tr(PROB[t.problema]))}${t.reporta?' · '+esc(t.reporta):''}</div>
    <div style="margin-top:6px"><span class="pill p-${t.estado}">${esc(tr(EST[t.estado]))}</span> <span class="dur">⏱ ${esc(fmtDur(live?(Date.now()-new Date(t.inicio).getTime())/1000:t.dur_seg))}</span> <span style="font-size:12px;color:var(--gray)">${esc(tr('Since / Desde'))} ${esc(fmtDT(t.inicio))}</span> ${priPill(t)} ${dueTx(t)}</div>
    ${t.detalle?`<p style="margin-top:8px;font-size:14px" data-no-i18n>${esc(t.detalle)}</p>`:''}
    <div class="tl">${ev.map(e=>`<div><b>${esc(tr(L[e.tipo]||e.tipo))}</b> <span data-no-i18n>${esc(e.quien||'')}</span><small>${esc(fmtDT(e.t))}</small>${e.nota?`<span data-no-i18n>${esc(e.nota)}</span>`:''}</div>`).join('')}</div>
-   ${t.estado!=='cerrado'?`<label for="nt">${esc(tr('Add a note / Agregar una nota'))}</label><textarea id="nt" maxlength="300"></textarea><div class="acts"><button class="btn alt sm" onclick="addNote('${t.id}')">${esc(tr('Add note / Agregar nota'))}</button>${D.admin?`<button class="btn alt sm" onclick="askNote('${t.id}','cerrar')">${esc(tr('Close without confirmation / Cerrar sin confirmación'))}</button>`:''}</div>`:''}
+   ${t.estado!=='cerrado'?`<label for="nt">${esc(tr('Add a note / Agregar una nota'))}</label><textarea id="nt" maxlength="300"></textarea><div class="acts"><button class="btn alt sm" onclick="addNote('${t.id}')">${esc(tr('Add note / Agregar nota'))}</button>${D.admin?`<button class="btn alt sm" onclick="addIT('${t.id}')">${esc(tr('Add IT note (internal) / Agregar nota de TI (interna)'))}</button><button class="btn alt sm" onclick="askNote('${t.id}','cerrar')">${esc(tr('Close without confirmation / Cerrar sin confirmación'))}</button>`:''}</div>`:''}
    <div class="acts"><button class="btn alt" onclick="closeM()">${esc(tr('Close / Cerrar'))}</button></div>`;
   $('ov').classList.remove('hide');
 }
@@ -227,6 +227,7 @@ async function savePlan(id){
   try{const r=await DH.rpc('ticket_planificar',{p_id:id,p_prioridad:$('pl-p').value,p_horas:parseInt($('pl-h').value,10)});if(r&&r.ok){closeM();await load();return;}}catch(e){}
   alert(tr('Could not update. / No se pudo actualizar.'));
 }
+async function addIT(id){const n=$('nt').value.trim();if(!n)return;await act(id,'nota_ti',n);}
 async function addNote(id){const n=$('nt').value.trim();if(!n)return;await act(id,'nota',n);}
 function closeM(){$('ov').classList.add('hide');OPEN=null;}
 $('ov').addEventListener('pointerdown',e=>{if(e.target===$('ov'))closeM();});
