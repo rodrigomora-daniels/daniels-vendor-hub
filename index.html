@@ -1726,8 +1726,15 @@ function domeSvg(pct,pace,col,label){
    +'<line x1="'+a1[0]+'" y1="'+a1[1]+'" x2="'+a2[0]+'" y2="'+a2[1]+'" stroke="#1E2735" stroke-width="3"/>'
    +'<text class="dt" x="100" y="96" text-anchor="middle">'+Math.round(pct)+'%</text></svg>';
 }
+/* Black Friday season: Thanksgiving..Cyber Monday (LA dates). While it runs, only the season meter shows; "My day" returns on Tuesday. */
+function seasonLiveNow(){
+  var t=new Date().toLocaleDateString('en-CA',{timeZone:'America/Los_Angeles'}), y=+t.slice(0,4);
+  var d1=new Date(Date.UTC(y,10,1)), off=(4-d1.getUTCDay()+7)%7, tg=Date.UTC(y,10,1+off+21), now=Date.parse(t+'T00:00:00Z');
+  return now>=tg && now<=tg+4*864e5;
+}
 async function loadDomeCard(){
   var el=document.getElementById('dome-card'); if(!el)return;
+  if(seasonLiveNow()){el.classList.add('hide');return}
   try{
     var r=await DH.rpc('ventas_mi');
     if(!r||r.error||r.vacio||(!r.yo&&!(r.gerente&&r.tiendas&&r.tiendas.length))){el.classList.add('hide');return}
