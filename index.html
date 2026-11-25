@@ -1628,9 +1628,8 @@ async function _renderMeCard(){
   var head='<div class="mh"><h3>'+({cumples:'🎂 ',reto:'🧩 '}[d.tipo]||'📈 ')+titles[d.tipo]+'</h3><button type="button" onclick="meMenu()" aria-label="'+T('Choose what to show here','Elegir qué mostrar aquí')+'">⚙</button></div>';
   var body='';
   if(ME.menu){
-    var opts=[['cumples',T('Birthdays & celebrations','Cumpleaños y celebraciones')],['ventas_resumen',T('Daily sales summary (all stores)','Resumen de ventas del día (todas las tiendas)')]];
+    var opts=[['cumples',T('Birthdays & celebrations','Cumpleaños y celebraciones')]];
     if(ME.reto)opts.push(['reto',T('Daily Challenge','Reto del día')]);
-    if(d.tienda)opts.push(['mi_tienda',T('My store vs daily goal','Mi tienda vs meta del día')]);
     body=opts.map(function(o){return '<button type="button" class="mopt'+(o[0]===d.tipo?' on':'')+'" onclick="meSet(\''+o[0]+'\')">'+o[1]+'</button>'}).join('');
     var md=['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], mde=['','ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
     var menuForm='';
