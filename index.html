@@ -1717,14 +1717,24 @@ async function loadDomeCard(){
         +'<div class="dn">'+T('Daily goal = monthly goal ÷ ','Meta diaria = meta mensual ÷ ')+y.dias+T(' scheduled days',' días programados')+(y.estimado?' ('+T('estimated, schedule incomplete','estimado, horario incompleto')+')':'')+'. '+T('The dark mark is where you should be by now.','La marca oscura es donde deberías ir a esta hora.')+'</div>';
     }
     if(r.gerente&&r.tiendas&&r.tiendas.length){
-      var tv=0,th=0; r.tiendas.forEach(function(t){if(t.hist!=null){tv+=t.v;th+=+t.hist}});
-      if(!r.yo&&th>0){var tp=tv/th*100; h+=domeSvg(tp,pace,'#1B3A6B',Math.round(tp)+'% '+T('of the same day last year','del mismo día del año pasado'))+'<div class="ds"><b>'+$(tv)+'</b> '+T('vs','vs')+' '+$(th)+' '+T('same weekday 2025','mismo día 2025')+'</div>'+st(tp)}
-      r.tiendas.forEach(function(t){var p2=t.hist>0?t.v/t.hist*100:0;
-        h+='<div class="dl"><span><b>'+meEsc(t.nombre)+'</b> '+$(t.v)+'</span><span>'+(t.hist!=null?$(t.hist)+' '+T('last yr','año ant.'):T('no 2025 data','sin datos 2025'))+'</span></div>'+bar(p2,pace);
+      var ref=function(t){return t.meta!=null?+t.meta:(t.hist!=null?+t.hist:null)}, refLbl=function(t){return t.meta!=null?T('goal','meta'):T('same weekday 2025','mismo día 2025')};
+      var tv=0,th=0,allMeta=true; r.tiendas.forEach(function(t){var rf=ref(t);tv+=t.v;if(rf!=null)th+=rf;if(t.meta==null)allMeta=false});
+      if(!r.yo&&th>0){var tp=tv/th*100, tl=allMeta?T('goal','meta'):T('same weekday 2025','mismo día 2025');
+        h+=domeSvg(tp,pace,'#1B3A6B',Math.round(tp)+'% '+T('of total','del total'))+'<div class="ds"><b>'+$(tv)+'</b> '+T('vs','vs')+' '+$(th)+' '+tl+'</div>'
+          +'<div class="dn" style="text-align:center;margin-top:2px">'+T('Expected by now','Esperado a esta hora')+' <b>'+$(th*pace/100)+'</b></div>'+st(tp)}
+      h+='<div class="dn" style="margin:6px 0 0">'+T('Tap a store to see its sellers.','Toca una tienda para ver sus vendedores.')+'</div>';
+      r.tiendas.forEach(function(t){var rf=ref(t), p2=rf>0?t.v/rf*100:0;
+        var sub=t.sin_filas?T('no sales in the report','sin ventas en el reporte'):(rf!=null?$(rf)+' '+refLbl(t):T('no 2025 data','sin datos 2025'));
+        h+='<details style="margin-top:6px"><summary style="display:block;min-height:44px"><span class="dl" style="margin-top:0"><span><b>'+meEsc(t.nombre)+'</b> '+$(t.v)+'</span><span>'+sub+'</span></span>'+bar(p2,pace)+'</summary>';
+        if(t.sin_filas){h+='<div class="dn">'+T('The hourly Sales by Salesperson report has no rows for this store yet today.','El reporte por hora de ventas por vendedor no trae filas de esta tienda hoy.')+'</div>'}
+        else{
+          h+='<div class="dl"><span>'+T('Services','Servicios')+' <b>'+(t.merch>0?(t.serv/t.merch*100).toFixed(1):'0.0')+'%</b></span><span>'+T('goal','meta')+' '+(r.tiendas&&r.serv_meta_pct!=null?r.serv_meta_pct:9)+'%</span></div>';
+          h+=t.vendedores.map(function(v){var p3=v.meta_dia>0?v.neto/v.meta_dia*100:0, sp=v.merch>0?(v.serv/v.merch*100):0;
+            return '<div class="dl" style="margin-top:10px"><span>'+meEsc(v.n)+' <small style="color:#6B6B6B">· '+v.vn+' '+T('sales','ventas')+' · '+T('svc','serv')+' '+sp.toFixed(1)+'%</small></span><span><b>'+$(v.neto)+'</b> / '+$(v.meta_dia)+'</span></div>'+bar(p3,pace)}).join('');
+        }
+        h+='</details>';
       });
-      h+='<details><summary>'+T('Sellers','Vendedores')+'</summary>'+r.tiendas.map(function(t){return '<div class="dl" style="margin-top:10px"><b>'+meEsc(t.nombre)+'</b></div>'+t.vendedores.map(function(v){var p3=v.meta_dia>0?v.neto/v.meta_dia*100:0;return '<div class="dl"><span>'+meEsc(v.n)+'</span><span><b>'+$(v.neto)+'</b> / '+$(v.meta_dia)+'</span></div>'+bar(p3,pace)}).join('')}).join('')
-        +'<div class="dn">'+T('Seller goals use an estimated 5 days a week until schedules are complete.','Las metas por vendedor usan 5 días por semana estimados hasta que los horarios estén completos.')+'</div></details>'
-        +'<div class="dn">'+T('Dark mark = expected by this hour. Net sales include delivery charges.','Marca oscura = esperado a esta hora. Las ventas netas incluyen cargos de entrega.')+'</div>';
+      h+='<div class="dn">'+T('Dark mark = expected by this hour. Net sales include delivery charges and exclude kits. Seller goals use an estimated 5 days a week until schedules are complete.','Marca oscura = esperado a esta hora. Las ventas netas incluyen cargos de entrega y excluyen kits. Las metas por vendedor usan 5 días por semana estimados hasta que los horarios estén completos.')+'</div>';
     }
     el.innerHTML=h; el.classList.remove('hide');
   }catch(e){el.classList.add('hide')}
