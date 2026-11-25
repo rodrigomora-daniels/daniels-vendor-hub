@@ -65,6 +65,12 @@
     <div class="row"><button class="btn" id="d-go">Load demo data / Cargar datos de prueba</button><button class="btn ghost" id="d-off">Clear demo / Borrar prueba</button></div>
     <div class="note">Fake numbers for the selected day, only visible to admins. Real hourly data will replace them. / Números falsos para el día elegido, solo visibles para administradores. Los datos reales por hora los reemplazarán.</div>
   </div>
+  <div class="card hide" id="imp">
+    <h2>Import seller report / Importar reporte por vendedor <span class="badge">Admin</span></h2>
+    <div class="note" style="margin:0 0 8px">Sales By Salesperson (CSV, hourly run). Each upload replaces the day's numbers for those sellers. / Sales By Salesperson (CSV por hora). Cada carga reemplaza los números del día de esos vendedores.</div>
+    <div class="row"><input type="file" id="i-f" accept=".csv,text/csv" aria-label="CSV"><button class="btn" id="i-go">Import / Importar</button></div>
+    <div id="i-out" class="note" role="status"></div>
+  </div>
 </main>
 <script src="dh-session.js"></script>
 <script>
@@ -112,7 +118,7 @@ function draw(){
      <div class="sub">${esc(T('Services','Servicios'))} ${$$(t.s)} / ${$$(t.meta_s)} · ${esc(T('penetration','penetración'))} ${(t.v>0?t.s/t.v*100:0).toFixed(1)}% ${esc(T('vs goal','vs meta'))} ${(t.meta_v>0?t.meta_s/t.meta_v*100:0).toFixed(1)}%</div></div>`).join('')}
     <div class="note">${esc(T('The dark tick marks where each store should be by this hour. The pace curve is a default assumption for now.','La marca oscura indica dónde debería ir cada tienda a esta hora. La curva de ritmo es un supuesto por ahora.'))}</div></div>
    <div class="card"><h2>${esc(T('Sales through the day','Ventas durante el día'))}</h2>${chart(L,S)}</div>`;
-  const dm=$('demo'); if(ISADM)dm.classList.remove('hide');
+  const dm=$('demo'); if(ISADM){dm.classList.remove('hide');$('imp').classList.remove('hide')}
 }
 function chart(L,S){
   const W=640,H=230,pl=52,pr=12,pt=14,pb=28, hrs=[]; for(let h=10;h<=20;h++)hrs.push(h);
@@ -137,6 +143,31 @@ $('d-h').oninput=e=>{$('rv-d').textContent=e.target.value+':00'};
 $('rv-d').textContent='15:00';
 $('d-go').onclick=async()=>{try{const r=await DH.rpc('ventas_demo',{p_fecha:D.fecha,p_hasta:+$('d-h').value});if(r&&r.error)throw 0;setDemo(D.fecha);await load(D.fecha,null)}catch(e){show(T('Could not load demo data.','No se pudieron cargar los datos de prueba.'))}};
 $('d-off').onclick=async()=>{try{await DH.rpc('ventas_demo',{p_fecha:D.fecha,p_hasta:null});setDemo('');await load(null,null)}catch(e){show(T('Could not clear demo data.','No se pudo borrar la prueba.'))}};
+
+function csvRows(t){const R=[];let r=[],c='',q=false;for(let i=0;i<t.length;i++){const ch=t[i];if(q){if(ch=='"'){if(t[i+1]=='"'){c+='"';i++}else q=false}else c+=ch}else if(ch=='"')q=true;else if(ch==','){r.push(c);c=''}else if(ch=='\n'||ch=='\r'){if(ch=='\r'&&t[i+1]=='\n')i++;r.push(c);c='';R.push(r);r=[]}else c+=ch}if(c!==''||r.length){r.push(c);R.push(r)}return R}
+function parseSellerCsv(t){
+  const R=csvRows(t), hi=R.findIndex(r=>r.some(x=>x.trim()==='EmplNo')); if(hi<0)throw new Error('header');
+  const H=R[hi].map(x=>x.trim()), ix=n=>H.indexOf(n), num=(r,n)=>{const i=ix(n);const v=i<0?'':String(r[i]||'').replace(/[$,\s]/g,'');const f=parseFloat(v);return isNaN(f)?0:f};
+  const head=R.slice(0,hi).map(r=>r.join(' ')).join(' ');
+  const mf=head.match(/From\s+(\d{1,2})\/(\d{1,2})\/(\d{4})\s+To\s+(\d{1,2})\/(\d{1,2})\/(\d{4})/), mr=head.match(/Run Date:\s*(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})\s*([AP]M)/i);
+  if(!mf||!mr)throw new Error('dates');
+  if(mf[1]!==mf[4]||mf[2]!==mf[5]||mf[3]!==mf[6])throw new Error('range');
+  const z=n=>String(n).padStart(2,'0'); let hh=+mr[4]%12; if(/PM/i.test(mr[7]))hh+=12;
+  const fecha=mf[3]+'-'+z(mf[1])+'-'+z(mf[2]), corrida=mr[3]+'-'+z(mr[1])+'-'+z(mr[2])+' '+z(hh)+':'+mr[5]+':'+mr[6];
+  const rows=[]; for(const r of R.slice(hi+1)){const t=(r[ix('Store')]||'').trim(),c=(r[ix('EmplNo')]||'').trim(); if(!t||!c)continue;
+    rows.push({t,c,n:(r[ix('Name')]||'').trim(),neto:num(r,'Net Sales$ (incl. Services)'),merch:num(r,'MerchSales$'),serv:Math.round((num(r,'Insur$')+num(r,'ExtServ$')+num(r,'FP$'))*100)/100,ent:num(r,'Deliv. Charge'),vn:Math.round(num(r,'#Sales Written')),pb:num(r,'ProfitBoost$')})}
+  return {fecha,corrida,rows};
+}
+$('i-go').onclick=async()=>{
+  const f=$('i-f').files[0], o=$('i-out'); if(!f){o.textContent=T('Choose the CSV first.','Elige primero el CSV.');return}
+  try{
+    const P=parseSellerCsv(await f.text()); if(!P.rows.length){o.textContent=T('No seller rows found.','No se encontraron filas de vendedores.');return}
+    const r=await DH.rpc('ventas_vend_importar',{p_fecha:P.fecha,p_corrida:P.corrida,p_filas:P.rows});
+    if(!r||r.error)throw new Error(r&&r.error||'rpc');
+    const sv=(r.sin_vincular||[]).map(x=>x.t+' '+x.c+' ('+x.n+')').join(', ');
+    o.textContent=T('Imported ','Importado: ')+r.filas+T(' sellers for ',' vendedores del ')+P.fecha+' · '+P.corrida.slice(11,16)+(sv?' · '+T('Not linked to a user: ','Sin vincular a usuario: ')+sv:'');
+  }catch(e){o.textContent=T('Could not read that file. Use the "Sales By Salesperson" CSV for a single day.','No se pudo leer el archivo. Usa el CSV "Sales By Salesperson" de un solo día.')}
+};
 (async function(){
   if(!DH.token()){location.href='index.html';return}
   try{const e=DH.emp();ISADM=!!(e&&e.es_admin)}catch(e){}

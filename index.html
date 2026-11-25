@@ -103,6 +103,24 @@
   .my-day{font:700 22px Georgia,'Times New Roman',serif;color:#1B3A6B;margin:0 0 12px}
   #hero2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-bottom:16px;align-items:stretch}
   #hero2 #goal-card{margin-bottom:0}
+  #hero2-r{display:flex;flex-direction:column;gap:16px;min-width:0}
+  #hero2-r #me-card{flex:1}
+  #dome-card{background:#fff;border-radius:6px;border-left:6px solid #C8922A;padding:14px 18px;box-shadow:0 14px 34px -26px rgba(18,40,74,.7);min-width:0}
+  #dome-card.hide{display:none}
+  #dome-card .dh{display:flex;align-items:baseline;gap:10px;margin-bottom:4px}
+  #dome-card .dh h3{font:700 17px Georgia,serif;color:#1B3A6B;margin:0;flex:1}
+  #dome-card .dh small{font:12px 'Segoe UI',Arial,sans-serif;color:#6B6B6B}
+  #dome-card svg.dm{display:block;width:100%;max-width:260px;margin:0 auto}
+  #dome-card .dt{font:700 28px Georgia,serif;fill:#12284A}
+  #dome-card .ds{text-align:center;font:14px/1.4 'Segoe UI',Arial,sans-serif;color:#33404f;margin-top:-4px}
+  #dome-card .dst{text-align:center;font:700 14px 'Segoe UI',Arial,sans-serif;margin:2px 0 8px}
+  #dome-card .dl{display:flex;justify-content:space-between;gap:8px;font:13px 'Segoe UI',Arial,sans-serif;color:#1E2735;margin-top:8px}
+  #dome-card .db{position:relative;background:#E7EBF2;border-radius:6px;height:12px;overflow:hidden;margin-top:3px}
+  #dome-card .db i{display:block;height:100%;background:#1B3A6B;border-radius:6px}
+  #dome-card .db i.g{background:#C8922A}
+  #dome-card .db b{position:absolute;top:-1px;bottom:-1px;width:3px;background:#1E2735}
+  #dome-card details{margin-top:10px} #dome-card summary{cursor:pointer;font:700 13px 'Segoe UI',Arial,sans-serif;color:#1B3A6B;min-height:40px;display:flex;align-items:center}
+  #dome-card .dn{font:12px/1.4 'Segoe UI',Arial,sans-serif;color:#6B6B6B;margin-top:8px}
   #me-card{background:#fff;border-radius:6px;border-left:6px solid #1B3A6B;padding:14px 18px;box-shadow:0 14px 34px -26px rgba(18,40,74,.7);min-width:0;display:flex;flex-direction:column}
   #me-card.hide{display:none}
   #me-card .mh{display:flex;align-items:center;gap:10px;margin-bottom:8px}
@@ -626,7 +644,8 @@ document.addEventListener('DOMContentLoaded',function(){
       <h2 class="my-day">My day / Mi día</h2>
       <div id="hero2">
       <section id="goal-card" class="hide" data-no-i18n aria-label="Sales vs goal"></section>
-      <section id="me-card" class="hide" data-no-i18n aria-label="My panel"></section>
+      <div id="hero2-r"><section id="dome-card" class="hide" data-no-i18n aria-label="My sales today"></section>
+      <section id="me-card" class="hide" data-no-i18n aria-label="My panel"></section></div>
       </div>
       <div id="briefing">
       <section id="alerts-card" class="hide" aria-label="Priority updates">
@@ -1211,7 +1230,7 @@ function handleLogout() {
    DASHBOARD
    ════════════════════════════════════════════════════════════ */
 async function loadDashboard() {
-  loadAlertsCard(); loadGoalCard(); loadMeCard(); initPushCard(); loadNewsHero(); loadPromoStrip(); loadMsgBadge(); loadNotesToday();
+  loadAlertsCard(); loadGoalCard(); loadMeCard(); loadDomeCard(); initPushCard(); loadNewsHero(); loadPromoStrip(); loadMsgBadge(); loadNotesToday();
   const emp = session.empleado;
 
   // If this employee has a temporary password, force the change screen first
@@ -1664,6 +1683,51 @@ async function meSet(t){try{await DH.rpc('home_widget_set',{p_tipo:t});ME.d.tipo
 async function meBirthday(){
   var m=+document.getElementById('mc-m').value,dd=+document.getElementById('mc-d').value;
   try{var ok=await DH.rpc('mi_cumple_set',{p_mes:m,p_dia:dd}); if(ok){ME.d.mi_cumple={mes:m,dia:dd}; await loadMeCard();}}catch(e){}
+}
+/* ===== Sales progress "dome" (seller: own numbers only; managers+: store vs same weekday 2025) ===== */
+function domeSvg(pct,pace,col,label){
+  var p=Math.max(0,Math.min(100,pct)), pt=function(f,r){var a=Math.PI*f/100;return [(100-r*Math.cos(a)).toFixed(1),(100-r*Math.sin(a)).toFixed(1)]};
+  var a1=pt(pace,68),a2=pt(pace,92);
+  return '<svg class="dm" viewBox="0 0 200 112" role="img" aria-label="'+label+'"><path d="M20 100 A80 80 0 0 1 180 100" pathLength="100" fill="none" stroke="#E7EBF2" stroke-width="16"/>'
+   +'<path d="M20 100 A80 80 0 0 1 180 100" pathLength="100" fill="none" stroke="'+col+'" stroke-width="16" stroke-dasharray="'+p.toFixed(1)+' 100"/>'
+   +'<line x1="'+a1[0]+'" y1="'+a1[1]+'" x2="'+a2[0]+'" y2="'+a2[1]+'" stroke="#1E2735" stroke-width="3"/>'
+   +'<text class="dt" x="100" y="96" text-anchor="middle">'+Math.round(pct)+'%</text></svg>';
+}
+async function loadDomeCard(){
+  var el=document.getElementById('dome-card'); if(!el)return;
+  try{
+    var r=await DH.rpc('ventas_mi');
+    if(!r||r.error||r.vacio||(!r.yo&&!(r.gerente&&r.tiendas&&r.tiendas.length))){el.classList.add('hide');return}
+    var es=(localStorage.getItem('dh_lang')==='es'), T=function(a,b){return es?b:a};
+    var $=function(n){return (n<0?'-':'')+'$'+Math.abs(Math.round(n)).toLocaleString('en-US')};
+    var pace=(r.ritmo||0)*100, stale=r.fecha!==r.hoy;
+    var d=new Date(r.fecha+'T12:00:00Z'), dn=(es?['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'])[d.getUTCDay()]+' '+(d.getUTCMonth()+1)+'/'+d.getUTCDate();
+    var tm=''; try{tm=new Date(r.corrida).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/Los_Angeles'})}catch(e){}
+    var st=function(pct){var df=pct-pace;return stale?'':df>=5?'<div class="dst" style="color:#2E7D32">▲ '+T('Ahead of pace','Adelante del ritmo')+'</div>':df<=-5?'<div class="dst" style="color:#C0392B">▼ '+T('Behind pace','Detrás del ritmo')+'</div>':'<div class="dst" style="color:#6B6B6B">● '+T('On pace','En ritmo')+'</div>'};
+    var bar=function(pct,mark,g){return '<div class="db"><i'+(g?' class="g"':'')+' style="width:'+Math.max(0,Math.min(100,pct)).toFixed(1)+'%"></i>'+(mark!=null?'<b style="left:'+Math.min(100,mark).toFixed(1)+'%"></b>':'')+'</div>'};
+    var h='<div class="dh"><h3>🎯 '+(r.yo?T('My day','Mi día'):T('Stores today','Tiendas hoy'))+' · '+dn+'</h3><small>'+(tm?T('Updated ','Actualizado ')+tm:'')+'</small></div>';
+    if(stale)h+='<div class="dn" style="margin:0 0 6px">'+T('Latest data is from ','Los últimos datos son del ')+dn+'.</div>';
+    if(r.yo){
+      var y=r.yo, pct=y.meta_dia>0?y.neto/y.meta_dia*100:0, mp=y.meta_mes>0?y.mes_acum/y.meta_mes*100:0;
+      h+=domeSvg(pct,pace,'#1B3A6B',Math.round(pct)+'% '+T('of today\'s goal','de la meta de hoy'))
+        +'<div class="ds"><b>'+$(y.neto)+'</b> '+T('of','de')+' '+$(y.meta_dia)+'</div>'+st(pct)
+        +'<div class="dl"><span>'+T('Services','Servicios')+' <b>'+y.serv_pct.toFixed(1)+'%</b></span><span>'+T('goal','meta')+' '+y.serv_meta_pct+'%</span></div>'+bar(y.serv_meta_pct?y.serv_pct/y.serv_meta_pct*100:0,null,true)
+        +'<div class="dl"><span>'+T('Profit booster','Profit booster')+' <b>'+y.pb_pct.toFixed(1)+'%</b></span><span>'+(y.pb_meta_pct!=null?T('goal','meta')+' '+y.pb_meta_pct+'%':'')+'</span></div>'+(y.pb_meta_pct?bar(y.pb_pct/y.pb_meta_pct*100,null,true):'')
+        +'<div class="dl"><span>'+T('Month','Mes')+' <b>'+$(y.mes_acum)+'</b></span><span>'+$(y.meta_mes)+'</span></div>'+bar(mp,null)
+        +'<div class="dn">'+T('Daily goal = monthly goal ÷ ','Meta diaria = meta mensual ÷ ')+y.dias+T(' scheduled days',' días programados')+(y.estimado?' ('+T('estimated, schedule incomplete','estimado, horario incompleto')+')':'')+'. '+T('The dark mark is where you should be by now.','La marca oscura es donde deberías ir a esta hora.')+'</div>';
+    }
+    if(r.gerente&&r.tiendas&&r.tiendas.length){
+      var tv=0,th=0; r.tiendas.forEach(function(t){if(t.hist!=null){tv+=t.v;th+=+t.hist}});
+      if(!r.yo&&th>0){var tp=tv/th*100; h+=domeSvg(tp,pace,'#1B3A6B',Math.round(tp)+'% '+T('of the same day last year','del mismo día del año pasado'))+'<div class="ds"><b>'+$(tv)+'</b> '+T('vs','vs')+' '+$(th)+' '+T('same weekday 2025','mismo día 2025')+'</div>'+st(tp)}
+      r.tiendas.forEach(function(t){var p2=t.hist>0?t.v/t.hist*100:0;
+        h+='<div class="dl"><span><b>'+meEsc(t.nombre)+'</b> '+$(t.v)+'</span><span>'+(t.hist!=null?$(t.hist)+' '+T('last yr','año ant.'):T('no 2025 data','sin datos 2025'))+'</span></div>'+bar(p2,pace);
+      });
+      h+='<details><summary>'+T('Sellers','Vendedores')+'</summary>'+r.tiendas.map(function(t){return '<div class="dl" style="margin-top:10px"><b>'+meEsc(t.nombre)+'</b></div>'+t.vendedores.map(function(v){var p3=v.meta_dia>0?v.neto/v.meta_dia*100:0;return '<div class="dl"><span>'+meEsc(v.n)+'</span><span><b>'+$(v.neto)+'</b> / '+$(v.meta_dia)+'</span></div>'+bar(p3,pace)}).join('')}).join('')
+        +'<div class="dn">'+T('Seller goals use an estimated 5 days a week until schedules are complete.','Las metas por vendedor usan 5 días por semana estimados hasta que los horarios estén completos.')+'</div></details>'
+        +'<div class="dn">'+T('Dark mark = expected by this hour. Net sales include delivery charges.','Marca oscura = esperado a esta hora. Las ventas netas incluyen cargos de entrega.')+'</div>';
+    }
+    el.innerHTML=h; el.classList.remove('hide');
+  }catch(e){el.classList.add('hide')}
 }
 async function loadGoalCard(){
   var el=document.getElementById('goal-card'); if(!el)return;
