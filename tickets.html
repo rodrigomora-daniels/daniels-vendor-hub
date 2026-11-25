@@ -35,6 +35,7 @@
   .btn[disabled]{opacity:.5}
   .err{background:#fdecea;color:var(--red);border-radius:8px;padding:10px 12px;font-size:14px;margin-top:10px;line-height:1.45}
   .okm{background:#e3f4e5;color:var(--green)}
+.xc{position:fixed;top:max(10px,env(safe-area-inset-top));right:12px;z-index:60;min-height:44px;padding:0 16px;border:0;border-radius:22px;background:#12284A;color:#fff;font:700 14px 'Segoe UI',Arial,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.35);cursor:pointer}.xc:focus-visible{outline:2px solid #C8922A;outline-offset:2px}
   .hide,.ov.hide{display:none!important}
   .pri{display:inline-block;font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px;margin-left:6px}.pri-urgente{background:#fdecea;color:#c0392b}.pri-alta{background:#fff1dc;color:#b86e00}.pri-normal{background:#e8f0fb;color:#1B3A6B}.pri-baja{background:#eee;color:#666}
   .cfgr{display:flex;gap:8px;margin:6px 0;align-items:center}.cfgr input{flex:1}.cfge span{flex:0 0 auto;max-width:42%}.cfge2{display:grid;gap:8px;margin:8px 0}
@@ -75,7 +76,7 @@
     <button class="btn alt sm hide" id="rbtn" onclick="openRep()">⬇ Report / Reporte</button></div>
   <div id="list"></div>
 </main>
-<div class="ov hide" id="ov"><div class="md" id="md" role="dialog" aria-modal="true"></div></div>
+<div class="ov hide" id="ov"><button type="button" class="xc" onclick="closeM()" aria-label="Close / Cerrar">✕ Close / Cerrar</button><div class="md" id="md" role="dialog" aria-modal="true"></div></div>
 <script src="dh-session.js"></script>
 <script>
 const $=id=>document.getElementById(id);
@@ -228,7 +229,7 @@ async function savePlan(id){
 }
 async function addNote(id){const n=$('nt').value.trim();if(!n)return;await act(id,'nota',n);}
 function closeM(){$('ov').classList.add('hide');OPEN=null;}
-$('ov').addEventListener('mousedown',e=>{if(e.target===$('ov'))closeM();});
+$('ov').addEventListener('pointerdown',e=>{if(e.target===$('ov'))closeM();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeM();});
 
 /* ---------- setup (IT admin only): locations and named equipment ---------- */

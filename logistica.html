@@ -80,6 +80,7 @@
   .acts .btn.del{background:#fff;color:var(--red);border:1px solid var(--red);margin-left:auto}
   .acts .btn.del.ask{background:var(--red);color:#fff}
   .err{background:#fdecea;color:var(--red);border-radius:8px;padding:10px 12px;font-size:14px;margin-top:10px;line-height:1.45}
+.xc{position:fixed;top:max(10px,env(safe-area-inset-top));right:12px;z-index:60;min-height:44px;padding:0 16px;border:0;border-radius:22px;background:#12284A;color:#fff;font:700 14px 'Segoe UI',Arial,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.35);cursor:pointer}.xc:focus-visible{outline:2px solid #C8922A;outline-offset:2px}
   .hide,.ov.hide{display:none!important}
   .small{font-size:12px;color:var(--gray);margin-top:8px}
   @media(max-width:700px){.f{grid-template-columns:1fr}.day{min-height:70px}.ev{font-size:10.5px}.hm{display:none}}
@@ -109,7 +110,7 @@
   <div class="card" id="box"></div>
 </main>
 <div id="selbar" role="region" aria-label="Bulk actions"></div>
-<div class="ov hide" id="ov"><div class="md" id="md" role="dialog" aria-modal="true"></div></div>
+<div class="ov hide" id="ov"><button type="button" class="xc" onclick="closeForm()" aria-label="Close / Cerrar">✕ Close / Cerrar</button><div class="md" id="md" role="dialog" aria-modal="true"></div></div>
 <script src="dh-session.js"></script>
 <script>
 const $=id=>document.getElementById(id);
@@ -447,7 +448,7 @@ function openForm(id,dayK){
   $('ov').classList.remove('hide'); if(hasPo)loadPod(CUR.id); setTimeout(()=>{const x=$('md').querySelector('input');if(x)x.focus();},30);
 }
 function closeForm(){$('ov').classList.add('hide');CUR=null;}
-$('ov').addEventListener('mousedown',e=>{if(e.target===$('ov'))closeForm();});
+$('ov').addEventListener('pointerdown',e=>{if(e.target===$('ov'))closeForm();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('ov').classList.contains('hide'))closeForm();});
 function ferr(t){const e=$('ferr');e.textContent=t;e.classList.toggle('hide',!t);}
 async function save(){
