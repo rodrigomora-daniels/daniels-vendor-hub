@@ -63,6 +63,24 @@
   #ex-out.busy{opacity:.55}
   .xp{display:inline-block;font-weight:700;font-size:12px;padding:1px 8px;border-radius:10px;background:#eef1f6;color:var(--navy)}
   .xp-a{background:#F2C14E;color:#12284A}.xp-g{background:#DDF3E4;color:#1E6B34}.xp-l{background:#FBE3E0;color:#B03024}
+  .chip.sm{min-height:34px;padding:0 11px;font-size:12px}
+  .navr{display:flex;align-items:flex-end;gap:6px}.grow{flex:1;min-width:0}
+  .btn.sq{min-width:44px;padding:0;font-size:20px}
+  details.more{border:1px solid var(--line);border-radius:10px;padding:8px 10px}details.more summary{cursor:pointer;font-weight:700;color:var(--navy);font-size:13px;min-height:32px;display:flex;align-items:center}
+  details.more .xg{margin-top:10px}
+  .mh,.hh{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .sw{font-size:13px;color:var(--navy);font-weight:700;display:flex;align-items:center;gap:6px;min-height:34px}.sw input{width:18px;height:18px;accent-color:var(--navy)}
+  .cw{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:#fff}
+  svg.pch{display:block;height:auto;max-width:none;min-width:100%}
+  .cb{cursor:pointer}.cb:hover rect:last-of-type,.cb.sel rect:last-of-type{filter:brightness(1.25)}.cb.sel text{font-weight:700;fill:#12284A}
+  .lg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--gray);margin:8px 2px}.lg span{display:flex;align-items:center;gap:5px}
+  .lg i{width:12px;height:12px;border-radius:3px;display:inline-block}.lg i.ln{height:3px;width:18px;border-radius:2px}.lg i.dsh{background:repeating-linear-gradient(90deg,#C8922A 0 5px,transparent 5px 9px)}.lg i.hat{background:repeating-linear-gradient(45deg,#FFF3D6 0 3px,#C8922A 3px 5px);border:1px solid #C8922A}
+  .pdet{background:#F4F7FC;border-radius:10px;padding:10px 12px;font-size:14px;margin:6px 0 12px;min-height:40px;line-height:1.5}
+  .empty{text-align:center;color:var(--gray);padding:22px;font-size:14px}
+  .xt tr.fu td{color:#7a6a3a;background:#FFFBF0}.xt tr.hl td{background:#E8F0FB}.xt tbody tr{cursor:pointer}
+  .xt td:first-child,.xt th:first-child{position:sticky;left:0;background:inherit;z-index:1}.xt th:first-child{background:#EEF1F6}.xt td:first-child{background:#fff}
+  .pr-only{display:none}
+  @media print{body:not(.printing),body.nodl{display:none!important}header,#pn-ctl,.mh .sw,.mh .chips,#hist,#imp,#hr,.row,.err{display:none!important}.pr-only{display:block!important;font:700 15px Georgia,serif;margin:0 0 8px}body{background:#fff}.card,.kpi{box-shadow:none!important;border:1px solid #ddd}.tw{max-height:none!important;overflow:visible!important}.cw{overflow:visible}.xt{font-size:10px}.xt td:first-child,.xt th:first-child{position:static}}
 </style>
 <meta name="dh-i18n" content="on">
 <script src="dh-chrome.js" defer></script>
@@ -71,13 +89,8 @@
 <header><h1>Sales vs goal / Ventas vs meta</h1></header>
 <main>
   <div id="err" class="err hide" role="alert"></div>
-  <div class="card"><div class="ctl">
-    <div><label for="f-d">Day / Día</label><select id="f-d"></select></div>
-    <div><label for="f-t">Store / Tienda</label><select id="f-t"></select></div>
-    <div id="w-h" class="hide"><label for="f-h">As of hour / Hasta la hora: <span class="rv" id="rv-h"></span></label><input type="range" id="f-h" min="10" max="20" step="1"></div>
-  </div></div>
-  <div id="out" data-no-i18n></div>
-  <div class="card hide" id="ex"><h2>Explore the numbers / Explorar los números</h2><div id="ex-ctl" class="xc" data-no-i18n></div><div id="ex-out" data-no-i18n></div></div>
+  <div class="card hide" id="hr"><h2>Hour by hour / Hora por hora</h2><div id="hr-out" data-no-i18n></div></div>
+  <div class="card hide" id="pn"><h2>History and forecast / Historial y pronóstico</h2><div id="pn-ctl" class="xc" data-no-i18n></div><div id="pn-out"><div class="pr-only" id="pn-pt"></div><div id="pn-kpi" class="kpis" data-no-i18n></div><div id="pn-main" data-no-i18n></div><div id="pn-tbl" data-no-i18n></div></div></div>
   <div class="card hide" id="hist" data-no-i18n></div>
   <div class="card hide" id="imp">
     <h2>Import seller report / Importar reporte por vendedor <span class="badge">Admin</span></h2>
@@ -93,67 +106,9 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;',
 const LANG=()=>{try{return localStorage.getItem('dh_lang')==='es'?'es':'en'}catch(e){return 'en'}};
 const T=(en,es)=>LANG()==='es'?es:en;
 const $$=n=>'$'+Math.round(n).toLocaleString('en-US');
-const pct=(a,b)=>b>0?a/b*100:0;
 const DOWN={en:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],es:['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']};
-const fdate=iso=>{const d=new Date(iso+'T12:00:00Z');return DOWN[LANG()][d.getUTCDay()]+' '+(d.getUTCMonth()+1)+'/'+d.getUTCDate()};
-let D=null, DEMO=false, ISADM=false, ISSUP=false;
+let ISADM=false, ISSUP=false;
 const show=t=>{const e=$('err');if(!t){e.classList.add('hide');return}e.textContent=t;e.classList.remove('hide')};
-function getDemo(){try{return localStorage.getItem('dh_goal_demo')||''}catch(e){return ''}}
-function setDemo(v){try{if(v)localStorage.setItem('dh_goal_demo',v);else localStorage.removeItem('dh_goal_demo')}catch(e){}}
-
-async function load(fecha,hora){
-  try{
-    const dm=getDemo(); DEMO=!!dm;
-    D=await DH.rpc('ventas_meta',{p_fecha:fecha||(dm||null),p_hora:hora==null?null:hora,p_demo:DEMO});
-    if(!D||D.error){show(T('You do not have access to this report.','No tienes acceso a este reporte.'));return}
-    show(''); draw();
-  }catch(e){show(T('Could not load the report. Try again.','No se pudo cargar el reporte. Intenta de nuevo.'))}
-}
-function sums(list){return list.reduce((a,t)=>({mv:a.mv+t.meta_v,ms:a.ms+t.meta_s,v:a.v+t.v,s:a.s+t.s}),{mv:0,ms:0,v:0,s:0})}
-function draw(){
-  const fd=$('f-d'); fd.innerHTML=D.dias.map(d=>`<option value="${d}">${esc(fdate(d))}</option>`).join(''); fd.value=D.fecha;
-  const ft=$('f-t'), cur=ft.value||''; ft.innerHTML=`<option value="">${esc(T('All stores','Todas las tiendas'))}</option>`+D.tiendas.map(t=>`<option value="${esc(t.tienda)}">${esc(t.tienda)}</option>`).join(''); ft.value=D.tiendas.some(t=>t.tienda===cur)?cur:'';
-  const w=$('w-h'); if(D.hora_max!=null){w.classList.remove('hide');const r=$('f-h');r.min=10;r.max=D.hora_max;r.value=D.hora;$('rv-h').textContent=D.hora+':00'}else w.classList.add('hide');
-  const sel=ft.value, L=sel?D.tiendas.filter(t=>t.tienda===sel):D.tiendas, S=sums(L), pace=D.ritmo_actual;
-  const hasData=D.hora_max!=null;
-  const pv=pct(S.v,S.mv), exp=pace==null?0:pace*100, diff=pv-exp;
-  const stat=!hasData?`<div class="d eq">${esc(T('No sales loaded yet','Sin ventas cargadas todavía'))}</div>`:diff>=2?`<div class="d up">▲ ${esc(T('Ahead of pace','Adelante del ritmo'))} (+${diff.toFixed(0)} pts)</div>`:diff<=-2?`<div class="d dn">▼ ${esc(T('Behind pace','Detrás del ritmo'))} (${diff.toFixed(0)} pts)</div>`:`<div class="d eq">● ${esc(T('On pace','En ritmo'))}</div>`;
-  const penA=S.v>0?S.s/S.v*100:0, penM=S.mv>0?S.ms/S.mv*100:0;
-  const bar=(a,b,cls)=>`<div class="bar"><div class="f ${cls||''}" style="width:${Math.min(100,pct(a,b)).toFixed(1)}%"></div>${cls==='s'||pace==null?'':`<div class="pace" style="left:${(exp).toFixed(1)}%" title="${esc(T('Expected by now','Esperado a esta hora'))}"></div>`}</div>`;
-  $('out').innerHTML=`
-   <div class="kpis">
-    <div class="kpi"><div class="v">${$$(S.v)}</div><div class="l">${esc(T('Sales so far · goal ','Ventas hasta ahora · meta '))}${$$(S.mv)}</div><div class="d">${pv.toFixed(0)}% ${esc(T('of goal','de la meta'))}</div></div>
-    <div class="kpi"><div class="v">${pace==null?'—':exp.toFixed(0)+'%'}</div><div class="l">${esc(T('Expected by now','Esperado a esta hora'))}</div>${stat}</div>
-    <div class="kpi"><div class="v">${$$(S.s)}</div><div class="l">${esc(T('Services · goal ','Servicios · meta '))}${$$(S.ms)}</div><div class="d">${pct(S.s,S.ms).toFixed(0)}% ${esc(T('of goal','de la meta'))}</div></div>
-    <div class="kpi"><div class="v">${penA.toFixed(1)}%</div><div class="l">${esc(T('Services penetration · goal ','Penetración de servicios · meta '))}${penM.toFixed(1)}%</div><div class="d ${penA>=penM?'up':'dn'}">${penA>=penM?'▲':'▼'} ${(penA-penM>=0?'+':'')+(penA-penM).toFixed(1)} pts</div></div>
-   </div>
-   <div class="card"><h2>${esc(T('By store','Por tienda'))}${D.nota?` · ${esc(D.nota)}`:''}${D.demo?`<span class="badge">${esc(T('Demo data','Datos de prueba'))}</span>`:''}</h2>
-    ${L.map(t=>`<div class="st"><div class="top"><b>${esc(t.tienda)}</b><span>${$$(t.v)} / ${$$(t.meta_v)} · ${pct(t.v,t.meta_v).toFixed(0)}%</span></div>${bar(t.v,t.meta_v)}
-     <div class="sub">${esc(T('Services','Servicios'))} ${$$(t.s)} / ${$$(t.meta_s)} · ${esc(T('penetration','penetración'))} ${(t.v>0?t.s/t.v*100:0).toFixed(1)}% ${esc(T('vs goal','vs meta'))} ${(t.meta_v>0?t.meta_s/t.meta_v*100:0).toFixed(1)}%</div></div>`).join('')}
-    <div class="note">${esc(T('The dark tick marks where each store should be by this hour. The pace curve is a default assumption for now.','La marca oscura indica dónde debería ir cada tienda a esta hora. La curva de ritmo es un supuesto por ahora.'))}</div></div>
-   <div class="card"><h2>${esc(T('Sales through the day','Ventas durante el día'))}</h2>${chart(L,S)}</div>`;
-  if(ISSUP)$('imp').classList.remove('hide')
-}
-function chart(L,S){
-  const W=640,H=230,pl=52,pr=12,pt=14,pb=28, hrs=[]; for(let h=10;h<=20;h++)hrs.push(h);
-  const x=h=>pl+(h-10)/10*(W-pl-pr), top=S.mv||1, y=v=>H-pb-Math.min(v,top*1.15)/(top*1.15)*(H-pb-pt);
-  const hv=h=>L.reduce((a,t)=>{const r=t.hist.filter(q=>q.h<=h).slice(-1)[0];return a+(r?r.v:0)},0);
-  const have=hrs.filter(h=>D.hora_max!=null&&h<=D.hora_max&&L.some(t=>t.hist.some(q=>q.h===h)));
-  const paceL=hrs.map(h=>x(h).toFixed(1)+','+y(S.mv*(h<10?0:(D.ritmo.find(r=>r.h===Math.min(h,20))||{f:1}).f)).toFixed(1)).join(' ');
-  const act=have.map(h=>x(h).toFixed(1)+','+y(hv(h)).toFixed(1)).join(' ');
-  const ticks=[0,.25,.5,.75,1].map(f=>`<line x1="${pl}" x2="${W-pr}" y1="${y(top*f).toFixed(1)}" y2="${y(top*f).toFixed(1)}" stroke="#E7EBF2"/><text x="${pl-6}" y="${(y(top*f)+4).toFixed(1)}" text-anchor="end" font-size="11" fill="#6B6B6B">${$$(top*f)}</text>`).join('');
-  return `<svg class="ch" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(T('Cumulative sales by hour versus expected pace','Ventas acumuladas por hora contra el ritmo esperado'))}">${ticks}
-   <line x1="${pl}" x2="${W-pr}" y1="${y(top).toFixed(1)}" y2="${y(top).toFixed(1)}" stroke="#C8922A" stroke-dasharray="5 4" stroke-width="2"/><text x="${W-pr}" y="${(y(top)-5).toFixed(1)}" text-anchor="end" font-size="11" fill="#9a7a1a" font-weight="700">${esc(T('Goal','Meta'))}</text>
-   <polyline points="${paceL}" fill="none" stroke="#9aa3b2" stroke-width="2" stroke-dasharray="2 4"/>
-   ${act?`<polyline points="${act}" fill="none" stroke="#1B3A6B" stroke-width="3" stroke-linejoin="round"/>${have.map(h=>`<circle cx="${x(h).toFixed(1)}" cy="${y(hv(h)).toFixed(1)}" r="4" fill="#1B3A6B"/>`).join('')}`:`<text x="${W/2}" y="${H/2}" text-anchor="middle" font-size="14" fill="#6B6B6B">${esc(T('No sales loaded yet','Sin ventas cargadas todavía'))}</text>`}
-   ${hrs.map(h=>`<text x="${x(h).toFixed(1)}" y="${H-8}" text-anchor="middle" font-size="11" fill="#6B6B6B">${h}h</text>`).join('')}</svg>
-   <div class="note"><b style="color:#1B3A6B">━</b> ${esc(T('Actual','Real'))} · <b style="color:#9aa3b2">┈</b> ${esc(T('Expected pace','Ritmo esperado'))} · <b style="color:#C8922A">┅</b> ${esc(T('Goal','Meta'))}</div>`;
-}
-$('f-d').onchange=()=>load($('f-d').value,null);
-$('f-t').onchange=()=>draw();
-$('f-h').oninput=e=>{$('rv-h').textContent=e.target.value+':00'};
-$('f-h').onchange=e=>load(D.fecha,+e.target.value);
-
 function csvRows(t){const R=[];let r=[],c='',q=false;for(let i=0;i<t.length;i++){const ch=t[i];if(q){if(ch=='"'){if(t[i+1]=='"'){c+='"';i++}else q=false}else c+=ch}else if(ch=='"')q=true;else if(ch==','){r.push(c);c=''}else if(ch=='\n'||ch=='\r'){if(ch=='\r'&&t[i+1]=='\n')i++;r.push(c);c='';R.push(r);r=[]}else c+=ch}if(c!==''||r.length){r.push(c);R.push(r)}return R}
 function parseSellerCsv(t){
   const R=csvRows(t), hi=R.findIndex(r=>r.some(x=>x.trim()==='EmplNo')); if(hi<0)throw new Error('header');
@@ -179,125 +134,222 @@ $('i-go').onclick=async()=>{
   }catch(e){o.textContent=T('Could not read that file. Use the "Sales By Salesperson" CSV for a single day.','No se pudo leer el archivo. Usa el CSV "Sales By Salesperson" de un solo día.')}
 };
 
-/* ---- explorer: filter, sort, download ---- */
-const SN={EU:'Euclid',CN:'Chino',RR:'Cerritos',WH:'Warehouse / Almacén',EC:'E-commerce'};
+
+/* ===== Sales vs goal: explorer (history, forecast, hourly) ===== */
+const SN={EU:'Euclid',CN:'Chino',RR:'Cerritos',EC:'E-commerce',WH:'Warehouse / Almacén'};
 const MON={en:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],es:['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']};
-const EX={opc:null,s:{grupo:'mes',desde:'',hasta:'',tiendas:new Set(),vend:'',dows:new Set(),meses:new Set(),anios:new Set(),q:''},sort:{k:null,d:-1},R:null,tm:null,busy:false,seq:0};
-const exTag=p=>{const q=Math.round(p),c=q>=120?'a':q>=100?'g':q>=80?'m':'l';return `<span class="xp xp-${c}">${q>=120?'★ ':q>=100?'✓ ':''}${q}%</span>`};
-function exLabel(r,g){
+const z2=n=>String(n).padStart(2,'0');
+const isoD=d=>d.getUTCFullYear()+'-'+z2(d.getUTCMonth()+1)+'-'+z2(d.getUTCDate());
+const addDays=(iso,n)=>{const d=new Date(iso+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return isoD(d)};
+const PN={opc:null,D:null,hoy:null,hr:null,s:{grupo:'dia',desde:'',hasta:'',tiendas:new Set(),vend:'',dows:new Set(),meses:new Set(),anios:new Set(),q:'',met:'neto',cmp:true,preset:'win'},sort:{k:null,d:1},sel:null,seq:0,tm:null,hfecha:'',hstore:'',hseq:0};
+const pTag=p=>{const q=Math.round(p),c=q>=120?'a':q>=100?'g':q>=80?'m':'l';return `<span class="xp xp-${c}">${q>=120?'★ ':q>=100?'✓ ':''}${q}%</span>`};
+const yoyTag=(a,b)=>{if(!(b>0))return '<span class="eq">—</span>';const p=(a/b-1)*100;return `<span class="${p>=0?'up':'dn'}">${p>=0?'▲':'▼'} ${Math.abs(p).toFixed(0)}%</span>`};
+function pLabel(r,g,short){
   const k=r.k, L=LANG();
-  if(g==='dia'){const d=new Date(k+'T12:00:00Z');return DOWN[L][d.getUTCDay()]+' '+(d.getUTCMonth()+1)+'/'+d.getUTCDate()+'/'+d.getUTCFullYear()}
-  if(g==='semana'){const d=new Date(k+'T12:00:00Z');return T('Week of ','Semana del ')+(d.getUTCMonth()+1)+'/'+d.getUTCDate()+'/'+d.getUTCFullYear()}
-  if(g==='mes'){const p=k.split('-');return MON[L][+p[1]-1]+' '+p[0]}
+  if(g==='dia'){const d=new Date(k+'T12:00:00Z');return DOWN[L][d.getUTCDay()]+' '+(d.getUTCMonth()+1)+'/'+d.getUTCDate()+(short?'':'/'+d.getUTCFullYear())}
+  if(g==='semana'){const d=new Date(k+'T12:00:00Z');return (short?'':T('Week of ','Sem. del '))+(d.getUTCMonth()+1)+'/'+d.getUTCDate()+(short?'':'/'+d.getUTCFullYear())}
+  if(g==='mes'){const p=k.split('-');return MON[L][+p[1]-1]+(short?" '"+p[0].slice(2):' '+p[0])}
   if(g==='anio')return k;
   if(g==='tienda')return SN[k]||k;
   if(g==='dow')return DOWN[L][+k];
-  return (r.nombre||r.codigo)+' · '+(SN[r.tienda]||r.tienda||'');
+  return short?(r.nombre||r.codigo||'').split(' ')[0]:(r.nombre||r.codigo)+' · '+(SN[r.tienda]||r.tienda||'');
 }
-function exCols(){return [
-  {k:'lbl',l:T('Group','Grupo'),t:'s'},
-  {k:'tienda',l:T('Store','Tienda'),t:'s'},
-  {k:'neto',l:T('Sales','Ventas'),t:'n',f:$$},
-  {k:'meta',l:T('Goal','Meta'),t:'n',f:v=>v==null?'—':$$(v)},
-  {k:'pm',l:T('% of goal','% de meta'),t:'n',f:(v)=>v==null?'—':exTag(v),raw:true},
-  {k:'merch',l:T('Merchandise','Mercancía'),t:'n',f:$$},
-  {k:'serv',l:T('Services','Servicios'),t:'n',f:$$},
-  {k:'sp',l:T('Svc %','% serv.'),t:'n',f:v=>v==null?'—':v.toFixed(1)+'%'},
-  {k:'desc',l:T('Discounts','Descuentos'),t:'n',f:v=>v?$$(v):'—'},
-  {k:'gp',l:T('Gross profit','Utilidad bruta'),t:'n',f:v=>v?$$(v):'—'},
-  {k:'gm',l:T('GM %','% margen'),t:'n',f:v=>v==null?'—':v.toFixed(1)+'%'},
-  {k:'ventas_n',l:T('# sales','# ventas'),t:'n',f:v=>Math.round(v).toLocaleString('en-US')},
-  {k:'tk',l:T('Avg ticket','Ticket prom.'),t:'n',f:v=>v==null?'—':$$(v)},
-  {k:'dias',l:T('Days','Días'),t:'n',f:v=>String(v)},
-  {k:'pd',l:T('Avg / day','Prom. / día'),t:'n',f:v=>v==null?'—':$$(v)}
-]}
-function exRows(){
-  const g=EX.R.grupo, q=EX.s.q.trim().toLowerCase();
-  let rows=EX.R.rows.map(r=>{
-    const o=Object.assign({},r); o.lbl=exLabel(r,g); o.tienda_n=SN[r.tienda]||r.tienda||'';
-    o.pm=o.meta>0?o.neto/o.meta*100:null; o.sp=o.merch>0?o.serv/o.merch*100:null; o.gm=o.merch>0&&o.gp?o.gp/o.merch*100:null;
-    o.tk=o.ventas_n>0?o.neto/o.ventas_n:null; o.pd=o.dias>0?o.neto/o.dias:null; return o});
-  if(q)rows=rows.filter(r=>(r.lbl+' '+r.tienda_n).toLowerCase().includes(q));
-  const S=EX.sort, def=(g==='dia'||g==='semana'||g==='mes'||g==='anio')?{k:'k',d:-1}:{k:'neto',d:-1};
-  const k=S.k||def.k, d=S.k?S.d:def.d;
-  rows.sort((a,b)=>{const x=a[k],y=b[k]; if(x==null&&y==null)return 0; if(x==null)return 1; if(y==null)return -1; return (typeof x==='string'?x.localeCompare(y):x-y)*d});
+const isTime=g=>g==='dia'||g==='semana'||g==='mes'||g==='anio';
+const MET={neto:{l:()=>T('Sales','Ventas'),f:r=>r.neto},serv:{l:()=>T('Services','Servicios'),f:r=>r.serv},merch:{l:()=>T('Merchandise','Mercancía'),f:r=>r.merch},ventas_n:{l:()=>T('# of sales','# de ventas'),f:r=>r.ventas_n,cnt:1},tk:{l:()=>T('Avg ticket','Ticket prom.'),f:r=>r.ventas_n>0?r.neto/r.ventas_n:0}};
+const fut=r=>r.desde>PN.hoy;
+function pRows(){
+  const D=PN.D, g=D.grupo, q=PN.s.q.trim().toLowerCase();
+  let rows=D.rows.map(r=>{const o=Object.assign({},r);o.lbl=pLabel(r,g);o.tienda_n=SN[r.tienda]||r.tienda||'';o.fut=fut(r);
+    o.pm=o.meta_real>0&&!o.fut?o.neto/o.meta_real*100:null;o.yoy=o.ly_real>0&&!o.fut?(o.neto/o.ly_real-1)*100:null;
+    o.sp=o.merch>0?o.serv/o.merch*100:null;o.tk=o.ventas_n>0?o.neto/o.ventas_n:null;o.pd=o.dias>0?o.neto/o.dias:null;return o});
+  if(q)rows=rows.filter(r=>(r.lbl+' '+r.tienda_n+' '+r.k).toLowerCase().includes(q));
+  const S=PN.sort, k=S.k||(isTime(g)?'k':'neto'), d=S.k?S.d:(isTime(g)?1:-1);
+  rows.sort((a,b)=>{const x=a[k],y=b[k];if(x==null&&y==null)return 0;if(x==null)return 1;if(y==null)return -1;return(typeof x==='string'?x.localeCompare(y):x-y)*d});
   return rows;
 }
-function exRender(){
-  const box=$('ex-out'); if(!EX.R){return}
-  if(EX.R.error){box.innerHTML=`<div class="err">${esc(T('You do not have access to this report.','No tienes acceso a este reporte.'))}</div>`;return}
-  const rows=exRows(), t=EX.R.total, cols=exCols(), S=EX.sort, g=EX.R.grupo;
-  const def=(g==='dia'||g==='semana'||g==='mes'||g==='anio')?'lbl':'neto';
-  const sk=S.k||(def==='lbl'?'k':def), sd=S.k?S.d:-1;
-  const pm=t.meta>0?t.neto/t.meta*100:null, sp=t.merch>0?t.serv/t.merch*100:null, tk=t.ventas_n>0?t.neto/t.ventas_n:null;
+/* ---- main chart ---- */
+function pChart(rows){
+  const g=PN.D.grupo, m=MET[PN.s.met], isN=PN.s.met==='neto', cmp=PN.s.cmp&&isN;
+  let L=isTime(g)?rows.slice().sort((a,b)=>a.k<b.k?-1:1):rows.slice(0,28);
+  if(!L.length)return `<div class="empty">${esc(T('No data for these filters.','Sin datos con estos filtros.'))}</div>`;
+  const n=L.length, bw=n>90?5:n>45?9:n>20?16:26, gap=n>90?1:n>45?2:6, pl=56, pr=14, pt=16, pb=44, W=Math.max(640,pl+pr+n*(bw+gap)), H=270;
+  const val=r=>r.fut?null:m.f(r), mx=Math.max(1,...L.map(r=>Math.max(val(r)||0,isN?(r.meta||0):0,cmp?(r.ly||0):0)))*1.08;
+  const x=i=>pl+i*(bw+gap)+bw/2, y=v=>H-pb-(v/mx)*(H-pb-pt);
+  const tk=[0,.25,.5,.75,1].map(f=>`<line x1="${pl}" x2="${W-pr}" y1="${y(mx*f).toFixed(1)}" y2="${y(mx*f).toFixed(1)}" stroke="#E7EBF2"/><text x="${pl-6}" y="${(y(mx*f)+4).toFixed(1)}" text-anchor="end" font-size="11" fill="#6B6B6B">${m.cnt?Math.round(mx*f).toLocaleString('en-US'):$$(mx*f)}</text>`).join('');
+  const step=Math.max(1,Math.ceil(n/(W/58)));
+  const bars=L.map((r,i)=>{const v=val(r),sel=PN.sel===r.k;
+    let b='';
+    if(r.fut&&isN&&r.meta>0)b=`<rect x="${(x(i)-bw/2).toFixed(1)}" y="${y(r.meta).toFixed(1)}" width="${bw}" height="${(H-pb-y(r.meta)).toFixed(1)}" fill="url(#hat)" stroke="#C8922A" stroke-width="1" rx="2"/>`;
+    else if(v!=null){const c=isN&&r.meta_real>0?(v/r.meta_real>=1?'#2E7D32':'#1B3A6B'):'#1B3A6B';b=`<rect x="${(x(i)-bw/2).toFixed(1)}" y="${y(v).toFixed(1)}" width="${bw}" height="${Math.max(0,H-pb-y(v)).toFixed(1)}" fill="${c}" rx="2"/>`}
+    const lb=i%step===0?`<text x="${x(i).toFixed(1)}" y="${H-pb+14}" text-anchor="middle" font-size="10" fill="#6B6B6B" ${n>16?`transform="rotate(-40 ${x(i).toFixed(1)} ${H-pb+14})" text-anchor="end"`:''}>${esc(pLabel(r,g,true))}</text>`:'';
+    return `<g class="cb${sel?' sel':''}" data-k="${esc(r.k)}"><rect x="${(x(i)-(bw+gap)/2).toFixed(1)}" y="${pt}" width="${bw+gap}" height="${H-pb-pt}" fill="transparent"/>${b}${lb}</g>`}).join('');
+  const lyL=cmp?`<polyline fill="none" stroke="#7d8798" stroke-width="2" points="${L.map((r,i)=>x(i).toFixed(1)+','+y(r.ly||0).toFixed(1)).join(' ')}"/>`+(n<=45?L.map((r,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(r.ly||0).toFixed(1)}" r="2.6" fill="#7d8798"/>`).join(''):''):'';
+  const gl=isN&&L.some(r=>r.meta>0)?`<polyline fill="none" stroke="#C8922A" stroke-width="2" stroke-dasharray="5 4" points="${L.filter(r=>r.meta>0).map(r=>x(L.indexOf(r)).toFixed(1)+','+y(r.meta).toFixed(1)).join(' ')}"/>`:'';
+  const td=PN.hoy&&isTime(g)?L.findIndex(r=>r.desde<=PN.hoy&&r.hasta>=PN.hoy):-1;
+  const tl=td>=0?`<line x1="${x(td).toFixed(1)}" x2="${x(td).toFixed(1)}" y1="${pt}" y2="${H-pb}" stroke="#12284A" stroke-width="1.5" stroke-dasharray="2 3"/><text x="${x(td).toFixed(1)}" y="${pt-4}" text-anchor="middle" font-size="10" font-weight="700" fill="#12284A">${esc(T('today','hoy'))}</text>`:'';
+  const leg=`<div class="lg"><span><i style="background:#1B3A6B"></i>${esc(m.l())}</span>${isN?`<span><i style="background:#2E7D32"></i>${esc(T('Hit goal','Cumplió meta'))}</span>`:''}${cmp?`<span><i class="ln" style="background:#7d8798"></i>${esc(T('Same day last year','Mismo día año pasado'))}</span>`:''}${isN?`<span><i class="ln dsh"></i>${esc(T('Goal','Meta'))}</span><span><i class="hat"></i>${esc(T('Forecast = goal','Pronóstico = meta'))}</span>`:''}</div>`;
+  return `<div class="cw"><svg id="pc" class="pch" viewBox="0 0 ${W} ${H}" width="${W}" role="img" aria-label="${esc(T('Chart of sales by period compared with last year and goal','Gráfica de ventas por periodo contra el año pasado y la meta'))}"><defs><pattern id="hat" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#FFF3D6"/><line x1="0" y1="0" x2="0" y2="6" stroke="#C8922A" stroke-width="2"/></pattern></defs>${tk}${tl}${bars}${gl}${lyL}</svg></div>${leg}<div id="pdet" class="pdet" aria-live="polite"></div>`;
+}
+function pDetail(k){
+  const el=$('pdet'); if(!el)return; const r=PN.D.rows.find(x=>x.k===k); PN.sel=k; if(!r){el.innerHTML='';return}
+  const g=PN.D.grupo, f=fut(r), lbl=pLabel(r,g);
+  const pm=r.meta_real>0&&!f?r.neto/r.meta_real*100:null;
+  el.innerHTML=`<b>${esc(lbl)}</b> ${f?`<span class="xp">${esc(T('Forecast','Pronóstico'))}</span>`:''} — `+(f?'':`${esc(T('Sales','Ventas'))} <b>${$$(r.neto)}</b> · `)+`${esc(T('Goal','Meta'))} <b>${r.meta>0?$$(r.meta):'—'}</b>`+(pm!=null?` ${pTag(pm)}`:'')+(r.ly>0?` · ${esc(T('Last year','Año pasado'))} <b>${$$(f?r.ly:r.ly_real)}</b>${f?'':' '+yoyTag(r.neto,r.ly_real)}`:'')+(f?'':` · ${esc(T('Services','Servicios'))} ${$$(r.serv)} · ${Math.round(r.ventas_n)} ${esc(T('sales','ventas'))}`);
+  document.querySelectorAll('#pc .cb').forEach(e=>e.classList.toggle('sel',e.dataset.k===k));
+  document.querySelectorAll('#pt tr[data-k]').forEach(e=>e.classList.toggle('hl',e.dataset.k===k));
+}
+/* ---- table ---- */
+function pCols(){return [
+ {k:'lbl',l:T('Period','Periodo'),t:'s'},{k:'tienda_n',l:T('Store','Tienda'),t:'s'},
+ {k:'neto',l:T('Sales','Ventas'),f:(v,r)=>r.fut?'—':$$(v)},
+ {k:'yoy',l:T('vs last yr','vs año pas.'),f:(v,r)=>v==null?'—':yoyTag(r.neto,r.ly_real),raw:1},
+ {k:'ly',l:T('Last year','Año pasado'),f:v=>v>0?$$(v):'—'},
+ {k:'meta',l:T('Goal','Meta'),f:v=>v>0?$$(v):'—'},
+ {k:'pm',l:T('% of goal','% de meta'),f:v=>v==null?'—':pTag(v),raw:1},
+ {k:'serv',l:T('Services','Servicios'),f:(v,r)=>r.fut?'—':$$(v)},{k:'sp',l:T('Svc %','% serv.'),f:v=>v==null?'—':v.toFixed(1)+'%'},
+ {k:'merch',l:T('Merchandise','Mercancía'),f:(v,r)=>r.fut?'—':$$(v)},
+ {k:'ventas_n',l:T('# sales','# ventas'),f:(v,r)=>r.fut?'—':Math.round(v).toLocaleString('en-US')},
+ {k:'tk',l:T('Avg ticket','Ticket prom.'),f:v=>v==null?'—':$$(v)},{k:'dias',l:T('Days','Días'),f:v=>String(v)},{k:'pd',l:T('Avg / day','Prom. / día'),f:v=>v==null?'—':$$(v)}]}
+function pTable(rows){
+  const t=PN.D.total,cols=pCols(),S=PN.sort,g=PN.D.grupo,def=isTime(g)?'k':'neto';
+  const head=cols.map(c=>{const kk=c.k==='lbl'?'k':c.k,on=S.k?S.k===kk:kk===def,asc=S.k?S.d>0:isTime(g);return `<th class="${c.t==='s'?'':'r '}sh${on?' on':''}" tabindex="0" role="button" onclick="pSort('${kk}')" onkeydown="if(event.key==='Enter')pSort('${kk}')">${esc(c.l)}${on?(asc?' ▲':' ▼'):''}</th>`}).join('');
+  const cell=(r,c)=>{const v=r[c.k];if(c.k==='lbl')return `<td data-no-i18n><b>${esc(v)}</b>${r.fut?` <span class="xp">${esc(T('forecast','pronóst.'))}</span>`:''}</td>`;if(c.k==='tienda_n')return `<td>${esc(v)}</td>`;const s=c.f?c.f(v,r):v;return `<td class="r">${c.raw?s:esc(s)}</td>`};
+  const pm=t.meta_real>0?t.neto/t.meta_real*100:null, sp=t.merch>0?t.serv/t.merch*100:null, tk=t.ventas_n>0?t.neto/t.ventas_n:null;
+  const tot=`<tr class="tot"><td><b>${esc(T('Total','Total'))}</b></td><td></td><td class="r">${$$(t.neto)}</td><td class="r">${t.ly_real>0?yoyTag(t.neto,t.ly_real):'—'}</td><td class="r">${t.ly>0?$$(t.ly):'—'}</td><td class="r">${t.meta>0?$$(t.meta):'—'}</td><td class="r">${pm==null?'—':pTag(pm)}</td><td class="r">${$$(t.serv)}</td><td class="r">${sp==null?'—':sp.toFixed(1)+'%'}</td><td class="r">${$$(t.merch)}</td><td class="r">${Math.round(t.ventas_n).toLocaleString('en-US')}</td><td class="r">${tk==null?'—':$$(tk)}</td><td class="r">${t.dias}</td><td class="r">${t.dias>0?$$(t.neto/t.dias):'—'}</td></tr>`;
+  return `<div class="tw"><table class="xt" id="pt"><thead><tr>${head}</tr></thead><tbody>${rows.map(r=>`<tr data-k="${esc(r.k)}"${r.fut?' class="fu"':''}>${cols.map(c=>cell(r,c)).join('')}</tr>`).join('')}${rows.length?tot:`<tr><td colspan="${cols.length}" class="empty">${esc(T('No sales match these filters.','Ninguna venta coincide con estos filtros.'))}</td></tr>`}</tbody></table></div>`;
+}
+function pSort(k){const S=PN.sort;if(S.k!==k){S.k=k;S.d=(k==='k'||k==='tienda_n')?1:-1}else if(S.d<0&&!(k==='k'||k==='tienda_n')){S.d=1}else if(S.d>0&&(k==='k'||k==='tienda_n')){S.d=-1}else{S.k=null;S.d=1}pRender()}
+/* ---- render ---- */
+function pRender(){
+  const box=$('pn-out'); if(!PN.D)return;
+  if(PN.D.error||!PN.D.rows){$('pn-kpi').innerHTML='';$('pn-tbl').innerHTML='';$('pn-main').innerHTML=`<div class="err">${esc(T('Could not load this view. Try again.','No se pudo cargar esta vista. Intenta de nuevo.'))}</div>`;return}
+  document.body.classList.toggle('nodl',!PN.D.descargar);
+  $('pn-pt').textContent=T('Sales vs goal','Ventas vs meta')+' · '+(PN.D.desde||'')+' → '+(PN.D.hasta||'');
+  const t=PN.D.total, rows=pRows(), pm=t.meta_real>0?t.neto/t.meta_real*100:null, fwd=(t.meta||0)-(t.meta_real||0);
   const kp=(v,l,d)=>`<div class="kpi"><div class="v">${v}</div><div class="l">${esc(l)}</div>${d?`<div class="d">${d}</div>`:''}</div>`;
-  const head=cols.map(c=>{const on=(c.k===S.k)||(!S.k&&(c.k===def||(def==='lbl'&&c.k==='lbl')));
-    return `<th class="${c.t==='n'?'r ':''}sh${on?' on':''}" onclick="exSort('${c.k}')" title="${esc(T('Sort','Ordenar'))}">${esc(c.l)}${on?(sd>0&&S.k?' ▲':' ▼'):''}</th>`}).join('');
-  const cell=(r,c)=>{const v=r[c.k]; if(c.k==='lbl')return `<td data-no-i18n><b>${esc(v)}</b></td>`; if(c.k==='tienda')return `<td>${esc(r.tienda_n)}</td>`; const s=c.f?c.f(v):v; return `<td class="r">${c.raw?s:esc(s)}</td>`};
-  const tot=`<tr class="tot"><td><b>${esc(T('Total','Total'))}</b></td><td></td><td class="r">${$$(t.neto)}</td><td class="r">${t.meta==null?'—':$$(t.meta)}</td><td class="r">${pm==null?'—':exTag(pm)}</td><td class="r">${$$(t.merch)}</td><td class="r">${$$(t.serv)}</td><td class="r">${sp==null?'—':sp.toFixed(1)+'%'}</td><td class="r">${t.desc?$$(t.desc):'—'}</td><td class="r">${t.gp?$$(t.gp):'—'}</td><td class="r">${t.merch>0&&t.gp?(t.gp/t.merch*100).toFixed(1)+'%':'—'}</td><td class="r">${Math.round(t.ventas_n).toLocaleString('en-US')}</td><td class="r">${tk==null?'—':$$(tk)}</td><td class="r">${t.dias}</td><td class="r">${t.dias>0?$$(t.neto/t.dias):'—'}</td></tr>`;
-  box.innerHTML=`<div class="kpis">${kp($$(t.neto),T('Sales in this view','Ventas en esta vista'),pm==null?'':exTag(pm)+' '+esc(T('of goal','de la meta')))}${kp(Math.round(t.ventas_n).toLocaleString('en-US'),T('Number of sales','Número de ventas'),tk==null?'':esc(T('Avg ticket ','Ticket prom. '))+$$(tk))}${kp(sp==null?'—':sp.toFixed(1)+'%',T('Services as % of merchandise','Servicios como % de mercancía'),$$(t.serv))}${kp(String(t.dias),T('Days with sales','Días con ventas'),t.dias>0?esc(T('Avg ','Prom. '))+$$(t.neto/t.dias)+esc(T(' per day',' por día')):'')}</div>
-   <div class="tw"><table class="xt"><thead><tr>${head}</tr></thead><tbody>${rows.map(r=>'<tr>'+cols.map(c=>cell(r,c)).join('')+'</tr>').join('')}${rows.length?tot:`<tr><td colspan="${cols.length}" class="empty">${esc(T('No sales match these filters.','Ninguna venta coincide con estos filtros.'))}</td></tr>`}</tbody></table></div>
-   <div class="note">${esc(T('Rows: ','Filas: '))}${rows.length}${EX.R.truncado?' · '+esc(T('Showing the first 4,000 groups. Narrow the dates to see the rest.','Se muestran los primeros 4,000 grupos. Acorta las fechas para ver el resto.')):''} · ${esc(T('Goal = the store goal for each day (same day last year, or the hand-loaded number if higher). It appears only for 2026 onward and when no seller is selected. Sales include services and delivery charges, and e-commerce is its own line.','Meta = la meta de la tienda de cada día (mismo día del año pasado, o la cargada a mano si es mayor). Solo aparece de 2026 en adelante y cuando no hay un vendedor elegido. Las ventas incluyen servicios y cargos de entrega, y el e-commerce es una línea aparte.'))}</div>`;
+  const sp=t.merch>0?t.serv/t.merch*100:null;
+  $('pn-kpi').innerHTML=kp($$(t.neto),T('Sales in this view','Ventas en esta vista'),pm==null?'':pTag(pm)+' '+esc(T('of goal so far','de la meta a hoy')))
+   +kp(t.ly_real>0?yoyTag(t.neto,t.ly_real):'—',T('vs same days last year','vs mismos días del año pasado'),t.ly_real>0?esc(T('Last year ','Año pasado '))+$$(t.ly_real):'')
+   +kp(t.meta>0?$$(t.meta):'—',T('Goal for the whole period','Meta de todo el periodo'),fwd>0?esc(T('Still ahead: ','Por delante: '))+$$(fwd):'')
+   +kp(sp==null?'—':sp.toFixed(1)+'%',T('Services as % of merchandise','Servicios como % de mercancía'),$$(t.serv));
+  const metChips=Object.keys(MET).map(k=>`<button type="button" class="chip sm${PN.s.met===k?' on':''}" onclick="pMet('${k}')" aria-pressed="${PN.s.met===k}">${esc(MET[k].l())}</button>`).join('');
+  $('pn-main').innerHTML=`<div class="mh"><div class="chips">${metChips}</div><label class="sw"><input type="checkbox" ${PN.s.cmp?'checked':''} onchange="PN.s.cmp=this.checked;pRender()"> ${esc(T('Compare with last year','Comparar con el año pasado'))}</label></div>`+pChart(rows);
+  const tb=$('pn-tbl'); tb.innerHTML=pTable(rows)+`<div class="note">${esc(T('Rows: ','Filas: '))}${rows.length}${PN.D.truncado?' · '+esc(T('Showing the first 4,000. Narrow the dates.','Se muestran los primeros 4,000. Acorta las fechas.')):''} · ${esc(T('Goal = the store goal for each day (same day last year, or the hand-loaded number if higher; for next year, this year). Forecast = goal. Last year is the same weekday, 364 days earlier. Sales include services and delivery charges; e-commerce is its own store.','Meta = la meta de la tienda de cada día (mismo día del año pasado, o la cargada a mano si es mayor; para el próximo año, este año). Pronóstico = meta. Año pasado es el mismo día de la semana, 364 días antes. Las ventas incluyen servicios y cargos de entrega; el e-commerce es una tienda aparte.'))}</div>`;
+  const sel=PN.sel&&PN.D.rows.some(r=>r.k===PN.sel)?PN.sel:(rows.find(r=>r.desde<=PN.hoy&&r.hasta>=PN.hoy)||rows[rows.length-1]||{}).k;
+  if(sel)pDetail(sel);
+  const dl=$('pn-dl'); if(dl)dl.classList.toggle('hide',!PN.D.descargar);
 }
-function exSort(k){const S=EX.sort; if(S.k!==k){S.k=k;S.d=(k==='lbl'||k==='tienda')?1:-1}else if(S.d<0&&(k==='lbl'||k==='tienda')){S.d=1}else if(S.d<0){S.d=1}else{S.k=null;S.d=-1} exRender()}
-function exArr(s){return s.size?[...s]:null}
-async function exFetch(){
-  const my=++EX.seq, s=EX.s; $('ex-out').classList.add('busy');
+document.addEventListener('click',e=>{const g=e.target.closest&&e.target.closest('#pc .cb');if(g){pDetail(g.dataset.k);return}const tr=e.target.closest&&e.target.closest('#pt tbody tr[data-k]');if(tr)pDetail(tr.dataset.k)});
+function pMet(k){PN.s.met=k;pRender()}
+/* ---- filters ---- */
+function pArr(s){return s.size?[...s]:null}
+async function pFetch(){
+  const my=++PN.seq, s=PN.s; $('pn-out').classList.add('busy');
   try{
-    const r=await DH.rpc('ventas_reporte',{p_desde:s.desde||null,p_hasta:s.hasta||null,p_tiendas:exArr(s.tiendas),p_codigos:s.vend?[s.vend]:null,p_dows:exArr(s.dows),p_meses:exArr(s.meses),p_anios:exArr(s.anios),p_grupo:s.grupo});
-    if(my!==EX.seq)return; EX.R=r||{error:'x'};
-  }catch(e){if(my!==EX.seq)return; EX.R={error:'x'}}
-  $('ex-out').classList.remove('busy'); exRender();
+    const r=await DH.rpc('ventas_panel',{p_desde:s.desde||null,p_hasta:s.hasta||null,p_tiendas:pArr(s.tiendas),p_codigos:s.vend?[s.vend]:null,p_dows:pArr(s.dows),p_meses:pArr(s.meses),p_anios:pArr(s.anios),p_grupo:s.grupo});
+    if(my!==PN.seq)return; PN.D=r||{error:'x'}; if(PN.D&&PN.D.hoy)PN.hoy=PN.D.hoy;
+  }catch(e){if(my!==PN.seq)return; PN.D={error:'x'}}
+  $('pn-out').classList.remove('busy'); pRender();
 }
-function exGo(){clearTimeout(EX.tm);EX.tm=setTimeout(exFetch,200)}
-function exSet(k,v){EX.s[k]=v; if(k==='vend'&&v){/* seller view hides goal, by design */} exPaint(); exGo()}
-function exTog(k,v){const st=EX.s[k]; if(st.has(v))st.delete(v); else st.add(v); exPaint(); exGo()}
-function exPreset(p){
-  const mx=EX.opc.max||new Date().toISOString().slice(0,10), d=new Date(mx+'T12:00:00Z'), z=n=>String(n).padStart(2,'0'), iso=x=>x.getUTCFullYear()+'-'+z(x.getUTCMonth()+1)+'-'+z(x.getUTCDate());
-  const sub=n=>{const x=new Date(d);x.setUTCDate(x.getUTCDate()-n);return iso(x)};
-  EX.s.meses.clear();EX.s.anios.clear();EX.s.dows.clear();
-  if(p==='7'){EX.s.desde=sub(6);EX.s.hasta=mx;EX.s.grupo='dia'}
-  else if(p==='30'){EX.s.desde=sub(29);EX.s.hasta=mx;EX.s.grupo='dia'}
-  else if(p==='mtd'){EX.s.desde=d.getUTCFullYear()+'-'+z(d.getUTCMonth()+1)+'-01';EX.s.hasta=mx;EX.s.grupo='dia'}
-  else if(p==='ytd'){EX.s.desde=d.getUTCFullYear()+'-01-01';EX.s.hasta=mx;EX.s.grupo='mes'}
-  else if(p==='ly'){EX.s.desde=(d.getUTCFullYear()-1)+'-01-01';EX.s.hasta=(d.getUTCFullYear()-1)+'-12-31';EX.s.grupo='mes'}
-  else{EX.s.desde='';EX.s.hasta='';EX.s.grupo='anio'}
-  exPaint(); exGo();
+function pGo(){clearTimeout(PN.tm);PN.tm=setTimeout(pFetch,180)}
+function pSet(k,v){PN.s[k]=v;if(k==='desde'||k==='hasta')PN.s.preset='';pPaint();pGo()}
+function pTog(k,v){const st=PN.s[k];st.has(v)?st.delete(v):st.add(v);pPaint();pGo()}
+function pPreset(p){
+  const hy=PN.hoy||new Date().toISOString().slice(0,10), d=new Date(hy+'T12:00:00Z'), Y=d.getUTCFullYear(), M=d.getUTCMonth(), s=PN.s;
+  s.meses.clear();s.anios.clear();s.dows.clear();s.vend='';s.preset=p;
+  const eom=(y,m)=>isoD(new Date(Date.UTC(y,m+1,0,12)));
+  const wk=()=>{const w=(d.getUTCDay()+6)%7;return addDays(hy,-w)};
+  if(p==='win'){s.desde=addDays(hy,-14);s.hasta=addDays(hy,14);s.grupo='dia'}
+  else if(p==='today'){s.desde=hy;s.hasta=hy;s.grupo='tienda'}
+  else if(p==='week'){s.desde=wk();s.hasta=addDays(wk(),6);s.grupo='dia'}
+  else if(p==='month'){s.desde=Y+'-'+z2(M+1)+'-01';s.hasta=eom(Y,M);s.grupo='dia'}
+  else if(p==='next30'){s.desde=hy;s.hasta=addDays(hy,30);s.grupo='dia'}
+  else if(p==='l30'){s.desde=addDays(hy,-29);s.hasta=hy;s.grupo='dia'}
+  else if(p==='year'){s.desde=Y+'-01-01';s.hasta=Y+'-12-31';s.grupo='mes'}
+  else if(p==='ly'){s.desde=(Y-1)+'-01-01';s.hasta=(Y-1)+'-12-31';s.grupo='mes'}
+  else if(p==='ny'){s.desde=(Y+1)+'-01-01';s.hasta=(Y+1)+'-12-31';s.grupo='mes'}
+  else{s.desde='';s.hasta=hy;s.grupo='anio';s.preset='all'}
+  PN.sel=null;pPaint();pGo();
 }
-function exPaint(){
-  const o=EX.opc, s=EX.s, L=LANG(), ch=(on,fn,t)=>`<button type="button" class="chip${on?' on':''}" onclick="${fn}" aria-pressed="${on}">${esc(t)}</button>`;
-  const yrs=[]; if(o.min&&o.max){for(let y=+o.max.slice(0,4);y>=+o.min.slice(0,4);y--)yrs.push(y)}
+function pShift(dir){
+  const s=PN.s; if(!s.desde||!s.hasta)return; const a=new Date(s.desde+'T12:00:00Z'),b=new Date(s.hasta+'T12:00:00Z'),n=Math.round((b-a)/864e5)+1;
+  if(s.grupo==='mes'||s.grupo==='anio'){const m=dir*(s.grupo==='anio'?12:n>=300?12:Math.max(1,Math.round(n/30)));const nd=new Date(a);nd.setUTCMonth(nd.getUTCMonth()+m);const ne=new Date(b);ne.setUTCMonth(ne.getUTCMonth()+m);s.desde=isoD(nd);s.hasta=isoD(ne)}
+  else{s.desde=addDays(s.desde,dir*n);s.hasta=addDays(s.hasta,dir*n)}
+  s.preset='';PN.sel=null;pPaint();pGo();
+}
+function pPaint(){
+  const o=PN.opc||{}, s=PN.s, L=LANG(), ch=(on,fn,t)=>`<button type="button" class="chip${on?' on':''}" onclick="${fn}" aria-pressed="${on}">${esc(t)}</button>`;
+  const yrs=[]; if(o.min){for(let y=+(PN.hoy||o.max||'2026').slice(0,4)+1;y>=+o.min.slice(0,4);y--)yrs.push(y)}
   const G=[['dia',T('Day','Día')],['semana',T('Week','Semana')],['mes',T('Month','Mes')],['anio',T('Year','Año')],['dow',T('Weekday','Día de la semana')],['tienda',T('Store','Tienda')],['vendedor',T('Seller','Vendedor')]];
+  const P=[['win',T('Around today','Alrededor de hoy')],['today',T('Today','Hoy')],['week',T('This week','Esta semana')],['month',T('This month','Este mes')],['next30',T('Next 30 days','Próx. 30 días')],['l30',T('Last 30 days','Últ. 30 días')],['year',T('This year','Este año')],['ly',T('Last year','Año pasado')],['ny',T('Next year','Próximo año')],['all',T('All time','Todo')]];
   const vs=(o.vendedores||[]).filter(v=>!s.tiendas.size||s.tiendas.has(v.t)); const byT={}; vs.forEach(v=>{(byT[v.t]=byT[v.t]||[]).push(v)});
-  $('ex-ctl').innerHTML=`
-   <div class="xg"><label>${esc(T('Group by','Agrupar por'))}</label><div class="chips">${G.map(g=>ch(s.grupo===g[0],`exSet('grupo','${g[0]}')`,g[1])).join('')}</div></div>
-   <div class="xg"><label>${esc(T('Quick range','Rango rápido'))}</label><div class="chips">${[['7',T('Last 7 days','Últimos 7 días')],['30',T('Last 30 days','Últimos 30 días')],['mtd',T('This month','Este mes')],['ytd',T('This year','Este año')],['ly',T('Last year','Año pasado')],['all',T('All time','Todo')]].map(p=>`<button type="button" class="chip" onclick="exPreset('${p[0]}')">${esc(p[1])}</button>`).join('')}</div></div>
-   <div class="xg two"><div><label for="x-d">${esc(T('From','Desde'))}</label><input type="date" id="x-d" value="${esc(s.desde)}" min="${esc(o.min||'')}" max="${esc(o.max||'')}" onchange="exSet('desde',this.value)"></div><div><label for="x-h">${esc(T('To','Hasta'))}</label><input type="date" id="x-h" value="${esc(s.hasta)}" min="${esc(o.min||'')}" max="${esc(o.max||'')}" onchange="exSet('hasta',this.value)"></div></div>
-   <div class="xg"><label>${esc(T('Year','Año'))}</label><div class="chips">${yrs.map(y=>ch(s.anios.has(y),`exTog('anios',${y})`,String(y))).join('')||'—'}</div></div>
-   <div class="xg"><label>${esc(T('Month','Mes'))}</label><div class="chips">${MON[L].map((m,i)=>ch(s.meses.has(i+1),`exTog('meses',${i+1})`,m)).join('')}</div></div>
-   <div class="xg"><label>${esc(T('Weekday','Día de la semana'))}</label><div class="chips">${DOWN[L].map((m,i)=>ch(s.dows.has(i),`exTog('dows',${i})`,m)).join('')}</div></div>
-   <div class="xg"><label>${esc(T('Store','Tienda'))}</label><div class="chips">${(o.tiendas||[]).map(t=>ch(s.tiendas.has(t),`exTog('tiendas','${t}')`,SN[t]||t)).join('')}</div></div>
-   <div class="xg two"><div><label for="x-v">${esc(T('Seller','Vendedor'))}</label><select id="x-v" onchange="exSet('vend',this.value)"><option value="">${esc(T('All sellers','Todos los vendedores'))}</option>${Object.keys(byT).sort().map(t=>`<optgroup label="${esc(SN[t]||t)}">${byT[t].map(v=>`<option value="${esc(v.c)}"${s.vend===v.c?' selected':''}>${esc(v.n)} (${esc(v.c)})</option>`).join('')}</optgroup>`).join('')}</select></div>
-     <div><label for="x-q">${esc(T('Find in results','Buscar en resultados'))}</label><input type="search" id="x-q" value="${esc(s.q)}" oninput="EX.s.q=this.value;exRender()" placeholder="${esc(T('Name, store, date…','Nombre, tienda, fecha…'))}"></div></div>
-   <div class="row"><button class="btn" onclick="exCsv()">${esc(T('Download CSV','Descargar CSV'))}</button><button class="btn ghost" onclick="exReset()">${esc(T('Clear filters','Limpiar filtros'))}</button></div>`;
+  const stores=(o.tiendas||[]).filter(t=>t!=='WH'||true);
+  $('pn-ctl').innerHTML=`
+   <div class="xg"><label>${esc(T('Range','Rango'))}</label><div class="chips">${P.map(p=>ch(s.preset===p[0],`pPreset('${p[0]}')`,p[1])).join('')}</div></div>
+   <div class="xg two"><div class="navr"><button type="button" class="btn ghost sq" onclick="pShift(-1)" aria-label="${esc(T('Earlier','Antes'))}">‹</button><div class="grow"><label for="x-d">${esc(T('From','Desde'))}</label><input type="date" id="x-d" value="${esc(s.desde)}" onchange="pSet('desde',this.value)"></div></div><div class="navr"><div class="grow"><label for="x-h">${esc(T('To','Hasta'))}</label><input type="date" id="x-h" value="${esc(s.hasta)}" onchange="pSet('hasta',this.value)"></div><button type="button" class="btn ghost sq" onclick="pShift(1)" aria-label="${esc(T('Later','Después'))}">›</button></div></div>
+   <div class="xg"><label>${esc(T('Group by','Agrupar por'))}</label><div class="chips">${G.map(g=>ch(s.grupo===g[0],`pSet('grupo','${g[0]}')`,g[1])).join('')}</div></div>
+   <div class="xg"><label>${esc(T('Store','Tienda'))}</label><div class="chips">${stores.map(t=>ch(s.tiendas.has(t),`pTog('tiendas','${t}')`,SN[t]||t)).join('')}</div></div>
+   <details class="more"${(s.meses.size||s.anios.size||s.dows.size||s.vend||s.q)?' open':''}><summary>${esc(T('More filters','Más filtros'))}</summary>
+    <div class="xg"><label>${esc(T('Year','Año'))}</label><div class="chips">${yrs.map(y=>ch(s.anios.has(y),`pTog('anios',${y})`,String(y))).join('')||'—'}</div></div>
+    <div class="xg"><label>${esc(T('Month','Mes'))}</label><div class="chips">${MON[L].map((m,i)=>ch(s.meses.has(i+1),`pTog('meses',${i+1})`,m)).join('')}</div></div>
+    <div class="xg"><label>${esc(T('Weekday','Día de la semana'))}</label><div class="chips">${DOWN[L].map((m,i)=>ch(s.dows.has(i),`pTog('dows',${i})`,m)).join('')}</div></div>
+    <div class="xg two"><div><label for="x-v">${esc(T('Seller','Vendedor'))}</label><select id="x-v" onchange="pSet('vend',this.value)"><option value="">${esc(T('All sellers','Todos los vendedores'))}</option>${Object.keys(byT).sort().map(t=>`<optgroup label="${esc(SN[t]||t)}">${byT[t].map(v=>`<option value="${esc(v.c)}"${s.vend===v.c?' selected':''}>${esc(v.n)} (${esc(v.c)})</option>`).join('')}</optgroup>`).join('')}</select></div>
+     <div><label for="x-q">${esc(T('Find in results','Buscar en resultados'))}</label><input type="search" id="x-q" value="${esc(s.q)}" oninput="PN.s.q=this.value;pRender()" placeholder="${esc(T('Name, store, date…','Nombre, tienda, fecha…'))}"></div></div>
+   </details>
+   <div class="row" id="pn-dl"><button type="button" class="btn" onclick="pCsv()">${esc(T('Download CSV','Descargar CSV'))}</button><button type="button" class="btn" onclick="pPdf()">${esc(T('Save as PDF','Guardar como PDF'))}</button><button type="button" class="btn ghost" onclick="pReset()">${esc(T('Reset','Restablecer'))}</button></div>`;
+  if(PN.D)$('pn-dl').classList.toggle('hide',!PN.D.descargar);
 }
-function exReset(){const s=EX.s;s.grupo='mes';s.desde='';s.hasta='';s.vend='';s.q='';['tiendas','dows','meses','anios'].forEach(k=>s[k].clear());EX.sort={k:null,d:-1};exPaint();exGo()}
-function exCsv(){
-  if(!EX.R||EX.R.error)return; const cols=exCols(), rows=exRows(), q=v=>{v=v==null?'':String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
-  const raw=r=>cols.map(c=>{if(c.k==='lbl')return r.lbl; if(c.k==='tienda')return r.tienda_n; const v=r[c.k]; return v==null?'':(typeof v==='number'?Math.round(v*100)/100:v)});
-  const t=EX.R.total, lines=[cols.map(c=>c.l).join(',')].concat(rows.map(r=>raw(r).map(q).join(','))); 
-  const s=EX.s, nm='sales_'+EX.R.grupo+'_'+(s.desde||'start')+'_'+(s.hasta||'today')+'.csv';
+function pReset(){const s=PN.s;s.q='';s.vend='';s.cmp=true;s.met='neto';['tiendas','dows','meses','anios'].forEach(k=>s[k].clear());PN.sort={k:null,d:1};pPreset('win')}
+/* ---- download (only with permission; the server says who) ---- */
+function pCsv(){
+  if(!PN.D||PN.D.error||!PN.D.descargar)return; const cols=pCols(), rows=pRows(), q=v=>{v=v==null?'':String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+  const val=(r,c)=>{if(c.k==='lbl')return r.lbl;if(c.k==='tienda_n')return r.tienda_n;if(c.k==='yoy'||c.k==='pm'||c.k==='sp'){const v=r[c.k];return v==null?'':v.toFixed(1)}const v=r[c.k];return v==null?'':(typeof v==='number'?Math.round(v*100)/100:v)};
+  const lines=[cols.map(c=>c.l).join(',')].concat(rows.map(r=>cols.map(c=>q(val(r,c))).join(',')));
+  const s=PN.s, nm='sales_'+PN.D.grupo+'_'+(PN.D.desde||'')+'_'+(PN.D.hasta||'')+'.csv';
   const b=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}), a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=nm; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);
 }
-async function exInit(){
-  try{EX.opc=await DH.rpc('ventas_reporte_opc')}catch(e){EX.opc=null}
-  if(!EX.opc||EX.opc.error){return}
-  $('ex').classList.remove('hide');
-  const mx=EX.opc.max; if(mx){const d=new Date(mx+'T12:00:00Z');d.setUTCFullYear(d.getUTCFullYear()-1);EX.s.desde=d.toISOString().slice(0,10);EX.s.hasta=mx}
-  exPaint(); exFetch();
-  window.addEventListener('dh-lang',()=>{exPaint();exRender();histPaint()});
-  histPaint();
+function pPdf(){if(!PN.D||PN.D.error||!PN.D.descargar)return;document.body.classList.add('printing');const done=()=>{document.body.classList.remove('printing');window.removeEventListener('afterprint',done)};window.addEventListener('afterprint',done);setTimeout(()=>window.print(),50)}
+/* ---- hour by hour ---- */
+const HRS=[10,11,12,13,14,15,16,17,18,19,20,21,22];
+async function hFetch(){
+  const my=++PN.hseq; try{const r=await DH.rpc('ventas_horas',{p_fecha:PN.hfecha||null}); if(my!==PN.hseq)return; PN.hr=r&&!r.error?r:null; if(r&&r.hoy&&!PN.hfecha)PN.hfecha=r.fecha}catch(e){PN.hr=null} hRender();
 }
+function hRender(){
+  const box=$('hr-out'); if(!box)return; const H=PN.hr; if(!H){box.innerHTML=`<div class="empty">${esc(T('Could not load the hourly view.','No se pudo cargar la vista por hora.'))}</div>`;return}
+  const all=H.tiendas, sel=PN.hstore, L=sel?all.filter(t=>t.t===sel):all;
+  const meta=L.reduce((a,t)=>a+(+t.meta||0),0), isToday=H.fecha===H.hoy, ult=H.ult_hora;
+  const cum=h=>L.reduce((a,t)=>{const r=t.horas.filter(q=>q.h<=h).slice(-1)[0];return a+(r?r.v:0)},0);
+  const hasH=L.some(t=>t.horas.length), finalV=L.reduce((a,t)=>a+(+t.final||0),0), hmax=hasH?Math.max(...L.flatMap(t=>t.horas.map(q=>q.h))):null, lastH=Math.max(hmax||0,ult||0)||null;
+  const nowV=hasH?cum(hmax):finalV, pace=f=>(H.ritmo.find(r=>r.h===f)||{f:1}).f;
+  const W=640,Hh=240,pl=56,pr=14,pt=14,pb=28,top=Math.max(meta,nowV,finalV,1)*1.1,x=h=>pl+(h-10)/12*(W-pl-pr),y=v=>Hh-pb-v/top*(Hh-pb-pt);
+  const tk=[0,.25,.5,.75,1].map(f=>`<line x1="${pl}" x2="${W-pr}" y1="${y(top*f).toFixed(1)}" y2="${y(top*f).toFixed(1)}" stroke="#E7EBF2"/><text x="${pl-6}" y="${(y(top*f)+4).toFixed(1)}" text-anchor="end" font-size="11" fill="#6B6B6B">${$$(top*f)}</text>`).join('');
+  const exp=HRS.map(h=>x(h).toFixed(1)+','+y(meta*pace(h)).toFixed(1)).join(' ');
+  const hs=hasH?HRS.filter(h=>h<=(isToday?Math.max(lastH||0,hmax):hmax)&&h>=Math.min(...L.flatMap(t=>t.horas.map(q=>q.h)),hmax)).map(h=>[h,cum(h)]):[];
+  const act=hs.map(p=>x(p[0]).toFixed(1)+','+y(p[1]).toFixed(1)).join(' ');
+  const svg=`<div class="cw"><svg class="pch" viewBox="0 0 ${W} ${Hh}" width="${W}" role="img" aria-label="${esc(T('Cumulative sales by hour against expected pace','Ventas acumuladas por hora contra el ritmo esperado'))}">${tk}<line x1="${pl}" x2="${W-pr}" y1="${y(meta).toFixed(1)}" y2="${y(meta).toFixed(1)}" stroke="#C8922A" stroke-dasharray="5 4" stroke-width="2"/><text x="${W-pr}" y="${(y(meta)-5).toFixed(1)}" text-anchor="end" font-size="11" font-weight="700" fill="#9a7a1a">${esc(T('Goal ','Meta '))}${$$(meta)}</text><polyline points="${exp}" fill="none" stroke="#9aa3b2" stroke-width="2" stroke-dasharray="2 4"/>${act?`<polyline points="${act}" fill="none" stroke="#1B3A6B" stroke-width="3" stroke-linejoin="round"/>${hs.map(p=>`<circle cx="${x(p[0]).toFixed(1)}" cy="${y(p[1]).toFixed(1)}" r="4" fill="#1B3A6B"/>`).join('')}`:(finalV>0?`<circle cx="${x(21).toFixed(1)}" cy="${y(finalV).toFixed(1)}" r="5" fill="#1B3A6B"/><text x="${(x(21)-8).toFixed(1)}" y="${(y(finalV)-8).toFixed(1)}" text-anchor="end" font-size="11" fill="#1B3A6B" font-weight="700">${$$(finalV)}</text>`:`<text x="${W/2}" y="${Hh/2}" text-anchor="middle" font-size="13" fill="#6B6B6B">${esc(isToday?T('No sales loaded yet today','Aún no hay ventas cargadas hoy'):T('Hour-by-hour detail was not saved for this day','El detalle por hora no se guardó para este día'))}</text>`)}${HRS.map(h=>`<text x="${x(h).toFixed(1)}" y="${Hh-8}" text-anchor="middle" font-size="11" fill="#6B6B6B">${h}h</text>`).join('')}</svg></div>`;
+  const expNow=isToday&&lastH?meta*pace(lastH):null, diff=expNow>0?(nowV/expNow-1)*100:null;
+  const rows=all.map(t=>{const v=t.horas.length?t.horas[t.horas.length-1].v:(+t.final||0),m=+t.meta||0,e=isToday&&lastH?m*pace(lastH):null;return `<tr><td><b>${esc(SN[t.t]||t.t)}</b></td><td class="r">${$$(v)}</td><td class="r">${m>0?$$(m):'—'}</td><td class="r">${m>0?pTag(v/m*100):'—'}</td><td class="r">${e==null?'—':$$(e)}</td><td class="r">${e>0?yoyTag(v,e):'—'}</td></tr>`}).join('');
+  const chips=`<button type="button" class="chip sm${!sel?' on':''}" onclick="PN.hstore='';hRender()">${esc(T('All stores','Todas'))}</button>`+all.map(t=>`<button type="button" class="chip sm${sel===t.t?' on':''}" onclick="PN.hstore='${t.t}';hRender()">${esc(SN[t.t]||t.t)}</button>`).join('');
+  box.innerHTML=`<div class="hh"><div class="chips">${chips}</div><div class="navr"><button type="button" class="btn ghost sq" onclick="hDay(-1)" aria-label="${esc(T('Previous day','Día anterior'))}">‹</button><input type="date" value="${esc(H.fecha)}" onchange="PN.hfecha=this.value;hFetch()" aria-label="${esc(T('Day','Día'))}"><button type="button" class="btn ghost sq" onclick="hDay(1)" aria-label="${esc(T('Next day','Día siguiente'))}">›</button></div></div>
+   <div class="kpis"><div class="kpi"><div class="v">${$$(nowV)}</div><div class="l">${esc(isToday?T('Sales so far today','Ventas de hoy a esta hora'):T('Sales that day','Ventas ese día'))}${lastH&&isToday?' · '+lastH+':00':''}</div>${meta>0?`<div class="d">${pTag(nowV/meta*100)} ${esc(T('of the day goal','de la meta del día'))}</div>`:''}</div>
+   <div class="kpi"><div class="v">${expNow==null?'—':$$(expNow)}</div><div class="l">${esc(T('Expected by this hour','Esperado a esta hora'))}</div>${diff==null?'':`<div class="d ${diff>=0?'up':'dn'}">${diff>=0?'▲':'▼'} ${Math.abs(diff).toFixed(0)}% ${esc(diff>=0?T('ahead of pace','adelante del ritmo'):T('behind pace','detrás del ritmo'))}</div>`}</div>
+   <div class="kpi"><div class="v">${meta>0?$$(meta):'—'}</div><div class="l">${esc(T('Goal for the day','Meta del día'))}</div><div class="d eq">${esc(H.fecha>H.hoy?T('Forecast','Pronóstico'):'')}</div></div></div>`+svg+`<div class="lg"><span><i class="ln" style="background:#1B3A6B"></i>${esc(T('Actual (cumulative)','Real (acumulado)'))}</span><span><i class="ln" style="background:#9aa3b2"></i>${esc(T('Expected pace','Ritmo esperado'))}</span><span><i class="ln dsh"></i>${esc(T('Goal','Meta'))}</span></div>
+   <div class="tw" style="margin-top:10px"><table class="xt"><thead><tr><th>${esc(T('Store','Tienda'))}</th><th class="r">${esc(T('Sales','Ventas'))}</th><th class="r">${esc(T('Goal','Meta'))}</th><th class="r">${esc(T('% of goal','% de meta'))}</th><th class="r">${esc(T('Expected now','Esperado ahora'))}</th><th class="r">${esc(T('vs pace','vs ritmo'))}</th></tr></thead><tbody>${rows}</tbody></table></div>
+   <div class="note">${esc(T('Hour-by-hour history starts on 11/25/2026, when each hourly report began to be saved. Earlier days show the final total only. The pace curve is a default assumption.','El historial por hora empieza el 25/11/2026, cuando se empezó a guardar cada reporte por hora. Los días anteriores muestran solo el total final. La curva de ritmo es un supuesto por ahora.'))}</div>`;
+}
+function hDay(n){PN.hfecha=addDays(PN.hfecha||PN.hoy,n);hFetch()}
+async function pnLoad(){try{PN.opc=await DH.rpc('ventas_reporte_opc')}catch(e){PN.opc=null} if(PN.opc&&!PN.opc.error){} pPaint(); await pFetch()}
+async function pnInit(){
+  try{PN.opc=await DH.rpc('ventas_reporte_opc')}catch(e){PN.opc=null}
+  if(!PN.opc||PN.opc.error){show(T('You do not have access to this report.','No tienes acceso a este reporte.'));return}
+  $('pn').classList.remove('hide'); $('hr').classList.remove('hide');
+  await hFetch(); PN.hoy=PN.hr?PN.hr.hoy:new Date().toISOString().slice(0,10);
+  pPreset('win'); histPaint();
+  setInterval(()=>{if(!document.hidden&&(!PN.hfecha||PN.hfecha===PN.hoy))hFetch()},300000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden){hFetch();pFetch()}});
+  window.addEventListener('dh-lang',()=>{pPaint();pRender();hRender();histPaint()});
+}
+
 /* ---- admin: load history file ---- */
 function histPaint(){
   const b=$('hist'); if(!ISSUP||!b)return; b.classList.remove('hide');
@@ -316,16 +368,17 @@ async function histGo(){
       done+=r.filas; o.textContent=T('Loading… ','Cargando… ')+done+' / '+rows.length;
     }
     o.textContent=T('Done. Loaded ','Listo. Se cargaron ')+done+T(' rows.',' filas.'); $('h-go').disabled=false;
-    EX.opc=await DH.rpc('ventas_reporte_opc'); exPaint(); exFetch();
+    await pnLoad();
   }catch(e){$('h-go').disabled=false;o.textContent=T('Could not load that file. Check the columns and try again.','No se pudo cargar el archivo. Revisa las columnas e intenta de nuevo.')}
 }
+
 
 (async function(){
   if(!DH.token()){location.href='index.html';return}
   try{const e=DH.emp();ISADM=!!(e&&e.es_admin)}catch(e){}
   try{ISSUP=(await DH.rpc('es_super_admin'))===true}catch(e){}
-  await load(null,null);
-  exInit();
+  if(ISSUP)$('imp').classList.remove('hide');
+  await pnInit();
 })();
 </script>
 </body>
