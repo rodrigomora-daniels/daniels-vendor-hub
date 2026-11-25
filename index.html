@@ -175,6 +175,12 @@
   #season-card .sb i{display:block;height:100%;background:#F2C14E;border-radius:8px}
   #season-card .sb b{position:absolute;top:-2px;bottom:-2px;width:3px;background:#fff}
   #season-card .sb.sm{height:12px;border-radius:6px;margin-top:4px}
+  #season-card .pc{display:inline-block;font:700 12px 'Segoe UI',Arial,sans-serif;margin-left:6px;padding:1px 8px;border-radius:10px;background:rgba(255,255,255,.16);color:#fff;white-space:nowrap}
+  #season-card .pc-a{background:#F2C14E;color:#12284A}
+  #season-card .pc-g{background:#7BE0A0;color:#0E2A1A}
+  #season-card .pc-l{background:rgba(255,156,143,.22);color:#FFB4A9}
+  #goal-card .pc{font:700 12px 'Segoe UI',Arial,sans-serif;margin-left:4px}
+  #goal-card .pc-a{color:#9A6B00}#goal-card .pc-g{color:#2E7D32}#goal-card .pc-l{color:#C0392B}
   #season-card .sn{display:flex;gap:16px;flex-wrap:wrap;font:14px 'Segoe UI',Arial,sans-serif;margin-top:8px;color:#E6EDF8}
   #season-card .sn b{font:700 20px Georgia,serif;color:#fff}
   #season-card .ss{font:700 14px 'Segoe UI',Arial,sans-serif}
@@ -1797,7 +1803,7 @@ async function loadGoalCard(){
     var hasData=r.hora_max!=null, pv=mv?v/mv*100:0, exp=r.ritmo_actual==null?0:r.ritmo_actual*100, diff=pv-exp, pen=v?sv/v*100:0, penM=mv?ms/mv*100:0;
     var laToday=new Date().toLocaleDateString('en-CA',{timeZone:'America/Los_Angeles'});
     var daysTo=Math.round((new Date(r.fecha+'T12:00:00Z')-new Date(laToday+'T12:00:00Z'))/864e5);
-    var sp=function(n){return '<span class="gst"><em>'+n.tienda+'</em><span class="gb sm"><i style="width:'+Math.min(100,n.meta_v?n.v/n.meta_v*100:0).toFixed(1)+'%"></i>'+(hasData?'<b style="left:'+exp.toFixed(1)+'%"></b>':'')+'</span><small>'+$(n.v)+' / '+$(n.meta_v)+'</small></span>'};
+    var sp=function(n){return '<span class="gst"><em>'+n.tienda+'</em><span class="gb sm"><i style="width:'+Math.min(100,n.meta_v?n.v/n.meta_v*100:0).toFixed(1)+'%"></i>'+(hasData?'<b style="left:'+exp.toFixed(1)+'%"></b>':'')+'</span><small>'+$(n.v)+' / '+$(n.meta_v)+(n.meta_v>0?(function(p){return ' <span class="pc pc-'+(p>=120?'a':p>=100?'g':p>=80?'m':'l')+'">'+(p>=120?'★ ':p>=100?'✓ ':'')+p+'%</span>'})(Math.round(n.v/n.meta_v*100)):'')+'</small></span>'};
     if(r.proxima&&!hasData){
       if(daysTo>45){el.classList.add('hide');return}
       var cd=daysTo<=0?T('Today','Hoy'):daysTo===1?T('Tomorrow','Mañana'):T('In '+daysTo+' days','En '+daysTo+' días');
@@ -1845,31 +1851,32 @@ async function loadSeasonCard(){
       cdb='<div class="gcd" data-t="'+gt+'" role="timer" aria-live="off"><div class="gct">'+T('Season starts in','La temporada arranca en')+' · '+LB[0]+'</div><div class="gcg">'
         +['d','h','m','s'].map(function(u){return '<div><b data-u="'+u+'">0</b><span>'+({d:T('days','días'),h:T('hours','horas'),m:T('min','min'),s:T('sec','seg')})[u]+'</span></div>'}).join('')+'</div></div>';}
     h+=cdb;
+    var pcB=function(v,m){if(!(m>0))return '';var p=Math.round(v/m*100),c=p>=120?'a':p>=100?'g':p>=80?'m':'l';return '<span class="pc pc-'+c+'" title="'+T('of goal','de la meta')+'">'+(p>=120?'★ ':p>=100?'✓ ':'')+p+'%</span>'};
     var barH=function(p,mark,sm){return '<div class="sb'+(sm?' sm':'')+'"><i style="width:'+Math.max(0,Math.min(100,p)).toFixed(1)+'%"></i>'+(mark!=null?'<b style="left:'+Math.min(100,mark).toFixed(1)+'%"></b>':'')+'</div>'};
     var st='';
     if(r.empezo){st=diff>=5?'<span class="ss" style="color:#7BE0A0">▲ '+T('Ahead of pace','Adelante del ritmo')+'</span>':diff<=-5?'<span class="ss" style="color:#FF9C8F">▼ '+T('Behind pace','Detrás del ritmo')+'</span>':'<span class="ss">● '+T('On pace','En ritmo')+'</span>'}
     h+=barH(pct,r.empezo&&r.ritmo>0?pace:null)
-      +'<div class="sn"><span><b>'+$(V)+'</b> / '+$(M)+' · '+Math.round(pct)+'%</span>'+(r.empezo?'<span>'+T('Expected by now ','Esperado a esta hora ')+'<b style="font-size:16px">'+$(E)+'</b></span>':'<span>'+T('Season goal to beat','Meta de temporada a superar')+'</span>')+st+'</div>';
+      +'<div class="sn"><span><b>'+$(V)+'</b> / '+$(M)+' '+pcB(V,M)+'</span>'+(r.empezo?'<span>'+T('Expected by now ','Esperado a esta hora ')+'<b style="font-size:16px">'+$(E)+'</b></span>':'<span>'+T('Season goal to beat','Meta de temporada a superar')+'</span>')+st+'</div>';
     // days strip
     var d0=inc.length?inc[0].dias:r.tiendas[0].dias;
     h+='<div class="sd">'+d0.map(function(d,i){
       var dm=0,dv=0; inc.forEach(function(t){dm+=+t.dias[i].meta||0;dv+=+t.dias[i].v||0});
       var fut=d.f>r.hoy, cur=d.f===r.hoy;
-      return '<div'+(cur?' class="t"':'')+'>'+SH[i]+' '+fd(d.f)+'<b>'+(fut||!r.empezo?$(dm):$(dv))+'</b>'+(fut||!r.empezo?'<span>'+T('goal','meta')+'</span>':'<span>'+T('of ','de ')+$(dm)+'</span>')+'</div>'}).join('')+'</div>';
+      return '<div'+(cur?' class="t"':'')+'>'+SH[i]+' '+fd(d.f)+'<b>'+(fut||!r.empezo?$(dm):$(dv))+'</b>'+(fut||!r.empezo?'<span>'+T('goal','meta')+'</span>':'<span>'+T('of ','de ')+$(dm)+(dm>0?' · '+Math.round(dv/dm*100)+'%':'')+'</span>')+'</div>'}).join('')+'</div>';
     // stores
     h+='<div class="sx" style="margin-top:12px">'+T('Tap a store to see each day and its sellers.','Toca una tienda para ver cada día y sus vendedores.')+'</div>';
     r.tiendas.forEach(function(t){
       var tp=t.meta>0?t.v/t.meta*100:0, tpc=t.meta>0?t.esperado/t.meta*100:0;
-      h+='<details><summary><span class="sl" style="margin-top:0"><span><b>'+meEsc(t.nombre)+'</b> '+(r.empezo&&!t.sin_filas?$(t.v):'')+'</span><span>'+(t.sin_filas?T('no seller report','sin reporte por vendedor'):$(t.meta)+' '+T('goal','meta'))+'</span></span>'+(t.sin_filas?'':barH(tp,r.empezo&&r.ritmo>0?tpc:null,true))+'</summary>';
+      h+='<details><summary><span class="sl" style="margin-top:0"><span><b>'+meEsc(t.nombre)+'</b> '+(r.empezo&&!t.sin_filas?$(t.v)+pcB(t.v,t.meta):'')+'</span><span>'+(t.sin_filas?T('no seller report','sin reporte por vendedor'):$(t.meta)+' '+T('goal','meta'))+'</span></span>'+(t.sin_filas?'':barH(tp,r.empezo&&r.ritmo>0?tpc:null,true))+'</summary>';
       if(t.sin_filas){h+='<div class="sx">'+T('This store is not in the hourly Sales by Salesperson report, so it is left out of the season total.','Esta tienda no viene en el reporte por hora de ventas por vendedor, por eso no entra en el total de la temporada.')+'</div>'}
       else{
-        h+=t.dias.map(function(d,i){var fut=d.f>r.hoy||!r.empezo; return '<div class="sl"><span>'+LB[i]+' <small>'+fd(d.f)+'</small></span><span>'+(fut?'<small>'+T('goal','meta')+'</small> '+$(d.meta):'<b>'+$(d.v)+'</b> / '+$(d.meta))+'</span></div>'}).join('');
+        h+=t.dias.map(function(d,i){var fut=d.f>r.hoy||!r.empezo; return '<div class="sl"><span>'+LB[i]+' <small>'+fd(d.f)+'</small></span><span>'+(fut?'<small>'+T('goal','meta')+'</small> '+$(d.meta):'<b>'+$(d.v)+'</b> / '+$(d.meta)+pcB(d.v,d.meta))+'</span></div>'}).join('');
         if(t.t==='EC'){h+='<div class="sx">'+T('Online sales (José Padrón, Victoria Sagaste). It has a store goal and no seller goals.','Ventas en línea (José Padrón, Victoria Sagaste). Tiene meta de tienda y no tiene metas por vendedor.')+'</div>'}
         else if(t.vendedores&&t.vendedores.length){
           var isT=r.ref===r.hoy;
           h+='<div class="sx" style="margin-top:12px"><b style="color:#fff">'+T('Sellers','Vendedores')+'</b> · '+(isT?T('today','hoy'):T('last day with data ','último día con datos ')+fd(r.ref))+(t.n?' · '+T('goal = store goal for the day ÷ '+t.n+(t.n===1?' seller':' sellers')+', never below the monthly minimum','meta = meta de la tienda del día ÷ '+t.n+(t.n===1?' vendedor':' vendedores')+', nunca debajo del mínimo mensual'):'')+'</div>';
           h+=t.vendedores.map(function(v){var vp=v.meta_hoy>0?v.hoy/v.meta_hoy*100:0;
-            return '<div class="sl" style="margin-top:10px"><span>'+meEsc(v.n)+' <small>· '+T('season','temporada')+' '+$(v.temp)+'</small></span><span><b>'+$(v.hoy)+'</b> / '+$(v.meta_hoy)+'</span></div>'+barH(vp,isT&&r.ritmo>0?r.ritmo*100:null,true)}).join('');
+            return '<div class="sl" style="margin-top:10px"><span>'+meEsc(v.n)+' <small>· '+T('season','temporada')+' '+$(v.temp)+'</small></span><span><b>'+$(v.hoy)+'</b> / '+$(v.meta_hoy)+pcB(v.hoy,v.meta_hoy)+'</span></div>'+barH(vp,isT&&r.ritmo>0?r.ritmo*100:null,true)}).join('');
         }
       }
       h+='</details>';
