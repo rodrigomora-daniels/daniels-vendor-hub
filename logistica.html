@@ -273,7 +273,13 @@ function visible(all){
     if(FLT.when==='past'&&!(k<t))return false; if(FLT.when==='old7'&&!(k<o))return false;
     if(FLT.when==='today'&&k!==t)return false; if(FLT.when==='future'&&!(k>t))return false;
     if(q&&!((TAB==='rec'?[r.vendor,r.po,r.driver_id,r.contenedor_num,r.notas]:[r.factura,r.cliente,r.direccion,r.notas]).join(' ').toLowerCase().includes(q)))return false;
-    return true;});
+    return true;}).sort((a,b)=>{
+    const sa=TAB==='rec'?String(a.cita||''):String(a.fecha_ndd||''), sb=TAB==='rec'?String(b.cita||''):String(b.fecha_ndd||'');
+    const fa=dateOf(a)>=t, fb=dateOf(b)>=t;
+    if(fa!==fb)return fa?-1:1;               // today and upcoming first
+    if(sa===sb)return 0;
+    return fa?(sa<sb?-1:1):(sa<sb?1:-1);     // upcoming: soonest first; past: most recent first
+  });
 }
 function sel(r){return SEL.has(r.id)?' sel':'';}
 function thCk(rows){return SELMODE?`<th class="ck"><input type="checkbox" aria-label="${esc(tr('Select all shown / Seleccionar todos los mostrados'))}" ${rows.length&&rows.every(r=>SEL.has(r.id))?'checked':''} onclick="selAll(this.checked)"></th>`:'';}
