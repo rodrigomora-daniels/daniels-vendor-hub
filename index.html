@@ -1698,6 +1698,7 @@ async function loadDomeCard(){
   try{
     var r=await DH.rpc('ventas_mi');
     if(!r||r.error||r.vacio||(!r.yo&&!(r.gerente&&r.tiendas&&r.tiendas.length))){el.classList.add('hide');return}
+    var _k=[r.corrida,r.fecha,r.ritmo,localStorage.getItem('dh_lang')].join('|'); if(el.dataset.k===_k&&el.innerHTML&&!el.classList.contains('hide'))return;
     var es=(localStorage.getItem('dh_lang')==='es'), T=function(a,b){return es?b:a};
     var $=function(n){return (n<0?'-':'')+'$'+Math.abs(Math.round(n)).toLocaleString('en-US')};
     var pace=(r.ritmo||0)*100, stale=r.fecha!==r.hoy;
@@ -1736,7 +1737,9 @@ async function loadDomeCard(){
       });
       h+='<div class="dn">'+T('Dark mark = expected by this hour. Net sales include delivery charges and exclude kits. Seller goals use an estimated 5 days a week until schedules are complete.','Marca oscura = esperado a esta hora. Las ventas netas incluyen cargos de entrega y excluyen kits. Las metas por vendedor usan 5 días por semana estimados hasta que los horarios estén completos.')+'</div>';
     }
-    el.innerHTML=h; el.classList.remove('hide');
+    var _op=[].map.call(el.querySelectorAll('details'),function(x){return x.open});
+    el.innerHTML=h; el.classList.remove('hide'); el.dataset.k=_k;
+    [].forEach.call(el.querySelectorAll('details'),function(x,i){if(_op[i])x.open=true});
   }catch(e){el.classList.add('hide')}
 }
 async function loadGoalCard(){
@@ -1830,7 +1833,7 @@ async function amDone(id){AML=AML.filter(function(a){return a.id!==id;});amRende
 async function amSnzDo(id,modo){AML=AML.filter(function(a){return a.id!==id;});AMS=null;amRender();try{await DH.rpc('alarma_posponer',{p_id:id,p_modo:modo});}catch(e){}}
 async function amAll(){AML=[];amRender();try{await DH.rpc('alarma_descartar',{});}catch(e){}}
 async function amPoll(){if(document.hidden||!DH.token())return;try{var r=await DH.rpc('alarmas_mias');if(Array.isArray(r)){AML=r;amRender();}}catch(e){}}
-setInterval(amPoll,90000);document.addEventListener('visibilitychange',function(){if(!document.hidden)amPoll();});
+setInterval(amPoll,90000);setInterval(function(){if(!document.hidden&&window.DH&&DH.token&&DH.token())loadDomeCard()},60000);document.addEventListener('visibilitychange',function(){if(!document.hidden&&window.DH&&DH.token&&DH.token())loadDomeCard()});document.addEventListener('visibilitychange',function(){if(!document.hidden)amPoll();});
 async function loadAlertsCard(){
   var card=document.getElementById('alerts-card'), br=document.getElementById('briefing');
   var al=null, sc=null;
