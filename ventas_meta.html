@@ -199,6 +199,7 @@ function pDetail(k){
   document.querySelectorAll('#pt tr[data-k]').forEach(e=>e.classList.toggle('hl',e.dataset.k===k));
 }
 /* ---- table ---- */
+const gTag=v=>`<b style="color:${v>=100?'#2E7D32':'#C0392B'}">${Math.round(v)}%${v>=100?' ✓':''}</b>`;
 function pCols(){return [
  {k:'lbl',l:T('Period','Periodo'),t:'s'},{k:'tienda_n',l:T('Store','Tienda'),t:'s'},
  {k:'neto',l:T('Sales','Ventas'),f:(v,r)=>r.fut?'—':$$(v)},
@@ -206,7 +207,7 @@ function pCols(){return [
  {k:'ly',l:T('Last year','Año pasado'),f:v=>v>0?$$(v):'—'},
  {k:'meta',l:T('Goal','Meta'),f:v=>v>0?$$(v):'—'},
  {k:'pm',l:T('% of goal','% de meta'),f:v=>v==null?'—':pTag(v),raw:1},
- {k:'serv',l:T('Services','Servicios'),f:(v,r)=>r.fut?'—':$$(v)},{k:'sp',l:T('Svc %','% serv.'),f:v=>v==null?'—':v.toFixed(1)+'%'},{k:'pb',l:'Profit Booster',f:(v,r)=>r.fut?'—':$$(v)},{k:'pp',l:'PB %',f:v=>v==null?'—':v.toFixed(1)+'%'},
+ {k:'serv',l:T('Services','Servicios'),f:(v,r)=>r.fut?'—':$$(v)},{k:'sp',l:T('Svc %','% serv.'),f:v=>v==null?'—':v.toFixed(1)+'%'},{k:'sg',l:T('Svc % of goal','% serv. de meta'),f:v=>v==null?'—':gTag(v),raw:1},{k:'pb',l:'Profit Booster',f:(v,r)=>r.fut?'—':$$(v)},{k:'pp',l:'PB %',f:v=>v==null?'—':v.toFixed(1)+'%'},{k:'pg',l:T('PB % of goal','% PB de meta'),f:v=>v==null?'—':gTag(v),raw:1},
  {k:'merch',l:T('Merchandise','Mercancía'),f:(v,r)=>r.fut?'—':$$(v)},
  {k:'ventas_n',l:T('# sales','# ventas'),f:(v,r)=>r.fut?'—':Math.round(v).toLocaleString('en-US')},
  {k:'tk',l:T('Avg ticket','Ticket prom.'),f:v=>v==null?'—':$$(v)},{k:'dias',l:T('Days','Días'),f:v=>String(v)},{k:'pd',l:T('Avg / day','Prom. / día'),f:v=>v==null?'—':$$(v)}]}
@@ -215,7 +216,7 @@ function pTable(rows){
   const head=cols.map(c=>{const kk=c.k==='lbl'?'k':c.k,on=S.k?S.k===kk:kk===def,asc=S.k?S.d>0:isTime(g);return `<th class="${c.t==='s'?'':'r '}sh${on?' on':''}" tabindex="0" role="button" onclick="pSort('${kk}')" onkeydown="if(event.key==='Enter')pSort('${kk}')">${esc(c.l)}${on?(asc?' ▲':' ▼'):''}</th>`}).join('');
   const cell=(r,c)=>{const v=r[c.k];if(c.k==='lbl')return `<td data-no-i18n><b>${esc(v)}</b>${r.fut?` <span class="xp">${esc(T('forecast','pronóst.'))}</span>`:''}</td>`;if(c.k==='tienda_n')return `<td>${esc(v)}</td>`;const s=c.f?c.f(v,r):v;return `<td class="r">${c.raw?s:esc(s)}</td>`};
   const pm=t.meta_real>0?t.neto/t.meta_real*100:null, sp=t.neto>0?t.serv/t.neto*100:null, pp=t.neto>0?t.pb/t.neto*100:null, tk=t.ventas_n>0?t.neto/t.ventas_n:null;
-  const tot=`<tr class="tot"><td><b>${esc(T('Total','Total'))}</b></td><td></td><td class="r">${$$(t.neto)}</td><td class="r">${t.ly_real>0?yoyTag(t.neto,t.ly_real):'—'}</td><td class="r">${t.ly>0?$$(t.ly):'—'}</td><td class="r">${t.meta>0?$$(t.meta):'—'}</td><td class="r">${pm==null?'—':pTag(pm)}</td><td class="r">${$$(t.serv)}</td><td class="r">${sp==null?'—':sp.toFixed(1)+'%'}</td><td class="r">${$$(t.pb||0)}</td><td class="r">${pp==null?'—':pp.toFixed(1)+'%'}</td><td class="r">${$$(t.merch)}</td><td class="r">${Math.round(t.ventas_n).toLocaleString('en-US')}</td><td class="r">${tk==null?'—':$$(tk)}</td><td class="r">${t.dias}</td><td class="r">${t.dias>0?$$(t.neto/t.dias):'—'}</td></tr>`;
+  const tot=`<tr class="tot"><td><b>${esc(T('Total','Total'))}</b></td><td></td><td class="r">${$$(t.neto)}</td><td class="r">${t.ly_real>0?yoyTag(t.neto,t.ly_real):'—'}</td><td class="r">${t.ly>0?$$(t.ly):'—'}</td><td class="r">${t.meta>0?$$(t.meta):'—'}</td><td class="r">${pm==null?'—':pTag(pm)}</td><td class="r">${$$(t.serv)}</td><td class="r">${sp==null?'—':sp.toFixed(1)+'%'}</td><td class="r">${t.sg==null?'—':gTag(t.sg)}</td><td class="r">${$$(t.pb||0)}</td><td class="r">${pp==null?'—':pp.toFixed(1)+'%'}</td><td class="r">${t.pg==null?'—':gTag(t.pg)}</td><td class="r">${$$(t.merch)}</td><td class="r">${Math.round(t.ventas_n).toLocaleString('en-US')}</td><td class="r">${tk==null?'—':$$(tk)}</td><td class="r">${t.dias}</td><td class="r">${t.dias>0?$$(t.neto/t.dias):'—'}</td></tr>`;
   return `<div class="tw"><table class="xt" id="pt"><thead><tr>${head}</tr></thead><tbody>${rows.map(r=>`<tr data-k="${esc(r.k)}"${r.fut?' class="fu"':''}>${cols.map(c=>cell(r,c)).join('')}</tr>`).join('')}${rows.length?tot:`<tr><td colspan="${cols.length}" class="empty">${esc(T('No sales match these filters.','Ninguna venta coincide con estos filtros.'))}</td></tr>`}</tbody></table></div>`;
 }
 function pSort(k){const S=PN.sort;if(S.k!==k){S.k=k;S.d=(k==='k'||k==='tienda_n')?1:-1}else if(S.d<0&&!(k==='k'||k==='tienda_n')){S.d=1}else if(S.d>0&&(k==='k'||k==='tienda_n')){S.d=-1}else{S.k=null;S.d=1}pRender()}
@@ -248,6 +249,7 @@ async function pFetch(){
   try{
     const r=await DH.rpc('ventas_panel',{p_desde:s.desde||null,p_hasta:s.hasta||null,p_tiendas:pArr(s.tiendas),p_codigos:s.vend?[s.vend]:null,p_dows:pArr(s.dows),p_meses:pArr(s.meses),p_anios:pArr(s.anios),p_grupo:s.grupo});
     if(my!==PN.seq)return; PN.D=r||{error:'x'}; if(PN.D&&PN.D.hoy)PN.hoy=PN.D.hoy;
+    if(PN.D&&PN.D.rows){const km=PN.D.kmeta||{serv:10,pb:8},g=(v,n,m)=>(v!=null&&n>0&&m>0)?v/m*100:null,add=r=>{const nt=+r.neto||0;r.sg=nt>0?g((+r.serv||0)/nt*100,1,km.serv):null;r.pg=nt>0?g((+r.pb||0)/nt*100,1,km.pb):null};PN.D.rows.forEach(add);if(PN.D.total){const t=PN.D.total;t.sg=t.neto>0?(t.serv/t.neto*100)/km.serv*100:null;t.pg=t.neto>0?((t.pb||0)/t.neto*100)/km.pb*100:null;}}
   }catch(e){if(my!==PN.seq)return; PN.D={error:'x'}}
   $('pn-out').classList.remove('busy'); pRender();
 }
@@ -346,8 +348,8 @@ function hKpi(L,H){
   if(!st.length)return '';
   const cards=st.map(t=>{const m=+t.kpi.neto;return `<div style="flex:1 1 220px;min-width:200px;border:1px solid #E7EBF2;border-radius:10px;padding:10px"><b>${esc(SN[t.t]||t.t)}</b>${bar(T('Services','Servicios'),pct(+t.kpi.serv,m),km.serv)}${bar('Profit Booster',pct(+t.kpi.pb,m),km.pb)}</div>`}).join('');
   const V=L.flatMap(t=>(t.vend||[]).filter(v=>+v.neto>0).map(v=>Object.assign({tt:t.t},v))).sort((a,b)=>pct(+a.serv,+a.neto)-pct(+b.serv,+b.neto));
-  const rows=V.map(v=>{const sp=pct(+v.serv,+v.neto),pp=pct(+v.pb,+v.neto);return `<tr><td>${esc(v.n)}</td><td>${esc(SN[v.tt]||v.tt)}</td><td class="r">${$$(+v.neto)}</td><td class="r" style="color:${col(sp,km.serv)};font-weight:600">${sp.toFixed(1)}%</td><td class="r" style="color:${col(pp,km.pb)};font-weight:600">${pp.toFixed(1)}%</td></tr>`}).join('');
-  return `<h3 style="margin:16px 0 6px">${esc(T('Services and Profit Booster penetration','Penetración de servicios y Profit Booster'))}</h3><div style="display:flex;flex-wrap:wrap;gap:10px">${cards}</div>`+(rows?`<div class="tw" style="margin-top:10px"><table class="xt"><thead><tr><th>${esc(T('Seller','Vendedor'))}</th><th>${esc(T('Store','Tienda'))}</th><th class="r">${esc(T('Net sales','Venta neta'))}</th><th class="r">${esc(T('Services','Servicios'))}</th><th class="r">Profit Booster</th></tr></thead><tbody>${rows}</tbody></table></div>`:'')+`<div class="note">${esc(T('Penetration = dollars of services or Profit Booster ÷ net sales dollars. Red = below goal. Sellers who are behind get a friendly push in the afternoon.','Penetración = dólares de servicios o Profit Booster ÷ venta neta. Rojo = abajo de la meta. Los vendedores que van abajo reciben un aviso amigable por la tarde.'))}</div>`;
+  const rows=V.map(v=>{const sp=pct(+v.serv,+v.neto),pp=pct(+v.pb,+v.neto);return `<tr><td>${esc(v.n)}</td><td>${esc(SN[v.tt]||v.tt)}</td><td class="r">${$$(+v.neto)}</td><td class="r" style="color:${col(sp,km.serv)};font-weight:600">${sp.toFixed(1)}%</td><td class="r" style="color:${col(pp,km.pb)};font-weight:600">${pp.toFixed(1)}%</td><td class="r">${gTag(km.serv>0?sp/km.serv*100:0)}</td><td class="r">${gTag(km.pb>0?pp/km.pb*100:0)}</td></tr>`}).join('');
+  return `<h3 style="margin:16px 0 6px">${esc(T('Services and Profit Booster penetration','Penetración de servicios y Profit Booster'))}</h3><div style="display:flex;flex-wrap:wrap;gap:10px">${cards}</div>`+(rows?`<div class="tw" style="margin-top:10px"><table class="xt"><thead><tr><th>${esc(T('Seller','Vendedor'))}</th><th>${esc(T('Store','Tienda'))}</th><th class="r">${esc(T('Net sales','Venta neta'))}</th><th class="r">${esc(T('Services','Servicios'))}</th><th class="r">Profit Booster</th><th class="r">${esc(T('Svc % of goal','% serv. de meta'))}</th><th class="r">${esc(T('PB % of goal','% PB de meta'))}</th></tr></thead><tbody>${rows}</tbody></table></div>`:'')+`<div class="note">${esc(T('Penetration = dollars of services or Profit Booster ÷ net sales dollars. Red = below goal. Sellers who are behind get a friendly push in the afternoon.','Penetración = dólares de servicios o Profit Booster ÷ venta neta. Rojo = abajo de la meta. Los vendedores que van abajo reciben un aviso amigable por la tarde.'))}</div>`;
 }
 function hDay(n){PN.hfecha=addDays(PN.hfecha||PN.hoy,n);hFetch()}
 async function pnLoad(){try{PN.opc=await DH.rpc('ventas_reporte_opc')}catch(e){PN.opc=null} if(PN.opc&&!PN.opc.error){} pPaint(); await pFetch()}
