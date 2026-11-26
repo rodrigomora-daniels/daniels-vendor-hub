@@ -1828,8 +1828,8 @@ async function loadGoalCard(){
       if(daysTo>45){el.classList.add('hide');var _c0=document.getElementById('cd-strip');if(_c0)_c0.classList.add('hide');return}
       var cd=daysTo<=0?T('Today','Hoy'):daysTo===1?T('Tomorrow','Mañana'):T('In '+daysTo+' days','En '+daysTo+' días');
       var first=r.dias[0], last=r.dias[r.dias.length-1], fd=function(x){var q=new Date(x+'T12:00:00Z');return (q.getUTCMonth()+1)+'/'+q.getUTCDate()};
-      var gt=laMidnight(r.fecha);
-      var cdb='<div class="gcd" data-t="'+gt+'" role="timer" aria-live="off"><div class="gct">'+(r.nota==='Thanksgiving'?T('Black Friday season starts in','La temporada Black Friday arranca en')+' · '+r.nota:T('Goal days start in','Los días con meta arrancan en'))+'</div><div class="gcg">'
+      var gt=laMidnight(r.fecha)+(r.nota==='Thanksgiving'?11*36e5:0); /* Thanksgiving: store opens 11 AM LA */
+      var cdb='<div class="gcd" data-t="'+gt+'" role="timer" aria-live="off"><div class="gct">'+(r.nota==='Thanksgiving'?T('Black Friday season starts in','La temporada Black Friday arranca en')+' · '+r.nota+' 11 AM':T('Goal days start in','Los días con meta arrancan en'))+'</div><div class="gcg">'
         +['d','h','m','s'].map(function(u){return '<div><b data-u="'+u+'">0</b><span>'+({d:T('days','días'),h:T('hours','horas'),m:T('min','min'),s:T('sec','seg')})[u]+'</span></div>'}).join('')+'</div></div>';
       var cs=document.getElementById('cd-strip'); if(cs){cs.innerHTML=cdb;cs.classList.remove('hide')}
       el.classList.add('hide'); startGoalClock(); return;
@@ -1851,7 +1851,8 @@ async function loadSeasonCard(){
     var r=await DH.rpc('ventas_temporada');
     if(!r||r.error||!r.activa||!r.tiendas||!r.tiendas.length){el.classList.add('hide');return}
     var es=(localStorage.getItem('dh_lang')==='es'), T=function(a,b){return es?b:a};
-    var _k=[r.corrida,r.hoy,es,r.tiendas.map(function(t){return t.v}).join(',')].join('|');
+    var OPEN=laMidnight(r.inicio)+11*36e5, emp=!!r.empezo&&Date.now()>=OPEN; /* store opens 11 AM LA on day 1 */
+    var _k=[r.corrida,r.hoy,es,emp,r.tiendas.map(function(t){return t.v}).join(',')].join('|');
     if(el.dataset.k===_k&&el.innerHTML&&!el.classList.contains('hide'))return;
     var $=function(n){return (n<0?'-':'')+'$'+Math.abs(Math.round(n||0)).toLocaleString('en-US')};
     var LB=es?['Acción de Gracias','Black Friday','Sábado','Domingo','Cyber Monday']:['Thanksgiving','Black Friday','Saturday','Sunday','Cyber Monday'];
@@ -1862,33 +1863,33 @@ async function loadSeasonCard(){
     var M=0,V=0,E=0; inc.forEach(function(t){M+=+t.meta;V+=+t.v;E+=+t.esperado});
     var pct=M>0?V/M*100:0, pace=M>0?E/M*100:0, diff=pct-pace;
     var dayIdx=Math.round((new Date(r.hoy+'T12:00:00Z')-new Date(r.inicio+'T12:00:00Z'))/864e5);
-    var chip=!r.empezo?(daysTo===1?T('Starts tomorrow','Empieza mañana'):T('Starts in '+daysTo+' days','Empieza en '+daysTo+' días')):(dayIdx>=0&&dayIdx<=4?T('Day '+(dayIdx+1)+' of 5','Día '+(dayIdx+1)+' de 5'):'');
+    var chip=!emp?(daysTo<=0?T('Starts today · 11 AM','Empieza hoy · 11 AM'):daysTo===1?T('Starts tomorrow · 11 AM','Empieza mañana · 11 AM'):T('Starts in '+daysTo+' days','Empieza en '+daysTo+' días')):(dayIdx>=0&&dayIdx<=4?T('Day '+(dayIdx+1)+' of 5','Día '+(dayIdx+1)+' de 5'):'');
     var h='<div class="sh"><h3>🛍️ '+T('Black Friday season','Temporada Black Friday')+'</h3>'+(chip?'<span class="sc">'+chip+'</span>':'')+'<small>'+LB[0]+' → '+LB[4]+' · '+fd(r.inicio)+'–'+fd(r.fin)+'</small></div>';
     var cdb='';
-    if(!r.empezo){var gt=laMidnight(r.inicio);
-      cdb='<div class="gcd" data-t="'+gt+'" role="timer" aria-live="off"><div class="gct">'+T('Season starts in','La temporada arranca en')+' · '+LB[0]+'</div><div class="gcg">'
+    if(!emp){var gt=OPEN;
+      cdb='<div class="gcd" data-t="'+gt+'" role="timer" aria-live="off"><div class="gct">'+T('Store opens in','La tienda abre en')+' · '+LB[0]+' 11 AM'+'</div><div class="gcg">'
         +['d','h','m','s'].map(function(u){return '<div><b data-u="'+u+'">0</b><span>'+({d:T('days','días'),h:T('hours','horas'),m:T('min','min'),s:T('sec','seg')})[u]+'</span></div>'}).join('')+'</div></div>';}
     h+=cdb;
     var pcB=function(v,m){if(!(m>0))return '';var p=Math.round(v/m*100),c=p>=120?'a':p>=100?'g':p>=80?'m':'l';return '<span class="pc pc-'+c+'" title="'+T('of goal','de la meta')+'">'+(p>=120?'★ ':p>=100?'✓ ':'')+p+'%</span>'};
     var barH=function(p,mark,sm){return '<div class="sb'+(sm?' sm':'')+'"><i style="width:'+Math.max(0,Math.min(100,p)).toFixed(1)+'%"></i>'+(mark!=null?'<b style="left:'+Math.min(100,mark).toFixed(1)+'%"></b>':'')+'</div>'};
     var st='';
-    if(r.empezo){st=diff>=5?'<span class="ss" style="color:#7BE0A0">▲ '+T('Ahead of pace','Adelante del ritmo')+'</span>':diff<=-5?'<span class="ss" style="color:#FF9C8F">▼ '+T('Behind pace','Detrás del ritmo')+'</span>':'<span class="ss">● '+T('On pace','En ritmo')+'</span>'}
-    h+=barH(pct,r.empezo&&r.ritmo>0?pace:null)
-      +'<div class="sn"><span><b>'+$(V)+'</b> / '+$(M)+' '+pcB(V,M)+'</span>'+(r.empezo?'<span>'+T('Expected by now ','Esperado a esta hora ')+'<b style="font-size:16px">'+$(E)+'</b></span>':'<span>'+T('Season goal to beat','Meta de temporada a superar')+'</span>')+st+'</div>';
+    if(emp){st=diff>=5?'<span class="ss" style="color:#7BE0A0">▲ '+T('Ahead of pace','Adelante del ritmo')+'</span>':diff<=-5?'<span class="ss" style="color:#FF9C8F">▼ '+T('Behind pace','Detrás del ritmo')+'</span>':'<span class="ss">● '+T('On pace','En ritmo')+'</span>'}
+    h+=barH(pct,emp&&r.ritmo>0?pace:null)
+      +'<div class="sn"><span><b>'+$(V)+'</b> / '+$(M)+' '+pcB(V,M)+'</span>'+(emp?'<span>'+T('Expected by now ','Esperado a esta hora ')+'<b style="font-size:16px">'+$(E)+'</b></span>':'<span>'+T('Season goal to beat','Meta de temporada a superar')+'</span>')+st+'</div>';
     // days strip
     var d0=inc.length?inc[0].dias:r.tiendas[0].dias;
     h+='<div class="sd">'+d0.map(function(d,i){
       var dm=0,dv=0; inc.forEach(function(t){dm+=+t.dias[i].meta||0;dv+=+t.dias[i].v||0});
       var fut=d.f>r.hoy, cur=d.f===r.hoy;
-      return '<div'+(cur?' class="t"':'')+'>'+SH[i]+' '+fd(d.f)+'<b>'+(fut||!r.empezo?$(dm):$(dv))+'</b>'+(fut||!r.empezo?'<span>'+T('goal','meta')+'</span>':'<span>'+T('of ','de ')+$(dm)+(dm>0?' · '+Math.round(dv/dm*100)+'%':'')+'</span>')+'</div>'}).join('')+'</div>';
+      return '<div'+(cur?' class="t"':'')+'>'+SH[i]+' '+fd(d.f)+'<b>'+(fut||!emp?$(dm):$(dv))+'</b>'+(fut||!emp?'<span>'+T('goal','meta')+'</span>':'<span>'+T('of ','de ')+$(dm)+(dm>0?' · '+Math.round(dv/dm*100)+'%':'')+'</span>')+'</div>'}).join('')+'</div>';
     // stores
     h+='<div class="sx" style="margin-top:12px">'+T('Tap a store to see each day and its sellers.','Toca una tienda para ver cada día y sus vendedores.')+'</div>';
     r.tiendas.forEach(function(t){
       var tp=t.meta>0?t.v/t.meta*100:0, tpc=t.meta>0?t.esperado/t.meta*100:0;
-      h+='<details><summary><span class="sl" style="margin-top:0"><span><b>'+meEsc(t.nombre)+'</b> '+(r.empezo&&!t.sin_filas?$(t.v)+pcB(t.v,t.meta):'')+'</span><span>'+(t.sin_filas?T('no seller report','sin reporte por vendedor'):$(t.meta)+' '+T('goal','meta'))+'</span></span>'+(t.sin_filas?'':barH(tp,r.empezo&&r.ritmo>0?tpc:null,true))+'</summary>';
+      h+='<details><summary><span class="sl" style="margin-top:0"><span><b>'+meEsc(t.nombre)+'</b> '+(emp&&!t.sin_filas?$(t.v)+pcB(t.v,t.meta):'')+'</span><span>'+(t.sin_filas?T('no seller report','sin reporte por vendedor'):$(t.meta)+' '+T('goal','meta'))+'</span></span>'+(t.sin_filas?'':barH(tp,emp&&r.ritmo>0?tpc:null,true))+'</summary>';
       if(t.sin_filas){h+='<div class="sx">'+T('This store is not in the hourly Sales by Salesperson report, so it is left out of the season total.','Esta tienda no viene en el reporte por hora de ventas por vendedor, por eso no entra en el total de la temporada.')+'</div>'}
       else{
-        h+=t.dias.map(function(d,i){var fut=d.f>r.hoy||!r.empezo; return '<div class="sl"><span>'+LB[i]+' <small>'+fd(d.f)+'</small></span><span>'+(fut?'<small>'+T('goal','meta')+'</small> '+$(d.meta):'<b>'+$(d.v)+'</b> / '+$(d.meta)+pcB(d.v,d.meta))+'</span></div>'}).join('');
+        h+=t.dias.map(function(d,i){var fut=d.f>r.hoy||!emp; return '<div class="sl"><span>'+LB[i]+' <small>'+fd(d.f)+'</small></span><span>'+(fut?'<small>'+T('goal','meta')+'</small> '+$(d.meta):'<b>'+$(d.v)+'</b> / '+$(d.meta)+pcB(d.v,d.meta))+'</span></div>'}).join('');
         if(t.t==='EC'){h+='<div class="sx">'+T('Online sales (José Padrón, Victoria Sagaste). It has a store goal and no seller goals.','Ventas en línea (José Padrón, Victoria Sagaste). Tiene meta de tienda y no tiene metas por vendedor.')+'</div>'}
         else if(t.vendedores&&t.vendedores.length){
           var isT=r.ref===r.hoy;
