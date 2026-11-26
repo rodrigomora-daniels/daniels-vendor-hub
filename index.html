@@ -1846,7 +1846,7 @@ async function loadGoalCard(){
         +'<div class="gn"><span><b>'+$(v)+'</b> / '+$(mv)+' · '+Math.round(pv)+'%</span><span>'+T('Services ','Servicios ')+'<b>'+pen.toFixed(1)+'%</b> '+T('vs goal','vs meta')+' '+penM.toFixed(1)+'%</span><span class="gs" style="color:'+col+'">'+st+'</span></div>'
         +'<div class="gsg">'+r.tiendas.map(sp).join('')+'</div>';
     }
-    el.classList.remove('hide'); startGoalClock();
+    el.classList.add('hide'); /* Home shows only the My-sales meter (dome); the store goal card stays hidden */ startGoalClock();
   }catch(e){el.classList.add('hide')}
 }
 async function loadSeasonCard(){
