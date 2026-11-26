@@ -117,6 +117,8 @@
     .app.in-thread .chans{display:none} .app:not(.in-thread) .thread{display:none}
     .back{display:block}
   }
+  .rcb{background:none;border:0;cursor:pointer;font-size:13px;opacity:.6;padding:0 4px}.rcb:hover{opacity:1}
+  #rdtip{position:fixed;z-index:60;max-width:min(320px,92vw);max-height:60vh;overflow:auto;background:#1d2433;color:#fff;font-size:12px;line-height:1.4;padding:8px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.3)}
 </style>
 <meta name="dh-i18n" content="on">
 <script src="dh-chrome.js" defer></script>
@@ -270,7 +272,7 @@ function appendMsgs(list){
     const dk=dayKey(m.t);
     if(dk!==lastDay){box.insertAdjacentHTML('beforeend',`<div class="day" data-no-i18n>${esc(dayLabel(m.t))}</div>`);lastDay=dk;lastWho='';}
     RAW[m.id]=m.cuerpo; const who=m.mio?'me':m.autor;
-    box.insertAdjacentHTML('beforeend',`<div class="m ${m.mio?'me':''} ${m.mencionado?'mn':''}" id="m-${m.id}">${!m.mio?`<div class="who" data-no-i18n>${esc(m.autor)}</div>`:''}${m.responde?`<div class="qt" data-no-i18n onclick="jumpTo('${m.responde.id}')"><b>↩ ${esc(m.responde.autor)}</b> ${m.responde.borrado?esc(tr('(deleted) / (borrado)')):esc(m.responde.cuerpo)}</div>`:''}<div class="b ${CI.plantillas?flashCls(m.cuerpo):''}" id="b-${m.id}" data-no-i18n>${((m.cuerpo==='📷'||m.cuerpo==='📎')&&(m.adjuntos||[]).length)?'':body(m)}${photosHTML(m)}</div><div class="rx" id="rx-${m.id}"></div><div class="meta"><span data-no-i18n>${tm(m.t)}</span><span class="ed${m.editado?'':' hide'}" id="ed-${m.id}">${esc(tr('edited / editado'))}</span>${m.movido?`<span class="ed">↪ ${esc(tr('moved / movido'))}</span>`:''}<button class="rxadd" onclick="togPk('${m.id}')" aria-label="React">☺+</button>${CI.puede_responder?`<button class="rp" data-id="${m.id}" onclick="setReply(this.dataset.id)">${esc(tr('Reply / Responder'))}</button>`:''}${m.puede_editar?`<button class="rp" onclick="editMsg('${m.id}')">${esc(tr('Edit / Editar'))}</button>`:''}${m.puede_borrar?`<button class="del" onclick="del('${m.id}',this)">Delete / Borrar</button>`:''}</div><div class="pk hide" id="pk-${m.id}">${EMO.map(e=>`<button onclick="react('${m.id}','${e}')" aria-label="${e}">${e}</button>`).join('')}</div></div>`);
+    box.insertAdjacentHTML('beforeend',`<div class="m ${m.mio?'me':''} ${m.mencionado?'mn':''}" id="m-${m.id}">${!m.mio?`<div class="who" data-no-i18n>${esc(m.autor)}</div>`:''}${m.responde?`<div class="qt" data-no-i18n onclick="jumpTo('${m.responde.id}')"><b>↩ ${esc(m.responde.autor)}</b> ${m.responde.borrado?esc(tr('(deleted) / (borrado)')):esc(m.responde.cuerpo)}</div>`:''}<div class="b ${CI.plantillas?flashCls(m.cuerpo):''}" id="b-${m.id}" data-no-i18n>${((m.cuerpo==='📷'||m.cuerpo==='📎')&&(m.adjuntos||[]).length)?'':body(m)}${photosHTML(m)}</div><div class="rx" id="rx-${m.id}"></div><div class="meta"><span data-no-i18n>${tm(m.t)}</span><span class="ed${m.editado?'':' hide'}" id="ed-${m.id}">${esc(tr('edited / editado'))}</span>${m.movido?`<span class="ed">↪ ${esc(tr('moved / movido'))}</span>`:''}${CI.puede_recibos?`<button class="rcb" onclick="readers('${m.id}',this)" aria-label="Who read this / Quién lo leyó">👁</button>`:''}<button class="rxadd" onclick="togPk('${m.id}')" aria-label="React">☺+</button>${CI.puede_responder?`<button class="rp" data-id="${m.id}" onclick="setReply(this.dataset.id)">${esc(tr('Reply / Responder'))}</button>`:''}${m.puede_editar?`<button class="rp" onclick="editMsg('${m.id}')">${esc(tr('Edit / Editar'))}</button>`:''}${m.puede_borrar?`<button class="del" onclick="del('${m.id}',this)">Delete / Borrar</button>`:''}</div><div class="pk hide" id="pk-${m.id}">${EMO.map(e=>`<button onclick="react('${m.id}','${e}')" aria-label="${e}">${e}</button>`).join('')}</div></div>`);
     lastWho=who;
   });
   box.setAttribute('data-day',lastDay); box.setAttribute('data-who',lastWho);
@@ -342,6 +344,22 @@ async function saveEdit(id){
   }catch(e){btns.forEach(x=>x.disabled=false);showErr(tr('Could not save the change. Check your connection. / No se pudo guardar. Revisa tu conexión.'));}
 }
 const EMO=['👍','❤️','😂','😮','🙏','✅'];
+/* managers only: who has read a message (read = opened the channel after it was sent) */
+let RDP=null;
+function rdClose(){if(RDP){RDP.remove();RDP=null;}}
+async function readers(id,btn){
+  if(RDP&&RDP.dataset.id===id){rdClose();return;} rdClose();
+  const tip=document.createElement('div'); tip.id='rdtip'; tip.dataset.id=id; tip.setAttribute('data-no-i18n',''); tip.textContent='…'; document.body.appendChild(tip); RDP=tip;
+  const pos=()=>{const r=btn.getBoundingClientRect(),w=tip.offsetWidth,x=Math.max(8,Math.min(innerWidth-w-8,r.left+r.width/2-w/2));tip.style.left=x+'px';const t=r.top-tip.offsetHeight-6;tip.style.top=(t<8?r.bottom+6:t)+'px';}; pos();
+  try{
+    const r=await DH.rpc('mensaje_lectores',{p_id:id}); if(RDP!==tip)return;
+    if(!r||!r.ok){tip.textContent=tr('Could not load. / No se pudo cargar.');pos();return;}
+    const L=(a)=>a.length?a.map(esc).join(', '):'—';
+    tip.innerHTML=`<b>${esc(tr('Read / Leyeron'))} (${r.leyeron.length})</b><div>${L(r.leyeron)}</div><b style="margin-top:6px;display:block">${esc(tr('Not yet / Aún no'))} (${r.faltan.length})</b><div>${L(r.faltan)}</div>`; pos();
+  }catch(e){if(RDP===tip){tip.textContent=tr('Could not load. / No se pudo cargar.');pos();}}
+}
+document.addEventListener('click',e=>{if(RDP&&!(e.target.closest&&(e.target.closest('.rcb')||e.target.closest('#rdtip'))))rdClose();});
+
 
 /* who reacted: hover (desktop) / long-press (phone) on a reaction shows the names */
 (function(){
