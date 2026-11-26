@@ -101,6 +101,8 @@
   #push-dlg .pb.go{background:#1B3A6B;color:#fff}#push-dlg .pb.off{background:#fff;border:1px solid #c5ccd8;color:#C0392B}#push-dlg .pb.cl{background:#fff;border:1px solid #c5ccd8;color:#1B3A6B;margin-left:8px}
   #push-dlg .msg{margin-top:10px;font-size:13px;color:#C0392B}
   .my-day{font:700 22px Georgia,'Times New Roman',serif;color:#1B3A6B;margin:0 0 12px}
+  #tg-msg{display:none;background:#fff;border-radius:6px;border-left:6px solid #F2C14E;padding:10px 16px;margin:0 0 14px;font:700 16px/1.4 Georgia,'Times New Roman',serif;color:#12284A;box-shadow:0 14px 34px -26px rgba(18,40,74,.7)}
+  #tg-msg.show{display:block}
   #hero2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-bottom:16px;align-items:stretch}
   #hero2 #goal-card,#hero2 #season-card{margin-bottom:0}
   #hero2-r{display:flex;flex-direction:column;gap:16px;min-width:0}
@@ -690,6 +692,8 @@ document.addEventListener('DOMContentLoaded',function(){
         <button class="x" onclick="dismissPush()" aria-label="Not now / Ahora no">✕</button>
       </div>
       <h2 class="my-day">My day / Mi día</h2>
+      <div id="tg-msg" role="note">🦃 Happy Thanksgiving to the Daniels family! / ¡Feliz Día de Acción de Gracias a la familia Daniels!</div>
+      <script>(function(){try{var d=new Date().toLocaleDateString("en-CA",{timeZone:"America/Los_Angeles"});if(d==="2026-11-26")document.getElementById("tg-msg").classList.add("show")}catch(e){}})()</script>
       <div id="hero2">
       <section id="season-card" class="hide" hidden data-no-i18n aria-label="Black Friday season"></section>
       <section id="goal-card" class="hide" data-no-i18n aria-label="Sales vs goal"></section>
