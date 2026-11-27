@@ -15,7 +15,7 @@
      switch for the next phrase. Spanglish: the Spanish engine copes best, so ties keep the current language. */
   var ESW = ' que como cual cuales donde cuando para con una el la los las del es esta este tiene tienen hay pero muy quiero necesito puedo cuanto cuanta gracias hola buenos dias favor cliente entrega ya mas porque tambien ahora hoy mañana manana precio disponible tienda sillon sofa cama colchon ';
   var ENW = ' the is are do does can could you your i we have has for with this that what how where when need want will would customer delivery please thanks hello good morning today tomorrow price available store sofa couch bed mattress also because they them there ';
-  function startLang() { var v = ''; try { v = localStorage.getItem('dh_voice_lang') || ''; } catch (e) {} return v === 'es-US' || v === 'en-US' ? v : (es() ? 'es-US' : 'en-US'); }
+  function startLang() { var v = ''; try { v = localStorage.getItem('dh_voice_lang') || ''; } catch (e) {} if (v === 'es-US' || v === 'en-US') return v; var nl = ''; try { nl = ((navigator.languages && navigator.languages[0]) || navigator.language || '').toLowerCase(); } catch (e) {} return (es() || nl.indexOf('es') === 0) ? 'es-US' : 'en-US'; }
   function saveLang(l) { try { localStorage.setItem('dh_voice_lang', l); } catch (e) {} }
   function other(l) { return l === 'es-US' ? 'en-US' : 'es-US'; }
   function score(text) {
@@ -34,6 +34,9 @@
        with low confidence and few real matches. Try the other engine for the next phrase. */
     if (conf > 0 && conf < 0.75 && nw >= 3 && mine <= 1 && theirs <= mine) return other(lang);
     if (conf > 0 && conf < 0.6 && nw >= 4 && theirs === 0) return other(lang);
+    /* Some engines never report confidence (0): decide by the words only. */
+    if (conf === 0 && nw >= 3 && theirs > mine) return other(lang);
+    if (conf === 0 && nw >= 4 && mine === 0 && theirs === 0 && lang === 'en-US' && /[ñáéíóúü¿¡]/.test(text)) return other(lang);
     return '';
   }
 
@@ -70,7 +73,7 @@
   }
 
   var css = document.createElement('style');
-  css.textContent = 'button[data-lang]{position:relative}button[data-lang]::after{content:attr(data-lang);position:absolute;right:2px;bottom:1px;font:700 9px/1 "Segoe UI",Arial,sans-serif;color:#1B3A6B;background:#E8EEF8;border-radius:4px;padding:1px 3px}.dh-rec::after{background:#fff!important;color:#C0392B!important}' +
+  css.textContent = 'button[data-lang]{position:relative}button[data-lang]::after{display:none}.dh-lang{margin-left:4px;min-width:36px;height:28px;padding:0 8px;border-radius:14px;border:1px solid #1B3A6B;background:#E8EEF8;color:#1B3A6B;font:700 12px/1 "Segoe UI",Arial,sans-serif;cursor:pointer;vertical-align:middle}' +
     '.dh-rec{background:#C0392B!important;color:#fff!important;border-color:#C0392B!important;animation:dhrec 1.3s ease-in-out infinite}' +
     '@keyframes dhrec{0%,100%{box-shadow:0 0 0 0 rgba(192,57,43,.55)}50%{box-shadow:0 0 0 8px rgba(192,57,43,0)}}' +
     '@media (prefers-reduced-motion:reduce){.dh-rec{animation:none}}' +
@@ -93,8 +96,12 @@
 
   function attach(field, btn) {
     if (!SR || !field || !btn || btn.__dhv) return;
-    btn.__dhv = true; btn.hidden = false; label(btn, false); btn.setAttribute('data-lang', startLang() === 'es-US' ? 'ES' : 'EN');
+    btn.__dhv = true; btn.hidden = false; label(btn, false); 
+    var pill = document.createElement('button'); pill.type = 'button'; pill.className = 'dh-lang'; btn.insertAdjacentElement('afterend', pill);
+    function paint() { var e = lang === 'es-US'; pill.textContent = e ? 'ES' : 'EN'; var t = e ? 'Español — toca para cambiar a English' : 'English — tap to switch to Español'; pill.title = t; pill.setAttribute('aria-label', t); btn.setAttribute('data-lang', e ? 'ES' : 'EN'); }
     var rec = null, base = '', fin = '', want = false, lang = startLang(), lastSw = 0, swTo = '';
+    paint();
+    pill.addEventListener('click', function (e) { e.preventDefault(); lang = other(lang); saveLang(lang); paint(); toast(lang === 'es-US' ? 'Español 🎤' : 'English 🎤'); if (btn.classList.contains('dh-rec')) { try { rec.stop(); } catch (x) {} } });
 
     function put(txt) {
       var max = field.maxLength > 0 ? field.maxLength : 100000;
@@ -110,7 +117,7 @@
     function start() {
       if (cur && cur !== stop) cur();           // stop any other microphone first
       rec = new SR();
-      rec.lang = lang; btn.setAttribute('data-lang', lang === 'es-US' ? 'ES' : 'EN');
+      rec.lang = lang; paint();
       rec.interimResults = true; rec.continuous = true; rec.maxAlternatives = 1;
       var v = field.value; base = v && !/\s$/.test(v) ? v + ' ' : v; fin = ''; want = true;
       rec.onstart = function () { ui(true); cur = stop; };
@@ -137,14 +144,14 @@
       };
       rec.onend = function () {
         // Some browsers end the session after a pause: keep listening until the person taps stop.
-        if (want) { base = field.value && !/\s$/.test(field.value) ? field.value + ' ' : field.value; fin = ''; try { rec.lang = lang; btn.setAttribute('data-lang', lang === 'es-US' ? 'ES' : 'EN'); rec.start(); return; } catch (e) {} }
+        if (want) { base = field.value && !/\s$/.test(field.value) ? field.value + ' ' : field.value; fin = ''; try { rec.lang = lang; paint(); rec.start(); return; } catch (e) {} }
         ui(false); if (cur === stop) cur = null; field.focus && field.focus();
       };
       try { rec.start(); } catch (e) { ui(false); toast(T('Voice did not start. Try again.', 'La voz no inició. Intenta otra vez.')); }
     }
 
     var lp = 0, lpFired = false;
-    btn.addEventListener('pointerdown', function () { lpFired = false; clearTimeout(lp); lp = setTimeout(function () { lpFired = true; lang = other(lang); saveLang(lang); btn.setAttribute('data-lang', lang === 'es-US' ? 'ES' : 'EN'); toast(lang === 'es-US' ? 'Español 🎤' : 'English 🎤'); if (btn.classList.contains('dh-rec')) { try { rec.stop(); } catch (e) {} } }, 650); });
+    btn.addEventListener('pointerdown', function () { lpFired = false; clearTimeout(lp); lp = setTimeout(function () { lpFired = true; lang = other(lang); saveLang(lang); paint(); toast(lang === 'es-US' ? 'Español 🎤' : 'English 🎤'); if (btn.classList.contains('dh-rec')) { try { rec.stop(); } catch (e) {} } }, 650); });
     ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) { btn.addEventListener(ev, function () { clearTimeout(lp); }); });
     btn.addEventListener('click', function (e) { e.preventDefault(); if (lpFired) { lpFired = false; return; } if (btn.classList.contains('dh-rec')) stop(); else start(); });
     document.addEventListener('visibilitychange', function () { if (document.hidden && btn.classList.contains('dh-rec')) stop(); });
