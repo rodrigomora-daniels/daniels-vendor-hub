@@ -215,17 +215,19 @@ function num(s){return parseFloat(String(s).replace(/,/g,''));}
 function parseText(t){
   const f={}, T=t.replace(/[ \t]+/g,' ');
   let m;
-  m=T.match(/FICO[^0-9\n]{0,25}(\d{3})\b/i); if(!m) m=T.match(/(?:credit\s*)?score[^0-9\n]{0,20}(\d{3})\b/i);
+  m=T.match(/FICO[^0-9\n]{0,25}(\d{3,4})\b/i); if(m&&m[1].length===4)m[1]=m[1].slice(1); if(!m) m=T.match(/(?:credit\s*)?score[^0-9\n]{0,20}(\d{3})\b/i);
   if(m&&+m[1]>=300&&+m[1]<=850)f.fico=+m[1];
   if(f.fico==null){ m=T.match(/(?:SCORE\s*SUMMARY|VANTAGE\s*SCORE|FICO)[^=]{0,80}=\s*(\d{3})\b/i); if(m&&+m[1]>=300&&+m[1]<=850)f.fico=+m[1]; }
+  m=T.match(/debt\s*ratio[\s\S]{0,400}?(?:^|[^A-Za-z0-9])([ABCD])(?=[^A-Za-z0-9]|$)/i); if(m)f.score=m[1].toUpperCase();
   m=T.match(/risk\s*score[^A-Za-z0-9\n]{0,15}\b([ABCDU])\b/i); if(m)f.score=m[1].toUpperCase();
   let late=0,found=false; for(const x of T.matchAll(/(\d{1,3})\s*\+?\s*days?\s*(?:late|past\s*due|delinquent)/gi)){found=true;late=Math.max(late,+x[1]);}
   for(const x of T.matchAll(/DELINQ\s*(\d{1,3})/g)){found=true;late=Math.max(late,+x[1]);}
   if(found)f.late=late;
   if(/\bCHARGEOFF\b/.test(T))f.bad=true;
+  m=T.match(/Invoices\s*:?\s*(\d+)/i); if(m&&+m[1]>0)f.existente=true;
   for(const x of T.matchAll(/(charge[\s-]?off|returned\s*check|\bNSF\b|co[\s-]?sign\w*)[^0-9\n]{0,15}(\d+)/gi)){ if(+x[2]>0)f.bad=true; }
   m=T.match(/(?:down\s*pay(?:ment)?|down\s*pmt)[^0-9$\n]{0,20}\$?\s*([\d,]+(?:\.\d\d)?)/i); if(m&&num(m[1])<20000)f.dp=num(m[1]);
-  m=T.match(/(?:total|purchase|sale|amount)[^0-9$\n]{0,20}\$?\s*([\d,]{3,}(?:\.\d\d)?)/i); if(m&&num(m[1])>=100&&num(m[1])<=25000)f.monto=num(m[1]);
+  m=T.match(/(?:purchase\s*(?:amount|total|price)|amount\s*(?:financed|of\s*sale)|sale\s*total|invoice\s*total|cash\s*price)[^0-9$\n]{0,20}\$?\s*([\d,]{3,}(?:\.\d\d)?)/i); if(m&&num(m[1])>=100&&num(m[1])<=25000)f.monto=num(m[1]);
   m=T.match(/(\d{1,2})\s*(?:mo\b|months)/i); if(m&&+m[1]>=3&&+m[1]<=36)f.plazo=+m[1];
   m=T.match(/\b(X00[1-5])\b/i); if(m)f.infinity={rule:m[1].toUpperCase(),dp:f.dp||null,plazo:f.plazo||null};
   return f;
@@ -234,7 +236,7 @@ async function ocrFallback(){
   const m=$('rmsg'); m.className='mut'; m.textContent=tr('Reading with the free reader… / Leyendo con el lector gratuito…');
   let txt=PDFTEXT; const w=SHOTS.length?await ocrWorker():null; for(const u of SHOTS){ const r=await w.recognize(u); txt+='\n'+((r&&r.data&&r.data.text)||''); }
   const f=parseText(txt); INF=f.infinity||null;
-  fill('fico',f.fico);fill('score',f.score);fill('monto',f.monto);fill('dp',f.dp);fill('plazo',f.plazo);fill('late',f.late);fill('bad',f.bad,true);
+  fill('fico',f.fico);fill('score',f.score);fill('monto',f.monto);fill('dp',f.dp);fill('plazo',f.plazo);fill('late',f.late);fill('bad',f.bad,true);fill('existente',f.existente,true);
   const got=Object.keys(f).filter(k=>k!=='infinity');
   m.className=got.length?'ok':'err';
   m.textContent=got.length?tr('Free reader filled: / El lector gratuito llenó: ')+got.join(', ')+tr('. Check the yellow fields and complete the rest. / . Revisa los campos amarillos y completa el resto.'):tr('Could not find fields in the text. Type them below. / No se encontraron campos en el texto. Captúralos abajo.');
