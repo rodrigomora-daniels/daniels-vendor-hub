@@ -48,7 +48,7 @@
   <div class="card hide" id="deny"><p class="err" id="denyt"></p></div>
   <div id="app" class="hide">
     <div class="card">
-      <h2 id="h-form"></h2>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 id="h-form" style="margin:0"></h2><button class="btn alt" type="button" id="newcase"></button></div>
       <p class="mut" id="p-priv"></p>
       <div class="drop" id="drop" tabindex="0">
         <p><b id="t-drop"></b></p><p class="mut" id="s-drop"></p>
@@ -90,7 +90,7 @@
     </div>
 
     <div class="card hide" id="res">
-      <h2 id="h-res"></h2>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 id="h-res" style="margin:0"></h2><button class="btn" type="button" id="newcase2"></button></div>
       <p><span class="badge" id="rbadge"></span> <span class="mut" id="rrule"></span></p>
       <div class="kv" id="rkv"></div>
       <div class="sug hide" id="rsug"></div>
@@ -127,6 +127,7 @@ const T={
  'h-cases':'Recent cases (7 days) / Casos recientes (7 días)','p-cases':'Visible to all credit approvers. / Visible para todos los aprobadores de crédito.','h-stats':'Agreement with the algorithm (90 days) / Coincidencia con el algoritmo (90 días)',
  'rlegal':'SAL recommends; you decide. Rules come from the Infinity X090 quick guide (Nov 17, 2026). Estimated payments use prescreener APRs and are not an offer. If you decline or change terms, record the real reason; adverse-action notices stay with the approver. / SAL recomienda; tú decides. Las reglas vienen de la guía rápida X090 de Infinity (17 nov 2026). Los pagos estimados usan APR del prescreener y no son una oferta. Si niegas o cambias términos, registra el motivo real; los avisos de acción adversa siguen siendo del aprobador.'
 };
+T['newcase']=T['newcase2']='🔄 Next customer / Siguiente cliente';
 T['s-drop']='Press Ctrl+V (or Cmd+V) anywhere on this page, drop files here, or use the button. SAL reads them and gives its recommendation right away. If something is missing it tells you exactly what to add. Images are not saved. / Presiona Ctrl+V (o Cmd+V) en cualquier parte, arrastra archivos aquí o usa el botón. SAL los lee y te da su recomendación al momento. Si falta algo, te dice exactamente qué agregar. Las imágenes no se guardan.';
 T['l-manual']='Enter or correct data by hand (only if you have no screenshots or files) / Capturar o corregir datos a mano (solo si no tienes capturas ni archivos)';
 for(const k in T){const e=$(k); if(e) e.textContent=tr(T[k]);}
@@ -269,6 +270,19 @@ async function readShots(){
     m.className='err'; $('manual').open=true; m.textContent=x.code==='NO_KEY'?tr('Screenshot reading is not enabled yet. Type the fields below. / La lectura de capturas aún no está activa. Captura los campos abajo.'):x.code==='PT403'?tr('No access. / Sin acceso.'):tr('Could not read the screenshots. Type the fields below. / No se pudieron leer las capturas. Captura los campos abajo.')+' ('+String((x&&x.message)||x).slice(0,80)+')'; }
   $('read').disabled=false;
 }
+
+// Clear everything so the next customer starts clean (the saved record stays for statistics; attachments are never saved).
+function resetCase(){
+  SHOTS=[]; PDFTEXT=''; INF=null; CUR=null; drawTh();
+  ['fico','monto','dp','plazo','ingreso','deudas','ref','nota'].forEach(i=>{const e=$(i); if(e){e.value=''; e.classList.remove('fromshot');}});
+  $('late').value='0'; $('score').value='U'; $('score').classList.remove('fromshot');
+  ['bad','autozone','existente'].forEach(i=>{$(i).checked=false;});
+  ['rmsg','msg','dmsg'].forEach(i=>{$(i).textContent='';$(i).className='';});
+  const o=$('ocrtxt'); if(o) o.remove();
+  $('manual').open=false; $('res').classList.add('hide'); $('go').disabled=false; $('read').disabled=false;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+$('newcase').onclick=$('newcase2').onclick=resetCase;
 document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',()=>el.classList.remove('fromshot')));
 async function loadList(){
   try{ const o=await DH.rpc('credito_listar'); const c=o.casos||[];
