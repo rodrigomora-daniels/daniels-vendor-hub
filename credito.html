@@ -59,6 +59,7 @@
         <button class="btn hide" type="button" id="read" style="margin-top:10px"></button>
         <p id="rmsg" role="status" style="margin-top:8px"></p>
       </div>
+      <details id="manual"><summary id="l-manual" style="font-size:14px;margin:10px 0 6px;cursor:pointer"></summary>
       <div class="g2">
         <div><label id="l-fico"></label><input id="fico" type="number" inputmode="numeric" min="300" max="850"></div>
         <div><label id="l-score"></label><select id="score"><option>A</option><option>B</option><option>C</option><option>D</option><option>U</option></select></div>
@@ -85,6 +86,7 @@
       </details>
       <button class="btn" id="go" style="margin-top:6px"></button>
       <p id="msg" role="status" style="margin-top:8px"></p>
+      </details>
     </div>
 
     <div class="card hide" id="res">
@@ -125,6 +127,8 @@ const T={
  'h-cases':'Recent cases (7 days) / Casos recientes (7 días)','p-cases':'Visible to all credit approvers. / Visible para todos los aprobadores de crédito.','h-stats':'Agreement with the algorithm (90 days) / Coincidencia con el algoritmo (90 días)',
  'rlegal':'SAL recommends; you decide. Rules come from the Infinity X090 quick guide (Nov 17, 2026). Estimated payments use prescreener APRs and are not an offer. If you decline or change terms, record the real reason; adverse-action notices stay with the approver. / SAL recomienda; tú decides. Las reglas vienen de la guía rápida X090 de Infinity (17 nov 2026). Los pagos estimados usan APR del prescreener y no son una oferta. Si niegas o cambias términos, registra el motivo real; los avisos de acción adversa siguen siendo del aprobador.'
 };
+T['s-drop']='Press Ctrl+V (or Cmd+V) anywhere on this page, drop files here, or use the button. SAL reads them and gives its recommendation right away. If something is missing it tells you exactly what to add. Images are not saved. / Presiona Ctrl+V (o Cmd+V) en cualquier parte, arrastra archivos aquí o usa el botón. SAL los lee y te da su recomendación al momento. Si falta algo, te dice exactamente qué agregar. Las imágenes no se guardan.';
+T['l-manual']='Enter or correct data by hand (only if you have no screenshots or files) / Capturar o corregir datos a mano (solo si no tienes capturas ni archivos)';
 for(const k in T){const e=$(k); if(e) e.textContent=tr(T[k]);}
 const PR=[['furniture','Furniture / Muebles'],['mattress','Mattress / Colchón'],['appliances','Appliances / Electrodomésticos'],['electronics','Electronics / Electrónicos'],['seasonal','Seasonal / Estacionales'],['iphone','iPhone / Apple']];
 $('producto').innerHTML=PR.map(p=>`<option value="${p[0]}" data-no-i18n>${tr(p[1])}</option>`).join('');
@@ -235,6 +239,23 @@ async function ocrFallback(){
   m.textContent=got.length?tr('Free reader filled: / El lector gratuito llenó: ')+got.join(', ')+tr('. Check the yellow fields and complete the rest. / . Revisa los campos amarillos y completa el resto.'):tr('Could not find fields in the text. Type them below. / No se encontraron campos en el texto. Captúralos abajo.');
   let d=$('ocrtxt'); if(!d){d=document.createElement('details');d.id='ocrtxt';d.innerHTML='<summary class="mut" style="cursor:pointer;margin-top:6px">'+tr('Text the reader saw / Texto que vio el lector')+'</summary><pre style="white-space:pre-wrap;font-size:12px;max-height:200px;overflow:auto"></pre>';$('drop').appendChild(d);}
   d.querySelector('pre').textContent=txt.trim().slice(0,4000);
+  afterRead();
+}
+// After reading the attachments: recommend right away. Only ask for data when FICO or the amount could not be found.
+function afterRead(){
+  const m=$('rmsg'); const miss=[];
+  if(!$('fico').value) miss.push(tr('FICO score / Score FICO'));
+  if(!$('monto').value) miss.push(tr('purchase amount / monto de la compra'));
+  const notes=[];
+  if(!$('score').classList.contains('fromshot')){ $('score').value='U'; notes.push(tr('Infinity score not seen, treated as unknown. / Score de Infinity no visible, se tomó como desconocido.')); }
+  if(miss.length){
+    m.className='err';
+    m.textContent=tr('Not enough information to recommend. Missing: / No tengo suficiente información para recomendar. Falta: ')+miss.join(', ')+tr('. Attach the page that shows it, or enter it below. / . Adjunta la página donde aparece, o captúralo abajo.');
+    $('manual').open=true; const f=!$('fico').value?$('fico'):$('monto'); try{f.focus();}catch(e){}
+    return;
+  }
+  if(notes.length){ m.textContent=(m.textContent?m.textContent+' ':'')+notes.join(' '); }
+  $('go').click();
 }
 async function readShots(){
   if(PDFTEXT&&!SHOTS.length){ try{ await ocrFallback(); }catch(e){} return; }
@@ -243,9 +264,9 @@ async function readShots(){
     const r=await DH.creditRead(SHOTS); const f=r.fields||{}; INF=f.infinity||null;
     fill('fico',f.fico);fill('score',f.score);fill('monto',f.monto);fill('dp',f.dp);fill('plazo',f.plazo);fill('late',f.late);fill('ingreso',f.ingreso);fill('deudas',f.deudas);
     fill('producto',f.producto);fill('bad',f.bad,true);fill('existente',f.existente,true);
-    m.className='ok'; m.textContent=tr('Done. Yellow fields came from the screenshots: check them, then press Ask SAL. / Listo. Los campos amarillos salieron de las capturas: revísalos y presiona Consultar a SAL.')+(f.notas?' — '+f.notas:'');
+    m.className='ok'; m.textContent=tr('Read. SAL is giving its recommendation; yellow fields came from the files, check them. / Leído. SAL da su recomendación; los campos amarillos salieron de los archivos, revísalos.')+(f.notas?' — '+f.notas:''); $('read').disabled=false; afterRead(); return;
   }catch(x){ if(x.code==='NO_KEY'||x.code==='LLM_401'||x.code==='LLM_402'||x.code==='LLM_429'){ try{ await ocrFallback(); $('read').disabled=false; return; }catch(e2){} }
-    m.className='err'; m.textContent=x.code==='NO_KEY'?tr('Screenshot reading is not enabled yet. Type the fields below. / La lectura de capturas aún no está activa. Captura los campos abajo.'):x.code==='PT403'?tr('No access. / Sin acceso.'):tr('Could not read the screenshots. Type the fields below. / No se pudieron leer las capturas. Captura los campos abajo.')+' ('+String((x&&x.message)||x).slice(0,80)+')'; }
+    m.className='err'; $('manual').open=true; m.textContent=x.code==='NO_KEY'?tr('Screenshot reading is not enabled yet. Type the fields below. / La lectura de capturas aún no está activa. Captura los campos abajo.'):x.code==='PT403'?tr('No access. / Sin acceso.'):tr('Could not read the screenshots. Type the fields below. / No se pudieron leer las capturas. Captura los campos abajo.')+' ('+String((x&&x.message)||x).slice(0,80)+')'; }
   $('read').disabled=false;
 }
 document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',()=>el.classList.remove('fromshot')));
