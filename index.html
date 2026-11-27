@@ -109,6 +109,16 @@
   #hero2-r #me-card{flex:1}
   #dome-card{background:#fff;border-radius:6px;border-left:6px solid #C8922A;padding:14px 18px;box-shadow:0 14px 34px -26px rgba(18,40,74,.7);min-width:0}
   #dome-card.hide{display:none}
+  #cmp-card{background:#fff;border-radius:6px;border-left:6px solid #1B3A6B;padding:14px 18px;box-shadow:0 14px 34px -26px rgba(18,40,74,.7);min-width:0;margin-top:12px;font:13px 'Segoe UI',Arial,sans-serif;color:#1E2735}
+  #cmp-card.hide{display:none}
+  #cmp-card h3{font:700 17px Georgia,serif;color:#1B3A6B;margin:0 0 2px}
+  #cmp-card table{width:100%;border-collapse:collapse;margin-top:8px}
+  #cmp-card th{font:600 11px 'Segoe UI',Arial,sans-serif;color:#6B6B6B;text-align:right;padding:4px 0}
+  #cmp-card th:first-child,#cmp-card td:first-child{text-align:left}
+  #cmp-card td{text-align:right;padding:6px 0;border-top:1px solid #EEF1F6}
+  #cmp-card tr.tt td{font-weight:700;border-top:2px solid #1B3A6B}
+  #cmp-card .up{color:#2E7D32;font-weight:600}#cmp-card .dn2{color:#C0392B;font-weight:600}
+  #cmp-card .nt{color:#6B6B6B;font-size:12px;margin-top:8px}
   #dome-card .dh{display:flex;align-items:baseline;gap:10px;margin-bottom:4px}
   #dome-card .dh h3{font:700 17px Georgia,serif;color:#1B3A6B;margin:0;flex:1}
   #dome-card .dh small{font:12px 'Segoe UI',Arial,sans-serif;color:#6B6B6B}
@@ -699,7 +709,7 @@ document.addEventListener('DOMContentLoaded',function(){
       <div id="hero2">
       <section id="season-card" class="hide" hidden data-no-i18n aria-label="Black Friday season"></section>
       <section id="goal-card" class="hide" data-no-i18n aria-label="Sales vs goal"></section>
-      <div id="hero2-r"><section id="cd-strip" class="hide" data-no-i18n aria-label="Countdown"></section><section id="dome-card" class="hide" data-no-i18n aria-label="My sales today"></section>
+      <div id="hero2-r"><section id="cd-strip" class="hide" data-no-i18n aria-label="Countdown"></section><section id="dome-card" class="hide" data-no-i18n aria-label="My sales today"></section><section id="cmp-card" class="hide" data-no-i18n aria-label="Sales vs last year"></section>
       <section id="me-card" class="hide" data-no-i18n aria-label="My panel"></section></div>
       </div>
       <div id="briefing">
@@ -1285,7 +1295,7 @@ function handleLogout() {
    DASHBOARD
    ════════════════════════════════════════════════════════════ */
 async function loadDashboard() {
-  loadAlertsCard(); loadGoalCard(); loadMeCard(); loadDomeCard(); holSkin(); initPushCard(); loadNewsHero(); loadPromoStrip(); loadMsgBadge(); loadNotesToday();
+  loadAlertsCard(); loadGoalCard(); loadMeCard(); loadDomeCard(); loadCmpCard(); holSkin(); initPushCard(); loadNewsHero(); loadPromoStrip(); loadMsgBadge(); loadNotesToday();
   const emp = session.empleado;
 
   // If this employee has a temporary password, force the change screen first
@@ -1796,6 +1806,35 @@ async function ventasDetalle(b){
     box.innerHTML=h;
   }catch(e){box.innerHTML=head+'<div style="margin-top:10px">'+T('Could not load. Try again.','No se pudo cargar. Intenta de nuevo.')+'</div>'}
 }
+
+async function loadCmpCard(){
+  var el=document.getElementById('cmp-card'); if(!el)return;
+  try{
+    var r=await DH.rpc('ventas_comparar');
+    if(!r||r.error||r.vacio||!r.tiendas){el.classList.add('hide');return}
+    var es=(localStorage.getItem('dh_lang')==='es'), T=function(a,b){return es?b:a};
+    var $=function(n){return n==null?'—':(n<0?'-':'')+'$'+Math.abs(Math.round(n)).toLocaleString('en-US')};
+    var dl=function(a,b){if(a==null||!(b>0))return '<span style="color:#6B6B6B">—</span>';var q=(a/b-1)*100;return '<span class="'+(q>=0?'up':'dn2')+'">'+(q>=0?'+':'')+q.toFixed(0)+'%</span>'};
+    var nm={EU:'Euclid',CN:'Chino',RR:'Cerritos',EC:'E-commerce'};
+    var tm=''; try{if(r.corrida)tm=new Date(r.corrida).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/Los_Angeles'})}catch(e){}
+    var fd=function(f){var d=new Date(f+'T12:00:00Z');return (d.getUTCMonth()+1)+'/'+d.getUTCDate()+'/'+String(d.getUTCFullYear()).slice(2)};
+    var pace=r.ritmo||0, tot={neto:0,ly:0,mtd:0,ly_mtd:0,gp:0,gpn:0,lgp:0,lgpn:0,hasgp:false,hasly:false,hasgply:false};
+    var rows=r.tiendas.map(function(t){
+      tot.neto+=+t.neto||0; if(t.ly!=null){tot.ly+=+t.ly;tot.hasly=true} tot.mtd+=+t.mtd||0; tot.ly_mtd+=+t.ly_mtd||0;
+      if(t.gp!=null){tot.gp+=+t.gp;tot.gpn+=+t.gp_neto||0;tot.hasgp=true}
+      if(t.ly_gp!=null){tot.lgp+=+t.ly_gp;tot.lgpn+=+t.ly_gp_neto||0;tot.hasgply=true}
+      return row(nm[t.t]||t.t,t)});
+    function row(n,t){
+      var exp=t.ly!=null&&pace>0?t.ly*pace:null;
+      var gpp=t.gp!=null&&t.gp_neto>0?t.gp/t.gp_neto*100:null, lgpp=t.ly_gp!=null&&t.ly_gp_neto>0?t.ly_gp/t.ly_gp_neto*100:null;
+      return '<tr><td>'+n+'</td><td>'+$(t.neto)+'</td><td>'+$(t.ly)+'</td><td>'+dl(t.neto,exp)+'</td><td>'+$(t.mtd)+' '+dl(t.mtd,t.ly_mtd)+'</td><td>'+(t.gp!=null?$(t.gp)+' <small style="color:#6B6B6B">'+(gpp!=null?gpp.toFixed(0)+'%':'')+'</small>':'—')+'</td><td>'+(t.ly_gp!=null?$(t.ly_gp)+(lgpp!=null?' <small style="color:#6B6B6B">'+lgpp.toFixed(0)+'%</small>':''):'<small style="color:#6B6B6B">'+T('pending','pendiente')+'</small>')+'</td></tr>'}
+    var tr=row(T('Total','Total'),{neto:tot.neto,ly:tot.hasly?tot.ly:null,mtd:tot.mtd,ly_mtd:tot.ly_mtd,gp:tot.hasgp?tot.gp:null,gp_neto:tot.gpn,ly_gp:tot.hasgply?tot.lgp:null,ly_gp_neto:tot.lgpn}).replace('<tr>','<tr class="tt">');
+    el.innerHTML='<h3>📊 '+T('Sales & profit vs last year','Ventas y profit vs año pasado')+'</h3><div style="color:#6B6B6B">'+fd(r.fecha)+' '+T('vs','vs')+' '+fd(r.ly_fecha)+(tm?' · '+T('Updated ','Actualizado ')+tm:'')+'</div>'
+      +'<div style="overflow-x:auto"><table style="min-width:520px"><thead><tr><th></th><th>'+T('Today','Hoy')+'</th><th>'+T('LY day','Día LY')+'</th><th>'+T('vs LY by now','vs LY a esta hora')+'</th><th>'+T('Month to date','Mes a la fecha')+'</th><th>Profit</th><th>Profit LY</th></tr></thead><tbody>'+rows.join('')+tr+'</tbody></table></div>'
+      +'<div class="nt">'+T('LY day = same day last year (Thanksgiving-aligned). "vs LY by now" compares today with the share of last year\'s day expected by this hour. Month to date = closed days only, compared with the same days last year. Profit is gross profit from the hourly detail report; last-year profit appears once the history is loaded. Visible only to the board, Misael and Rodrigo.','Día LY = el mismo día del año pasado (alineado con Acción de Gracias). "vs LY a esta hora" compara hoy con la parte del día pasado esperada a esta hora. Mes a la fecha = solo días cerrados, contra los mismos días del año pasado. Profit es la utilidad bruta del reporte por hora con detalle; el profit del año pasado aparece cuando se cargue el histórico. Solo lo ven el board, Misael y Rodrigo.')+'</div>';
+    el.classList.remove('hide');
+  }catch(e){el.classList.add('hide')}
+}
 async function loadDomeCard(){
   var el=document.getElementById('dome-card'); if(!el)return;
   try{
@@ -2013,7 +2052,7 @@ async function amDone(id){AML=AML.filter(function(a){return a.id!==id;});amRende
 async function amSnzDo(id,modo){AML=AML.filter(function(a){return a.id!==id;});AMS=null;amRender();try{await DH.rpc('alarma_posponer',{p_id:id,p_modo:modo});}catch(e){}}
 async function amAll(){AML=[];amRender();try{await DH.rpc('alarma_descartar',{});}catch(e){}}
 async function amPoll(){if(document.hidden||!DH.token())return;try{var r=await DH.rpc('alarmas_mias');if(Array.isArray(r)){AML=r;amRender();}}catch(e){}}
-setInterval(amPoll,90000);setInterval(function(){if(!document.hidden&&window.DH&&DH.token&&DH.token()){loadDomeCard();holSkin()}},60000);document.addEventListener('visibilitychange',function(){if(!document.hidden&&window.DH&&DH.token&&DH.token()){loadDomeCard();holSkin()}});document.addEventListener('visibilitychange',function(){if(!document.hidden)amPoll();});
+setInterval(amPoll,90000);setInterval(function(){if(!document.hidden&&window.DH&&DH.token&&DH.token()){loadDomeCard();loadCmpCard();holSkin()}},60000);document.addEventListener('visibilitychange',function(){if(!document.hidden&&window.DH&&DH.token&&DH.token()){loadDomeCard();loadCmpCard();holSkin()}});document.addEventListener('visibilitychange',function(){if(!document.hidden)amPoll();});
 async function loadAlertsCard(){
   var card=document.getElementById('alerts-card'), br=document.getElementById('briefing');
   var al=null, sc=null;
