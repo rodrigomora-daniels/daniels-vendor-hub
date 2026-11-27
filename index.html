@@ -1770,13 +1770,13 @@ async function loadDomeCard(){
     var $=function(n){return (n<0?'-':'')+'$'+Math.abs(Math.round(n)).toLocaleString('en-US')};
     var pace=(r.ritmo||0)*100, stale=r.fecha!==r.hoy;
     var d=new Date(r.fecha+'T12:00:00Z'), dn=(es?['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'])[d.getUTCDay()]+' '+(d.getUTCMonth()+1)+'/'+d.getUTCDate();
-    var tm=''; try{tm=new Date(r.corrida).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/Los_Angeles'})}catch(e){}
+    var tm=''; try{if(r.corrida)tm=new Date(r.corrida).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/Los_Angeles'})}catch(e){}
     var st=function(pct){var df=pct-pace;return stale?'':df>=5?'<div class="dst" style="color:#2E7D32">▲ '+T('Ahead of pace','Adelante del ritmo')+'</div>':df<=-5?'<div class="dst" style="color:#C0392B">▼ '+T('Behind pace','Detrás del ritmo')+'</div>':'<div class="dst" style="color:#6B6B6B">● '+T('On pace','En ritmo')+'</div>'};
     var pcD=function(v,m){if(!(m>0))return '';var q=Math.round(v/m*100),c=q>=120?'a':q>=100?'g':q>=80?'m':'l';return ' <span class="pc pc-'+c+'">'+(q>=120?'★ ':q>=100?'✓ ':'')+q+'%</span>'};
     var bar=function(pct,mark,g){return '<div class="db"><i'+(g?' class="g"':'')+' style="width:'+Math.max(0,Math.min(100,pct)).toFixed(1)+'%"></i>'+(mark!=null?'<b style="left:'+Math.min(100,mark).toFixed(1)+'%"></b>':'')+'</div>'};
     var kpi=function(lbl,p,g){g=+g||0;var ok=g>0&&p>=g,w=g>0?Math.min(100,p/g*100):0,c=ok?'#2E7D32':'#C0392B';return '<div class="dl"><span>'+lbl+' <b style="color:'+c+'">'+(+p).toFixed(1)+'%</b></span><span>'+(ok?'✓':'')+'</span></div><div class="db"><i style="width:'+w.toFixed(1)+'%;background:'+c+'"></i></div>'};
     var kc=function(p,g){return '<span style="color:'+(p>=g?'#2E7D32':'#C0392B')+'">'+(+p).toFixed(1)+'%</span>'};
-    var h='<div class="dh"><h3>🎯 '+(r.yo?T('My day','Mi día'):T('Stores today','Tiendas hoy'))+' · '+dn+'</h3><small>'+(tm?T('Updated ','Actualizado ')+tm:'')+'</small></div>';
+    var h='<div class="dh"><h3>🎯 '+(r.yo?T('My day','Mi día'):T('Stores today','Tiendas hoy'))+' · '+dn+'</h3><small>'+(tm?T('Updated ','Actualizado ')+tm:T('No report yet today','Aún sin reporte de hoy'))+'</small></div>';
     if(stale)h+='<div class="dn" style="margin:0 0 6px">'+T('Latest data is from ','Los últimos datos son del ')+dn+'.</div>';
     if(r.yo){
       var y=r.yo, pct=y.meta_dia>0?y.neto/y.meta_dia*100:0, mp=y.meta_mes>0?y.mes_acum/y.meta_mes*100:0;
