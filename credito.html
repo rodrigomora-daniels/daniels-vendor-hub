@@ -95,6 +95,7 @@
       <div class="kv" id="rkv"></div>
       <div class="sug hide" id="rsug"></div>
       <div id="rwarn"></div>
+      <div class="sug hide" id="rexp" style="background:#F3F6FB"></div>
       <ul class="rc" id="rcodes"></ul>
       <p class="legal" id="rlegal"></p>
       <h2 style="margin-top:14px" id="h-dec"></h2>
@@ -150,7 +151,23 @@ function showRes(r){
   $('rcodes').innerHTML=(r.codes||[]).map(c=>`<li data-no-i18n><code>${c.c}</code>${tr(c.t).replace(/</g,'&lt;')}</li>`).join('')+(r.externo&&r.recomendacion!=='externo'?`<li data-no-i18n><code>ALT</code>${tr('Alternative / Alternativa')}: ${r.externo}</li>`:'');
   const D=[['aprobado','Approved / Aprobé'],['aprobado_condiciones','Approved with conditions / Aprobé con condiciones'],['externo','External / Externo'],['rechazado','Declined / Rechacé'],['escalado','Escalated / Escalé']];
   $('decb').innerHTML=D.map(d=>`<button class="btn alt" data-d="${d[0]}" data-no-i18n>${tr(d[1])}</button>`).join('');
-  $('dmsg').textContent=''; $('res').scrollIntoView({behavior:'smooth'});
+  $('dmsg').textContent=''; $('res').scrollIntoView({behavior:'smooth'}); loadExp();
+}
+
+// Historical experience (anonymous aggregates from Infinity quotations 2023-2026). Informational only: it is never a credit rule.
+async function loadExp(){
+  const el=$('rexp'); el.classList.add('hide'); el.textContent='';
+  const f=parseInt($('fico').value,10), mo=parseFloat($('monto').value); if(!f&&!mo) return;
+  try{
+    const x=await DH.rpc('credito_experiencia',{p_fico:f||null,p_monto:isNaN(mo)?null:mo}); const c=x&&(x.celda||x.fico); if(!c||!c.n) return;
+    const dp=(c.dp_p50!=null)?tr('typical down payment ')+money(c.dp_p50)+' ('+money(c.dp_p25)+'–'+money(c.dp_p75)+')'+tr('; / ; ')+Math.round(c.sin_dp)+tr('% bought with no down payment / % compró sin enganche'):'';
+    const por=(x.fico&&x.fico.por_dp)||{}; const vals=Object.values(por).map(v=>+v).filter(v=>!isNaN(v));
+    const spread=vals.length>=3?Math.max(...vals)-Math.min(...vals):null;
+    const ins=spread!=null?(spread<=8?tr('In this FICO band the down payment barely changes who falls behind (range '+Math.min(...vals)+'%–'+Math.max(...vals)+'%): FICO is the stronger signal. / En esta banda de FICO el enganche casi no cambia quién se atrasa (rango '+Math.min(...vals)+'%–'+Math.max(...vals)+'%): el FICO pesa más.'):tr('Overdue by down payment in this FICO band: / Atraso por enganche en esta banda de FICO: ')+Object.entries(por).map(([k,v])=>'$'+k+'→'+v+'%').join(' · ')):'';
+    const lbl=x.fico_banda+(x.monto_banda&&x.celda?' · '+x.monto_banda:'');
+    el.innerHTML='<b>'+tr('What happened in similar cases / Qué pasó en casos parecidos')+'</b> (FICO '+lbl+', n='+c.n+')<br>'+tr(c.moroso+'% have an overdue balance today (all customers: '+(x.todos?x.todos.moroso:'—')+'%); / '+c.moroso+'% tiene saldo atrasado hoy (todos los clientes: '+(x.todos?x.todos.moroso:'—')+'%); ')+(dp?dp+'. ':'')+(c.plazo?tr('Typical term / Plazo típico')+' '+c.plazo+' '+tr('mo / meses')+'. ':'')+(ins?'<br>'+ins:'')+'<br><i style="font-size:12px">'+tr('Historical information, not a credit rule. / Información histórica, no es una regla de crédito.')+'</i>';
+    el.classList.remove('hide');
+  }catch(e){}
 }
 $('decb').addEventListener('click',async e=>{
   const b=e.target.closest('button[data-d]'); if(!b||!CUR)return;
@@ -288,7 +305,7 @@ function resetCase(){
   ['bad','autozone','existente'].forEach(i=>{$(i).checked=false;});
   ['rmsg','msg','dmsg'].forEach(i=>{$(i).textContent='';$(i).className='';});
   const o=$('ocrtxt'); if(o) o.remove();
-  $('manual').open=false; $('res').classList.add('hide'); $('go').disabled=false; $('read').disabled=false;
+  $('manual').open=false; $('res').classList.add('hide'); $('rexp').classList.add('hide'); $('go').disabled=false; $('read').disabled=false;
   window.scrollTo({top:0,behavior:'smooth'});
 }
 $('newcase').onclick=$('newcase2').onclick=resetCase;
