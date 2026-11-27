@@ -116,6 +116,7 @@
   #dome-card .dt{font:700 28px Georgia,serif;fill:#12284A}
   #dome-card .ds{text-align:center;font:14px/1.4 'Segoe UI',Arial,sans-serif;color:#33404f;margin-top:-4px}
   #dome-card .dst{text-align:center;font:700 14px 'Segoe UI',Arial,sans-serif;margin:2px 0 8px}
+  .vd-b{border:1px solid #1B3A6B;background:#fff;color:#1B3A6B;border-radius:20px;padding:7px 16px;font:600 13px 'Segoe UI',Arial,sans-serif}
   #dome-card .dl{display:flex;justify-content:space-between;gap:8px;font:13px 'Segoe UI',Arial,sans-serif;color:#1E2735;margin-top:8px}
   #dome-card .db{position:relative;background:#E7EBF2;border-radius:6px;height:12px;overflow:hidden;margin-top:3px}
   #dome-card .db i{display:block;height:100%;background:#1B3A6B;border-radius:6px}
@@ -1762,6 +1763,39 @@ function seasonLiveNow(){
   var d1=new Date(Date.UTC(y,10,1)), off=(4-d1.getUTCDay()+7)%7, tg=Date.UTC(y,10,1+off+21), now=Date.parse(t+'T00:00:00Z');
   return now>=tg && now<=tg+4*864e5;
 }
+
+async function ventasDetalle(b){
+  var es=(localStorage.getItem('dh_lang')==='es'), T=function(a,c){return es?c:a};
+  var f=b.dataset.f,t=b.dataset.t,c=b.dataset.c,n=b.dataset.n||'';
+  var $=function(x){x=+x||0;return (x<0?'-':'')+'$'+Math.abs(x).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})};
+  var old=document.getElementById('vd-modal'); if(old)old.remove();
+  var m=document.createElement('div'); m.id='vd-modal';
+  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+  m.onclick=function(e){if(e.target===m)m.remove()};
+  var box=document.createElement('div');
+  box.style.cssText='background:#fff;color:#1E2735;width:100%;max-width:560px;max-height:88vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px 16px 28px;font:14px "Segoe UI",Arial,sans-serif';
+  box.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:16px">🧾 '+meEsc(n||T('E-commerce','E-commerce'))+'</b><button style="border:0;background:#EEF1F6;border-radius:8px;padding:6px 12px;font-size:14px" onclick="document.getElementById(\'vd-modal\').remove()">✕</button></div><div style="color:#6B6B6B;margin:6px 0 10px">'+T('Loading…','Cargando…')+'</div>';
+  m.appendChild(box); document.body.appendChild(m);
+  var head=box.firstChild.outerHTML;
+  try{
+    var r=await DH.rpc('ventas_detalle',{p_fecha:f,p_tienda:t,p_codigo:c||''});
+    if(!r||r.error){box.innerHTML=head+'<div style="margin-top:10px">'+T('You do not have access to this detail.','No tienes acceso a este detalle.')+'</div>';return}
+    var tm=''; try{if(r.corrida)tm=new Date(r.corrida).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/Los_Angeles'})}catch(e){}
+    var fa=r.facturas||[], tot=0; fa.forEach(function(x){tot+=+x.neto||0});
+    var h=head+'<div style="color:#6B6B6B;margin:6px 0 8px">'+(tm?T('Updated ','Actualizado ')+tm+' · ':'')+fa.length+' '+T(fa.length===1?'invoice':'invoices',fa.length===1?'factura':'facturas')+' · <b style="color:#1E2735">'+$(tot)+'</b></div>';
+    if(!fa.length)h+='<div style="margin-top:10px">'+T('No sales detail yet for this day.','Aún no hay detalle de ventas de este día.')+'</div>';
+    fa.forEach(function(x){
+      h+='<div style="border:1px solid #DDE3EC;border-radius:10px;padding:10px;margin-top:10px"><div style="display:flex;justify-content:space-between;gap:8px"><b>'+T('Invoice','Factura')+' '+meEsc(x.factura)+(c?'':' <small style="color:#6B6B6B;font-weight:400">· '+meEsc(x.vendedor)+'</small>')+'</b><b>'+$(x.neto)+'</b></div>';
+      (x.lineas||[]).forEach(function(l){
+        var ent=!l.sku&&!l.modelo;
+        h+='<div style="display:flex;justify-content:space-between;gap:8px;margin-top:6px;padding-top:6px;border-top:1px dashed #E6EAF0"><span>'+(ent?T('Delivery charge','Cargo de entrega'):(+l.qty||0)+' × '+meEsc(l.desc||l.modelo||'')+'<br><small style="color:#6B6B6B">'+meEsc(l.sku||'')+(l.modelo?' · '+meEsc(l.modelo):'')+(l.depto?' · '+meEsc(l.depto):'')+'</small>')+'</span><span style="white-space:nowrap">'+$(l.neto)+'</span></div>';
+      });
+      h+='</div>';
+    });
+    h+='<div style="color:#6B6B6B;font-size:12px;margin-top:12px">'+T('Net sales include services and delivery. Same hourly report as the totals.','Venta neta incluye servicios y entrega. Es el mismo reporte por hora de los totales.')+'</div>';
+    box.innerHTML=h;
+  }catch(e){box.innerHTML=head+'<div style="margin-top:10px">'+T('Could not load. Try again.','No se pudo cargar. Intenta de nuevo.')+'</div>'}
+}
 async function loadDomeCard(){
   var el=document.getElementById('dome-card'); if(!el)return;
   try{
@@ -1784,7 +1818,7 @@ async function loadDomeCard(){
       var y=r.yo, pct=y.meta_dia>0?y.neto/y.meta_dia*100:0, mp=y.meta_mes>0?y.mes_acum/y.meta_mes*100:0;
       h+=domeSvg(pct,pace,'#1B3A6B',Math.round(pct)+'% '+T('of today\'s goal','de la meta de hoy'))
         +'<div class="ds"><b>'+$(y.neto)+'</b> '+T('of','de')+' '+$(y.meta_dia)+'</div>'+st(pct)
-        +kpi(T('Services','Servicios'),y.serv_pct,y.serv_meta_pct)+kpi('Profit Booster',y.pb_pct,y.pb_meta_pct!=null?y.pb_meta_pct:8)
+        +'<div style="text-align:center;margin:6px 0"><button class="vd-b" data-f="'+r.fecha+'" data-t="'+meEsc(y.tienda)+'" data-c="'+meEsc(y.codigo)+'" data-n="'+meEsc(y.nombre||T('My sales','Mis ventas'))+'" onclick="ventasDetalle(this)">🧾 '+T('See what I sold','Ver lo que vendí')+'</button></div>'+kpi(T('Services','Servicios'),y.serv_pct,y.serv_meta_pct)+kpi('Profit Booster',y.pb_pct,y.pb_meta_pct!=null?y.pb_meta_pct:8)
         +((y.neto>0&&(y.serv_pct<y.serv_meta_pct||y.pb_pct<(y.pb_meta_pct!=null?y.pb_meta_pct:8)))?'<div class="dn" style="color:#C0392B">💪 '+T('Keep pushing! Offer services and Profit Booster on your next sale.','¡Échale ganas! Ofrece servicios y Profit Booster en tu próxima venta.')+'</div>':'')
         +'<div class="dl"><span>'+T('Month','Mes')+' <b>'+$(y.mes_acum)+'</b></span><span>'+$(y.meta_mes)+'</span></div>'+bar(mp,null)
         +'<div class="dn">'+(y.base==='tienda'&&y.n?T('Daily goal = your store goal today ('+$(y.meta_tienda)+') ÷ '+y.n+(y.n===1?' seller.':' sellers.'),'Meta diaria = la meta de tu tienda hoy ('+$(y.meta_tienda)+') ÷ '+y.n+(y.n===1?' vendedor.':' vendedores.')):T('Daily goal = your share of the '+$(y.meta_mes)+' monthly minimum for today.','Meta diaria = tu parte del mínimo mensual de '+$(y.meta_mes)+' para hoy.'))+' '+T('Never below your monthly minimum. The dark mark is where you should be by now.','Nunca baja de tu mínimo mensual. La marca oscura es donde deberías ir a esta hora.')+'</div>';
@@ -1800,12 +1834,12 @@ async function loadDomeCard(){
         var sub=t.sin_filas?T('no sales in the report','sin ventas en el reporte'):(rf>0?$(rf)+' '+refLbl(t):(rf===0?T('no goal today','sin meta hoy'):T('no 2025 data','sin datos 2025')));
         h+='<details style="margin-top:6px"><summary style="display:block;min-height:44px"><span class="dl" style="margin-top:0"><span><b>'+meEsc(t.nombre)+'</b> '+$(t.v)+pcD(t.v,rf)+'</span><span>'+sub+'</span></span>'+bar(p2,pace)+'</summary>';
         if(t.sin_filas){h+='<div class="dn">'+T('The hourly Sales by Salesperson report has no rows for this store yet today.','El reporte por hora de ventas por vendedor no trae filas de esta tienda hoy.')+'</div>'}
-        else if(t.t==='EC'){h+='<div class="dn">'+T('Online sales (José Padrón, Victoria Sagaste). It has a store goal and no seller goals.','Ventas en línea (José Padrón, Victoria Sagaste). Tiene meta de tienda y no tiene metas por vendedor.')+'</div>'}
+        else if(t.t==='EC'){h+='<div class="dn">'+T('Online sales (José Padrón, Victoria Sagaste). It has a store goal and no seller goals.','Ventas en línea (José Padrón, Victoria Sagaste). Tiene meta de tienda y no tiene metas por vendedor.')+'</div><div style="text-align:center;margin:8px 0"><button class="vd-b" data-f="'+r.fecha+'" data-t="EC" data-c="" data-n="E-commerce" onclick="ventasDetalle(this)">🧾 '+T('See sales detail','Ver detalle de ventas')+'</button></div>'}
         else{
           h+=kpi(T('Services','Servicios'),t.v>0?t.serv/t.v*100:0,r.serv_meta_pct!=null?r.serv_meta_pct:9)+kpi('Profit Booster',t.v>0?(t.pb||0)/t.v*100:0,r.pb_meta_pct!=null?r.pb_meta_pct:8);
           h+='<div class="dn" style="margin:4px 0 0">'+(t.n?T('Seller goal = store goal ÷ '+t.n+(t.n===1?' seller':' sellers')+', never below the monthly minimum.','Meta por vendedor = meta de la tienda ÷ '+t.n+(t.n===1?' vendedor':' vendedores')+', nunca debajo del mínimo mensual.'):T('Seller goal = the monthly minimum (no seller count yet).','Meta por vendedor = el mínimo mensual (aún sin conteo de vendedores).'))+'</div>';
           h+=t.vendedores.map(function(v){var p3=v.meta_dia>0?v.neto/v.meta_dia*100:0, sp=v.neto>0?(v.serv/v.neto*100):0;
-            return '<div class="dl" style="margin-top:10px"><span>'+meEsc(v.n)+' <small style="color:#6B6B6B">· '+v.vn+' '+T('sales','ventas')+' · '+T('svc','serv')+' '+kc(sp,r.serv_meta_pct!=null?r.serv_meta_pct:9)+' · PB '+kc(v.neto>0?(v.pb||0)/v.neto*100:0,r.pb_meta_pct!=null?r.pb_meta_pct:8)+'</small></span><span><b>'+$(v.neto)+'</b> / '+$(v.meta_dia)+pcD(v.neto,v.meta_dia)+'</span></div>'+bar(p3,pace)}).join('');
+            return '<div class="dl" style="margin-top:10px"><span class="vd-n" data-f="'+r.fecha+'" data-t="'+t.t+'" data-c="'+meEsc(v.c)+'" data-n="'+meEsc(v.n)+'" onclick="ventasDetalle(this)" style="cursor:pointer">'+meEsc(v.n)+' <u style="color:#1B3A6B">🧾</u> <small style="color:#6B6B6B">· '+v.vn+' '+T('sales','ventas')+' · '+T('svc','serv')+' '+kc(sp,r.serv_meta_pct!=null?r.serv_meta_pct:9)+' · PB '+kc(v.neto>0?(v.pb||0)/v.neto*100:0,r.pb_meta_pct!=null?r.pb_meta_pct:8)+'</small></span><span><b>'+$(v.neto)+'</b> / '+$(v.meta_dia)+pcD(v.neto,v.meta_dia)+'</span></div>'+bar(p3,pace)}).join('');
         }
         h+='</details>';
       });
