@@ -42,13 +42,13 @@
 
   /* Spoken numbers become digits: "one oh four dash six six six five five five" / "uno cero cuatro guion seis seis seis cinco cinco cinco"
      -> 104-666555 (SKUs, quantities, phone numbers). A run needs at least two number words or a dash word, so "one chair" stays as typed. */
-  var DW = { zero: 0, oh: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, cero: 0, uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9 };
-  var DASH = { dash: 1, hyphen: 1, guion: 1, gion: 1, raya: 1, minus: 1, menos: 1 };
+  var DW = { zero: 0, oh: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, cero: 0, sero: 0, ceros: 0, siro: 0, uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9, nueva: 9, nuebe: 9, nuevo: 9, sinco: 5, cinko: 5, sies: 6, seiz: 6, syete: 7, dos: 2, tres: 3 };
+  var DASH = { dash: 1, hyphen: 1, guion: 1, gion: 1, raya: 1, minus: 1, menos: 1, slash: 1, diagonal: 1, barra: 1 };
   var MULT = { double: 2, doble: 2, triple: 3 };
   function plain(w) { return w.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[.,;:!?]+$/, ''); }
   function spoken(text) {
     var tk = String(text || '').split(/(\s+)/), out = [], i = 0;
-    function kind(w) { var x = plain(w); if (/^\d+$/.test(x)) return 'n'; if (x === 'oh' || DW.hasOwnProperty(x)) return 'w'; if (DASH[x]) return 'd'; if (MULT[x]) return 'm'; if (/^-$/.test(x)) return 'd'; return ''; }
+    function kind(w) { var x = plain(w); if (/^\d+$/.test(x)) return 'n'; if (x === 'oh' || DW.hasOwnProperty(x)) return 'w'; if (DASH[x]) return 'd'; if (MULT[x]) return 'm'; if (/^[-\/]$/.test(x)) return 'd'; return ''; }
     while (i < tk.length) {
       if (/^\s+$/.test(tk[i]) || !kind(tk[i])) { out.push(tk[i]); i++; continue; }
       var j = i, run = [], words = 0, dashes = 0;   // collect a run of number-ish tokens separated by single spaces
@@ -64,8 +64,8 @@
       var last = tk[j - 1], trail = /^\s+$/.test(last) ? '' : (String(last).match(/[.,;:!?]+$/) || [''])[0];
       while (run.length && run[0].t === 'd') run.shift();
       while (run.length && run[run.length - 1].t === 'd') run.pop();
-      var nn = run.filter(function (r) { return r.t === 'n'; }).length;
-      if (run.length && ((words >= 2 && nn >= 2) || (dashes >= 1 && nn >= 2 && words + dashes >= 1))) { out.push(run.map(function (r) { return r.v; }).join('') + trail); }
+      var nn = run.filter(function (r) { return r.t === 'n'; }).length, nd = run.reduce(function (a, r) { return a + (r.t === 'n' ? r.v.length : 0); }, 0);
+      if (run.length && ((words >= 2 && nn >= 2) || (dashes >= 1 && nn >= 2 && words + dashes >= 1) || (words === 0 && dashes === 0 && nn >= 3 && nd >= 6))) { out.push(run.map(function (r) { return r.v; }).join('') + trail); }
       else { for (var q = i; q < j; q++) out.push(tk[q]); }
       i = j;
     }
