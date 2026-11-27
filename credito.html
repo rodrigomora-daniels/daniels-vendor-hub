@@ -181,7 +181,10 @@ async function pdfjs(){ if(window.__pdfjs)return window.__pdfjs;
 async function addPdf(file){
   const lib=await pdfjs(); const doc=await lib.getDocument({data:await file.arrayBuffer()}).promise; let txt='';
   for(let i=1;i<=Math.min(doc.numPages,10);i++){
-    const pg=await doc.getPage(i); const c=await pg.getTextContent(); const t=c.items.map(x=>x.str).join(' ');
+    const pg=await doc.getPage(i); const c=await pg.getTextContent();
+    // Rebuild visual lines (same y = same line, left to right) so a label and its value stay together, as on the printed page.
+    const its=c.items.filter(x=>x.str&&x.str.trim()).map(x=>({s:x.str,x:x.transform[4],y:Math.round(x.transform[5]/3)})).sort((a,b)=>b.y-a.y||a.x-b.x); const lines=[]; its.forEach(o=>{const L=lines[lines.length-1]; if(L&&L.y===o.y)L.t.push(o.s); else lines.push({y:o.y,t:[o.s]});});
+    const t=lines.map(L=>L.t.join(' ')).join('\n');
     if(t.replace(/\s/g,'').length>=40){ txt+='\n'+t; }
     else if(SHOTS.length<10){ const v=pg.getViewport({scale:2}); const cv=document.createElement('canvas'); cv.width=v.width; cv.height=v.height; await pg.render({canvasContext:cv.getContext('2d'),viewport:v}).promise; SHOTS.push(cv.toDataURL('image/jpeg',.85)); }
   }
@@ -223,6 +226,9 @@ function parseText(t){
   let late=0,found=false; for(const x of T.matchAll(/(\d{1,3})\s*\+?\s*days?\s*(?:late|past\s*due|delinquent)/gi)){found=true;late=Math.max(late,+x[1]);}
   for(const x of T.matchAll(/DELINQ\s*(\d{1,3})/g)){found=true;late=Math.max(late,+x[1]);}
   if(found)f.late=late;
+  m=T.match(/\bRating:\s*([ABCD])\b/i); if(m&&f.score==null)f.score=m[1].toUpperCase();
+  m=T.match(/#\s*of\s*Invoices:\s*(\d+)/i); if(m&&+m[1]>0)f.existente=true;
+  m=T.match(/NSF\s*Chk:\s*\(?(\d+)\)?/i); if(m&&+m[1]>0)f.bad=true;
   if(/\bCHARGEOFF\b/.test(T))f.bad=true;
   m=T.match(/Invoices\s*:?\s*(\d+)/i); if(m&&+m[1]>0)f.existente=true;
   for(const x of T.matchAll(/(charge[\s-]?off|returned\s*check|\bNSF\b|co[\s-]?sign\w*)[^0-9\n]{0,15}(\d+)/gi)){ if(+x[2]>0)f.bad=true; }
@@ -253,7 +259,8 @@ function afterRead(){
   if(!$('score').classList.contains('fromshot')){ $('score').value='U'; notes.push(tr('Infinity score not seen, treated as unknown. / Score de Infinity no visible, se tomó como desconocido.')); }
   if(miss.length){
     m.className='err';
-    m.textContent=tr('Not enough information to recommend. Missing: / No tengo suficiente información para recomendar. Falta: ')+miss.join(', ')+tr('. Attach the page that shows it, or enter it below. / . Adjunta la página donde aparece, o captúralo abajo.');
+    const got=[]; if($('score').classList.contains('fromshot'))got.push(tr('Infinity rating / Rating de Infinity')+' '+$('score').value); if($('existente').checked)got.push(tr('existing customer / cliente existente')); if($('fico').value)got.push('FICO '+$('fico').value); if($('monto').value)got.push(tr('amount / monto')+' $'+$('monto').value);
+    m.textContent=(got.length?tr('Read from your file: / Leí de tu archivo: ')+got.join(', ')+'. ':'')+tr('Still needed: / Aún necesito: ')+miss.join(', ')+tr('. This page does not show it: attach the TRW page or the quote, or type it below. / . Esta página no lo trae: adjunta la página del TRW o la cotización, o captúralo abajo.');
     $('manual').open=true; const f=!$('fico').value?$('fico'):$('monto'); try{f.focus();}catch(e){}
     return;
   }
