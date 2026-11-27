@@ -28,7 +28,12 @@
     var sc = score(text), mine = lang === 'es-US' ? sc.es : sc.en, theirs = lang === 'es-US' ? sc.en : sc.es;
     if (theirs >= mine + 2) return other(lang);
     if (theirs > mine && conf > 0 && conf < 0.6) return other(lang);
-    if (mine === 0 && theirs === 0 && conf > 0 && conf < 0.4 && String(text).trim().split(/\s+/).length >= 2) return other(lang);
+    var nw = String(text).trim().split(/\s+/).length;
+    if (mine === 0 && theirs === 0 && conf > 0 && conf < 0.4 && nw >= 2) return other(lang);
+    /* The engine heard speech it does not understand: Spanish read by the English engine (or the reverse) comes back as odd words
+       with low confidence and few real matches. Try the other engine for the next phrase. */
+    if (conf > 0 && conf < 0.75 && nw >= 3 && mine <= 1 && theirs <= mine) return other(lang);
+    if (conf > 0 && conf < 0.6 && nw >= 4 && theirs === 0) return other(lang);
     return '';
   }
 
