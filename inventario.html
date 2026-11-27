@@ -47,7 +47,7 @@ function parseCSV(text){
   const out=[];let row=[],f='',q=false;
   for(let i=0;i<text.length;i++){const c=text[i];
     if(q){if(c==='"'){if(text[i+1]==='"'){f+='"';i++;}else q=false;}else f+=c;}
-    else if(c==='"')q=true; else if(c===','){row.push(f);f='';}
+    else if(c==='"'&&f==='')q=true; else if(c===','){row.push(f);f='';}   /* a quote opens a quoted field only at the start of a field: 14" or 18"LEAF inside a description is just text */
     else if(c==='\n'){row.push(f.replace(/\r$/,''));out.push(row);row=[];f='';}
     else f+=c;}
   if(f||row.length){row.push(f.replace(/\r$/,''));out.push(row);}
