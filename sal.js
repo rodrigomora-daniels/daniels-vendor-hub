@@ -318,13 +318,65 @@
     (T.match(/\d[\d,]*\.\d{2}\b/g) || []).forEach(function (x) { o.prices.push(x.replace(/,/g, '')); });
     return o;
   }
-  async function scanTag(file) {
+
+  /* ---------- live tag scanner: camera + guide frame, reads on its own and captures when it sees a SKU twice in a row ---------- */
+  var liveOn = false;
+  async function openLive() {
+    if (liveOn || scanning || busy) return;
+    if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) { camFile.click(); return; }
+    liveOn = true;
+    var ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;z-index:100000;background:#000;display:flex;flex-direction:column';
+    ov.innerHTML = '<video playsinline muted autoplay style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>' +
+      '<div id="lv-fr" style="position:absolute;left:7%;right:7%;top:26%;height:34%;border:3px solid #fff;border-radius:14px;box-shadow:0 0 0 100vmax rgba(0,0,0,.55)"></div>' +
+      '<div id="lv-msg" style="position:absolute;left:0;right:0;top:calc(26% + 36%);text-align:center;color:#fff;font:600 15px/1.35 Segoe UI,Arial,sans-serif;padding:0 24px"></div>' +
+      '<div style="position:absolute;left:0;right:0;bottom:0;display:flex;gap:10px;justify-content:center;padding:16px 16px calc(16px + env(safe-area-inset-bottom))">' +
+      '<button type="button" id="lv-ph" style="border:0;border-radius:22px;padding:12px 18px;font:600 14px Segoe UI,Arial,sans-serif;background:#fff;color:#1B3A6B">' + esc(t('Take a photo instead', 'Mejor tomar foto')) + '</button>' +
+      '<button type="button" id="lv-x" style="border:0;border-radius:22px;padding:12px 18px;font:600 14px Segoe UI,Arial,sans-serif;background:rgba(255,255,255,.2);color:#fff">' + esc(t('Close', 'Cerrar')) + '</button></div>';
+    document.body.appendChild(ov);
+    var vid = ov.querySelector('video'), fr = ov.querySelector('#lv-fr'), msg = ov.querySelector('#lv-msg'), stream = null, alive = true, last = '', t0 = Date.now();
+    function say(x) { msg.textContent = x; }
+    function done() { alive = false; liveOn = false; try { if (stream) stream.getTracks().forEach(function (k) { k.stop(); }); } catch (e) {} ov.remove(); document.removeEventListener('visibilitychange', vis); }
+    function vis() { if (document.hidden) done(); }
+    document.addEventListener('visibilitychange', vis);
+    ov.querySelector('#lv-x').onclick = done;
+    ov.querySelector('#lv-ph').onclick = function () { done(); camFile.click(); };
+    say(t('Starting the camera…', 'Iniciando la cámara…'));
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
+      vid.srcObject = stream; await vid.play();
+    } catch (e) { done(); camFile.click(); return; }
+    say(t('Getting ready to read…', 'Preparando la lectura…'));
+    var W; try { W = await getOcr(); } catch (e) { done(); camFile.click(); return; }
+    say(t('Put the whole tag inside the frame and hold still', 'Pon toda la etiqueta dentro del recuadro y mantén quieto'));
+    var cv = document.createElement('canvas'), cx = cv.getContext('2d');
+    while (alive) {
+      await new Promise(function (r) { setTimeout(r, 450); });
+      if (!alive || !vid.videoWidth) continue;
+      try {
+        var vr = vid.getBoundingClientRect(), fb = fr.getBoundingClientRect(), vw = vid.videoWidth, vh = vid.videoHeight;
+        var k = Math.max(vr.width / vw, vr.height / vh), ox = (vw * k - vr.width) / 2, oy = (vh * k - vr.height) / 2;
+        var sx = Math.max(0, (fb.left - vr.left + ox) / k), sy = Math.max(0, (fb.top - vr.top + oy) / k), sw = Math.min(vw - sx, fb.width / k), sh = Math.min(vh - sy, fb.height / k);
+        var sc = Math.min(1, 1400 / sw); cv.width = Math.round(sw * sc); cv.height = Math.round(sh * sc);
+        cx.drawImage(vid, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
+        var r = await W.recognize(cv); if (!alive) return;
+        var txt = (r && r.data && r.data.text) || '', tag = parseTag(txt);
+        if (tag.sku) {
+          if (tag.sku === last) { try { if (navigator.vibrate) navigator.vibrate(60); } catch (e) {} done(); scanTag(cv, txt); return; }
+          last = tag.sku; say(t('Almost… hold still', 'Casi… mantén quieto'));
+        } else {
+          last = ''; if (Date.now() - t0 > 20000) say(t('Move a little closer, avoid glare, or tap "Take a photo instead"', 'Acércate un poco, evita el reflejo o toca "Mejor tomar foto"'));
+        }
+      } catch (e) {}
+    }
+  }
+  async function scanTag(file, pre) {
     if (!file || busy || scanning) return;
     scanning = true; camBtn.disabled = true; sendBtn.disabled = true; forced = null; logEl.innerHTML = ''; root.classList.add('asked'); setFace('search');
     var w = addSal(esc(t('Reading the tag', 'Leyendo la etiqueta')) + '<span class="sal-dots" aria-hidden="true"><i></i><i></i><i></i></span>', 'search');
     var q = '';
     try {
-      var r = await withTimeout((async function () { var W = await getOcr(); return W.recognize(await prepImage(file)); })(), 60000);
+      var r = await withTimeout((async function () { if (pre) return { data: { text: pre } }; var W = await getOcr(); return W.recognize(await prepImage(file)); })(), 60000);
       var tag = parseTag(r && r.data && r.data.text);
       w.remove();
       var nearNote = '', fmt = function (x) { return String(x).replace(/^(\d{3})(\d{6})$/, '$1-$2'); };
@@ -724,7 +776,7 @@
     xBtn.addEventListener('click', close);
     panel.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.stopPropagation(); close(); } });
     form.addEventListener('submit', function (e) { e.preventDefault(); ask(input.value); });
-    camBtn.addEventListener('click', function () { camFile.click(); });
+    camBtn.addEventListener('click', function () { openLive(); });
     camFile.addEventListener('change', function () { var f = camFile.files && camFile.files[0]; camFile.value = ''; scanTag(f); });
     chipsEl.addEventListener('click', function (e) {
       var b = e.target.closest('button'); if (!b) return; var q = b.getAttribute('data-q') || b.textContent;
