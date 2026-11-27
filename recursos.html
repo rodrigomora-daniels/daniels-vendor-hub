@@ -59,8 +59,8 @@ function openFile(id){
   const it=D.items.find(x=>x.id===id); if(!it||!window.DH||!DH.view){err('Could not open the file. / No se pudo abrir el archivo.');return;}
   DH.view(it.archivo_id,{title:it.titulo});
 }
-const CAT_ORDER=['Sales Resources','Credit','Infinity','Training','Policies','Safety','Manager Tools'];
-const CAT_ICON={'Sales Resources':'🛋️','Credit':'💳','Infinity':'🏦','Training':'🎓','Policies':'📜','Safety':'🦺','Manager Tools':'🧰'};
+const CAT_ORDER=['Sales Resources','Credit','Infinity','Training','Policies','IT Policies','Safety','Manager Tools'];
+const CAT_ICON={'Sales Resources':'🛋️','Credit':'💳','Infinity':'🏦','Training':'🎓','Policies':'📜','IT Policies':'💻','Safety':'🦺','Manager Tools':'🧰'};
 function catRank(c){const i=CAT_ORDER.findIndex(k=>c.startsWith(k));return i<0?99:i;}
 function catIcon(c){const k=CAT_ORDER.find(k=>c.startsWith(k));return k?CAT_ICON[k]:'📁';}
 function fileIcon(i){const m=i.mime||'';if(!i.archivo_id)return /google\.com/.test(i.url||'')?'📊':'🔗';
