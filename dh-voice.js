@@ -37,6 +37,38 @@
     return '';
   }
 
+  /* Spoken numbers become digits: "one oh four dash six six six five five five" / "uno cero cuatro guion seis seis seis cinco cinco cinco"
+     -> 104-666555 (SKUs, quantities, phone numbers). A run needs at least two number words or a dash word, so "one chair" stays as typed. */
+  var DW = { zero: 0, oh: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, cero: 0, uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9 };
+  var DASH = { dash: 1, hyphen: 1, guion: 1, gion: 1, raya: 1, minus: 1, menos: 1 };
+  var MULT = { double: 2, doble: 2, triple: 3 };
+  function plain(w) { return w.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[.,;:!?]+$/, ''); }
+  function spoken(text) {
+    var tk = String(text || '').split(/(\s+)/), out = [], i = 0;
+    function kind(w) { var x = plain(w); if (/^\d+$/.test(x)) return 'n'; if (x === 'oh' || DW.hasOwnProperty(x)) return 'w'; if (DASH[x]) return 'd'; if (MULT[x]) return 'm'; if (/^-$/.test(x)) return 'd'; return ''; }
+    while (i < tk.length) {
+      if (/^\s+$/.test(tk[i]) || !kind(tk[i])) { out.push(tk[i]); i++; continue; }
+      var j = i, run = [], words = 0, dashes = 0;   // collect a run of number-ish tokens separated by single spaces
+      while (j < tk.length) {
+        var w = tk[j]; if (/^\s+$/.test(w)) { if (j + 1 < tk.length && kind(tk[j + 1])) { j++; continue; } break; }
+        var k = kind(w); if (!k) break;
+        if (k === 'm') { var nx = tk[j + 2]; if (nx && (kind(nx) === 'w' || kind(nx) === 'n')) { var nxp = plain(nx), dg = /^\d+$/.test(nxp) ? nxp : String(DW[nxp]); run.push({ t: 'n', v: new Array(MULT[plain(w)] + 1).join(dg) }); words++; j += 3; continue; } break; }
+        if (k === 'w') { run.push({ t: 'n', v: String(DW[plain(w)]) }); words++; }
+        else if (k === 'd') { run.push({ t: 'd', v: '-' }); dashes++; }
+        else run.push({ t: 'n', v: plain(w) });
+        j++;
+      }
+      var last = tk[j - 1], trail = /^\s+$/.test(last) ? '' : (String(last).match(/[.,;:!?]+$/) || [''])[0];
+      while (run.length && run[0].t === 'd') run.shift();
+      while (run.length && run[run.length - 1].t === 'd') run.pop();
+      var nn = run.filter(function (r) { return r.t === 'n'; }).length;
+      if (run.length && ((words >= 2 && nn >= 2) || (dashes >= 1 && nn >= 2 && words + dashes >= 1))) { out.push(run.map(function (r) { return r.v; }).join('') + trail); }
+      else { for (var q = i; q < j; q++) out.push(tk[q]); }
+      i = j;
+    }
+    return out.join('');
+  }
+
   var css = document.createElement('style');
   css.textContent = 'button[data-lang]{position:relative}button[data-lang]::after{content:attr(data-lang);position:absolute;right:2px;bottom:1px;font:700 9px/1 "Segoe UI",Arial,sans-serif;color:#1B3A6B;background:#E8EEF8;border-radius:4px;padding:1px 3px}.dh-rec::after{background:#fff!important;color:#C0392B!important}' +
     '.dh-rec{background:#C0392B!important;color:#fff!important;border-color:#C0392B!important;animation:dhrec 1.3s ease-in-out infinite}' +
@@ -66,7 +98,7 @@
 
     function put(txt) {
       var max = field.maxLength > 0 ? field.maxLength : 100000;
-      field.value = (base + txt).slice(0, max);
+      field.value = (base + spoken(txt)).slice(0, max);
       field.dispatchEvent(new Event('input', { bubbles: true }));
     }
     function stop() {
@@ -124,6 +156,6 @@
       var f = document.querySelector(b.getAttribute('data-voice')); if (f) attach(f, b);
     });
   }
-  window.DHVoice = { supported: !!SR, attach: attach };
+  window.DHVoice = { supported: !!SR, attach: attach, spoken: spoken };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', auto); else auto();
 })();
