@@ -92,6 +92,8 @@
   #lb{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:80;display:flex;align-items:center;justify-content:center;padding:12px}
   #lb img{max-width:100%;max-height:100%;object-fit:contain;border-radius:6px}#lb button{position:absolute;top:10px;right:10px;min-width:48px;min-height:48px;border:0;border-radius:24px;background:#fff;font-size:20px;cursor:pointer}
   .atb.cam{font-size:20px}
+  .atb.mic{font-size:20px}
+  .atb[hidden]{display:none}
   .ed{font-size:11px;color:var(--gray);font-style:italic}
   textarea.edt{width:100%;min-height:70px;font:inherit;font-size:16px;padding:8px 10px;border:1px solid #cfd6e2;border-radius:8px;resize:vertical;color:var(--ink)}
   .edb{display:flex;gap:8px;margin-top:6px}.edb .btn2{border:1px solid #c5ccd8;background:#fff;color:var(--navy);border-radius:8px;padding:8px 14px;font-weight:700;min-height:42px;cursor:pointer}
@@ -141,6 +143,7 @@
       <div id="mpop" class="hide" role="listbox" aria-label="Mention"></div>
       <button type="button" class="atb" id="atb" onclick="openAt()" aria-label="Mention someone / Mencionar a alguien">@</button>
       <button type="button" class="atb cam" id="camb" onclick="$('phf').click()" aria-label="Attach a file / Adjuntar archivo">📎</button>
+      <button type="button" class="atb mic" id="micb" data-voice="#txt" hidden aria-label="Dictate by voice / Dictar por voz">🎤</button>
       <input type="file" id="phf" accept="image/*,application/pdf" multiple class="hide" onchange="pickPhotos(this)">
       <textarea id="txt" rows="1" maxlength="1500" placeholder="Write a message… / Escribe un mensaje…" aria-label="Message"></textarea>
       <button class="send" id="sendb" type="submit">Send / Enviar</button>
@@ -149,6 +152,7 @@
 </div>
 <div class="mtoast hide" id="mtoast" role="status"></div>
 <div class="dlg" id="dlg" onclick="if(event.target===this)closeDlg()" role="dialog" aria-modal="true"><div class="dp" id="dp"></div></div>
+<script src="dh-voice.js"></script>
 <script src="dh-session.js"></script>
 <script src="push.js"></script>
 <script>
