@@ -1872,10 +1872,19 @@ async function domeCmp(fecha,codes){
     if(n<=7){if(has)svg+='<text x="'+(cx+bw/2+0.5).toFixed(1)+'" y="'+(y(ne)-3).toFixed(1)+'" text-anchor="middle" font-size="9" font-weight="700" fill="#1B3A6B">'+kf(ne)+'</text>'}
     if(i%step===0||n<=7){var dd=new Date(r.k+'T12:00:00Z'); svg+='<text x="'+cx.toFixed(1)+'" y="'+(H-pb+13)+'" text-anchor="middle" font-size="10" fill="'+(isT?'#1B3A6B':'#6B6B6B')+'" font-weight="'+(isT?'700':'400')+'">'+(n<=7?DW[dd.getUTCDay()]+' ':'')+(dd.getUTCMonth()+1)+'/'+dd.getUTCDate()+'</text>'}
   });
+  var mt=+(q.total&&q.total.meta)||0, ne2=+(q.total&&q.total.neto)||0, goalH='';
+  if(mt>0){
+    var ex=0; R.forEach(function(r){var m=+r.meta||0; if(r.k<fecha)ex+=m; else if(r.k===fecha)ex+=m*(DMC.p>0&&DMC.p<=1?DMC.p:1)});
+    var pc=ne2/mt*100, pe=Math.min(100,ex/mt*100), ahead=ne2>=ex, left=Math.max(0,mt-ne2), remD=R.filter(function(r){return r.k>fecha}).length;
+    var gl=DMC.w==='season'?T('Thanksgiving week goal','Meta semana de Thanksgiving'):DMC.w==='7'?T('7-day goal','Meta 7 días'):T('Month goal','Meta del mes');
+    goalH='<div style="margin:8px 0 4px"><div style="display:flex;justify-content:space-between;align-items:baseline;font-size:13px"><span><b>'+$$(ne2)+'</b> <span style="padding:1px 8px;border-radius:10px;font-weight:700;font-size:12px;background:'+(pc>=100?'#F7C948':ahead?'#E3F1E4':'#FBE3E0')+';color:'+(pc>=100?'#1B3A6B':ahead?'#2E7D32':'#C0392B')+'">'+(pc>=100?'★ ':'')+pc.toFixed(0)+'%</span></span><span style="color:#6B6B6B">'+gl+' '+$$(mt)+'</span></div>'
+      +'<div style="position:relative;height:16px;border-radius:8px;background:#E6EBF3;margin-top:4px"><div style="height:16px;border-radius:8px;background:#1B3A6B;width:'+Math.min(100,pc).toFixed(1)+'%"></div><div style="position:absolute;top:-3px;left:'+pe.toFixed(1)+'%;width:3px;height:22px;background:#222;border-radius:2px"></div></div>'
+      +'<div style="font-size:11px;color:#6B6B6B;margin-top:3px">'+T('Dark mark = expected by this hour','Marca oscura = esperado a esta hora')+' · '+(left>0?T('Left to goal','Falta para la meta')+': <b>'+$$(left)+'</b>'+(remD>0?' ('+$$(left/remD)+'/'+T('day','día')+' '+T('for the next','para los próximos')+' '+remD+')':''):T('Goal reached','Meta alcanzada'))+'</div></div>';
+  }
   var base='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+(H-pb)+'" y2="'+(H-pb)+'" stroke="#DDE3EC"/>';
   var d=sl>0?(sc/sl-1)*100:null, col=d==null?'#6B6B6B':d>=0?'#2E7D32':'#C0392B';
   var cap=d==null?T('No closed day to compare yet.','Aún no hay un día cerrado para comparar.'):T('Closed days','Días cerrados')+': <b>'+$$(sc)+'</b> vs <b>'+$$(sl)+'</b> LY · <b style="color:'+col+'">'+(d>=0?'▲ +':'▼ ')+d.toFixed(0)+'%</b>';
-  box.innerHTML=chips+'<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="'+T('Sales by day compared with last year','Ventas por día contra el año pasado')+'" style="display:block;margin-top:6px">'+base+svg+'</svg>'
+  box.innerHTML=chips+goalH+'<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="'+T('Sales by day compared with last year','Ventas por día contra el año pasado')+'" style="display:block;margin-top:6px">'+base+svg+'</svg>'
     +'<div style="display:flex;gap:12px;font-size:11px;color:#6B6B6B;margin:2px 0"><span><i style="display:inline-block;width:10px;height:10px;background:#1B3A6B;border-radius:2px"></i> '+T('This year','Este año')+'</span><span><i style="display:inline-block;width:10px;height:10px;background:#B8C2D1;border-radius:2px"></i> '+T('Same day last year','Mismo día año pasado')+'</span></div>'
     +'<div class="dn" style="margin:2px 0 0">'+cap+' <a href="ventas_meta.html" style="color:#1B3A6B">'+T('More ranges','Más rangos')+' ›</a></div>';
 }
@@ -1937,7 +1946,7 @@ async function loadDomeCard(){
     var _op=[].map.call(el.querySelectorAll('details'),function(x){return x.open});
     el.innerHTML=h; el.classList.remove('hide'); el.dataset.k=_k;
     [].forEach.call(el.querySelectorAll('details'),function(x,i){if(_op[i])x.open=true});
-    if(document.getElementById('dm-cmp'))domeCmp(r.fecha,(r.tiendas||[]).map(function(t){return t.t}));
+    if(document.getElementById('dm-cmp')){DMC.p=r.ritmo;domeCmp(r.fecha,(r.tiendas||[]).map(function(t){return t.t}));}
   }catch(e){el.classList.add('hide')}
 }
 async function loadGoalCard(){
