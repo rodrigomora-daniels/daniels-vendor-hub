@@ -328,8 +328,8 @@
     var ov = document.createElement('div');
     ov.style.cssText = 'position:fixed;inset:0;z-index:100000;background:#000;display:flex;flex-direction:column';
     ov.innerHTML = '<video playsinline muted autoplay style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>' +
-      '<div id="lv-fr" style="position:absolute;left:7%;right:7%;top:26%;height:34%;border:3px solid #fff;border-radius:14px;box-shadow:0 0 0 100vmax rgba(0,0,0,.55)"></div>' +
-      '<div id="lv-msg" style="position:absolute;left:0;right:0;top:calc(26% + 36%);text-align:center;color:#fff;font:600 15px/1.35 Segoe UI,Arial,sans-serif;padding:0 24px"></div>' +
+      '<div id="lv-fr" style="position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);height:min(60vh,115vw);aspect-ratio:3/4;max-width:92vw;border:3px solid #fff;border-radius:14px;box-shadow:0 0 0 100vmax rgba(0,0,0,.55)"></div>' +
+      '<div id="lv-msg" style="position:absolute;left:0;right:0;bottom:calc(84px + env(safe-area-inset-bottom));text-align:center;color:#fff;font:600 15px/1.35 Segoe UI,Arial,sans-serif;padding:0 24px"></div>' +
       '<div style="position:absolute;left:0;right:0;bottom:0;display:flex;gap:10px;justify-content:center;padding:16px 16px calc(16px + env(safe-area-inset-bottom))">' +
       '<button type="button" id="lv-ph" style="border:0;border-radius:22px;padding:12px 18px;font:600 14px Segoe UI,Arial,sans-serif;background:#fff;color:#1B3A6B">' + esc(t('Take a photo instead', 'Mejor tomar foto')) + '</button>' +
       '<button type="button" id="lv-x" style="border:0;border-radius:22px;padding:12px 18px;font:600 14px Segoe UI,Arial,sans-serif;background:rgba(255,255,255,.2);color:#fff">' + esc(t('Close', 'Cerrar')) + '</button></div>';
