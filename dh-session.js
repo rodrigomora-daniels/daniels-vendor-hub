@@ -99,6 +99,7 @@
     return out;
   }
   DH.creditRead = function (images) { return fn({ images: images }, 'credit-read'); };
+  DH.tagRead = function (image) { return fn({ image: image }, 'tag-read'); };
   DH.creditAssist = function (datos) { return fn({ datos: datos }, 'credit-assist'); };
   DH.salWeb = function (q, detail, mode) { return fn({ q: q, detail: !!detail, mode: mode || '' }, 'sal-web'); };
   DH.files = {

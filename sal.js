@@ -361,14 +361,26 @@
         cx.drawImage(vid, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
         var r = await W.recognize(cv); if (!alive) return;
         var txt = (r && r.data && r.data.text) || '', tag = parseTag(txt);
-        if (tag.sku) {
-          if (tag.sku === last) { try { if (navigator.vibrate) navigator.vibrate(60); } catch (e) {} done(); scanTag(cv, txt); return; }
-          last = tag.sku; say(t('Almost… hold still', 'Casi… mantén quieto'));
+        var key = tag.sku || (tag.model && tag.prices.length ? 'm:' + tag.model : '');
+        if (key) {
+          if (key === last) { try { if (navigator.vibrate) navigator.vibrate(60); } catch (e) {} done(); scanTag(cv, txt); return; }
+          last = key; say(t('Almost… hold still', 'Casi… mantén quieto'));
         } else {
           last = ''; if (Date.now() - t0 > 20000) say(t('Move a little closer, avoid glare, or tap "Take a photo instead"', 'Acércate un poco, evita el reflejo o toca "Mejor tomar foto"'));
         }
       } catch (e) {}
     }
+  }
+
+  /* AI reading of the tag (needs the Anthropic key on the server; any failure -> null and the free reader takes over) */
+  async function aiTag(cv) {
+    if (!(window.DH && DH.tagRead)) return null;
+    var out = await withTimeout(DH.tagRead(cv.toDataURL('image/jpeg', 0.85)), 15000), f = out && out.fields;
+    if (!f) return null;
+    var sku = String(f.sku || '').replace(/\D/g, ''); if (sku.length !== 9) sku = '';
+    var model = String(f.model || '').trim(), prices = (f.prices || []).filter(function (x) { return +x > 0; }).map(function (x) { return Number(x).toFixed(2); });
+    if (!sku && !model) return null;
+    return { sku: sku, model: model, prices: prices };
   }
   async function scanTag(file, pre) {
     if (!file || busy || scanning) return;
@@ -376,8 +388,8 @@
     var w = addSal(esc(t('Reading the tag', 'Leyendo la etiqueta')) + '<span class="sal-dots" aria-hidden="true"><i></i><i></i><i></i></span>', 'search');
     var q = '';
     try {
-      var r = await withTimeout((async function () { if (pre) return { data: { text: pre } }; var W = await getOcr(); return W.recognize(await prepImage(file)); })(), 60000);
-      var tag = parseTag(r && r.data && r.data.text);
+      var r = await withTimeout((async function () { var cv2 = (file && file.getContext) ? file : await prepImage(file), ai = null; try { ai = await aiTag(cv2); } catch (e) {} if (ai) return { ai: ai }; if (pre) return { data: { text: pre } }; var W = await getOcr(); return W.recognize(cv2); })(), 60000);
+      var tag = r && r.ai ? r.ai : parseTag(r && r.data && r.data.text);
       w.remove();
       var nearNote = '', fmt = function (x) { return String(x).replace(/^(\d{3})(\d{6})$/, '$1-$2'); };
       if (tag.sku || tag.model) {   // a camera often misreads one digit (6 as 0): check the SKU exists, else use the closest SKU that matches the model
