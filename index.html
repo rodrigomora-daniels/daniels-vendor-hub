@@ -1857,7 +1857,7 @@ async function domeCmp(fecha,codes){
   var nm={EU:'Euclid',CN:'Chino',RR:'Cerritos',EC:'E-commerce'};
   var chip=function(on,fn,t){return '<button type="button" class="dmk'+(on?' on':'')+'" aria-pressed="'+on+'" onclick="'+fn+'">'+t+'</button>'};
   var chips='<div>'+(DMC.codes.length>1?chip(!DMC.t,"dmcSet('t','')",T('All','Todas'))+DMC.codes.map(function(c){return chip(DMC.t===c,"dmcSet('t','"+c+"')",nm[c]||c)}).join(''):'')+'</div><div>'
-    +(near?chip(DMC.w==='season',"dmcSet('w','season')",T('Thanksgiving week','Semana de Thanksgiving')):'')+chip(DMC.w==='7',"dmcSet('w','7')",T('7 days','7 días'))+chip(DMC.w==='mes',"dmcSet('w','mes')",T('This month','Este mes'))+'</div>';
+    +(near?chip(DMC.w==='season',"dmcSet('w','season')",T('Thanksgiving 5 days (Thu–Mon)','5 días de Thanksgiving (jue–lun)')):'')+chip(DMC.w==='7',"dmcSet('w','7')",T('7 days','7 días'))+chip(DMC.w==='mes',"dmcSet('w','mes')",T('This month','Este mes'))+'</div>';
   var q=null; try{q=await DH.rpc('ventas_panel',{p_desde:d0,p_hasta:d1,p_tiendas:DMC.t?[DMC.t]:null,p_grupo:'dia'})}catch(e){}
   if(!q||q.error||!q.rows||!q.rows.length){box.innerHTML='';return}
   var R=q.rows, n=R.length, W=320, H=150, pl=4, pr=4, pt=16, pb=24, gw=(W-pl-pr)/n, bw=Math.max(2,Math.min(15,gw*.38));
@@ -1876,7 +1876,7 @@ async function domeCmp(fecha,codes){
   if(mt>0){
     var ex=0; R.forEach(function(r){var m=+r.meta||0; if(r.k<fecha)ex+=m; else if(r.k===fecha)ex+=m*(DMC.p>0&&DMC.p<=1?DMC.p:1)});
     var pc=ne2/mt*100, pe=Math.min(100,ex/mt*100), ahead=ne2>=ex, left=Math.max(0,mt-ne2), remD=R.filter(function(r){return r.k>fecha}).length;
-    var gl=DMC.w==='season'?T('Thanksgiving week goal','Meta semana de Thanksgiving'):DMC.w==='7'?T('7-day goal','Meta 7 días'):T('Month goal','Meta del mes');
+    var gl=DMC.w==='season'?T('Thanksgiving 5-day goal (Thu–Mon)','Meta 5 días de Thanksgiving (jue–lun)'):DMC.w==='7'?T('7-day goal','Meta 7 días'):T('Month goal','Meta del mes');
     goalH='<div style="margin:8px 0 4px"><div style="display:flex;justify-content:space-between;align-items:baseline;font-size:13px"><span><b>'+$$(ne2)+'</b> <span style="padding:1px 8px;border-radius:10px;font-weight:700;font-size:12px;background:'+(pc>=100?'#F7C948':ahead?'#E3F1E4':'#FBE3E0')+';color:'+(pc>=100?'#1B3A6B':ahead?'#2E7D32':'#C0392B')+'">'+(pc>=100?'★ ':'')+pc.toFixed(0)+'%</span></span><span style="color:#6B6B6B">'+gl+' '+$$(mt)+'</span></div>'
       +'<div style="position:relative;height:16px;border-radius:8px;background:#E6EBF3;margin-top:4px"><div style="height:16px;border-radius:8px;background:#1B3A6B;width:'+Math.min(100,pc).toFixed(1)+'%"></div><div style="position:absolute;top:-3px;left:'+pe.toFixed(1)+'%;width:3px;height:22px;background:#222;border-radius:2px"></div></div>'
       +'<div style="font-size:11px;color:#6B6B6B;margin-top:3px">'+T('Dark mark = expected by this hour','Marca oscura = esperado a esta hora')+' · '+(left>0?T('Left to goal','Falta para la meta')+': <b>'+$$(left)+'</b>'+(remD>0?' ('+$$(left/remD)+'/'+T('day','día')+' '+T('for the next','para los próximos')+' '+remD+')':''):T('Goal reached','Meta alcanzada'))+'</div></div>';
@@ -2039,7 +2039,7 @@ async function loadSeasonCard(){
       }
       h+='</details>';
     });
-    h+='<div class="sx">'+T('Goal = what each store sold the same day last year (Thanksgiving week 2025), or the number loaded by hand if it is higher. Euclid does not include e-commerce. Same hourly report as My day; this card is only for the season and disappears after Cyber Monday. White mark = expected by this hour.','Meta = lo que vendió cada tienda el mismo día el año pasado (semana de Acción de Gracias 2025), o el número cargado a mano si es mayor. Euclid no incluye e-commerce. Mismo reporte por hora que Mi día; esta tarjeta es solo de la temporada y desaparece después del Cyber Monday. Marca blanca = esperado a esta hora.')+'</div>';
+    h+='<div class="sx">'+T('Goal = what each store sold the same day last year (Thanksgiving 2025, same 5 days), or the number loaded by hand if it is higher. Euclid does not include e-commerce. Same hourly report as My day; this card is only for the season and disappears after Cyber Monday. White mark = expected by this hour.','Meta = lo que vendió cada tienda el mismo día el año pasado (semana de Acción de Gracias 2025), o el número cargado a mano si es mayor. Euclid no incluye e-commerce. Mismo reporte por hora que Mi día; esta tarjeta es solo de la temporada y desaparece después del Cyber Monday. Marca blanca = esperado a esta hora.')+'</div>';
     var _op=[].map.call(el.querySelectorAll('details'),function(x){return x.open});
     el.innerHTML=h; el.classList.remove('hide'); el.dataset.k=_k;
     [].forEach.call(el.querySelectorAll('details'),function(x,i){if(_op[i])x.open=true});
