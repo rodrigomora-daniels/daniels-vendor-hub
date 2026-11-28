@@ -1782,13 +1782,16 @@ async function ventasDetalle(b){
   var es=(localStorage.getItem('dh_lang')==='es'), T=function(a,c){return es?c:a};
   var f=b.dataset.f,t=b.dataset.t,c=b.dataset.c,n=b.dataset.n||'';
   var $=function(x){x=+x||0;return (x<0?'-':'')+'$'+Math.abs(x).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})};
-  var old=document.getElementById('vd-modal'); if(old)old.remove();
+  window.vdClose=function(){var o=document.getElementById('vd-modal'); if(o)o.remove(); document.body.style.overflow=window._vdBo||''; document.documentElement.style.overflow=window._vdHo||''; document.removeEventListener('keydown',window._vdKey)};
+  var old=document.getElementById('vd-modal'); if(old){old.remove()} else {window._vdBo=document.body.style.overflow; window._vdHo=document.documentElement.style.overflow}
+  document.body.style.overflow='hidden'; document.documentElement.style.overflow='hidden';
+  window._vdKey=function(e){if(e.key==='Escape')window.vdClose()}; document.addEventListener('keydown',window._vdKey);
   var m=document.createElement('div'); m.id='vd-modal';
-  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
-  m.onclick=function(e){if(e.target===m)m.remove()};
+  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:flex-end;justify-content:center;overscroll-behavior:contain';
+  m.onclick=function(e){if(e.target===m)window.vdClose()};
   var box=document.createElement('div');
-  box.style.cssText='background:#fff;color:#1E2735;width:100%;max-width:560px;max-height:88vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px 16px 28px;font:14px "Segoe UI",Arial,sans-serif';
-  box.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:16px">🧾 '+meEsc(n||T('E-commerce','E-commerce'))+'</b><button style="border:0;background:#EEF1F6;border-radius:8px;padding:6px 12px;font-size:14px" onclick="document.getElementById(\'vd-modal\').remove()">✕</button></div><div style="color:#6B6B6B;margin:6px 0 10px">'+T('Loading…','Cargando…')+'</div>';
+  box.style.cssText='background:#fff;color:#1E2735;width:100%;max-width:560px;max-height:88vh;max-height:88dvh;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;border-radius:16px 16px 0 0;padding:0 16px calc(28px + env(safe-area-inset-bottom));font:14px "Segoe UI",Arial,sans-serif';
+  box.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#fff;padding:14px 0 8px;z-index:1"><b style="font-size:16px">🧾 '+meEsc(n||T('E-commerce','E-commerce'))+'</b><button style="border:0;background:#EEF1F6;border-radius:8px;padding:6px 12px;font-size:14px" onclick="vdClose()" aria-label="'+T('Close','Cerrar')+'">✕</button></div><div style="color:#6B6B6B;margin:6px 0 10px">'+T('Loading…','Cargando…')+'</div>';
   m.appendChild(box); document.body.appendChild(m);
   var head=box.firstChild.outerHTML;
   try{
