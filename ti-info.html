@@ -38,7 +38,7 @@
 <script src="dh-chrome.js" defer></script>
 </head>
 <body>
-<header><h1>💻 IT Info &amp; Newsletter / Info de TI y Boletín</h1><a href="tickets.html">← IT tickets</a></header>
+<header><h1>💻 IT Info &amp; Newsletter / Info de TI y Boletín</h1><a href="tickets.html">← IT Support</a></header>
 <main>
   <p class="intro" id="intro"></p>
   <div class="card hide" id="ed"></div>
@@ -59,7 +59,7 @@ function rich(t){ // escape, then turn https links and line breaks into HTML
   return h.replace(/\n/g,'<br>');
 }
 function render(){
-  $('intro').textContent=tr('Cybersecurity updates, scams to watch for and IT guides from our IT team. Need help now? Use IT tickets. / Novedades de ciberseguridad, estafas a las que hay que estar atento y guías del equipo de TI. ¿Necesitas ayuda ahora? Usa Tickets de TI.');
+  $('intro').textContent=tr('Cybersecurity updates, scams to watch for and IT guides from our IT team. Need help now? Use IT Support. / Novedades de ciberseguridad, estafas a las que hay que estar atento y guías del equipo de TI. ¿Necesitas ayuda ahora? Usa Soporte de TI.');
   $('newrow').classList.toggle('hide',!D.admin); $('newbtn').textContent=tr('+ New post / + Nueva publicación');
   $('list').innerHTML=D.items.length?D.items.map(x=>`<div class="card post${x.fijada?' pin':''}"><div class="meta"><span class="pill t-${esc(x.tipo)}">${esc(tr(TIPO[x.tipo]||x.tipo))}</span>${x.fijada?'<span>📌 '+esc(tr('Pinned / Fijado'))+'</span>':''}${x.publicada?'':'<span class="pill draft">'+esc(tr('Draft / Borrador'))+'</span>'}<span>${esc(fmt(x.creado))}</span></div><h2>${esc(x.titulo)}</h2><div class="body">${rich(x.cuerpo)}</div>${x.enlace_url?`<div class="row"><a class="btn" style="display:inline-flex;align-items:center;text-decoration:none" href="${esc(x.enlace_url)}" target="_blank" rel="noopener noreferrer">🔗 ${esc(x.enlace_texto||'Open link / Abrir enlace')}</a></div>`:''}${D.admin?`<div class="row"><button class="btn alt" type="button" data-e="${x.id}">${esc(tr('Edit / Editar'))}</button><button class="btn alt" type="button" data-d="${x.id}">${esc(tr('Delete / Borrar'))}</button></div>`:''}</div>`).join(''):'<p class="empty">'+esc(tr('Nothing posted yet. / Aún no hay publicaciones.'))+'</p>';
 }

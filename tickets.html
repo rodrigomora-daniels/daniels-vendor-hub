@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content"><script src="dh-phone.js"></script><link rel="stylesheet" href="dh-mobile.css">
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#1B3A6B">
-<title>My Workspace — IT tickets / Tickets de TI</title>
+<title>My Workspace — IT Support / Soporte de TI</title>
 <style>
   :root{--navy:#1B3A6B;--gold:#C8922A;--lt:#D6E4F7;--ink:#1E2735;--gray:#6B6B6B;--red:#C0392B;--green:#2E7D32}
   *{box-sizing:border-box;margin:0;padding:0}
@@ -85,7 +85,7 @@
 <script src="dh-chrome.js" defer></script>
 </head>
 <body>
-<header><h1>🛠 IT tickets / Tickets de TI</h1><a href="index.html">← Home / Inicio</a></header>
+<header><h1>🛠 IT Support / Soporte de TI</h1><a href="index.html">← Home / Inicio</a></header>
 <main>
   <div id="rep" class="card hide"></div>
   <div class="bar"><h2 style="margin:0" id="lh">Tickets</h2><span class="sp"></span>
@@ -214,7 +214,7 @@ function render(){
   if(new Set(D.items.map(x=>x.ubicacion)).size>1){f.classList.remove('hide');const cur=f.value;f.innerHTML='<option value="">'+esc(tr('All locations / Todas las ubicaciones'))+'</option>'+[...new Set(D.items.map(x=>x.ubicacion))].map(l=>`<option${l===cur?' selected':''}>${esc(l)}</option>`).join('');}
   $('rbtn').classList.toggle('hide',!(D.csv||D.stats)); $('sbtn').classList.toggle('hide',!(D.csv||D.stats)); $('cbtn').classList.toggle('hide',!D.admin);
   const loc=f.value, its=D.items.filter(x=>!loc||x.ubicacion===loc);
-  $('lh').textContent=tr(D.admin?'IT queue / Cola de TI':'IT tickets / Tickets de TI');
+  $('lh').textContent=tr(D.admin?'IT queue / Cola de TI':'IT Support / Soporte de TI');
   const ro=D.puede_reportar?'':'<div class="empty" style="margin-bottom:10px">'+esc(tr('You can follow the status of every ticket here. Managers report problems. / Aquí puedes ver el estado de todos los tickets. Los gerentes reportan los problemas.'))+'</div>';
   if(!its.length){$('list').innerHTML=ro+'<div class="empty">'+esc(tr('No tickets. / No hay tickets.'))+'</div>';return;}
   const grp=[['abierto','Open / Abiertos'],['en_proceso','In progress / En proceso'],['resuelto','Waiting confirmation / Esperando confirmación'],['cerrado','Closed (last 30 days) / Cerrados (últimos 30 días)']];
