@@ -1840,7 +1840,7 @@ async function loadDomeCard(){
   try{
     var r=await DH.rpc('ventas_mi');
     if(!r||r.error||r.vacio||(!r.yo&&!(r.gerente&&r.tiendas&&r.tiendas.length))){el.classList.add('hide');return}
-    var _k=[r.corrida,r.fecha,r.ritmo,localStorage.getItem('dh_lang')].join('|'); if(el.dataset.k===_k&&el.innerHTML&&!el.classList.contains('hide'))return;
+    var _k=[r.corrida,r.fecha,r.ritmo,localStorage.getItem('dh_lang'),r.yo?r.yo.neto:'',(r.tiendas||[]).map(function(t){return t.v}).join(',')].join('|'); if(el.dataset.k===_k&&el.innerHTML&&!el.classList.contains('hide'))return;
     var es=(localStorage.getItem('dh_lang')==='es'), T=function(a,b){return es?b:a};
     var $=function(n){return (n<0?'-':'')+'$'+Math.abs(Math.round(n)).toLocaleString('en-US')};
     var pace=(r.ritmo||0)*100, stale=r.fecha!==r.hoy;
