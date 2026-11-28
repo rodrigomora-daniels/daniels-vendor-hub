@@ -90,6 +90,7 @@
   <div id="rep" class="card hide"></div>
   <div class="bar"><h2 style="margin:0" id="lh">Tickets</h2><span class="sp"></span>
     <select id="flt" class="hide" onchange="render()" aria-label="Location / Ubicación"></select>
+    <button class="btn alt sm hide" id="abtn" onclick="openAv()">📣 IT announcements / Avisos de TI</button>
     <button class="btn alt sm hide" id="cbtn" onclick="openCfg()">⚙ Setup / Configuración</button>
     <button class="btn alt sm hide" id="sbtn" onclick="openStats()">📊 Stats / Estadísticas</button>
     <button class="btn alt sm hide" id="rbtn" onclick="openRep()">⬇ Report / Reporte</button></div>
@@ -133,6 +134,7 @@ async function init(){
   HOPEN=(location.hash||'').slice(1)||null;
   try{CAT=await DH.rpc('tickets_catalogo_ver');}catch(e){}
   F.loc=defLoc(); await load();
+  try{const a=await DH.rpc('it_avisos_listar'); if(a&&a.admin)$('abtn').classList.remove('hide');}catch(e){}
 }
 async function load(){
   try{D=await DH.rpc('tickets_listar');}
@@ -298,6 +300,45 @@ function openCfg(){
    <div class="cfge2"><input id="c-neweq" maxlength="60" placeholder="${esc(tr('e.g. Register 2, Label printer / ej. Caja 2, Impresora de etiquetas'))}"><select id="c-newdev" aria-label="${esc(tr('Device / Equipo'))}">${devOpts('pos')}</select><select id="c-newloc2" aria-label="${esc(tr('Location / Ubicación'))}">${locOpts('')}</select><button class="btn sm" onclick="cfgAddEq()">+ ${esc(tr('Add / Agregar'))}</button></div>
    <div class="err hide" id="c-err" role="alert"></div>
    <div class="acts"><button class="btn alt" onclick="closeM()">${esc(tr('Close / Cerrar'))}</button></div>`;
+  $('ov').classList.remove('hide');
+}
+
+
+/* ---------- IT announcements (IT admin only): shown on the Home board, right half ---------- */
+let AV={items:[]}, AVE=null;
+async function avLoad(){try{AV=await DH.rpc('it_avisos_listar');}catch(e){AV={items:[]};}}
+function avErr(t){const e=$('a-err');if(e){e.textContent=t;e.classList.remove('hide');}}
+async function avSave(){
+  const d={titulo:$('a-t').value,cuerpo:$('a-b').value,enlace_url:$('a-u').value,enlace_texto:$('a-lt').value}; if($('a-d').value!=='')d.dias=$('a-d').value;
+  try{const r=await DH.rpc('it_aviso_guardar',{p_accion:AVE?'edit':'add',p_id:AVE||null,p_datos:d});
+    if(r&&r.ok){AVE=null;await avLoad();avRender();return;}
+    avErr(tr(r&&r.error==='enlace'?'The link must start with https:// / El enlace debe empezar con https://':r&&r.error==='titulo'?'Add a title. / Agrega un título.':'Check the fields and try again. / Revisa los campos e intenta de nuevo.'));
+  }catch(e){avErr(tr('Could not save. / No se pudo guardar.'));}
+}
+async function avDel(id){
+  const b=$('ad-'+id);
+  if(b&&!b.dataset.sure){b.dataset.sure='1';b.textContent=tr('Sure? / ¿Seguro?');return;}
+  try{await DH.rpc('it_aviso_guardar',{p_accion:'del',p_id:id,p_datos:{}});}catch(e){}
+  if(AVE===id)AVE=null; await avLoad(); avRender();
+}
+function avEdit(id){AVE=id;avRender();}
+async function openAv(){AVE=null;await avLoad();avRender();}
+function avRender(){
+  const cur=AVE?AV.items.find(x=>x.id===AVE):null;
+  const vig=i=>i.vigente?'':` <span class="small" style="margin:0">(${esc(tr('expired / vencido'))})</span>`;
+  const row=i=>`<div class="cfgr" style="align-items:flex-start"><div style="flex:1;min-width:0"><b data-no-i18n>${esc(i.titulo)}</b>${vig(i)}<div class="small" style="margin:2px 0 0" data-no-i18n>${esc(fmtDT(i.publicado_en))}${i.enlace_url?' · 🔗':''}</div></div><button class="btn alt sm" onclick="avEdit('${i.id}')">${esc(tr('Edit / Editar'))}</button><button class="btn alt sm" id="ad-${i.id}" onclick="avDel('${i.id}')" aria-label="${esc(tr('Delete / Borrar'))}">✕</button></div>`;
+  $('md').innerHTML=`<h3>${esc(tr('IT announcements / Avisos de TI'))}</h3>
+   <p class="small" style="margin:6px 0 10px">${esc(tr('Shown to everyone on the Home board, next to the important communications. Keep it short; add a button only if people need to open something. / Se muestran a todos en el tablero de Inicio, junto a los comunicados importantes. Que sea corto; agrega un botón solo si la gente necesita abrir algo.'))}</p>
+   <div class="step">${esc(cur?tr('Edit announcement / Editar aviso'):tr('New announcement / Nuevo aviso'))}</div>
+   <label for="a-t">${esc(tr('Title / Título'))}</label><input id="a-t" maxlength="120" value="${esc(cur?cur.titulo:'')}">
+   <label for="a-b">${esc(tr('Message / Mensaje'))}</label><textarea id="a-b" maxlength="1500" rows="4">${esc(cur?cur.cuerpo:'')}</textarea>
+   <div class="grid2"><div><label for="a-lt">${esc(tr('Button text (optional) / Texto del botón (opcional)'))}</label><input id="a-lt" maxlength="40" value="${esc(cur&&cur.enlace_texto||'')}"></div>
+   <div><label for="a-u">${esc(tr('Button link (https://…) / Enlace del botón'))}</label><input id="a-u" maxlength="500" inputmode="url" value="${esc(cur&&cur.enlace_url||'')}"></div></div>
+   <label for="a-d">${esc(tr('Show for / Mostrar durante'))}</label><select id="a-d"><option value="7">7 ${esc(tr('days / días'))}</option><option value="14">14 ${esc(tr('days / días'))}</option><option value="30" selected>30 ${esc(tr('days / días'))}</option><option value="90">90 ${esc(tr('days / días'))}</option><option value="0">${esc(tr('Until I remove it / Hasta que lo quite'))}</option>${cur?`<option value="" selected>${esc(tr('Keep current / Mantener actual'))}</option>`:''}</select>
+   <div class="err hide" id="a-err" role="alert"></div>
+   <div class="acts"><button class="btn" onclick="avSave()">${esc(cur?tr('Save / Guardar'):tr('Publish / Publicar'))}</button>${cur?`<button class="btn alt" onclick="avEdit(null)">${esc(tr('Cancel edit / Cancelar edición'))}</button>`:''}<button class="btn alt" onclick="closeM()">${esc(tr('Close / Cerrar'))}</button></div>
+   <div class="step">${esc(tr('Published / Publicados'))} · ${AV.items.length}</div>
+   ${AV.items.length?AV.items.map(row).join(''):`<p class="small">${esc(tr('Nothing published yet. / Aún no hay avisos.'))}</p>`}`;
   $('ov').classList.remove('hide');
 }
 
