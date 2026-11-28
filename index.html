@@ -701,7 +701,6 @@ document.addEventListener('DOMContentLoaded',function(){
   <button class="nl" id="nl-reportes" onclick="navigateToTool('reportes')" style="display:none"><span>📊</span>My reports / Mis reportes</button>
   <button class="nl" id="nl-logistica" onclick="navigateToTool('logistica')" style="display:none"><span>🚚</span>Receiving &amp; Deliveries / Recepción y Entregas</button>
   <button class="nl" id="nl-tickets" style="display:none" onclick="navigateToTool('tickets')"><span>🛠</span>IT tickets / Tickets de TI</button>
-  <button class="nl" onclick="navigateToTool('tiinfo')"><span>💻</span>IT Info &amp; Newsletter / Info de TI y Boletín</button>
   <button class="nl" id="nl-credito" onclick="navigateToTool('credito')"><span>💳</span>Ask SAL Credit / Ask SAL Crédito</button>
   <button class="nl" id="nl-inventario" style="display:none" onclick="navigateToTool('inventario')"><span>📦</span>Inventory upload / Cargar inventario</button>
   <button class="nl" onclick="navigateToTool('notas')"><span>📝</span>My notes / Mis notas</button>
@@ -2102,9 +2101,9 @@ async function loadNewsHero(){
     var hero=document.getElementById('news-hero'), ib=document.getElementById('imp-board');
     var imp=NEWS_ITEMS.filter(function(i){return i.fijada;}), rest=NEWS_ITEMS.filter(function(i){return !i.fijada;});
     var canReport=false; try{var tr=await DH.rpc('tickets_mi_rol'); canReport=!!(tr&&tr.reporta);}catch(e){}
-    var itp=[]; try{var ia=await DH.rpc('it_avisos_listar'); itp=((ia&&ia.items)||[]).filter(function(x){return x.vigente;});}catch(e){}
+    var itp=[]; try{var ia=await DH.rpc('ti_info_listar'); itp=((ia&&ia.items)||[]).filter(function(x){return x.publicada;});}catch(e){}
     var item=function(i){return '<div class="ib-i" role="button" tabindex="0" onclick="openNews(this)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openNews(this)}"><b data-no-i18n>'+nhEsc(i.titulo)+'</b><div class="ib-b" data-no-i18n>'+nhEsc(i.cuerpo)+'</div><div class="ib-m">'+nhFmt(i.publicada_en)+(i.autor?' · '+nhEsc(i.autor):'')+'</div></div>';};
-    var itItem=function(i){return '<div class="ib-i" role="button" tabindex="0" onclick="this.classList.toggle(\'open\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.classList.toggle(\'open\')}"><b data-no-i18n>'+nhEsc(i.titulo)+'</b>'+(i.cuerpo?'<div class="ib-b" data-no-i18n>'+nhEsc(i.cuerpo)+'</div>':'')+'<div class="ib-m">'+nhFmt(i.publicado_en)+'</div></div>'+(i.enlace_url?'<div class="ib-bw"><a class="ib-btn" href="'+nhEsc(i.enlace_url)+'" target="_blank" rel="noopener noreferrer">🔗 '+nhEsc(i.enlace_texto||'Open link / Abrir enlace')+'</a></div>':'');};
+    var itItem=function(i){return '<div class="ib-i" role="button" tabindex="0" onclick="this.classList.toggle(\'open\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.classList.toggle(\'open\')}"><b data-no-i18n>'+nhEsc(i.titulo)+'</b>'+(i.cuerpo?'<div class="ib-b" data-no-i18n>'+nhEsc(i.cuerpo)+'</div>':'')+'<div class="ib-m">'+nhFmt(i.creado)+'</div></div>'+(i.enlace_url?'<div class="ib-bw"><a class="ib-btn" href="'+nhEsc(i.enlace_url)+'" target="_blank" rel="noopener noreferrer">🔗 '+nhEsc(i.enlace_texto||'Open link / Abrir enlace')+'</a></div>':'');};
     var colL='', colR='';
     if(imp.length){
       colL='<div class="ib-h"><span>📌 Important communications / Comunicados importantes</span>'+(imp.length>1?'<span class="ib-n">'+imp.length+'</span>':'')+'</div>'

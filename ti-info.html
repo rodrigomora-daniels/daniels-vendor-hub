@@ -38,7 +38,7 @@
 <script src="dh-chrome.js" defer></script>
 </head>
 <body>
-<header><h1>💻 IT Info &amp; Newsletter / Info de TI y Boletín</h1><a href="index.html">← Home / Inicio</a></header>
+<header><h1>💻 IT Info &amp; Newsletter / Info de TI y Boletín</h1><a href="tickets.html">← IT tickets</a></header>
 <main>
   <p class="intro" id="intro"></p>
   <div class="card hide" id="ed"></div>
@@ -61,13 +61,15 @@ function rich(t){ // escape, then turn https links and line breaks into HTML
 function render(){
   $('intro').textContent=tr('Cybersecurity updates, scams to watch for and IT guides from our IT team. Need help now? Use IT tickets. / Novedades de ciberseguridad, estafas a las que hay que estar atento y guías del equipo de TI. ¿Necesitas ayuda ahora? Usa Tickets de TI.');
   $('newrow').classList.toggle('hide',!D.admin); $('newbtn').textContent=tr('+ New post / + Nueva publicación');
-  $('list').innerHTML=D.items.length?D.items.map(x=>`<div class="card post${x.fijada?' pin':''}"><div class="meta"><span class="pill t-${esc(x.tipo)}">${esc(tr(TIPO[x.tipo]||x.tipo))}</span>${x.fijada?'<span>📌 '+esc(tr('Pinned / Fijado'))+'</span>':''}${x.publicada?'':'<span class="pill draft">'+esc(tr('Draft / Borrador'))+'</span>'}<span>${esc(fmt(x.creado))}</span></div><h2>${esc(x.titulo)}</h2><div class="body">${rich(x.cuerpo)}</div>${D.admin?`<div class="row"><button class="btn alt" type="button" data-e="${x.id}">${esc(tr('Edit / Editar'))}</button><button class="btn alt" type="button" data-d="${x.id}">${esc(tr('Delete / Borrar'))}</button></div>`:''}</div>`).join(''):'<p class="empty">'+esc(tr('Nothing posted yet. / Aún no hay publicaciones.'))+'</p>';
+  $('list').innerHTML=D.items.length?D.items.map(x=>`<div class="card post${x.fijada?' pin':''}"><div class="meta"><span class="pill t-${esc(x.tipo)}">${esc(tr(TIPO[x.tipo]||x.tipo))}</span>${x.fijada?'<span>📌 '+esc(tr('Pinned / Fijado'))+'</span>':''}${x.publicada?'':'<span class="pill draft">'+esc(tr('Draft / Borrador'))+'</span>'}<span>${esc(fmt(x.creado))}</span></div><h2>${esc(x.titulo)}</h2><div class="body">${rich(x.cuerpo)}</div>${x.enlace_url?`<div class="row"><a class="btn" style="display:inline-flex;align-items:center;text-decoration:none" href="${esc(x.enlace_url)}" target="_blank" rel="noopener noreferrer">🔗 ${esc(x.enlace_texto||'Open link / Abrir enlace')}</a></div>`:''}${D.admin?`<div class="row"><button class="btn alt" type="button" data-e="${x.id}">${esc(tr('Edit / Editar'))}</button><button class="btn alt" type="button" data-d="${x.id}">${esc(tr('Delete / Borrar'))}</button></div>`:''}</div>`).join(''):'<p class="empty">'+esc(tr('Nothing posted yet. / Aún no hay publicaciones.'))+'</p>';
 }
 function editor(x){
   x=x||{tipo:'boletin',publicada:true,fijada:false,titulo:'',cuerpo:''}; const ed=$('ed'); ed.classList.remove('hide'); ed.dataset.id=x.id||'';
   ed.innerHTML=`<label for="e-t">${esc(tr('Title / Título'))}</label><input id="e-t" maxlength="160" value="${esc(x.titulo)}">
   <label for="e-k">${esc(tr('Type / Tipo'))}</label><select id="e-k">${Object.keys(TIPO).map(k=>`<option value="${k}"${k===x.tipo?' selected':''}>${esc(tr(TIPO[k]))}</option>`).join('')}</select>
   <label for="e-b">${esc(tr('Text (links starting with https:// become clickable) / Texto (los enlaces que empiezan con https:// se vuelven clicables)'))}</label><textarea id="e-b" maxlength="12000">${esc(x.cuerpo)}</textarea>
+  <label for="e-u">${esc(tr('Button link (optional, https://) / Enlace del botón (opcional, https://)'))}</label><input id="e-u" maxlength="500" placeholder="https://" value="${esc(x.enlace_url||'')}">
+  <label for="e-lt">${esc(tr('Button text (optional) / Texto del botón (opcional)'))}</label><input id="e-lt" maxlength="40" value="${esc(x.enlace_texto||'')}">
   <label class="chk"><input type="checkbox" id="e-p"${x.publicada?' checked':''}>${esc(tr('Published (visible to everyone) / Publicado (visible para todos)'))}</label>
   <label class="chk"><input type="checkbox" id="e-f"${x.fijada?' checked':''}>${esc(tr('Pin at the top / Fijar arriba'))}</label>
   <div class="row"><button class="btn" id="e-s" type="button">${esc(tr('Save / Guardar'))}</button><button class="btn alt" id="e-c" type="button">${esc(tr('Cancel / Cancelar'))}</button></div><p id="e-m" role="status"></p>`;
@@ -75,7 +77,7 @@ function editor(x){
   $('e-s').onclick=async()=>{const m=$('e-m'); const t=$('e-t').value.trim(), b=$('e-b').value.trim();
     if(!t||!b){m.className='errm';m.textContent=tr('Title and text are required. / Título y texto son obligatorios.');return;}
     $('e-s').disabled=true;
-    try{ await DH.rpc('ti_info_guardar',{p_id:ed.dataset.id||null,p_titulo:t,p_cuerpo:b,p_tipo:$('e-k').value,p_fijada:$('e-f').checked,p_publicada:$('e-p').checked}); ed.classList.add('hide'); await load(); }
+    try{ await DH.rpc('ti_info_guardar',{p_id:ed.dataset.id||null,p_titulo:t,p_cuerpo:b,p_tipo:$('e-k').value,p_fijada:$('e-f').checked,p_publicada:$('e-p').checked,...(($('e-u').value.trim())?{p_enlace_url:$('e-u').value.trim(),p_enlace_texto:$('e-lt').value.trim()||null}:{})}); ed.classList.add('hide'); await load(); }
     catch(e){ m.className='errm'; m.textContent=tr('Could not save. / No se pudo guardar.'); $('e-s').disabled=false; } };
   window.scrollTo({top:0,behavior:'smooth'});
 }
