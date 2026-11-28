@@ -114,7 +114,7 @@ function story(n,lead){
   const u=n.imagen_archivo_id&&URLS[n.imagen_archivo_id];
   const long=!lead&&String(n.cuerpo||'').length>260;
   return `<article class="st ${lead?'lead':'side'}" id="s-${n.id}">${u?`<img loading="lazy" src="${esc(u.url)}" alt="" onclick="zoom('${n.id}')">`:''}
-    <div class="kick">${n.fijada?'📌 Featured / Destacada':(lead?'Latest / Reciente':'News / Noticia')} ${tags(n)}</div>
+    <div class="kick">${n.fijada?'📌 Important communication / Comunicado importante':(lead?'Latest / Reciente':'News / Noticia')} ${tags(n)}</div>
     <h3 data-no-i18n>${esc(n.titulo)}</h3>
     <div class="by" data-no-i18n>${fmt(n.publicada_en)}${n.autor?' · '+esc(n.autor):''}${n.expira_en?' · until '+fmt(n.expira_en):''}</div>
     <div data-no-i18n>${body(n,long)}</div>
@@ -152,7 +152,7 @@ function edit(id){
    <label>Who sees it / Quién lo ve</label>
    <div class="row"><label style="font-weight:400"><input type="checkbox" id="f-all" ${all?'checked':''}> Everyone / Todos</label>
    ${ROLES.map(x=>`<label style="font-weight:400"><input type="checkbox" class="f-r" value="${x}" ${roles.includes(x)?'checked':''}> ${x}</label>`).join('')}</div>
-   <div class="row"><label style="font-weight:400"><input type="checkbox" id="f-p" ${n.fijada?'checked':''}> 📌 Pin to top / Fijar arriba</label>
+   <div class="row"><label style="font-weight:400"><input type="checkbox" id="f-p" ${n.fijada?'checked':''}> 📌 Important communication: pin to top / Comunicado importante: fijar arriba</label>
    <label style="font-weight:400"><input type="checkbox" id="f-a" ${n.activo?'checked':''}> Visible</label></div>
    <div style="margin-top:12px"><button class="btn" id="f-save" onclick="save('${id||''}')">Save / Guardar</button> <button class="btn ghost" onclick="$('edit').classList.add('hide')">Cancel</button></div>`;
   e.scrollIntoView({behavior:'smooth'});

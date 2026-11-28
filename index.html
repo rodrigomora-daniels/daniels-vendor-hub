@@ -252,6 +252,7 @@
   #briefing{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:22px;align-items:stretch}
   #briefing.two{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}
   #briefing #news-hero{margin-bottom:0}
+  #briefing.two:not(:has(#news-hero.show)){grid-template-columns:1fr}
   #briefing.two #news-hero.has-img{grid-template-columns:1fr}
   #briefing.two #news-hero img{order:-1;min-height:0;max-height:170px}
   #alerts-card{background:#12284A;color:#fff;border-radius:6px;border-left:6px solid #C8922A;padding:16px 18px 14px;box-shadow:0 14px 34px -22px rgba(18,40,74,.7);display:flex;flex-direction:column;min-width:0}
@@ -297,6 +298,18 @@
   .ac-oth{margin-top:auto;padding-top:10px;color:#E8C878;font:700 13px 'Segoe UI',Arial,sans-serif;text-decoration:none}
   .ac-oth.hide{display:none}
   @media (max-width:900px){#briefing.two{grid-template-columns:1fr}}
+  #imp-board{display:none;margin:0 0 16px;border-radius:10px;overflow:hidden;background:#fff;border:2px solid var(--navy);box-shadow:0 10px 26px -18px rgba(10,22,45,.55);font-family:'Segoe UI',Arial,sans-serif}
+  #imp-board.show{display:block}
+  #imp-board .ib-h{background:var(--navy);color:#fff;padding:9px 14px;font-weight:700;font-size:15px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  #imp-board .ib-n{background:var(--gold);color:var(--navy);border-radius:10px;padding:1px 9px;font-size:12px}
+  #imp-board .ib-i{padding:12px 14px;border-top:1px solid #E3E8F0;cursor:pointer}
+  #imp-board .ib-i:first-of-type{border-top:0}
+  #imp-board .ib-i:hover{background:#F6F8FC}
+  #imp-board .ib-i:focus-visible{outline:3px solid var(--navy);outline-offset:-3px}
+  #imp-board .ib-i b{display:block;font-size:16px;color:var(--navy);line-height:1.3}
+  #imp-board .ib-b{font-size:14px;line-height:1.45;color:#33404f;margin-top:4px;white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  #imp-board .ib-m{color:#6B6B6B;font-size:12px;margin-top:4px}
+  #imp-board .ib-all{display:block;padding:9px 14px;border-top:1px solid #E3E8F0;font-weight:700;font-size:13px;color:var(--navy);cursor:pointer;text-align:center}
   #news-hero{display:none;grid-template-columns:1fr;background:#fff;border-radius:6px;border-left:6px solid var(--gold);box-shadow:0 1px 0 #dfe5ee,0 14px 34px -22px rgba(18,40,74,.45);padding:0;margin-bottom:22px;overflow:hidden;cursor:pointer;transition:box-shadow .2s,transform .2s}
   #news-hero.show{display:grid}
   #news-hero.has-img{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}
@@ -716,6 +729,7 @@ document.addEventListener('DOMContentLoaded',function(){
       <div id="hero2-r"><section id="cd-strip" class="hide" data-no-i18n aria-label="Countdown"></section><section id="dome-card" class="hide" data-no-i18n aria-label="My sales today"></section><section id="cmp-card" class="hide" data-no-i18n aria-label="Sales vs last year"></section>
       <section id="me-card" class="hide" data-no-i18n aria-label="My panel"></section></div>
       </div>
+      <section id="imp-board" aria-label="Important communications"></section>
       <div id="briefing">
       <section id="alerts-card" class="hide" aria-label="Priority updates">
         <div id="ac-alarms" class="hide"></div>
@@ -728,7 +742,7 @@ document.addEventListener('DOMContentLoaded',function(){
         <div id="ac-sched" class="hide"></div>
         <a class="ac-oth hide" id="ac-oth" href="mensajes.html"></a>
       </section>
-      <div id="news-hero" onclick="openNews()" role="button" tabindex="0" aria-label="Open What's New">
+      <div id="news-hero" onclick="openNews(this)" role="button" tabindex="0" aria-label="Open What's New">
         <div class="nh-txt">
           <div class="nh-top"><span id="nh-kick">Latest news / Última noticia</span></div>
           <h3 id="nh-title" data-no-i18n></h3><div class="nh-body" id="nh-body" data-no-i18n></div>
@@ -2064,12 +2078,20 @@ async function loadNewsHero(){
   try{
     var r=await DH.rpc('noticias_listar');
     NEWS_ITEMS=(r.items||[]).filter(function(i){return i.estado==='vigente';});
-    var hero=document.getElementById('news-hero');
-    if(!NEWS_ITEMS.length){hero.classList.remove('show');return;}
-    var n=NEWS_ITEMS[0];
+    var hero=document.getElementById('news-hero'), ib=document.getElementById('imp-board');
+    var imp=NEWS_ITEMS.filter(function(i){return i.fijada;}), rest=NEWS_ITEMS.filter(function(i){return !i.fijada;});
+    if(imp.length){
+      var shown=imp.slice(0,3);
+      ib.innerHTML='<div class="ib-h"><span>📌 Important communications / Comunicados importantes</span>'+(imp.length>1?'<span class="ib-n">'+imp.length+'</span>':'')+'</div>'
+        +shown.map(function(i){return '<div class="ib-i" role="button" tabindex="0" onclick="openNews(this)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openNews(this)}"><b data-no-i18n>'+nhEsc(i.titulo)+'</b><div class="ib-b" data-no-i18n>'+nhEsc(i.cuerpo)+'</div><div class="ib-m">'+nhFmt(i.publicada_en)+(i.autor?' · '+nhEsc(i.autor):'')+'</div></div>';}).join('')
+        +(imp.length>3?'<div class="ib-all" role="button" tabindex="0" onclick="openNews(this)">See all '+imp.length+' / Ver las '+imp.length+' ›</div>':'');
+      ib.classList.add('show');
+    } else {ib.classList.remove('show');ib.innerHTML='';}
+    if(!rest.length){hero.classList.remove('show');return;}
+    var n=rest[0];
     document.getElementById('nh-title').textContent=n.titulo;
     document.getElementById('nh-body').textContent=n.cuerpo;
-    document.getElementById('nh-kick').textContent=n.fijada?'📌 Pinned / Fijada':'Latest news / Última noticia';
+    document.getElementById('nh-kick').textContent='Latest news / Última noticia';
     document.getElementById('nh-more').textContent=(NEWS_ITEMS.length>1?'Read all '+NEWS_ITEMS.length+' stories / Leer las '+NEWS_ITEMS.length+' noticias':'Read more / Leer más');
     hero.classList.add('show');
     try{NEWS_URLS=await DH.files.sign(NEWS_ITEMS.map(function(i){return i.imagen_archivo_id;}));}catch(e){NEWS_URLS={};}
@@ -2230,11 +2252,11 @@ async function loadPromoStrip(){
     box.style.display='block';
   }catch(e){}
 }
-function openNews(){
-  var f=document.getElementById('news-full'), h=document.getElementById('news-hero'), panel=f.querySelector('.nf-panel');
+function openNews(src){
+  var f=document.getElementById('news-full'), h=(src&&src.getBoundingClientRect)?src:document.getElementById('news-hero'), panel=f.querySelector('.nf-panel');
   document.getElementById('nf-list').innerHTML=NEWS_ITEMS.map(function(n){
     var u=n.imagen_archivo_id&&NEWS_URLS[n.imagen_archivo_id];
-    return '<div class="nf-post">'+(u?'<img loading="lazy" alt="" src="'+nhEsc(u.url)+'">':'')+(n.fijada?'<small>📌 </small>':'')+'<h3 data-no-i18n>'+nhEsc(n.titulo)+'</h3><div class="by">'+nhFmt(n.publicada_en)+(n.autor?' · '+nhEsc(n.autor):'')+'</div><div class="b" data-no-i18n>'+nhEsc(n.cuerpo)+'</div></div>';
+    return '<div class="nf-post">'+(u?'<img loading="lazy" alt="" src="'+nhEsc(u.url)+'">':'')+(n.fijada?'<small style="display:inline-block;background:#0A2A5E;color:#fff;border-radius:8px;padding:1px 8px;font:700 11px Segoe UI,Arial,sans-serif;margin-bottom:4px">📌 Important / Importante</small>':'')+'<h3 data-no-i18n>'+nhEsc(n.titulo)+'</h3><div class="by">'+nhFmt(n.publicada_en)+(n.autor?' · '+nhEsc(n.autor):'')+'</div><div class="b" data-no-i18n>'+nhEsc(n.cuerpo)+'</div></div>';
   }).join('');
   var rc=h.getBoundingClientRect();
   f.classList.add('show'); document.body.style.overflow='hidden';
