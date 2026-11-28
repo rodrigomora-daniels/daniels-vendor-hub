@@ -880,6 +880,11 @@ document.addEventListener('DOMContentLoaded',function(){
           <h3>My notes / Mis notas</h3>
           <p>Private quick notes and follow-ups. / Notas rápidas y seguimientos privados.</p>
         </div>
+        <div class="home-card" id="card-it" style="display:none" onclick="navigateToTool('tickets')">
+          <div class="home-card-icon">🛠</div>
+          <h3>IT Support / Soporte de TI</h3>
+          <p>Report a problem and follow your IT tickets. / Reporta un problema y da seguimiento a tus tickets de TI.</p>
+        </div>
         <div class="home-card" onclick="navigateToTool('organigrama')">
           <div class="home-card-icon">🏢</div>
           <h3>Org Chart / Organigrama</h3>
@@ -1360,7 +1365,7 @@ async function loadDashboard() {
   try{ DH.rpc('board_puede').then(ok=>{ const b=document.getElementById('nl-board'); if(!b||ok!==true) return; b.disabled=false; b.removeAttribute('aria-disabled'); b.removeAttribute('title'); b.style.opacity=''; b.style.cursor=''; b.style.display=''; const sm=b.querySelector('small'); if(sm) sm.remove(); b.onclick=()=>{ location.href='board.html'; }; }).catch(()=>{}); }catch(e){}
   try{ DH.rpc('credito_puede').then(ok=>{ const n=document.getElementById('nl-credito'); if(n&&ok!==true){ const s=n.querySelector('span'); if(s) s.textContent='🔒'; n.title='Credit approvers only / Solo aprobadores de crédito'; } }).catch(()=>{}); }catch(e){}
   try{ DH.rpc('inventario_puede').then(ok=>{ const n=document.getElementById('nl-inventario'); if(n&&ok===true) n.style.display=''; }).catch(()=>{}); }catch(e){}
-  try{ DH.rpc('tickets_mi_rol').then(r=>{ const n=document.getElementById('nl-tickets'); if(n&&r&&r.reporta) n.style.display=''; }).catch(()=>{}); }catch(e){}
+  try{ DH.rpc('tickets_mi_rol').then(r=>{ const n=document.getElementById('nl-tickets'); if(n&&r&&r.reporta) n.style.display=''; const c=document.getElementById('card-it'); if(c&&r&&r.reporta) c.style.display=''; }).catch(()=>{}); }catch(e){}
   try{ DH.rpc('logistica_mi_acceso').then(r=>{ const n=document.getElementById('nl-logistica'); if(n&&r&&(r.rec||r.ndd)) n.style.display=''; }).catch(()=>{}); }catch(e){}
   try{ DH.rpc('reportes_mis').then(r=>{ const n=document.getElementById('nl-reportes'); if(n&&r&&((r.items&&r.items.length)||r.admin)) n.style.display=''; }).catch(()=>{}); }catch(e){}
   const isMgr = emp.es_admin || ['manager','admin'].includes(emp.rol) || /^(ted|karen)\s+rosenberg/i.test(emp.nombre_completo || '');
