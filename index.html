@@ -111,6 +111,10 @@
   #dome-card.hide{display:none}
   #cmp-card{background:#fff;border-radius:6px;border-left:6px solid #1B3A6B;padding:14px 18px;box-shadow:0 14px 34px -26px rgba(18,40,74,.7);min-width:0;margin-top:12px;font:13px 'Segoe UI',Arial,sans-serif;color:#1E2735}
   #cmp-card.hide{display:none}
+  .dmc{margin:10px 0 4px}
+  .dmk{display:inline-block;border:1px solid #cfd6e2;background:#fff;color:#1B3A6B;border-radius:999px;min-height:36px;padding:4px 12px;margin:2px 4px 2px 0;font:700 12px 'Segoe UI',Arial,sans-serif;cursor:pointer}
+  .dmk.on{background:#1B3A6B;color:#fff;border-color:#1B3A6B}
+  .dmk:focus-visible{outline:3px solid #C8922A;outline-offset:2px}
   #cmp-card h3{font:700 17px Georgia,serif;color:#1B3A6B;margin:0 0 2px}
   #cmp-card table{width:100%;border-collapse:collapse;margin-top:8px}
   #cmp-card th{font:600 11px 'Segoe UI',Arial,sans-serif;color:#6B6B6B;text-align:right;padding:4px 0}
@@ -1793,6 +1797,9 @@ async function ventasDetalle(b){
     var tm=''; try{if(r.corrida)tm=new Date(r.corrida).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/Los_Angeles'})}catch(e){}
     var fa=r.facturas||[], tot=0; fa.forEach(function(x){tot+=+x.neto||0});
     var h=head+'<div style="color:#6B6B6B;margin:6px 0 8px">'+(tm?T('Updated ','Actualizado ')+tm+' · ':'')+fa.length+' '+T(fa.length===1?'invoice':'invoices',fa.length===1?'factura':'facturas')+' · <b style="color:#1E2735">'+$(tot)+'</b></div>';
+    var nr=(r.neto_resumen==null?null:+r.neto_resumen);
+    if(nr!=null&&fa.length&&nr-tot>0.5){var tr2=''; try{if(r.corrida_resumen)tr2=new Date(r.corrida_resumen).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/Los_Angeles'})}catch(e){}
+      h+='<div style="background:#FFF4D6;border-radius:8px;padding:8px 10px;font-size:13px;margin-bottom:6px">'+T('The meter totals are newer ('+tr2+', '+$(nr)+'). This detail is from '+tm+'; the rest fills in with the next hourly report.','Los totales del medidor son más recientes ('+tr2+', '+$(nr)+'). Este detalle es de las '+tm+'; el resto se completa con el siguiente reporte por hora.')+'</div>'}
     if(!fa.length)h+='<div style="margin-top:10px">'+T('No sales detail yet for this day.','Aún no hay detalle de ventas de este día.')+'</div>';
     fa.forEach(function(x){
       h+='<div style="border:1px solid #DDE3EC;border-radius:10px;padding:10px;margin-top:10px"><div style="display:flex;justify-content:space-between;gap:8px"><b>'+T('Invoice','Factura')+' '+meEsc(x.factura)+(c?'':' <small style="color:#6B6B6B;font-weight:400">· '+meEsc(x.vendedor)+'</small>')+'</b><b>'+$(x.neto)+'</b></div>';
@@ -1835,12 +1842,51 @@ async function loadCmpCard(){
     el.classList.remove('hide');
   }catch(e){el.classList.add('hide')}
 }
+var DMC={t:'',w:null,f:'',codes:[]};
+function _nthThu(y){var d=new Date(Date.UTC(y,10,1,12));d.setUTCDate(1+((4-d.getUTCDay()+7)%7)+21);return d}
+function _isoD(d){return d.toISOString().slice(0,10)}
+function _addD(iso,n){var d=new Date(iso+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return _isoD(d)}
+function dmcSet(k,v){DMC[k]=v;domeCmp(DMC.f,DMC.codes)}
+async function domeCmp(fecha,codes){
+  var box=document.getElementById('dm-cmp'); if(!box||!fecha)return;
+  DMC.f=fecha; DMC.codes=codes||[];
+  var es=(localStorage.getItem('dh_lang')==='es'), T=function(a,b){return es?b:a};
+  var th=_isoD(_nthThu(+fecha.slice(0,4))), near=fecha>=_addD(th,-7)&&fecha<=_addD(th,11);
+  if(!DMC.w||(DMC.w==='season'&&!near))DMC.w=near?'season':'7';
+  var d0,d1; if(DMC.w==='season'){d0=th;d1=_addD(th,4)}else if(DMC.w==='7'){d0=_addD(fecha,-6);d1=fecha}else{d0=fecha.slice(0,8)+'01';d1=fecha}
+  var nm={EU:'Euclid',CN:'Chino',RR:'Cerritos',EC:'E-commerce'};
+  var chip=function(on,fn,t){return '<button type="button" class="dmk'+(on?' on':'')+'" aria-pressed="'+on+'" onclick="'+fn+'">'+t+'</button>'};
+  var chips='<div>'+(DMC.codes.length>1?chip(!DMC.t,"dmcSet('t','')",T('All','Todas'))+DMC.codes.map(function(c){return chip(DMC.t===c,"dmcSet('t','"+c+"')",nm[c]||c)}).join(''):'')+'</div><div>'
+    +(near?chip(DMC.w==='season',"dmcSet('w','season')",T('Thanksgiving week','Semana de Thanksgiving')):'')+chip(DMC.w==='7',"dmcSet('w','7')",T('7 days','7 días'))+chip(DMC.w==='mes',"dmcSet('w','mes')",T('This month','Este mes'))+'</div>';
+  var q=null; try{q=await DH.rpc('ventas_panel',{p_desde:d0,p_hasta:d1,p_tiendas:DMC.t?[DMC.t]:null,p_grupo:'dia'})}catch(e){}
+  if(!q||q.error||!q.rows||!q.rows.length){box.innerHTML='';return}
+  var R=q.rows, n=R.length, W=320, H=150, pl=4, pr=4, pt=16, pb=24, gw=(W-pl-pr)/n, bw=Math.max(2,Math.min(15,gw*.38));
+  var mx=1; R.forEach(function(r){mx=Math.max(mx,+r.neto||0,+r.ly||0)}); mx*=1.12;
+  var y=function(v){return H-pb-(v/mx)*(H-pb-pt)}, kf=function(v){return v>=1000?'$'+(v/1000).toFixed(v>=10000?0:1)+'k':'$'+Math.round(v)};
+  var DW=es?['D','L','M','M','J','V','S']:['S','M','T','W','T','F','S'];
+  var sc=0,sl=0,svg='',step=Math.ceil(n/8);
+  R.forEach(function(r,i){
+    var cx=pl+gw*i+gw/2, ne=+r.neto||0, ly=+r.ly||0, isT=r.k===fecha, has=ne>0, fut=r.k>fecha;
+    if(ly>0)svg+='<rect x="'+(cx-bw-0.5).toFixed(1)+'" y="'+y(ly).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+(H-pb-y(ly)).toFixed(1)+'" fill="#B8C2D1" rx="2"/>';
+    if(has){var up=ly>0&&ne>=ly; svg+='<rect x="'+(cx+0.5).toFixed(1)+'" y="'+y(ne).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+(H-pb-y(ne)).toFixed(1)+'" fill="'+(isT?'#7E9BC7':up?'#2E7D32':'#1B3A6B')+'" rx="2"/>'; if(!isT&&ly>0){sc+=ne;sl+=ly}}
+    if(n<=7){if(has)svg+='<text x="'+(cx+bw/2+0.5).toFixed(1)+'" y="'+(y(ne)-3).toFixed(1)+'" text-anchor="middle" font-size="9" font-weight="700" fill="#1B3A6B">'+kf(ne)+'</text>'}
+    if(i%step===0||n<=7){var dd=new Date(r.k+'T12:00:00Z'); svg+='<text x="'+cx.toFixed(1)+'" y="'+(H-pb+13)+'" text-anchor="middle" font-size="10" fill="'+(isT?'#1B3A6B':'#6B6B6B')+'" font-weight="'+(isT?'700':'400')+'">'+(n<=7?DW[dd.getUTCDay()]+' ':'')+(dd.getUTCMonth()+1)+'/'+dd.getUTCDate()+'</text>'}
+  });
+  var base='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+(H-pb)+'" y2="'+(H-pb)+'" stroke="#DDE3EC"/>';
+  var d=sl>0?(sc/sl-1)*100:null, col=d==null?'#6B6B6B':d>=0?'#2E7D32':'#C0392B';
+  var cap=d==null?T('No closed day to compare yet.','Aún no hay un día cerrado para comparar.'):T('Closed days','Días cerrados')+': <b>'+$$(sc)+'</b> vs <b>'+$$(sl)+'</b> LY · <b style="color:'+col+'">'+(d>=0?'▲ +':'▼ ')+d.toFixed(0)+'%</b>';
+  box.innerHTML=chips+'<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="'+T('Sales by day compared with last year','Ventas por día contra el año pasado')+'" style="display:block;margin-top:6px">'+base+svg+'</svg>'
+    +'<div style="display:flex;gap:12px;font-size:11px;color:#6B6B6B;margin:2px 0"><span><i style="display:inline-block;width:10px;height:10px;background:#1B3A6B;border-radius:2px"></i> '+T('This year','Este año')+'</span><span><i style="display:inline-block;width:10px;height:10px;background:#B8C2D1;border-radius:2px"></i> '+T('Same day last year','Mismo día año pasado')+'</span></div>'
+    +'<div class="dn" style="margin:2px 0 0">'+cap+' <a href="ventas_meta.html" style="color:#1B3A6B">'+T('More ranges','Más rangos')+' ›</a></div>';
+}
+function $$(n){return (n<0?'-':'')+'$'+Math.abs(Math.round(n)).toLocaleString('en-US')}
 async function loadDomeCard(){
   var el=document.getElementById('dome-card'); if(!el)return;
   try{
     var r=await DH.rpc('ventas_mi');
     if(!r||r.error||r.vacio||(!r.yo&&!(r.gerente&&r.tiendas&&r.tiendas.length))){el.classList.add('hide');return}
     var _k=[r.corrida,r.fecha,r.ritmo,localStorage.getItem('dh_lang'),r.yo?r.yo.neto:'',(r.tiendas||[]).map(function(t){return t.v}).join(',')].join('|'); if(el.dataset.k===_k&&el.innerHTML&&!el.classList.contains('hide'))return;
+    var lyT={}; if(r.gerente){try{var _q=await DH.rpc('ventas_panel',{p_desde:r.fecha,p_hasta:r.fecha,p_grupo:'tienda'}); if(_q&&_q.rows)_q.rows.forEach(function(x){lyT[x.k]=+x.ly||0})}catch(e){}}
     var es=(localStorage.getItem('dh_lang')==='es'), T=function(a,b){return es?b:a};
     var $=function(n){return (n<0?'-':'')+'$'+Math.abs(Math.round(n)).toLocaleString('en-US')};
     var pace=(r.ritmo||0)*100, stale=r.fecha!==r.hoy;
@@ -1868,10 +1914,14 @@ async function loadDomeCard(){
       if(!r.yo&&th>0){var tp=tv/th*100, tl=allMeta?T('goal','meta'):T('same weekday 2025','mismo día 2025');
         h+=domeSvg(tp,pace,'#1B3A6B',Math.round(tp)+'% '+T('of total','del total'))+'<div class="ds"><b>'+$(tv)+'</b> '+T('vs','vs')+' '+$(th)+' '+tl+'</div>'
           +'<div class="dn" style="text-align:center;margin-top:2px">'+T('Expected by now','Esperado a esta hora')+' <b>'+$(th*pace/100)+'</b></div>'+st(tp)}
+      var _tl=0; r.tiendas.forEach(function(t){_tl+=lyT[t.t]||0});
+      if(!stale&&_tl>0&&pace>0){var _q2=(tv/(_tl*pace/100)-1)*100; h+='<div class="dn" style="text-align:center;margin-top:2px">'+T('vs same hour last year','vs misma hora del año pasado')+' <b style="color:'+(_q2>=0?'#2E7D32':'#C0392B')+'">'+(_q2>=0?'▲ +':'▼ ')+Math.round(_q2)+'%</b> <small style="color:#6B6B6B">('+T('LY day total ','total del día LY ')+$(_tl)+')</small></div>'}
+      h+='<div id="dm-cmp" class="dmc"></div>';
       h+='<div class="dn" style="margin:6px 0 0">'+T('Tap a store to see its sellers.','Toca una tienda para ver sus vendedores.')+'</div>';
       r.tiendas.forEach(function(t){var rf=ref(t), p2=rf>0?t.v/rf*100:0;
         var sub=t.sin_filas?T('no sales in the report','sin ventas en el reporte'):(rf>0?$(rf)+' '+refLbl(t):(rf===0?T('no goal today','sin meta hoy'):T('no 2025 data','sin datos 2025')));
-        h+='<details style="margin-top:6px"><summary style="display:block;min-height:44px"><span class="dl" style="margin-top:0"><span><b>'+meEsc(t.nombre)+'</b> '+$(t.v)+pcD(t.v,rf)+'</span><span>'+sub+'</span></span>'+bar(p2,pace)+'</summary>';
+        var lyc='', lyv=lyT[t.t]; if(!stale&&lyv>0&&pace>0){var q3=(t.v/(lyv*pace/100)-1)*100; lyc=' <b style="color:'+(q3>=0?'#2E7D32':'#C0392B')+'">'+(q3>=0?'▲ +':'▼ ')+Math.round(q3)+'% vs LY</b>'}
+        h+='<details style="margin-top:6px"><summary style="display:block;min-height:44px"><span class="dl" style="margin-top:0"><span><b>'+meEsc(t.nombre)+'</b> '+$(t.v)+pcD(t.v,rf)+lyc+'</span><span>'+sub+'</span></span>'+bar(p2,pace)+'</summary>';
         if(t.sin_filas){h+='<div class="dn">'+T('The hourly Sales by Salesperson report has no rows for this store yet today.','El reporte por hora de ventas por vendedor no trae filas de esta tienda hoy.')+'</div>'}
         else if(t.t==='EC'){h+='<div class="dn">'+T('Online sales (José Padrón, Victoria Sagaste). It has a store goal and no seller goals.','Ventas en línea (José Padrón, Victoria Sagaste). Tiene meta de tienda y no tiene metas por vendedor.')+'</div><div style="text-align:center;margin:8px 0"><button class="vd-b" data-f="'+r.fecha+'" data-t="EC" data-c="" data-n="E-commerce" onclick="ventasDetalle(this)">🧾 '+T('See sales detail','Ver detalle de ventas')+'</button></div>'}
         else{
@@ -1887,6 +1937,7 @@ async function loadDomeCard(){
     var _op=[].map.call(el.querySelectorAll('details'),function(x){return x.open});
     el.innerHTML=h; el.classList.remove('hide'); el.dataset.k=_k;
     [].forEach.call(el.querySelectorAll('details'),function(x,i){if(_op[i])x.open=true});
+    if(document.getElementById('dm-cmp'))domeCmp(r.fecha,(r.tiendas||[]).map(function(t){return t.t}));
   }catch(e){el.classList.add('hide')}
 }
 async function loadGoalCard(){

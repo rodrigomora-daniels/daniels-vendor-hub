@@ -262,6 +262,7 @@ function pPreset(p){
   const eom=(y,m)=>isoD(new Date(Date.UTC(y,m+1,0,12)));
   const wk=()=>{const w=(d.getUTCDay()+6)%7;return addDays(hy,-w)};
   if(p==='win'){s.desde=addDays(hy,-14);s.hasta=addDays(hy,14);s.grupo='dia'}
+  else if(p==='bf'){const th=(()=>{const f=new Date(Date.UTC(Y,10,1,12));f.setUTCDate(1+((4-f.getUTCDay()+7)%7)+21);return isoD(f)})();s.desde=th;s.hasta=addDays(th,4);s.grupo='dia'}
   else if(p==='today'){s.desde=hy;s.hasta=hy;s.grupo='tienda'}
   else if(p==='week'){s.desde=wk();s.hasta=addDays(wk(),6);s.grupo='dia'}
   else if(p==='month'){s.desde=Y+'-'+z2(M+1)+'-01';s.hasta=eom(Y,M);s.grupo='dia'}
@@ -283,7 +284,7 @@ function pPaint(){
   const o=PN.opc||{}, s=PN.s, L=LANG(), ch=(on,fn,t)=>`<button type="button" class="chip${on?' on':''}" onclick="${fn}" aria-pressed="${on}">${esc(t)}</button>`;
   const yrs=[]; if(o.min){for(let y=+(PN.hoy||o.max||'2026').slice(0,4)+1;y>=+o.min.slice(0,4);y--)yrs.push(y)}
   const G=[['dia',T('Day','Día')],['semana',T('Week','Semana')],['mes',T('Month','Mes')],['anio',T('Year','Año')],['dow',T('Weekday','Día de la semana')],['tienda',T('Store','Tienda')],['vendedor',T('Seller','Vendedor')]];
-  const P=[['win',T('Around today','Alrededor de hoy')],['today',T('Today','Hoy')],['week',T('This week','Esta semana')],['month',T('This month','Este mes')],['next30',T('Next 30 days','Próx. 30 días')],['l30',T('Last 30 days','Últ. 30 días')],['year',T('This year','Este año')],['ly',T('Last year','Año pasado')],['ny',T('Next year','Próximo año')],['all',T('All time','Todo')]];
+  const P=[['win',T('Around today','Alrededor de hoy')],['bf',T('Thanksgiving week vs LY','Semana de Thanksgiving vs LY')],['today',T('Today','Hoy')],['week',T('This week','Esta semana')],['month',T('This month','Este mes')],['next30',T('Next 30 days','Próx. 30 días')],['l30',T('Last 30 days','Últ. 30 días')],['year',T('This year','Este año')],['ly',T('Last year','Año pasado')],['ny',T('Next year','Próximo año')],['all',T('All time','Todo')]];
   const vs=(o.vendedores||[]).filter(v=>!s.tiendas.size||s.tiendas.has(v.t)); const byT={}; vs.forEach(v=>{(byT[v.t]=byT[v.t]||[]).push(v)});
   const stores=(o.tiendas||[]).filter(t=>t!=='WH'||true);
   $('pn-ctl').innerHTML=`
